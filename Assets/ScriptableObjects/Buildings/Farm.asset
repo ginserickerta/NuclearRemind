@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3a9c1e4d2b4f6a8e0c3b5d7f9a1c3e, type: 3}
+  m_Name: Farm
+  m_EditorClassIdentifier:
+  buildingName: ฟาร์มเพาะปลูก
+  description: 'ฟาร์มเพาะปลูกพืชผลเพื่อผลิต
+    Food ให้ประชากร ผลิต Food ต่อ
+    tick'
+  nuclearKnowledge: 'การฉายรังสีอาหาร (Food Irradiation)
+    ด้วยรังสีแกมมาช่วยฆ่าเชื้อแบคทีเรียและแมลงในผลผลิต
+    ทำให้เก็บรักษาอาหารได้นานขึ้นโดยไม่ทำลายคุณค่าทางอาหาร'
+  sprite: {fileID: 0}
+  size: {x: 1, y: 2}
+  buildingType: 2
+  materialCost: 15
+  energyCost: 0
+  workerRequired: 2
+  foodProduction: 3
+  waterProduction: 0
+  radiationProtectionBonus: 0
+  energyProduction: 0
+  researchPointsPerTick: 0
+  isCoreTowerPart: 0
+  towerPhaseRequired: 0

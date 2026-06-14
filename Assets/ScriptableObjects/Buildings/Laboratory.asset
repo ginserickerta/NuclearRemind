@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3a9c1e4d2b4f6a8e0c3b5d7f9a1c3e, type: 3}
+  m_Name: Laboratory
+  m_EditorClassIdentifier:
+  buildingName: ห้องปฏิบัติการ
+  description: 'ห้องปฏิบัติการวิจัย
+    ปลดล็อก Research Points สำหรับ
+    Learning Codex สาขา Agriculture, Medical และ
+    Environment'
+  nuclearKnowledge: 'เทคนิคทางการแพทย์นิวเคลียร์ เช่น
+    PET Scan ใช้ไอโซโทปรังสีอายุสั้นฉีดเข้าร่างกายเพื่อสร้างภาพการทำงานของอวัยวะ
+    ช่วยวินิจฉัยโรคได้แม่นยำ'
+  sprite: {fileID: 0}
+  size: {x: 1, y: 1}
+  buildingType: 6
+  materialCost: 35
+  energyCost: 8
+  workerRequired: 3
+  foodProduction: 0
+  waterProduction: 0
+  radiationProtectionBonus: 0
+  energyProduction: 0
+  researchPointsPerTick: 2
+  isCoreTowerPart: 0
+  towerPhaseRequired: 0

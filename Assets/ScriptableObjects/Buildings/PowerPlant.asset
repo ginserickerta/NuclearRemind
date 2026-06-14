@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3a9c1e4d2b4f6a8e0c3b5d7f9a1c3e, type: 3}
+  m_Name: PowerPlant
+  m_EditorClassIdentifier:
+  buildingName: โรงไฟฟ้า
+  description: 'โรงไฟฟ้าสำรองของเมือง
+    ผลิต Energy สำหรับขับเคลื่อนสิ่งก่อสร้างต่าง
+    ๆ ในเมือง'
+  nuclearKnowledge: 'ปฏิกิริยานิวเคลียร์ฟิชชัน (Fission)
+    คือการแตกตัวของนิวเคลียสอะตอมหนัก เช่น ยูเรเนียม-235
+    ปลดปล่อยพลังงานออกมาในรูปแบบ chain reaction
+    ที่ควบคุมได้'
+  sprite: {fileID: 0}
+  size: {x: 2, y: 2}
+  buildingType: 4
+  materialCost: 40
+  energyCost: 0
+  workerRequired: 4
+  foodProduction: 0
+  waterProduction: 0
+  radiationProtectionBonus: 0
+  energyProduction: 5
+  researchPointsPerTick: 0
+  isCoreTowerPart: 0
+  towerPhaseRequired: 0

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3a9c1e4d2b4f6a8e0c3b5d7f9a1c3e, type: 3}
+  m_Name: CoreTower
+  m_EditorClassIdentifier:
+  buildingName: CORE TOWER
+  description: 'เตาปฏิกรณ์ฟิวชันหลักของเมือง
+    Veltara สร้างค้างไว้ที่
+    30% ต้องสร้างต่อให้เสร็จผ่าน
+    3 ระยะ (Foundation -> Reactor Core -> Fusion Activation)
+    เพื่อให้โลกได้รับพลังงาน'
+  nuclearKnowledge: 'ปฏิกิริยานิวเคลียร์ฟิวชัน (Fusion)
+    ต้องกักเก็บพลาสมาที่อุณหภูมิหลายล้านองศาด้วยสนามแม่เหล็ก
+    (Magnetic Confinement) เพื่อให้นิวเคลียสเบารวมตัวกันปลดปล่อยพลังงานสะอาดมหาศาล'
+  sprite: {fileID: 0}
+  size: {x: 3, y: 3}
+  buildingType: 7
+  materialCost: 0
+  energyCost: 0
+  workerRequired: 0
+  foodProduction: 0
+  waterProduction: 0
+  radiationProtectionBonus: 0
+  energyProduction: 0
+  researchPointsPerTick: 0
+  isCoreTowerPart: 1
+  towerPhaseRequired: 1
