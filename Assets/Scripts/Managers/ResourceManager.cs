@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace NuclearReMind
@@ -34,7 +33,6 @@ namespace NuclearReMind
         };
 
         private float _tickTimer;
-        private readonly Dictionary<Vector2Int, BuildingData> _placedBuildings = new Dictionary<Vector2Int, BuildingData>();
 
         private void Awake()
         {
@@ -49,14 +47,14 @@ namespace NuclearReMind
         private void OnEnable()
         {
             EventManager.Instance.OnBuildingPlaced += HandleBuildingPlaced;
-            EventManager.Instance.OnBuildingRemoved += HandleBuildingRemoved;
+            EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
         }
 
         private void OnDisable()
         {
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnBuildingPlaced -= HandleBuildingPlaced;
-            EventManager.Instance.OnBuildingRemoved -= HandleBuildingRemoved;
+            EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
         }
 
         private void Start()
@@ -76,8 +74,6 @@ namespace NuclearReMind
 
         private void HandleBuildingPlaced(Cell cell, BuildingData data)
         {
-            _placedBuildings[new Vector2Int(cell.col, cell.row)] = data;
-
             // materialCost ยังไม่มี ResourceType ของตัวเองใน ResourceData (ตาม Improve data model) — หักเฉพาะ energy/workers ที่มีอยู่
             var c = Current;
             c.energy = Mathf.Max(0f, c.energy - data.energyCost);
@@ -88,16 +84,18 @@ namespace NuclearReMind
             CheckThresholds();
         }
 
-        private void HandleBuildingRemoved(Vector2Int position)
+        private void HandleSaveLoaded(SaveData save)
         {
-            _placedBuildings.Remove(position);
+            Current = save.resources;
+            EventManager.Instance.RaiseResourceChanged(Current);
+            CheckThresholds();
         }
 
         private void Tick()
         {
             var c = Current;
 
-            foreach (var data in _placedBuildings.Values)
+            foreach (var data in BuildingRegistry.Instance.PlacedBuildings.Values)
             {
                 c.food += data.foodProduction;
                 c.water += data.waterProduction;

@@ -43,6 +43,7 @@ namespace NuclearReMind
         {
             EventManager.Instance.OnResourceDepleted += HandleResourceDepleted;
             EventManager.Instance.OnResourceChanged += HandleResourceChanged;
+            EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
         }
 
         private void OnDisable()
@@ -50,11 +51,13 @@ namespace NuclearReMind
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnResourceDepleted -= HandleResourceDepleted;
             EventManager.Instance.OnResourceChanged -= HandleResourceChanged;
+            EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
         }
 
         private void Start()
         {
             EventManager.Instance.RaiseTrustChanged(Current.trust);
+            EventManager.Instance.RaisePopulationChanged(Current);
         }
 
         private void Update()
@@ -99,11 +102,20 @@ namespace NuclearReMind
             if (!Mathf.Approximately(pop.trust, previousTrust))
                 EventManager.Instance.RaiseTrustChanged(pop.trust);
 
+            EventManager.Instance.RaisePopulationChanged(pop);
+
             if (pop.isOnStrike && !wasOnStrike)
                 EventManager.Instance.RaiseWorkerStrike();
 
             if (pop.trust <= 0f)
                 EventManager.Instance.RaiseRiotStarted();
+        }
+
+        private void HandleSaveLoaded(SaveData save)
+        {
+            Current = save.population;
+            EventManager.Instance.RaiseTrustChanged(Current.trust);
+            EventManager.Instance.RaisePopulationChanged(Current);
         }
     }
 }

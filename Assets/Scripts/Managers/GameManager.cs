@@ -21,9 +21,26 @@ namespace NuclearReMind
             DontDestroyOnLoad(gameObject);
         }
 
+        void OnEnable()
+        {
+            EventManager.Instance.OnTowerComplete += HandleTowerComplete;
+        }
+
+        void OnDisable()
+        {
+            if (EventManager.Instance == null) return;
+            EventManager.Instance.OnTowerComplete -= HandleTowerComplete;
+        }
+
         void Start()
         {
             Debug.Log("[GameManager] Initialized");
+        }
+
+        void HandleTowerComplete()
+        {
+            SetState(GameState.Victory);
+            EventManager.Instance.RaiseGameOver(GameEndType.Win);
         }
 
         public void SetState(GameState newState)

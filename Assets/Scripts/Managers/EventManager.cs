@@ -24,16 +24,21 @@ namespace NuclearReMind
 
         // ===== Population =====
         public event Action<float> OnTrustChanged;
+        public event Action<PopulationData> OnPopulationChanged;
         public event Action OnWorkerStrike;
         public event Action OnRiotStarted;
 
         // ===== CORE TOWER =====
+        public event Action<TowerData> OnTowerProgressChanged;
         public event Action<int> OnTowerPhaseComplete;
         public event Action OnTowerComplete;
 
         // ===== Game State =====
         public event Action<GameManager.GameState> OnGameStateChanged;
         public event Action<GameEndType> OnGameOver;
+
+        // ===== Save/Load =====
+        public event Action<SaveData> OnSaveLoaded;
 
         private void Awake()
         {
@@ -58,15 +63,20 @@ namespace NuclearReMind
 
         // ===== Population =====
         public void RaiseTrustChanged(float newTrust) => OnTrustChanged?.Invoke(newTrust);
+        public void RaisePopulationChanged(PopulationData data) => OnPopulationChanged?.Invoke(data);
         public void RaiseWorkerStrike() => OnWorkerStrike?.Invoke();
         public void RaiseRiotStarted() => OnRiotStarted?.Invoke();
 
         // ===== CORE TOWER =====
+        public void RaiseTowerProgressChanged(TowerData data) => OnTowerProgressChanged?.Invoke(data);
         public void RaiseTowerPhaseComplete(int phase) => OnTowerPhaseComplete?.Invoke(phase);
         public void RaiseTowerComplete() => OnTowerComplete?.Invoke();
 
         // ===== Game State =====
         public void RaiseGameStateChanged(GameManager.GameState newState) => OnGameStateChanged?.Invoke(newState);
         public void RaiseGameOver(GameEndType endType) => OnGameOver?.Invoke(endType);
+
+        // ===== Save/Load =====
+        public void RaiseSaveLoaded(SaveData data) => OnSaveLoaded?.Invoke(data);
     }
 }
