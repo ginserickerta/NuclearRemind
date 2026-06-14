@@ -7,7 +7,7 @@ namespace NuclearReMind
     /// <summary>
     /// Save/Load สถานะเกมเป็น JSON (SaveData) ที่ Application.persistentDataPath
     /// แคชสถานะล่าสุดของ Resource/Population/Tower ผ่าน OnXxxChanged event
-    /// ปุ่ม Save/Load บน HUD จะต่อเข้ากับ Save()/Load() ใน Day 7
+    /// เรียก Save()/Load() ผ่าน EventManager.OnSaveRequested/OnLoadRequested (คีย์ลัด F5/F9 ใน InputManager)
     /// </summary>
     public class SaveManager : MonoBehaviour
     {
@@ -18,6 +18,8 @@ namespace NuclearReMind
         private ResourceData _resources;
         private PopulationData _population;
         private TowerData _tower;
+        private int _aethonRelationship;
+        private int _keranRelationship;
 
         private static string SavePath => Path.Combine(Application.persistentDataPath, SaveFileName);
 
@@ -36,6 +38,10 @@ namespace NuclearReMind
             EventManager.Instance.OnResourceChanged += HandleResourceChanged;
             EventManager.Instance.OnPopulationChanged += HandlePopulationChanged;
             EventManager.Instance.OnTowerProgressChanged += HandleTowerProgressChanged;
+            EventManager.Instance.OnSaveRequested += Save;
+            EventManager.Instance.OnLoadRequested += Load;
+            EventManager.Instance.OnRelationshipChanged += HandleRelationshipChanged;
+            EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
         }
 
         private void OnDisable()
@@ -44,11 +50,27 @@ namespace NuclearReMind
             EventManager.Instance.OnResourceChanged -= HandleResourceChanged;
             EventManager.Instance.OnPopulationChanged -= HandlePopulationChanged;
             EventManager.Instance.OnTowerProgressChanged -= HandleTowerProgressChanged;
+            EventManager.Instance.OnSaveRequested -= Save;
+            EventManager.Instance.OnLoadRequested -= Load;
+            EventManager.Instance.OnRelationshipChanged -= HandleRelationshipChanged;
+            EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
         }
 
         private void HandleResourceChanged(ResourceData data) => _resources = data;
         private void HandlePopulationChanged(PopulationData data) => _population = data;
         private void HandleTowerProgressChanged(TowerData data) => _tower = data;
+
+        private void HandleRelationshipChanged(int aethon, int keran)
+        {
+            _aethonRelationship = aethon;
+            _keranRelationship = keran;
+        }
+
+        private void HandleSaveLoaded(SaveData save)
+        {
+            _aethonRelationship = save.aethonRelationship;
+            _keranRelationship = save.keranRelationship;
+        }
 
         public void Save()
         {
@@ -60,7 +82,9 @@ namespace NuclearReMind
                 placedBuildings = new List<Vector2Int>(),
                 buildingTypes = new List<string>(),
                 unlockedCodexEntries = new List<string>(),
-                gameTime = Time.time
+                gameTime = Time.time,
+                aethonRelationship = _aethonRelationship,
+                keranRelationship = _keranRelationship
             };
 
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)

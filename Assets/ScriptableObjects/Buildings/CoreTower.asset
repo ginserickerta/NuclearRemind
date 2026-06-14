@@ -11,17 +11,17 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7f3a9c1e4d2b4f6a8e0c3b5d7f9a1c3e, type: 3}
   m_Name: CoreTower
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   buildingName: CORE TOWER
-  description: 'เตาปฏิกรณ์ฟิวชันหลักของเมือง
-    Veltara สร้างค้างไว้ที่
-    30% ต้องสร้างต่อให้เสร็จผ่าน
-    3 ระยะ (Foundation -> Reactor Core -> Fusion Activation)
-    เพื่อให้โลกได้รับพลังงาน'
-  nuclearKnowledge: 'ปฏิกิริยานิวเคลียร์ฟิวชัน (Fusion)
-    ต้องกักเก็บพลาสมาที่อุณหภูมิหลายล้านองศาด้วยสนามแม่เหล็ก
-    (Magnetic Confinement) เพื่อให้นิวเคลียสเบารวมตัวกันปลดปล่อยพลังงานสะอาดมหาศาล'
-  sprite: {fileID: 0}
+  description: "\u0E40\u0E15\u0E32\u0E1B\u0E0F\u0E34\u0E01\u0E23\u0E13\u0E4C\u0E1F\u0E34\u0E27\u0E0A\u0E31\u0E19\u0E2B\u0E25\u0E31\u0E01\u0E02\u0E2D\u0E07\u0E40\u0E21\u0E37\u0E2D\u0E07
+    Veltara \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07\u0E44\u0E27\u0E49\u0E17\u0E35\u0E48
+    30% \u0E15\u0E49\u0E2D\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E15\u0E48\u0E2D\u0E43\u0E2B\u0E49\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E1C\u0E48\u0E32\u0E19
+    3 \u0E23\u0E30\u0E22\u0E30 (Foundation -> Reactor Core -> Fusion Activation)
+    \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E49\u0E42\u0E25\u0E01\u0E44\u0E14\u0E49\u0E23\u0E31\u0E1A\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19"
+  nuclearKnowledge: "\u0E1B\u0E0F\u0E34\u0E01\u0E34\u0E23\u0E34\u0E22\u0E32\u0E19\u0E34\u0E27\u0E40\u0E04\u0E25\u0E35\u0E22\u0E23\u0E4C\u0E1F\u0E34\u0E27\u0E0A\u0E31\u0E19
+    (Fusion) \u0E15\u0E49\u0E2D\u0E07\u0E01\u0E31\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E1E\u0E25\u0E32\u0E2A\u0E21\u0E32\u0E17\u0E35\u0E48\u0E2D\u0E38\u0E13\u0E2B\u0E20\u0E39\u0E21\u0E34\u0E2B\u0E25\u0E32\u0E22\u0E25\u0E49\u0E32\u0E19\u0E2D\u0E07\u0E28\u0E32\u0E14\u0E49\u0E27\u0E22\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01
+    (Magnetic Confinement) \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E49\u0E19\u0E34\u0E27\u0E40\u0E04\u0E25\u0E35\u0E22\u0E2A\u0E40\u0E1A\u0E32\u0E23\u0E27\u0E21\u0E15\u0E31\u0E27\u0E01\u0E31\u0E19\u0E1B\u0E25\u0E14\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E2A\u0E30\u0E2D\u0E32\u0E14\u0E21\u0E2B\u0E32\u0E28\u0E32\u0E25"
+  sprite: {fileID: 21300000, guid: 6d4dcd6fca3beb14c89047cbcbbc1d0e, type: 3}
   size: {x: 3, y: 3}
   buildingType: 7
   materialCost: 0

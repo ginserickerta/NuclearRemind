@@ -44,6 +44,7 @@ namespace NuclearReMind
             EventManager.Instance.OnResourceDepleted += HandleResourceDepleted;
             EventManager.Instance.OnResourceChanged += HandleResourceChanged;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
+            EventManager.Instance.OnTrustDelta += HandleTrustDelta;
         }
 
         private void OnDisable()
@@ -52,6 +53,7 @@ namespace NuclearReMind
             EventManager.Instance.OnResourceDepleted -= HandleResourceDepleted;
             EventManager.Instance.OnResourceChanged -= HandleResourceChanged;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+            EventManager.Instance.OnTrustDelta -= HandleTrustDelta;
         }
 
         private void Start()
@@ -116,6 +118,26 @@ namespace NuclearReMind
             Current = save.population;
             EventManager.Instance.RaiseTrustChanged(Current.trust);
             EventManager.Instance.RaisePopulationChanged(Current);
+        }
+
+        private void HandleTrustDelta(float amount)
+        {
+            var pop = Current;
+            pop.trust = Mathf.Clamp(pop.trust + amount, 0f, 100f);
+
+            bool wasOnStrike = pop.isOnStrike;
+            pop.isOnStrike = pop.trust < strikeThreshold;
+
+            Current = pop;
+
+            EventManager.Instance.RaiseTrustChanged(pop.trust);
+            EventManager.Instance.RaisePopulationChanged(pop);
+
+            if (pop.isOnStrike && !wasOnStrike)
+                EventManager.Instance.RaiseWorkerStrike();
+
+            if (pop.trust <= 0f)
+                EventManager.Instance.RaiseRiotStarted();
         }
     }
 }

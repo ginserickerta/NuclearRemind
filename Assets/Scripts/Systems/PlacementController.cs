@@ -15,6 +15,15 @@ namespace NuclearReMind
         public Color validColor = new Color(0f, 1f, 0f, 0.5f);
         public Color invalidColor = new Color(1f, 0f, 0f, 0.5f);
 
+        [Header("Testing - Building Hotbar (กด 1-7 เพื่อเลือกอาคาร)")]
+        public BuildingData[] buildingHotbar;
+
+        private static readonly KeyCode[] HotbarKeys =
+        {
+            KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4,
+            KeyCode.Alpha5, KeyCode.Alpha6, KeyCode.Alpha7
+        };
+
         private BuildingData selectedBuilding;
         private Vector2Int currentCell;
         private bool isPlacing;
@@ -27,6 +36,8 @@ namespace NuclearReMind
 
         private void Update()
         {
+            HandleHotbarInput();
+
             if (!isPlacing || selectedBuilding == null)
                 return;
 
@@ -36,6 +47,21 @@ namespace NuclearReMind
                 ConfirmPlace();
             else if (Input.GetMouseButtonDown(1))
                 CancelPlacement();
+        }
+
+        /// <summary>
+        /// เช็คปุ่มเลข 1-7 เพื่อเลือกอาคารจาก buildingHotbar และเริ่มวาง
+        /// </summary>
+        private void HandleHotbarInput()
+        {
+            for (int i = 0; i < HotbarKeys.Length && i < buildingHotbar.Length; i++)
+            {
+                if (Input.GetKeyDown(HotbarKeys[i]) && buildingHotbar[i] != null)
+                {
+                    BeginPlacement(buildingHotbar[i]);
+                    break;
+                }
+            }
         }
 
         /// <summary>
@@ -51,6 +77,8 @@ namespace NuclearReMind
                 ghostRenderer.sprite = buildingData.sprite;
                 ghostRenderer.gameObject.SetActive(true);
             }
+
+            EventManager.Instance.RaiseBuildingSelected(buildingData);
         }
 
         /// <summary>
@@ -140,6 +168,8 @@ namespace NuclearReMind
 
             if (ghostRenderer != null)
                 ghostRenderer.gameObject.SetActive(false);
+
+            EventManager.Instance.RaiseBuildingSelected(null);
         }
     }
 }

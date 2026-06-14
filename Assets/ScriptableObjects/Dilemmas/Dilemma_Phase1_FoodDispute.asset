@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2feab78457fb118478c92e9e4ac3dfb9, type: 3}
+  m_Name: Dilemma_Phase1_FoodDispute
+  m_EditorClassIdentifier:
+  dilemmaId: dilemma_phase1_food_dispute
+  scenarioText: "หลังจากผ่าน Phase
+    1 ของ CORE TOWER ไปได้ อาหารในเมือง
+    Veltara กำลังขาดแคลน
+    กลุ่มของ Aethon เสนอให้จัดสรรอาหารให้คนงานก่อสร้างก่อนเพื่อเร่งงาน
+    CORE TOWER ขณะที่กลุ่มของ
+    Keran เรียกร้องให้แบ่งอาหารอย่างเท่าเทียมแก่ประชาชนทั่วไป
+    คุณจะตัดสินใจอย่างไร?"
+  choiceAText: "จัดสรรอาหารให้คนงานก่อสร้าง
+    (สนับสนุน Aethon)"
+  choiceBText: "แบ่งอาหารให้ประชาชนอย่างเท่าเทียม
+    (สนับสนุน Keran)"
+  choiceA_FoodChange: -10
+  choiceA_TrustChange: -5
+  choiceA_AethonRelationChange: 10
+  choiceA_KeranRelationChange: -10
+  choiceB_FoodChange: -5
+  choiceB_TrustChange: 5
+  choiceB_AethonRelationChange: -10
+  choiceB_KeranRelationChange: 10
+  triggerCondition: phase_1_complete

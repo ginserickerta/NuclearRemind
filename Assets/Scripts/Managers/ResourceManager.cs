@@ -48,6 +48,7 @@ namespace NuclearReMind
         {
             EventManager.Instance.OnBuildingPlaced += HandleBuildingPlaced;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
+            EventManager.Instance.OnResourceDelta += HandleResourceDelta;
         }
 
         private void OnDisable()
@@ -55,6 +56,7 @@ namespace NuclearReMind
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnBuildingPlaced -= HandleBuildingPlaced;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+            EventManager.Instance.OnResourceDelta -= HandleResourceDelta;
         }
 
         private void Start()
@@ -87,6 +89,34 @@ namespace NuclearReMind
         private void HandleSaveLoaded(SaveData save)
         {
             Current = save.resources;
+            EventManager.Instance.RaiseResourceChanged(Current);
+            CheckThresholds();
+        }
+
+        private void HandleResourceDelta(ResourceType type, float amount)
+        {
+            var c = Current;
+
+            switch (type)
+            {
+                case ResourceType.Food:
+                    c.food = Mathf.Clamp(c.food + amount, 0f, maxFood);
+                    break;
+                case ResourceType.Water:
+                    c.water = Mathf.Clamp(c.water + amount, 0f, maxWater);
+                    break;
+                case ResourceType.RadiationProtection:
+                    c.radiationProtection = Mathf.Clamp(c.radiationProtection + amount, 0f, maxRadiationProtection);
+                    break;
+                case ResourceType.Energy:
+                    c.energy = Mathf.Clamp(c.energy + amount, 0f, maxEnergy);
+                    break;
+                case ResourceType.Workers:
+                    c.workers = Mathf.Clamp(c.workers + Mathf.RoundToInt(amount), 0, maxWorkers);
+                    break;
+            }
+
+            Current = c;
             EventManager.Instance.RaiseResourceChanged(Current);
             CheckThresholds();
         }

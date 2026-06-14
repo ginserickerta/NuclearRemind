@@ -11,16 +11,17 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7f3a9c1e4d2b4f6a8e0c3b5d7f9a1c3e, type: 3}
   m_Name: PowerPlant
-  m_EditorClassIdentifier:
-  buildingName: โรงไฟฟ้า
-  description: 'โรงไฟฟ้าสำรองของเมือง
-    ผลิต Energy สำหรับขับเคลื่อนสิ่งก่อสร้างต่าง
-    ๆ ในเมือง'
-  nuclearKnowledge: 'ปฏิกิริยานิวเคลียร์ฟิชชัน (Fission)
-    คือการแตกตัวของนิวเคลียสอะตอมหนัก เช่น ยูเรเนียม-235
-    ปลดปล่อยพลังงานออกมาในรูปแบบ chain reaction
-    ที่ควบคุมได้'
-  sprite: {fileID: 0}
+  m_EditorClassIdentifier: 
+  buildingName: "\u0E42\u0E23\u0E07\u0E44\u0E1F\u0E1F\u0E49\u0E32"
+  description: "\u0E42\u0E23\u0E07\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E2A\u0E33\u0E23\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E40\u0E21\u0E37\u0E2D\u0E07
+    \u0E1C\u0E25\u0E34\u0E15 Energy \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E02\u0E31\u0E1A\u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E2A\u0E34\u0E48\u0E07\u0E01\u0E48\u0E2D\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E15\u0E48\u0E32\u0E07
+    \u0E46 \u0E43\u0E19\u0E40\u0E21\u0E37\u0E2D\u0E07"
+  nuclearKnowledge: "\u0E1B\u0E0F\u0E34\u0E01\u0E34\u0E23\u0E34\u0E22\u0E32\u0E19\u0E34\u0E27\u0E40\u0E04\u0E25\u0E35\u0E22\u0E23\u0E4C\u0E1F\u0E34\u0E0A\u0E0A\u0E31\u0E19
+    (Fission) \u0E04\u0E37\u0E2D\u0E01\u0E32\u0E23\u0E41\u0E15\u0E01\u0E15\u0E31\u0E27\u0E02\u0E2D\u0E07\u0E19\u0E34\u0E27\u0E40\u0E04\u0E25\u0E35\u0E22\u0E2A\u0E2D\u0E30\u0E15\u0E2D\u0E21\u0E2B\u0E19\u0E31\u0E01
+    \u0E40\u0E0A\u0E48\u0E19 \u0E22\u0E39\u0E40\u0E23\u0E40\u0E19\u0E35\u0E22\u0E21-235
+    \u0E1B\u0E25\u0E14\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E2D\u0E2D\u0E01\u0E21\u0E32\u0E43\u0E19\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A
+    chain reaction \u0E17\u0E35\u0E48\u0E04\u0E27\u0E1A\u0E04\u0E38\u0E21\u0E44\u0E14\u0E49"
+  sprite: {fileID: 21300000, guid: 460c56b188f82e94c9ec17cf0a63e6be, type: 3}
   size: {x: 2, y: 2}
   buildingType: 4
   materialCost: 40

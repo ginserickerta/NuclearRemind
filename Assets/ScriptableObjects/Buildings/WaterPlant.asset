@@ -11,14 +11,15 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7f3a9c1e4d2b4f6a8e0c3b5d7f9a1c3e, type: 3}
   m_Name: WaterPlant
-  m_EditorClassIdentifier:
-  buildingName: โรงผลิตน้ำ
-  description: 'ระบบบำบัดและผลิตน้ำสะอาด
-    สำหรับ Coolant System และการอุปโภคของประชากร
-    ใช้ Energy ในการบำบัด'
-  nuclearKnowledge: 'การตรวจวัดไอโซโทป เช่น ทริเทียม
-    (Tritium) ในน้ำ ช่วยติดตามการปนเปื้อนทางรังสีและประเมินความปลอดภัยของระบบน้ำดื่ม'
-  sprite: {fileID: 0}
+  m_EditorClassIdentifier: 
+  buildingName: "\u0E42\u0E23\u0E07\u0E1C\u0E25\u0E34\u0E15\u0E19\u0E49\u0E33"
+  description: "\u0E23\u0E30\u0E1A\u0E1A\u0E1A\u0E33\u0E1A\u0E31\u0E14\u0E41\u0E25\u0E30\u0E1C\u0E25\u0E34\u0E15\u0E19\u0E49\u0E33\u0E2A\u0E30\u0E2D\u0E32\u0E14
+    \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A Coolant System \u0E41\u0E25\u0E30\u0E01\u0E32\u0E23\u0E2D\u0E38\u0E1B\u0E42\u0E20\u0E04\u0E02\u0E2D\u0E07\u0E1B\u0E23\u0E30\u0E0A\u0E32\u0E01\u0E23
+    \u0E43\u0E0A\u0E49 Energy \u0E43\u0E19\u0E01\u0E32\u0E23\u0E1A\u0E33\u0E1A\u0E31\u0E14"
+  nuclearKnowledge: "\u0E01\u0E32\u0E23\u0E15\u0E23\u0E27\u0E08\u0E27\u0E31\u0E14\u0E44\u0E2D\u0E42\u0E0B\u0E42\u0E17\u0E1B
+    \u0E40\u0E0A\u0E48\u0E19 \u0E17\u0E23\u0E34\u0E40\u0E17\u0E35\u0E22\u0E21 (Tritium)
+    \u0E43\u0E19\u0E19\u0E49\u0E33 \u0E0A\u0E48\u0E27\u0E22\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E01\u0E32\u0E23\u0E1B\u0E19\u0E40\u0E1B\u0E37\u0E49\u0E2D\u0E19\u0E17\u0E32\u0E07\u0E23\u0E31\u0E07\u0E2A\u0E35\u0E41\u0E25\u0E30\u0E1B\u0E23\u0E30\u0E40\u0E21\u0E34\u0E19\u0E04\u0E27\u0E32\u0E21\u0E1B\u0E25\u0E2D\u0E14\u0E20\u0E31\u0E22\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A\u0E19\u0E49\u0E33\u0E14\u0E37\u0E48\u0E21"
+  sprite: {fileID: 21300000, guid: f9a2422733e4ba34492249cae6b5d51f, type: 3}
   size: {x: 1, y: 1}
   buildingType: 3
   materialCost: 25

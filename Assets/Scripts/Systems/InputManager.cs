@@ -30,6 +30,12 @@ namespace NuclearReMind
 
             if (Input.GetMouseButtonDown(1))
                 HandleRightClick();
+
+            if (Input.GetKeyDown(KeyCode.F5))
+                EventManager.Instance.RaiseSaveRequested();
+
+            if (Input.GetKeyDown(KeyCode.F9))
+                EventManager.Instance.RaiseLoadRequested();
         }
 
         /// <summary>
