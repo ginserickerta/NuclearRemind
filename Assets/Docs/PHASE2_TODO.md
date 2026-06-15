@@ -21,10 +21,22 @@
 | Assembly Definitions | `Scripts/NuclearReMind.asmdef` | ✅ |
 
 ## ค้างจาก Phase 1 (ทำเองใน Editor)
-- [ ] Import sprite tiles/buildings → วาด map Veltara 12×9 บน Tilemap "Ground"
-- [x] สร้าง `BuildingData` asset จริง (`Assets/ScriptableObjects/Buildings/`: Habitat, Farm, WaterPlant, PowerPlant, RadiationShelter, Laboratory, CoreTower) — ยังไม่มี sprite รอ sprite จริง
+- [x] Import sprite tiles/buildings → วาด map Veltara 12×9 บน Tilemap "Ground" — `PlaceholderSpriteGenerator`
+      สร้าง `Ground.png` (128×64, iso diamond) + `Ground.asset` (Tile) แล้ววาดเต็ม 12×9 (108 ทไทล์) บน
+      Tilemap "Ground" ใน `Gamescene.unity` (placeholder รอ sprite จริงจากทีม Art)
+- [x] สร้าง `BuildingData` asset จริง (`Assets/ScriptableObjects/Buildings/`: Habitat, Farm, WaterPlant, PowerPlant, RadiationShelter, Laboratory, CoreTower) — ใส่ placeholder sprite ต่ออาคารแล้ว (ดูหัวข้อ "Building visuals" ด้านล่าง) รอ sprite จริง
 - [x] รัน EditMode tests ใน Test Runner ให้เขียวครบ — ผ่านครบ 8/8 (รันผ่าน Unity batchmode)
-- [ ] ปรับ tileWidth/tileHeight/originOffset ให้ตรง sprite จริง
+- [x] ปรับ tileWidth/tileHeight/originOffset ให้ตรง sprite จริง — `GridManager` ใช้ `tileWidth=1, tileHeight=0.5,
+      originOffset=(0,0,0)`; Grid component ตั้ง `cellSize=(1,0.5,1)` + `cellLayout=Isometric` ตรงกับ
+      `Ground.png` (128×64 @ 128 PPU = 1×0.5 unit) แล้ว — ค่าเหล่านี้จะถูก re-tune อีกครั้งเมื่อได้ sprite จริง
+
+## Building visuals (เพิ่มหลัง migration, 2026-06-14)
+- Placeholder sprite รายอาคาร (ทรง/สี iso เฉพาะตัวต่ออาคาร, pivot bottom-center) สำหรับ Habitat, Farm,
+  WaterPlant, PowerPlant, RadiationShelter, Laboratory, CoreTower — ผูกเข้า `BuildingData.sprite` แล้ว
+- `BuildingVisualSpawner` (`Scripts/Systems/BuildingVisualSpawner.cs`) subscribe
+  `EventManager.Instance.OnBuildingPlaced` เพื่อ spawn sprite ตึกที่วางแล้วให้ติดอยู่ในฉาก (ไม่หายไปพร้อม ghost preview)
+- ทั้งหมดสร้าง/วาดผ่าน `Assets/Editor/PlaceholderSpriteGenerator.cs` (menu: `NuclearReMind/Generate Placeholder Sprites`)
+  ให้รันใหม่ได้ทุกครั้งที่ schema เปลี่ยน หรือเมื่อได้ sprite จริงมาแทน
 
 ## Migration completed (2026-06-14)
 
@@ -52,8 +64,15 @@
 - TooltipController: ชั้น 1 ชื่อ+cost / ชั้น 2 `description` (gameplay) / ชั้น 3 `nuclearKnowledge` (ความรู้จริง)
 - MoralDilemmaManager: `DilemmaData` SO + Popup UI + consequence ต่อ Trust/Resources
 
-### Day 9 — Integration milestone ✅ Milestone
-- ทดสอบ flow รวมทั้งหมด (placement -> resource -> population -> tower -> save/load -> HUD -> tooltip -> dilemma), commit + tag `v0.1-prototype`
+### Day 9 — Integration milestone ✅ Milestone — เสร็จแล้ว (2026-06-15)
+- `Tests/EditMode/IntegrationFlowTests.cs` ทดสอบ flow รวมทั้งหมดผ่าน `EventManager`:
+  placement -> resource/registry/grid/visual -> tower phase complete -> dilemma trigger/resolve ->
+  tower completion -> victory/game over -> save/load round trip (resource, population, tower, grid, visual)
+  รันผ่าน Unity batchmode ครบ 12/12 (8 GridManagerTests + 4 IntegrationFlowTests)
+- แก้ gap ที่ค้างไว้: `GridManager`/`BuildingVisualSpawner` เพิ่ม `OnSaveLoaded` handler เพื่อ re-occupy cell
+  และ respawn visual จาก save (อ่าน footprint/sprite ผ่าน `BuildingRegistry.GetBuildingDataByName` ซึ่งเป็น
+  read-only lookup), `BuildingVisualSpawner` ใช้ `DestroyImmediate` นอก Play mode เพื่อให้ทำงานถูกใน EditMode tests ด้วย
+- commit + tag `v0.1-prototype`
 
 Day 10 เป็นต้นไป: ต่อตาม `Assets/Docs/ImprovePlan1.csv` (Content phase, เลขวันเดิม ไม่เปลี่ยน)
 

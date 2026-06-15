@@ -54,8 +54,6 @@ namespace NuclearReMind
             _placedBuildings.Remove(position);
         }
 
-        // หมายเหตุ: คืน state ของ registry ตาม save เท่านั้น ยังไม่ spawn GameObject อาคารใหม่ในฉาก
-        // (การ respawn ภาพ placement จาก save เป็นงาน integration ของ Day 9)
         private void HandleSaveLoaded(SaveData save)
         {
             _placedBuildings.Clear();
@@ -64,13 +62,17 @@ namespace NuclearReMind
 
             for (int i = 0; i < save.placedBuildings.Count; i++)
             {
-                BuildingData data = FindBuildingDataByName(save.buildingTypes[i]);
+                BuildingData data = GetBuildingDataByName(save.buildingTypes[i]);
                 if (data != null)
                     _placedBuildings[save.placedBuildings[i]] = data;
             }
         }
 
-        private BuildingData FindBuildingDataByName(string buildingName)
+        /// <summary>
+        /// ค้นหา BuildingData จาก allBuildingData ตามชื่อ — ใช้สำหรับ restore สถานะจาก save
+        /// (GridManager / BuildingVisualSpawner เรียกใช้ตอน OnSaveLoaded เพื่อ re-occupy cell และ respawn visual)
+        /// </summary>
+        public BuildingData GetBuildingDataByName(string buildingName)
         {
             foreach (var data in allBuildingData)
             {

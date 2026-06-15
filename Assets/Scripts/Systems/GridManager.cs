@@ -77,6 +77,49 @@ namespace NuclearReMind
             InitializeGrid();
         }
 
+        private void OnEnable()
+        {
+            EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
+        }
+
+        private void OnDisable()
+        {
+            if (EventManager.Instance == null) return;
+            EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+        }
+
+        /// <summary>
+        /// รีเซ็ต grid แล้วทำเครื่องหมาย cell ที่ถูกครอบครองใหม่ตาม placedBuildings ใน save
+        /// (อ่าน footprint จาก BuildingRegistry.GetBuildingDataByName ซึ่งเป็น read-only lookup)
+        /// </summary>
+        private void HandleSaveLoaded(SaveData save)
+        {
+            InitializeGrid();
+
+            if (save.placedBuildings == null || save.buildingTypes == null)
+                return;
+
+            for (int i = 0; i < save.placedBuildings.Count; i++)
+            {
+                BuildingData data = BuildingRegistry.Instance.GetBuildingDataByName(save.buildingTypes[i]);
+                if (data == null)
+                    continue;
+
+                Vector2Int origin = save.placedBuildings[i];
+                for (int dx = 0; dx < data.size.x; dx++)
+                {
+                    for (int dy = 0; dy < data.size.y; dy++)
+                    {
+                        Cell cell = GetCell(origin.x + dx, origin.y + dy);
+                        if (cell == null) continue;
+
+                        cell.isOccupied = true;
+                        cell.buildingType = data.buildingType;
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// สร้าง Cell ทั้งหมดของ grid ตามขนาด columns x rows
         /// (เรียกได้จากภายนอกเพื่อรีเซ็ต grid เมื่อเริ่มเกมใหม่)
