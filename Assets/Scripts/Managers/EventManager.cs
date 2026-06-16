@@ -54,6 +54,22 @@ namespace NuclearReMind
         public event Action<CodexEntry> OnCodexEntryUnlocked;
         public event Action<CodexEntry> OnCodexUnlockFailed; // RP ไม่พอ
 
+        // ===== Game Tick =====
+        public event Action OnGameTick; // raised by ResourceManager ทุก tickInterval
+
+        // ===== Construction =====
+        public event Action<Vector2Int, BuildingData> OnConstructionComplete;
+        public event Action<Vector2Int, int> OnConstructionProgressChanged; // (cell, progress 0-10)
+        public event Action<Vector2Int> OnConstructionCancelRequested;    // BuildingQueueUI → ConstructionController
+        public event Action<Vector2Int> OnConstructionPrioritizeRequested; // BuildingQueueUI → ConstructionController
+
+        // ===== Tutorial =====
+        public event Action OnTutorialComplete;
+
+        // ===== Overdrive =====
+        public event Action<bool> OnOverdriveToggled;  // true = activate
+        public event Action<float> OnTowerDamaged;     // remaining durability
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -106,5 +122,21 @@ namespace NuclearReMind
         // ===== Codex =====
         public void RaiseCodexEntryUnlocked(CodexEntry entry) => OnCodexEntryUnlocked?.Invoke(entry);
         public void RaiseCodexUnlockFailed(CodexEntry entry) => OnCodexUnlockFailed?.Invoke(entry);
+
+        // ===== Game Tick =====
+        public void RaiseGameTick() => OnGameTick?.Invoke();
+
+        // ===== Construction =====
+        public void RaiseConstructionComplete(Vector2Int cell, BuildingData data) => OnConstructionComplete?.Invoke(cell, data);
+        public void RaiseConstructionProgressChanged(Vector2Int cell, int progress) => OnConstructionProgressChanged?.Invoke(cell, progress);
+        public void RaiseConstructionCancelRequested(Vector2Int cell) => OnConstructionCancelRequested?.Invoke(cell);
+        public void RaiseConstructionPrioritizeRequested(Vector2Int cell) => OnConstructionPrioritizeRequested?.Invoke(cell);
+
+        // ===== Tutorial =====
+        public void RaiseTutorialComplete() => OnTutorialComplete?.Invoke();
+
+        // ===== Overdrive =====
+        public void RaiseOverdriveToggled(bool active) => OnOverdriveToggled?.Invoke(active);
+        public void RaiseTowerDamaged(float durability) => OnTowerDamaged?.Invoke(durability);
     }
 }

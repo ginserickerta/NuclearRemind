@@ -87,6 +87,13 @@ namespace NuclearReMind
                 keranRelationship = _keranRelationship
             };
 
+            if (ConstructionController.Instance != null)
+            {
+                var (cells, progress) = ConstructionController.Instance.GetSaveState();
+                save.underConstructionCells = cells;
+                save.constructionProgress   = progress;
+            }
+
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
             {
                 save.placedBuildings.Add(kvp.Key);

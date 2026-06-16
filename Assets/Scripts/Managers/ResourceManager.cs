@@ -127,10 +127,17 @@ namespace NuclearReMind
 
         private void Tick()
         {
+            EventManager.Instance.RaiseGameTick();
+
             var c = Current;
 
-            foreach (var data in BuildingRegistry.Instance.PlacedBuildings.Values)
+            foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
             {
+                if (ConstructionController.Instance != null &&
+                    ConstructionController.Instance.IsUnderConstruction(kvp.Key))
+                    continue;
+
+                var data = kvp.Value;
                 c.food += data.foodProduction;
                 c.water += data.waterProduction;
                 c.radiationProtection += data.radiationProtectionBonus;

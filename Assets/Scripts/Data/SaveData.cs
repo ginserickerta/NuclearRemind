@@ -19,5 +19,7 @@ namespace NuclearReMind
         public float gameTime;
         public int aethonRelationship;
         public int keranRelationship;
+        public List<Vector2Int> underConstructionCells = new List<Vector2Int>();
+        public List<int> constructionProgress = new List<int>();
     }
 }

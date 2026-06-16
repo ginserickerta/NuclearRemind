@@ -7,6 +7,7 @@ namespace NuclearReMind
     {
         Win,
         ResourceDepleted,
-        TrustCollapsed
+        TrustCollapsed,
+        TowerDestroyed
     }
 }
