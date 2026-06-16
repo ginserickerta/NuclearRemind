@@ -14,9 +14,13 @@ namespace NuclearReMind
 
         public const int TotalConstructionTicks = 10;
 
+        [Header("Progress UI — ใส่ prefab ที่มี ConstructionProgressUI + TextMesh")]
+        public GameObject constructionProgressUIPrefab;
+
         // List รักษาลำดับสำหรับ Prioritize, Dict ให้ O(1) lookup
         private readonly List<Vector2Int> _queue = new List<Vector2Int>();
         private readonly Dictionary<Vector2Int, int> _progress = new Dictionary<Vector2Int, int>();
+        private readonly Dictionary<Vector2Int, GameObject> _progressUI = new Dictionary<Vector2Int, GameObject>();
 
         private void Awake()
         {
@@ -69,6 +73,7 @@ namespace NuclearReMind
 
             _queue.Add(pos);
             _progress[pos] = 0;
+            SpawnProgressUI(pos, 0);
             EventManager.Instance.RaiseConstructionProgressChanged(pos, 0);
         }
 
@@ -76,6 +81,7 @@ namespace NuclearReMind
         {
             _queue.Remove(pos);
             _progress.Remove(pos);
+            DestroyProgressUI(pos);
         }
 
         private void HandleGameTick()
@@ -93,6 +99,7 @@ namespace NuclearReMind
                 {
                     _progress.Remove(pos);
                     _queue.Remove(pos);
+                    DestroyProgressUI(pos);
 
                     if (BuildingRegistry.Instance.PlacedBuildings.TryGetValue(pos, out var data))
                         EventManager.Instance.RaiseConstructionComplete(pos, data);
@@ -153,6 +160,31 @@ namespace NuclearReMind
                 _queue.Add(pos);
                 _progress[pos] = prog;
             }
+        }
+
+        // ─────────────────────────────────────────
+        //  Progress UI helpers
+        // ─────────────────────────────────────────
+
+        private void SpawnProgressUI(Vector2Int pos, int initialProgress)
+        {
+            if (constructionProgressUIPrefab == null || GridManager.Instance == null) return;
+
+            var worldPos = GridManager.Instance.IsoToWorld(pos.x, pos.y);
+            worldPos.y += 0.6f; // ลอยขึ้นเหนือ sprite
+
+            var go = Instantiate(constructionProgressUIPrefab, worldPos, Quaternion.identity);
+            var ui = go.GetComponent<ConstructionProgressUI>();
+            if (ui != null) ui.Init(pos, initialProgress);
+
+            _progressUI[pos] = go;
+        }
+
+        private void DestroyProgressUI(Vector2Int pos)
+        {
+            if (!_progressUI.TryGetValue(pos, out var go)) return;
+            _progressUI.Remove(pos);
+            if (go != null) Destroy(go);
         }
 
         // เรียกโดย SaveManager ตอน Save()

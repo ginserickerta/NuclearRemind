@@ -12,11 +12,13 @@ namespace NuclearReMind
     {
         private Vector2Int _cell;
         private TextMesh _text;
+        private bool _initialized;
 
         public void Init(Vector2Int cell, int initialProgress)
         {
             _cell = cell;
             _text = GetComponent<TextMesh>();
+            _initialized = true;
             UpdateText(initialProgress);
         }
 
@@ -37,18 +39,18 @@ namespace NuclearReMind
 
         private void HandleProgressChanged(Vector2Int cell, int progress)
         {
-            if (cell != _cell) return;
+            if (!_initialized || cell != _cell) return;
             UpdateText(progress);
         }
 
         private void HandleComplete(Vector2Int cell, BuildingData _)
         {
-            if (cell == _cell) Destroy(gameObject);
+            if (_initialized && cell == _cell) Destroy(gameObject);
         }
 
         private void HandleRemoved(Vector2Int cell)
         {
-            if (cell == _cell) Destroy(gameObject);
+            if (_initialized && cell == _cell) Destroy(gameObject);
         }
 
         private void UpdateText(int progress)

@@ -20,7 +20,8 @@ namespace NuclearReMind
         public float[] phaseTargets = { 100f, 100f, 100f };
 
         [Header("Overdrive")]
-        public float overdriveEnergyOutputBonus = 0.15f; // +15% energy output
+        public float overdriveBaseEnergyPerTick = 20f;   // พลังงานพื้นฐานที่ CoreTower ผลิตต่อ tick
+        public float overdriveEnergyOutputBonus = 0.15f; // +15% → inject energy delta = base * 0.15
         // TODO: SPEC_NEEDED — Overdrive energy consumption rate per tick
         // TODO: SPEC_NEEDED — Overdrive durability decay rate per tick
 
@@ -84,9 +85,14 @@ namespace NuclearReMind
 
             if (tower.isOverdriveActive)
             {
+                // inject energy bonus (+15% of base)
+                float energyBonus = overdriveBaseEnergyPerTick * overdriveEnergyOutputBonus;
+                EventManager.Instance.RaiseResourceDelta(ResourceType.Energy, energyBonus);
+
                 // TODO: SPEC_NEEDED — หัก energy consumption ต่อ tick เมื่อ Overdrive
-                // TODO: SPEC_NEEDED — ลด durability ต่อ tick เมื่อ Overdrive
                 // EventManager.Instance.RaiseResourceDelta(ResourceType.Energy, -overdriveEnergyConsumptionPerTick);
+
+                // TODO: SPEC_NEEDED — ลด durability ต่อ tick เมื่อ Overdrive
                 // tower.durability -= overdriveDurabilityDecayPerTick;
                 // tower.durability = Mathf.Clamp(tower.durability, 0f, 100f);
 
