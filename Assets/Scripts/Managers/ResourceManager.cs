@@ -16,6 +16,7 @@ namespace NuclearReMind
         public float maxRadiationProtection = 200f;
         public float maxEnergy = 300f;
         public int maxWorkers = 100;
+        public float maxResearchPoints = 500f;
 
         [Header("Tick")]
         public float tickInterval = 5f;
@@ -114,6 +115,9 @@ namespace NuclearReMind
                 case ResourceType.Workers:
                     c.workers = Mathf.Clamp(c.workers + Mathf.RoundToInt(amount), 0, maxWorkers);
                     break;
+                case ResourceType.ResearchPoints:
+                    c.researchPoints = Mathf.Clamp(c.researchPoints + amount, 0f, maxResearchPoints);
+                    break;
             }
 
             Current = c;
@@ -131,6 +135,7 @@ namespace NuclearReMind
                 c.water += data.waterProduction;
                 c.radiationProtection += data.radiationProtectionBonus;
                 c.energy += data.energyProduction;
+                c.researchPoints += data.researchPointsPerTick;
             }
 
             c.food = Mathf.Clamp(c.food, 0f, maxFood);
@@ -138,6 +143,7 @@ namespace NuclearReMind
             c.radiationProtection = Mathf.Clamp(c.radiationProtection, 0f, maxRadiationProtection);
             c.energy = Mathf.Clamp(c.energy, 0f, maxEnergy);
             c.workers = Mathf.Clamp(c.workers, 0, maxWorkers);
+            c.researchPoints = Mathf.Clamp(c.researchPoints, 0f, maxResearchPoints);
 
             Current = c;
 

@@ -13,6 +13,7 @@ namespace NuclearReMind
         public float radiationProtection;
         public float energy;
         public int workers;
+        public float researchPoints;   // สะสมจาก Laboratory ทุก tick ใช้ unlock Codex entries
     }
 
     /// <summary>
@@ -24,6 +25,7 @@ namespace NuclearReMind
         Water,
         RadiationProtection,
         Energy,
-        Workers
+        Workers,
+        ResearchPoints
     }
 }

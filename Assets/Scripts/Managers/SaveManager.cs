@@ -81,7 +81,7 @@ namespace NuclearReMind
                 tower = _tower,
                 placedBuildings = new List<Vector2Int>(),
                 buildingTypes = new List<string>(),
-                unlockedCodexEntries = new List<string>(),
+                unlockedCodexEntries = new List<string>(CodexManager.Instance.UnlockedIds),
                 gameTime = Time.time,
                 aethonRelationship = _aethonRelationship,
                 keranRelationship = _keranRelationship

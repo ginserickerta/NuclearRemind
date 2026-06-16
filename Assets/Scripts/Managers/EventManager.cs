@@ -50,6 +50,10 @@ namespace NuclearReMind
         public event Action<DilemmaData, bool> OnDilemmaResolved;
         public event Action<int, int> OnRelationshipChanged; // (aethon, keran)
 
+        // ===== Codex =====
+        public event Action<CodexEntry> OnCodexEntryUnlocked;
+        public event Action<CodexEntry> OnCodexUnlockFailed; // RP ไม่พอ
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -98,5 +102,9 @@ namespace NuclearReMind
         public void RaiseDilemmaTriggered(DilemmaData data) => OnDilemmaTriggered?.Invoke(data);
         public void RaiseDilemmaResolved(DilemmaData data, bool choiceA) => OnDilemmaResolved?.Invoke(data, choiceA);
         public void RaiseRelationshipChanged(int aethon, int keran) => OnRelationshipChanged?.Invoke(aethon, keran);
+
+        // ===== Codex =====
+        public void RaiseCodexEntryUnlocked(CodexEntry entry) => OnCodexEntryUnlocked?.Invoke(entry);
+        public void RaiseCodexUnlockFailed(CodexEntry entry) => OnCodexUnlockFailed?.Invoke(entry);
     }
 }
