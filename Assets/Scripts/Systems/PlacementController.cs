@@ -34,6 +34,17 @@ namespace NuclearReMind
                 ghostRenderer.gameObject.SetActive(false);
         }
 
+        private void OnEnable()
+        {
+            EventManager.Instance.OnBuildingSelectRequested += BeginPlacement;
+        }
+
+        private void OnDisable()
+        {
+            if (EventManager.Instance == null) return;
+            EventManager.Instance.OnBuildingSelectRequested -= BeginPlacement;
+        }
+
         private void Update()
         {
             HandleHotbarInput();

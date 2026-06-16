@@ -11,6 +11,7 @@ namespace NuclearReMind.EditorTools
     ///   1. เพิ่ม ConstructionController + สร้าง ConstructionProgressUI prefab
     ///   2. สร้าง BuildingQueueUI + entry prefab ใน HUDCanvas
     ///   3. สร้าง TutorialManager + popup panel ใน HUDCanvas
+    ///   4. สร้าง BuildingSelectionUI hotbar ด้านล่างจอ
     /// </summary>
     public static class Day11Setup
     {
@@ -40,6 +41,7 @@ namespace NuclearReMind.EditorTools
             SetupConstructionController();
             SetupBuildingQueueUI(hudCanvas, font);
             SetupTutorialManager(hudCanvas, font);
+            SetupBuildingSelectionUI(hudCanvas, font);
 
             EditorSceneManager.MarkSceneDirty(scene);
             AssetDatabase.SaveAssets();
@@ -310,6 +312,67 @@ namespace NuclearReMind.EditorTools
             tm.tutorialPanel  = panelGO;
             tm.dismissButton  = boxGO.transform.Find("TutorialDismissBtn")?.GetComponent<Button>();
             EditorUtility.SetDirty(tm);
+        }
+
+        // ─────────────────────────────────────────────
+        //  4. BuildingSelectionUI hotbar (bottom-center)
+        // ─────────────────────────────────────────────
+
+        private static void SetupBuildingSelectionUI(GameObject hudCanvas, Font font)
+        {
+            // หา PlacementController เพื่อดึง buildingHotbar array
+            var placement = Object.FindFirstObjectByType<PlacementController>();
+            if (placement == null)
+            {
+                Debug.LogWarning("[Day11Setup] ไม่พบ PlacementController ใน scene — ข้าม BuildingSelectionUI");
+                return;
+            }
+
+            if (placement.buildingHotbar == null || placement.buildingHotbar.Length == 0)
+            {
+                Debug.LogWarning("[Day11Setup] PlacementController.buildingHotbar ว่างเปล่า — ใส่ BuildingData assets ก่อน");
+                return;
+            }
+
+            // Panel พื้นหลัง (bottom-center)
+            var panelGO = GetOrCreate("BuildingSelectionPanel", hudCanvas.transform);
+            {
+                var rect = panelGO.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0.5f, 0f);
+                rect.anchorMax = new Vector2(0.5f, 0f);
+                rect.pivot     = new Vector2(0.5f, 0f);
+                rect.anchoredPosition = new Vector2(0f, 4f);
+
+                int count   = placement.buildingHotbar.Length;
+                float width = count * 94f + 8f; // 90px slot + 4px gap, 4px padding masing-masing
+                rect.sizeDelta = new Vector2(width, 118f);
+
+                var bg = panelGO.GetComponent<Image>() ?? panelGO.AddComponent<Image>();
+                bg.color = new Color(0f, 0f, 0f, 0.65f);
+            }
+
+            // Row ปุ่ม (HorizontalLayoutGroup)
+            var rowGO = GetOrCreate("ButtonRow", panelGO.transform);
+            {
+                var rect = rowGO.GetComponent<RectTransform>();
+                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+                rect.offsetMin = new Vector2(4, 4); rect.offsetMax = new Vector2(-4, -4);
+
+                var hlg = rowGO.GetComponent<HorizontalLayoutGroup>() ?? rowGO.AddComponent<HorizontalLayoutGroup>();
+                hlg.spacing = 4f;
+                hlg.childAlignment = TextAnchor.MiddleCenter;
+                hlg.childControlWidth = false; hlg.childForceExpandWidth = false;
+                hlg.childControlHeight = false; hlg.childForceExpandHeight = false;
+            }
+
+            // BuildingSelectionUI component
+            var uiGO = GetOrCreate("BuildingSelectionUI", hudCanvas.transform);
+            var selUI = uiGO.GetComponent<BuildingSelectionUI>() ?? uiGO.AddComponent<BuildingSelectionUI>();
+            selUI.buildings        = placement.buildingHotbar;
+            selUI.buttonContainer  = rowGO.transform;
+            EditorUtility.SetDirty(selUI);
+
+            Debug.Log($"[Day11Setup] สร้าง BuildingSelectionUI {placement.buildingHotbar.Length} ปุ่ม");
         }
 
         // ─────────────────────────────────────────────

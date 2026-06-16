@@ -54,6 +54,9 @@ namespace NuclearReMind
         public event Action<CodexEntry> OnCodexEntryUnlocked;
         public event Action<CodexEntry> OnCodexUnlockFailed; // RP ไม่พอ
 
+        // ===== Building Selection (UI → PlacementController) =====
+        public event Action<BuildingData> OnBuildingSelectRequested; // UI กด → PlacementController เริ่มวาง
+
         // ===== Game Tick =====
         public event Action OnGameTick; // raised by ResourceManager ทุก tickInterval
 
@@ -122,6 +125,9 @@ namespace NuclearReMind
         // ===== Codex =====
         public void RaiseCodexEntryUnlocked(CodexEntry entry) => OnCodexEntryUnlocked?.Invoke(entry);
         public void RaiseCodexUnlockFailed(CodexEntry entry) => OnCodexUnlockFailed?.Invoke(entry);
+
+        // ===== Building Selection =====
+        public void RaiseBuildingSelectRequested(BuildingData data) => OnBuildingSelectRequested?.Invoke(data);
 
         // ===== Game Tick =====
         public void RaiseGameTick() => OnGameTick?.Invoke();
