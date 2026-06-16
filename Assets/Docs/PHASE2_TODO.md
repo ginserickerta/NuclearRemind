@@ -74,7 +74,21 @@
   read-only lookup), `BuildingVisualSpawner` ใช้ `DestroyImmediate` นอก Play mode เพื่อให้ทำงานถูกใน EditMode tests ด้วย
 - commit + tag `v0.1-prototype`
 
-Day 10 เป็นต้นไป: ต่อตาม `Assets/Docs/ImprovePlan1.csv` (Content phase, เลขวันเดิม ไม่เปลี่ยน)
+### Day 10 — CodexManager + Research Point system ✅ เสร็จแล้ว (2026-06-15)
+- `Scripts/Data/CodexEntry.cs` — ScriptableObject: entryId, title, branch, content, illustration, researchPointCost, unlockedByEvent
+- `Scripts/Data/ResourceData.cs` — เพิ่ม `researchPoints` field (default 0, backward-compatible)
+- `Scripts/Data/ResourceType.cs` — เพิ่ม `ResearchPoints` enum value
+- `Scripts/Managers/EventManager.cs` — เพิ่ม OnCodexEntryUnlocked, OnCodexUnlockFailed + RaiseXxx methods
+- `Scripts/Managers/ResourceManager.cs` — accumulate researchPoints per Tick, handle ResearchDelta
+- `Scripts/Managers/CodexManager.cs` — Singleton, TryUnlock (RP check), AutoUnlockByEvent (phase events), IsUnlocked()
+- `Scripts/UI/CodexUIController.cs` — Codex panel UI, RefreshList, ShowEntry, Toggle
+- `Scripts/Managers/SaveManager.cs` — Save() อ่าน CodexManager.Instance.UnlockedIds ลง unlockedCodexEntries
+- `Editor/CodexSetup.cs` — menu "NuclearReMind/Setup Codex System" สร้าง 5 CodexEntry assets + wire CodexManager +
+  สร้าง Codex Canvas UI (panel, scrollable list, detail view, RP counter) + เพิ่มปุ่ม Codex ใน HUDCanvas ทั้งหมดในคลิกเดียว
+- เนื้อหาภาษาไทย 5 entries (ระดับมัธยม): ฟิชชัน, ปฏิกิริยาลูกโซ่, ครึ่งชีวิต, สารหล่อเย็น, รังสีและการป้องกัน
+- ขั้นตอนสุดท้าย (ต้องทำใน Editor): เปิด Gamescene → NuclearReMind → Setup Codex System → Save Scene
+
+Day 11 เป็นต้นไป: ต่อตาม `Assets/Docs/ImprovePlan1.csv` (Content phase, เลขวันเดิม ไม่เปลี่ยน)
 
 ## หมายเหตุสถาปัตยกรรม (จาก Day 7, อัปเดตหลัง migration)
 - โค้ดเกมทั้งหมดอยู่ใน assembly `NuclearReMind` (asmdef) — Manager ใหม่ทุกตัววางใน `Assets/Scripts/Managers|Systems|UI|Data|Utils/...` ตามหน้าที่ เพื่อให้อยู่ assembly เดียวกัน

@@ -19,6 +19,8 @@ namespace NuclearReMind
 
         public IReadOnlyCollection<string> UnlockedIds => _unlockedIds;
 
+        public bool IsUnlocked(string entryId) => _unlockedIds.Contains(entryId);
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
