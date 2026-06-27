@@ -19,12 +19,12 @@ namespace NuclearReMind.EditorTools
         private const string GroundTilePath = TilesFolder + "/Ground.asset";
         private const int BuildingPixelsPerUnit = 64;
 
-        // ===== Dark theme (post-apocalyptic) =====
-        private static readonly Color BuildingFill    = Hex("#4A5568"); // เทาเข้ม silhouette
-        private static readonly Color BuildingOutline = Hex("#718096"); // เส้นขอบสว่างกว่า
-        private static readonly Color GroundFill       = Hex("#1C2333"); // พื้น tile
-        private static readonly Color GroundEdge       = Hex("#2D3748"); // เส้นขอบ tile
-        private static readonly Color CameraBackground = Hex("#0D1117"); // ดำอมเทา
+        // ===== Theme colors — ดึงจาก Palette กลาง (ปัจจุบัน = LIGHT) =====
+        private static readonly Color BuildingFill    = Palette.BuildingFill;
+        private static readonly Color BuildingOutline = Palette.BuildingOutline;
+        private static readonly Color GroundFill       = Palette.GroundFill;
+        private static readonly Color GroundEdge       = Palette.GroundEdge;
+        private static readonly Color CameraBackground = Palette.CameraBackground;
 
         private static Color Hex(string hex)
         {
@@ -74,7 +74,7 @@ namespace NuclearReMind.EditorTools
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log("[PlaceholderSpriteGenerator] สร้าง dark-theme silhouette sprite, ตั้ง camera bg #0D1117, วาด Ground tilemap 20x12 สำเร็จ");
+            Debug.Log("[PlaceholderSpriteGenerator] สร้าง light-theme silhouette sprite, ตั้ง camera bg จาก Palette, วาด Ground tilemap 20x12 สำเร็จ");
         }
 
         private static Texture2D CreateBuildingTexture(string name)
