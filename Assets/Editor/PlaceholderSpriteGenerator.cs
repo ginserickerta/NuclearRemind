@@ -19,6 +19,19 @@ namespace NuclearReMind.EditorTools
         private const string GroundTilePath = TilesFolder + "/Ground.asset";
         private const int BuildingPixelsPerUnit = 64;
 
+        // ===== Dark theme (post-apocalyptic) =====
+        private static readonly Color BuildingFill    = Hex("#4A5568"); // เทาเข้ม silhouette
+        private static readonly Color BuildingOutline = Hex("#718096"); // เส้นขอบสว่างกว่า
+        private static readonly Color GroundFill       = Hex("#1C2333"); // พื้น tile
+        private static readonly Color GroundEdge       = Hex("#2D3748"); // เส้นขอบ tile
+        private static readonly Color CameraBackground = Hex("#0D1117"); // ดำอมเทา
+
+        private static Color Hex(string hex)
+        {
+            ColorUtility.TryParseHtmlString(hex, out var c);
+            return c;
+        }
+
         private static readonly string[] BuildingNames =
         {
             "Habitat",
@@ -37,10 +50,14 @@ namespace NuclearReMind.EditorTools
             Directory.CreateDirectory(TilesFolder);
 
             foreach (var name in BuildingNames)
-                WritePng(Path.Combine(BuildingsFolder, name + ".png"), CreateBuildingTexture(name));
+            {
+                var tex = CreateBuildingTexture(name);
+                ApplySilhouette(tex, BuildingFill, BuildingOutline); // dark theme: เทาเข้ม + outline
+                WritePng(Path.Combine(BuildingsFolder, name + ".png"), tex);
+            }
 
             WritePng(Path.Combine(TilesFolder, "Ground.png"), CreateIsoDiamondTexture(128, 64,
-                new Color(0.55f, 0.50f, 0.45f), new Color(0.35f, 0.32f, 0.28f)));
+                GroundFill, GroundEdge));
 
             AssetDatabase.Refresh();
 
@@ -57,7 +74,7 @@ namespace NuclearReMind.EditorTools
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log("[PlaceholderSpriteGenerator] สร้าง placeholder sprite แบบทรงอาคาร, ใส่ icon ให้ BuildingData และวาด Ground tilemap 12x9 สำเร็จ");
+            Debug.Log("[PlaceholderSpriteGenerator] สร้าง dark-theme silhouette sprite, ตั้ง camera bg #0D1117, วาด Ground tilemap 20x12 สำเร็จ");
         }
 
         private static Texture2D CreateBuildingTexture(string name)
@@ -331,6 +348,41 @@ namespace NuclearReMind.EditorTools
             return tex;
         }
 
+        /// <summary>
+        /// แปลงสไปรต์ที่วาดไว้ให้เป็น silhouette สีเดียว + เส้นขอบ (dark theme)
+        /// pixel ทึบที่ติดขอบ (มีเพื่อนบ้านโปร่งใส/นอกภาพ) = outline, ที่เหลือ = fill, โปร่งใสคงเดิม
+        /// คงรูปทรง (alpha mask) ของอาคารแต่ละหลังไว้ แค่เปลี่ยนเป็นเทาเข้มทั้งก้อน
+        /// </summary>
+        private static void ApplySilhouette(Texture2D tex, Color fill, Color outline)
+        {
+            int w = tex.width, h = tex.height;
+            Color[] src = tex.GetPixels();
+            Color[] dst = new Color[src.Length];
+            Color transparent = new Color(0, 0, 0, 0);
+
+            bool Solid(int x, int y)
+            {
+                if (x < 0 || y < 0 || x >= w || y >= h) return false;
+                return src[y * w + x].a > 0.01f;
+            }
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    int i = y * w + x;
+                    if (src[i].a <= 0.01f) { dst[i] = transparent; continue; }
+
+                    bool edge = !Solid(x - 1, y) || !Solid(x + 1, y) ||
+                                !Solid(x, y - 1) || !Solid(x, y + 1);
+                    dst[i] = edge ? outline : fill;
+                }
+            }
+
+            tex.SetPixels(dst);
+            tex.Apply();
+        }
+
         private static void WritePng(string path, Texture2D tex)
         {
             File.WriteAllBytes(path, tex.EncodeToPNG());
@@ -409,23 +461,34 @@ namespace NuclearReMind.EditorTools
         private static void PaintGroundTilemap()
         {
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-            var groundGO = GameObject.Find("Ground");
 
+            // ตั้งสีพื้นหลังกล้องเป็น dark theme (#0D1117)
+            var cam = Object.FindFirstObjectByType<Camera>();
+            if (cam != null)
+            {
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = CameraBackground;
+                EditorUtility.SetDirty(cam);
+            }
+
+            var groundGO = GameObject.Find("Ground");
             if (groundGO == null)
+            {
+                EditorSceneManager.MarkSceneDirty(scene);
+                EditorSceneManager.SaveScene(scene);
                 return;
+            }
 
             var tilemap = groundGO.GetComponent<Tilemap>();
             var tile = AssetDatabase.LoadAssetAtPath<Tile>(GroundTilePath);
 
-            if (tilemap == null || tile == null)
-                return;
-
-            for (int col = 0; col < 12; col++)
+            if (tilemap != null && tile != null)
             {
-                for (int row = 0; row < 9; row++)
-                {
-                    tilemap.SetTile(new Vector3Int(col, row, 0), tile);
-                }
+                tilemap.ClearAllTiles();
+                for (int col = 0; col < 20; col++)        // = GridManager.columns
+                    for (int row = 0; row < 12; row++)    // = GridManager.rows
+                        tilemap.SetTile(new Vector3Int(col, row, 0), tile);
+                tilemap.CompressBounds();
             }
 
             EditorSceneManager.MarkSceneDirty(scene);

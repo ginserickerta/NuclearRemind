@@ -17,8 +17,8 @@ namespace NuclearReMind.Tests
         {
             go = new GameObject("GridManagerTest");
             grid = go.AddComponent<GridManager>();
-            grid.columns = 12;
-            grid.rows = 9;
+            grid.columns = 20;
+            grid.rows = 12;
             grid.tileWidth = 1f;
             grid.tileHeight = 0.5f;
             grid.originOffset = Vector3.zero;
@@ -76,7 +76,7 @@ namespace NuclearReMind.Tests
         public void IsInBounds_InsideGrid_ReturnsTrue()
         {
             Assert.IsTrue(grid.IsInBounds(0, 0));
-            Assert.IsTrue(grid.IsInBounds(11, 8));
+            Assert.IsTrue(grid.IsInBounds(19, 11));
             Assert.IsTrue(grid.IsInBounds(5, 4));
         }
 
@@ -85,15 +85,15 @@ namespace NuclearReMind.Tests
         {
             Assert.IsFalse(grid.IsInBounds(-1, 0));
             Assert.IsFalse(grid.IsInBounds(0, -1));
-            Assert.IsFalse(grid.IsInBounds(12, 0));
-            Assert.IsFalse(grid.IsInBounds(0, 9));
+            Assert.IsFalse(grid.IsInBounds(20, 0));
+            Assert.IsFalse(grid.IsInBounds(0, 12));
         }
 
         [Test]
         public void GetCell_OutOfBounds_ReturnsNull()
         {
             Assert.IsNull(grid.GetCell(-1, -1));
-            Assert.IsNull(grid.GetCell(12, 9));
+            Assert.IsNull(grid.GetCell(20, 12));
         }
 
         [Test]

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace NuclearReMind
@@ -14,7 +15,8 @@ namespace NuclearReMind
         PowerPlant,
         RadiationShelter,
         Laboratory,
-        CoreTower
+        CoreTower,
+        PowerConduit
     }
 
     /// <summary>
@@ -48,8 +50,8 @@ namespace NuclearReMind
         public static GridManager Instance { get; private set; }
 
         [Header("Grid Size")]
-        public int columns = 12;
-        public int rows = 9;
+        public int columns = 20;
+        public int rows = 12;
 
         [Header("Tile Dimensions (Isometric)")]
         public float tileWidth = 1f;
@@ -64,6 +66,9 @@ namespace NuclearReMind
         public Color occupiedColor = Color.red;
 
         private Cell[,] grid;
+        // ติดตาม footprint ของแต่ละอาคาร (origin → size) เพื่อ free cells เมื่อทุบ
+        private readonly Dictionary<Vector2Int, Vector2Int> _buildingFootprints =
+            new Dictionary<Vector2Int, Vector2Int>();
 
         private void Awake()
         {
@@ -79,13 +84,39 @@ namespace NuclearReMind
 
         private void OnEnable()
         {
-            EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
+            EventManager.Instance.OnBuildingPlaced  += HandleBuildingPlaced;
+            EventManager.Instance.OnBuildingRemoved += HandleBuildingRemoved;
+            EventManager.Instance.OnSaveLoaded      += HandleSaveLoaded;
         }
 
         private void OnDisable()
         {
             if (EventManager.Instance == null) return;
-            EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+            EventManager.Instance.OnBuildingPlaced  -= HandleBuildingPlaced;
+            EventManager.Instance.OnBuildingRemoved -= HandleBuildingRemoved;
+            EventManager.Instance.OnSaveLoaded      -= HandleSaveLoaded;
+        }
+
+        private void HandleBuildingPlaced(Cell cell, BuildingData data)
+        {
+            var origin = new Vector2Int(cell.col, cell.row);
+            _buildingFootprints[origin] = data.size;
+        }
+
+        private void HandleBuildingRemoved(Vector2Int origin)
+        {
+            if (!_buildingFootprints.TryGetValue(origin, out Vector2Int size)) return;
+
+            for (int dx = 0; dx < size.x; dx++)
+                for (int dy = 0; dy < size.y; dy++)
+                {
+                    var cell = GetCell(origin.x + dx, origin.y + dy);
+                    if (cell == null) continue;
+                    cell.isOccupied   = false;
+                    cell.buildingType = BuildingType.None;
+                }
+
+            _buildingFootprints.Remove(origin);
         }
 
         /// <summary>
@@ -95,6 +126,7 @@ namespace NuclearReMind
         private void HandleSaveLoaded(SaveData save)
         {
             InitializeGrid();
+            _buildingFootprints.Clear();
 
             if (save.placedBuildings == null || save.buildingTypes == null)
                 return;
@@ -102,21 +134,19 @@ namespace NuclearReMind
             for (int i = 0; i < save.placedBuildings.Count; i++)
             {
                 BuildingData data = BuildingRegistry.Instance.GetBuildingDataByName(save.buildingTypes[i]);
-                if (data == null)
-                    continue;
+                if (data == null) continue;
 
                 Vector2Int origin = save.placedBuildings[i];
+                _buildingFootprints[origin] = data.size;
+
                 for (int dx = 0; dx < data.size.x; dx++)
-                {
                     for (int dy = 0; dy < data.size.y; dy++)
                     {
                         Cell cell = GetCell(origin.x + dx, origin.y + dy);
                         if (cell == null) continue;
-
-                        cell.isOccupied = true;
+                        cell.isOccupied   = true;
                         cell.buildingType = data.buildingType;
                     }
-                }
             }
         }
 
@@ -128,12 +158,10 @@ namespace NuclearReMind
         {
             grid = new Cell[columns, rows];
             for (int col = 0; col < columns; col++)
-            {
                 for (int row = 0; row < rows; row++)
-                {
                     grid[col, row] = new Cell(col, row);
-                }
-            }
+
+            _buildingFootprints.Clear();
         }
 
         /// <summary>
