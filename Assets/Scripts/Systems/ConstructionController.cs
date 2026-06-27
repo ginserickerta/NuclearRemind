@@ -14,7 +14,7 @@ namespace NuclearReMind
 
         public const int TotalConstructionTicks = 10;
 
-        [Header("Progress UI — ใส่ prefab ที่มี ConstructionProgressUI + TextMesh")]
+        [Header("Progress UI — prefab ที่มี ConstructionProgressUI (สร้าง progress bar เองตอน runtime)")]
         public GameObject constructionProgressUIPrefab;
 
         // List รักษาลำดับสำหรับ Prioritize, Dict ให้ O(1) lookup

@@ -59,33 +59,18 @@ namespace NuclearReMind.EditorTools
 
             var cc = go.GetComponent<ConstructionController>() ?? go.AddComponent<ConstructionController>();
 
-            // สร้าง ConstructionProgressUI prefab (world-space TextMesh เหนืออาคาร)
+            // สร้าง ConstructionProgressUI prefab (world-space progress bar เหนืออาคาร)
+            // ConstructionProgressUI สร้าง bar (background + fill) เองตอน runtime — prefab เป็นแค่ GameObject เปล่า + script
+            // regenerate ทุกครั้งเพื่อ overwrite prefab เวอร์ชันตัวเลข "x/10" เดิม
             var prefabPath = $"{PrefabPath}/ConstructionProgressUI.prefab";
-            var existingPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
 
-            if (existingPrefab == null)
-            {
-                // สร้าง temp object ใน scene แล้ว save เป็น prefab
-                var temp = new GameObject("ConstructionProgressUI");
-                var tm = temp.AddComponent<TextMesh>();
-                tm.text = "0/10";
-                tm.fontSize = 24;
-                tm.color = Color.white;
-                tm.anchor = TextAnchor.MiddleCenter;
-                tm.alignment = TextAlignment.Center;
-                temp.AddComponent<ConstructionProgressUI>();
+            var temp = new GameObject("ConstructionProgressUI");
+            temp.AddComponent<ConstructionProgressUI>();
+            var prefab = PrefabUtility.SaveAsPrefabAsset(temp, prefabPath);
+            Object.DestroyImmediate(temp);
+            Debug.Log($"[Day11Setup] สร้าง/อัปเดต prefab: {prefabPath} (progress bar)");
 
-                // renderer ด้านหน้า เทียบกับ Layer Sorting ของ isometric scene
-                var mr = temp.GetComponent<MeshRenderer>();
-                if (mr != null) mr.sortingOrder = 10;
-
-                var prefab = PrefabUtility.SaveAsPrefabAsset(temp, prefabPath);
-                Object.DestroyImmediate(temp);
-                existingPrefab = prefab;
-                Debug.Log($"[Day11Setup] สร้าง prefab: {prefabPath}");
-            }
-
-            cc.constructionProgressUIPrefab = existingPrefab;
+            cc.constructionProgressUIPrefab = prefab;
             EditorUtility.SetDirty(cc);
         }
 
