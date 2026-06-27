@@ -317,8 +317,10 @@ namespace NuclearReMind.EditorTools
         // ─────────────────────────────────────────────
         //  เนื้อหา 5 entries ภาษาไทย (ระดับมัธยม)
         // ─────────────────────────────────────────────
-        private static EntryDef[] BuildEntryDefs() => new[]
+        private static EntryDef[] BuildEntryDefs()
         {
+            var core = new[]
+            {
             new EntryDef(
                 "Core_01",
                 "ฟิชชัน (Nuclear Fission)",
@@ -449,7 +451,14 @@ namespace NuclearReMind.EditorTools
   X-Ray ทรวงอก ≈ 0.02 mSv | เที่ยวบินข้ามทวีป ≈ 0.1 mSv
   รังสีในระดับต่ำเหล่านี้ร่างกายซ่อมแซมตัวเองได้ตามปกติ"
             ),
-        };
+            };
+
+            // เพิ่ม 15 entries ของสาขา Agriculture / Medical / Environment (CodexBranchContent.cs)
+            var all = new List<EntryDef>(core);
+            foreach (var e in CodexBranchContent.Entries())
+                all.Add(new EntryDef(e.id, e.title, e.branch, e.cost, e.unlockedBy, e.content));
+            return all.ToArray();
+        }
 
         // ─────────────────────────────────────────────
         //  Helper utilities
