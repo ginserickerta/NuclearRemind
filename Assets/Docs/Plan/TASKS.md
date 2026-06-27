@@ -114,7 +114,8 @@
 ## BLOCK D — NSC Content (หัวใจคะแนน)
 *ทำขนานกับ Block B–C ได้ เป็นงาน data ไม่ใช่ code*
 
-- [ ] **D1** · Codex Agriculture (5 entries)
+- [~] **D1** · Codex Agriculture (5 entries) — เนื้อหา ✅ (27 มิ.ย.) ใน `Editor/CodexBranchContent.cs`
+  - ⚠ ปลดล็อกด้วย RP ชั่วคราว (cost 40–80) แทน event-trigger — ขาด building + dilemma
   - โคบอลต์-60 ถนอมอาหาร
   - ฉายรังสีแกมมาทำลายจุลินทรีย์
   - ปรับปรุงพันธุ์พืช (ข้าว กข6/กข10/กข15)
@@ -122,7 +123,7 @@
   - Agri Dome กับการเกษตรควบคุม
   - unlock trigger: สร้าง Research Lab / Agri Dome / วิกฤต Food
 
-- [ ] **D2** · Codex Medical (5 entries)
+- [~] **D2** · Codex Medical (5 entries) — เนื้อหา ✅ (27 มิ.ย.) ใน `Editor/CodexBranchContent.cs`
   - PET Scan — สารเภสัชรังสีตรวจเนื้อร้าย
   - SPECT — สแกนโมเลกุล
   - Targeted Radionuclide Therapy
@@ -130,7 +131,7 @@
   - เซลล์กลายพันธุ์จากรังสีไอออไนซ์
   - unlock trigger: สร้าง Med Center / วิกฤต Outbreak
 
-- [ ] **D3** · Codex Environment (5 entries)
+- [~] **D3** · Codex Environment (5 entries) — เนื้อหา ✅ (27 มิ.ย.) ใน `Editor/CodexBranchContent.cs`
   - ALARA principle
   - รังสีพื้นหลัง (Background radiation)
   - เขตรังสี Zone A/B
@@ -181,6 +182,7 @@
 | — | 27 มิ.ย. | dark theme + grid 20×12 (logic/visual/fog) | scene apply + verified |
 | — | 27 มิ.ย. | **B1 ✅ + B4 ✅** (CORE TOWER v2.1 refactor) | 45/45 tests ผ่าน, compile สะอาด |
 | — | 27 มิ.ย. | **B2 ✅ + B3 ✅** (overclock UI + SCRAM) → **Block B เสร็จครบ** | 49/49 tests ผ่าน, compile สะอาด |
+| — | 27 มิ.ย. | **D1–D3 เนื้อหา ✅** Codex 15 entries (เกษตร/แพทย์/สิ่งแวดล้อม) ปลดล็อกด้วย RP | รอ generate asset + content QA |
 | D3 | 27 มิ.ย. | B1 | |
 | D4 | 28 มิ.ย. | B2, B3, B4 | |
 | D5 | 29 มิ.ย. | C1, C2 | |

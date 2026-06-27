@@ -13,7 +13,7 @@
 | สถาปัตยกรรม / Core systems | 95% |
 | Gameplay loop (วาง → resource → tower) | 90% |
 | UI / HUD | 75% |
-| เนื้อหาวิทยาศาสตร์นิวเคลียร์ | 12% |
+| เนื้อหาวิทยาศาสตร์นิวเคลียร์ | 55% |
 | Narrative / Dilemma | 5% |
 | Art (sprite จริง) | 5% |
 | Audio | 0% |
@@ -46,7 +46,18 @@
 > เทสต์ใหม่: `GameManagerTests` (10), `AlertControllerTests` (6), `CoreTowerManagerTests` (12), `ResourceManagerTests` (9)
 
 > ⚠️ ต้องรันเมนู `NuclearReMind → Setup HUD Canvas` ใหม่ใน Unity เพื่อสร้าง DayPanel/SpeedPanel/AlertContainer/CoreTowerPanel
-> ⚠️ งานทั้งหมดนี้ **ยังไม่ได้ commit** (commit ล่าสุด = 16 มิ.ย.)
+
+**Block D (เริ่ม) — NSC Codex content**
+- **D1–D3** เขียนเนื้อหา Codex 3 สาขาครบ **15 entries** (Agriculture/Medical/Environment) ใน
+  `Assets/Editor/CodexBranchContent.cs` — เนื้อหาวิทยาศาสตร์จาก `Plan/CODEX_CONTENT.md`
+- รวม `nuclearKnowledge` เข้าท้าย `content` (schema จริงมีแค่ field `content`) + จัดรูปแบบ emoji-section ตาม entry เดิม
+- ปลดล็อกด้วย **Research Point** (cost 40–90, tiered) — ใช้ระบบ RP + CodexUI เดิมได้ทันที
+  (CodexManager auto-unlock รองรับแค่ `phase_{n}_complete` → event-gated ค่อยต่อเมื่อ Block C/อาคารสาขาพร้อม)
+- `CodexSetup.BuildEntryDefs()` รวม 5 Core + 15 สาขา = **20 entries** → เมนู `Setup Codex System` สร้าง asset + wire ให้อัตโนมัติ
+
+> ⚠️ ต้องรันเมนู `NuclearReMind → Setup Codex System` ใหม่ใน Unity เพื่อ generate asset 15 ตัว + re-wire CodexManager (20 entries)
+> ⚠️ ยังขาด: อาคารสาขา (Agri Dome / Med Center) + dilemma + content QA กับอาจารย์ที่ปรึกษา
+> ⚠️ งาน 17–27 มิ.ย. (Block A+B) commit แล้ว — งาน Codex (Block D) นี้ **ยังไม่ได้ commit**
 
 ---
 
@@ -88,9 +99,9 @@
 | CodexManager | `Managers/CodexManager.cs` | 100% | TryUnlock, AutoUnlockByEvent |
 | CodexUIController | `UI/CodexUIController.cs` | 90% | list, detail view, RP counter |
 | Core entries | `ScriptableObjects/CodexEntries/` | 100% | 5/5 (ฟิชชัน, ลูกโซ่, ครึ่งชีวิต, สารหล่อเย็น, รังสี) |
-| Agriculture branch | — | **0%** | 0/5 entries, 0/3 buildings |
-| Medical branch | — | **0%** | 0/5 entries, 0/3 buildings |
-| Environment branch | — | **0%** | 0/5 entries, radiation zones ยังไม่มี |
+| Agriculture branch | `Editor/CodexBranchContent.cs` | 70% | 5/5 entries (เนื้อหา) ✅ — ขาด 0/3 buildings, dilemma |
+| Medical branch | `Editor/CodexBranchContent.cs` | 70% | 5/5 entries (เนื้อหา) ✅ — ขาด 0/3 buildings, dilemma |
+| Environment branch | `Editor/CodexBranchContent.cs` | 70% | 5/5 entries (เนื้อหา) ✅ — ขาด radiation zones, dilemma |
 
 ### Day 11+ — ระบบเพิ่มเติม (นอกแผน CSV เดิม)
 
