@@ -328,7 +328,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -5.999939, y: 69.99997}
+  m_AnchoredPosition: {x: -6, y: 70}
   m_SizeDelta: {x: 120, y: 24}
   m_Pivot: {x: 1, y: 0}
 --- !u!114 &62326535
@@ -9853,6 +9853,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dilemmaPool:
+  - {fileID: 11400000, guid: be43b5fc5cf02b040a361f8da4c312bb, type: 2}
+  - {fileID: 11400000, guid: c4b833a92cec68f4689ba4ba9800f3d3, type: 2}
+  - {fileID: 11400000, guid: fe67e1602ef3e6e4ab2bf407f1e65998, type: 2}
   - {fileID: 11400000, guid: 162346ba7f569b54ca737b06e21e49d8, type: 2}
 --- !u!1 &800000180
 GameObject:
