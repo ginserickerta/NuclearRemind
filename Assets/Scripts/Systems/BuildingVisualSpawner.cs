@@ -16,19 +16,35 @@ namespace NuclearReMind
 
         private readonly Dictionary<Vector2Int, GameObject> _spawnedVisuals = new Dictionary<Vector2Int, GameObject>();
 
+        private static readonly Color ColorPowered   = Color.white;
+        private static readonly Color ColorUnpowered = new Color(0.35f, 0.35f, 0.35f, 1f);
+
         private void OnEnable()
         {
-            EventManager.Instance.OnBuildingPlaced += HandleBuildingPlaced;
-            EventManager.Instance.OnBuildingRemoved += HandleBuildingRemoved;
-            EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
+            EventManager.Instance.OnBuildingPlaced    += HandleBuildingPlaced;
+            EventManager.Instance.OnBuildingRemoved   += HandleBuildingRemoved;
+            EventManager.Instance.OnSaveLoaded        += HandleSaveLoaded;
+            EventManager.Instance.OnPowerGridChanged  += HandlePowerGridChanged;
         }
 
         private void OnDisable()
         {
             if (EventManager.Instance == null) return;
-            EventManager.Instance.OnBuildingPlaced -= HandleBuildingPlaced;
-            EventManager.Instance.OnBuildingRemoved -= HandleBuildingRemoved;
-            EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+            EventManager.Instance.OnBuildingPlaced   -= HandleBuildingPlaced;
+            EventManager.Instance.OnBuildingRemoved  -= HandleBuildingRemoved;
+            EventManager.Instance.OnSaveLoaded       -= HandleSaveLoaded;
+            EventManager.Instance.OnPowerGridChanged -= HandlePowerGridChanged;
+        }
+
+        private void HandlePowerGridChanged(HashSet<Vector2Int> poweredCells)
+        {
+            foreach (var kvp in _spawnedVisuals)
+            {
+                if (kvp.Value == null) continue;
+                var sr = kvp.Value.GetComponent<SpriteRenderer>();
+                if (sr == null) continue;
+                sr.color = poweredCells.Contains(kvp.Key) ? ColorPowered : ColorUnpowered;
+            }
         }
 
         private void HandleBuildingPlaced(Cell cell, BuildingData data)

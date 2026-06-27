@@ -24,11 +24,17 @@ namespace NuclearReMind
         private Image[]  _buttonImages;
         private BuildingData _selected;
         private ResourceData _resources;
+        private bool _isDemolishing;
+
+        // demolish button refs (สร้างแยกจาก building slots)
+        private Image _demolishImage;
 
         // สีสถานะ
-        private static readonly Color ColNormal   = new Color(0.15f, 0.15f, 0.22f, 1f);
-        private static readonly Color ColSelected = new Color(0.25f, 0.55f, 0.85f, 1f);
-        private static readonly Color ColCantAfford = new Color(0.35f, 0.15f, 0.15f, 1f);
+        private static readonly Color ColNormal      = new Color(0.15f, 0.15f, 0.22f, 1f);
+        private static readonly Color ColSelected    = new Color(0.25f, 0.55f, 0.85f, 1f);
+        private static readonly Color ColCantAfford  = new Color(0.35f, 0.15f, 0.15f, 1f);
+        private static readonly Color ColDemolish    = new Color(0.35f, 0.10f, 0.10f, 1f);
+        private static readonly Color ColDemolishOn  = new Color(0.85f, 0.20f, 0.20f, 1f);
 
         private void Awake()
         {
@@ -38,15 +44,17 @@ namespace NuclearReMind
 
         private void OnEnable()
         {
-            EventManager.Instance.OnBuildingSelected  += HandleBuildingSelected;
-            EventManager.Instance.OnResourceChanged   += HandleResourceChanged;
+            EventManager.Instance.OnBuildingSelected    += HandleBuildingSelected;
+            EventManager.Instance.OnResourceChanged     += HandleResourceChanged;
+            EventManager.Instance.OnDemolishModeToggled += HandleDemolishModeToggled;
         }
 
         private void OnDisable()
         {
             if (EventManager.Instance == null) return;
-            EventManager.Instance.OnBuildingSelected  -= HandleBuildingSelected;
-            EventManager.Instance.OnResourceChanged   -= HandleResourceChanged;
+            EventManager.Instance.OnBuildingSelected    -= HandleBuildingSelected;
+            EventManager.Instance.OnResourceChanged     -= HandleResourceChanged;
+            EventManager.Instance.OnDemolishModeToggled -= HandleDemolishModeToggled;
         }
 
         private void Start()
@@ -70,18 +78,60 @@ namespace NuclearReMind
 
             for (int i = 0; i < buildings.Length; i++)
             {
-                var data    = buildings[i];
+                var data = buildings[i];
                 if (data == null) continue;
 
-                var slot    = CreateSlot(i, data);
+                var slot = CreateSlot(i, data);
                 _buttons[i]      = slot.GetComponent<Button>();
                 _buttonImages[i] = slot.GetComponent<Image>();
             }
+
+            BuildDemolishButton();
+        }
+
+        private static Font LoadKanitFont()
+        {
+            var f = Resources.Load<Font>("Fonts/Kanit-Regular");
+            return f != null ? f : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        }
+
+        private void BuildDemolishButton()
+        {
+            var font = LoadKanitFont();
+
+            var slot = new GameObject("Slot_Demolish", typeof(RectTransform));
+            slot.transform.SetParent(buttonContainer, false);
+            slot.GetComponent<RectTransform>().sizeDelta = new Vector2(90f, 110f);
+
+            _demolishImage = slot.AddComponent<Image>();
+            _demolishImage.color = ColDemolish;
+
+            var btn = slot.AddComponent<Button>();
+            btn.targetGraphic = _demolishImage;
+            var colors = btn.colors;
+            colors.highlightedColor = new Color(0.6f, 0.2f, 0.2f, 1f);
+            colors.pressedColor     = new Color(0.9f, 0.1f, 0.1f, 1f);
+            btn.colors = colors;
+
+            // ไอคอนค้อน
+            MakeText("Icon",    slot.transform, font, "🔨", 30,
+                new Vector2(0, 20), new Vector2(0, 48), TextAnchor.MiddleCenter)
+                .GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.3f);
+            MakeText("Label",   slot.transform, font, "ทุบอาคาร", 11,
+                new Vector2(0, 24), new Vector2(0, 20), TextAnchor.LowerCenter)
+                .GetComponent<RectTransform>().anchorMin = new Vector2(0, 0);
+            var subLbl = MakeText("SubLabel", slot.transform, font, "คลิกขวายกเลิก", 9,
+                new Vector2(0, 6), new Vector2(0, 16), TextAnchor.LowerCenter);
+            subLbl.color = new Color(0.8f, 0.6f, 0.6f);
+            subLbl.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0);
+            subLbl.GetComponent<RectTransform>().anchorMax = new Vector2(1, 0);
+
+            btn.onClick.AddListener(ToggleDemolish);
         }
 
         private GameObject CreateSlot(int index, BuildingData data)
         {
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var font = LoadKanitFont();
 
             // Slot container
             var slot = new GameObject($"Slot_{index + 1}", typeof(RectTransform));
@@ -148,6 +198,9 @@ namespace NuclearReMind
         private void HandleBuildingSelected(BuildingData data)
         {
             _selected = data;
+            // การเลือกอาคารจะยกเลิก demolish mode อัตโนมัติ
+            if (data != null && _isDemolishing)
+                EventManager.Instance.RaiseDemolishModeToggled(false);
             RefreshButtonColors();
         }
 
@@ -155,6 +208,19 @@ namespace NuclearReMind
         {
             _resources = res;
             RefreshButtonColors();
+        }
+
+        private void HandleDemolishModeToggled(bool active)
+        {
+            _isDemolishing = active;
+            if (_demolishImage != null)
+                _demolishImage.color = active ? ColDemolishOn : ColDemolish;
+        }
+
+        private void ToggleDemolish()
+        {
+            // PlacementController.HandleDemolishModeToggled ดูแล cancel placement แล้ว
+            EventManager.Instance.RaiseDemolishModeToggled(!_isDemolishing);
         }
 
         private void RefreshButtonColors()
@@ -165,13 +231,16 @@ namespace NuclearReMind
             {
                 if (_buttons[i] == null || buildings[i] == null) continue;
 
-                bool isSelected  = buildings[i] == _selected;
-                bool canAfford   = CanAfford(buildings[i]);
+                bool isSelected = buildings[i] == _selected && !_isDemolishing;
+                bool canAfford  = CanAfford(buildings[i]);
 
                 _buttonImages[i].color = isSelected  ? ColSelected
                                        : !canAfford  ? ColCantAfford
                                                      : ColNormal;
             }
+
+            if (_demolishImage != null)
+                _demolishImage.color = _isDemolishing ? ColDemolishOn : ColDemolish;
         }
 
         // ─────────────────────────────────────────
