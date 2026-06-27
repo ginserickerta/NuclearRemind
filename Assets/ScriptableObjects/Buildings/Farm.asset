@@ -24,11 +24,15 @@ MonoBehaviour:
   buildingType: 2
   materialCost: 15
   energyCost: 0
-  workerRequired: 2
-  foodProduction: 3
+  workerRequired: 1
+  foodProduction: 40
   waterProduction: 0
   radiationProtectionBonus: 0
   energyProduction: 0
   researchPointsPerTick: 0
+  energyConsumption: 5
+  waterConsumption: 8
   isCoreTowerPart: 0
   towerPhaseRequired: 0
+  powerRange: 0
+  isPowerRelay: 0

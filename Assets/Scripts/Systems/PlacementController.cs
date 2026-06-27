@@ -37,12 +37,20 @@ namespace NuclearReMind
         private void OnEnable()
         {
             EventManager.Instance.OnBuildingSelectRequested += BeginPlacement;
+            EventManager.Instance.OnDemolishModeToggled     += HandleDemolishModeToggled;
         }
 
         private void OnDisable()
         {
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnBuildingSelectRequested -= BeginPlacement;
+            EventManager.Instance.OnDemolishModeToggled     -= HandleDemolishModeToggled;
+        }
+
+        private void HandleDemolishModeToggled(bool active)
+        {
+            if (active && isPlacing)
+                CancelPlacement();
         }
 
         private void Update()
@@ -82,6 +90,10 @@ namespace NuclearReMind
         {
             selectedBuilding = buildingData;
             isPlacing = true;
+
+            // ออกจาก demolish mode เมื่อเริ่มวางอาคาร
+            if (DemolitionController.Instance != null && DemolitionController.Instance.IsDemolishing)
+                EventManager.Instance.RaiseDemolishModeToggled(false);
 
             if (ghostRenderer != null)
             {

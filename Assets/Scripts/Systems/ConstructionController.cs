@@ -6,7 +6,7 @@ namespace NuclearReMind
     /// <summary>
     /// จัดการ construction queue: ทุก building ที่วางใหม่ต้องรอ 10 tick จึงจะ active
     /// ระหว่างสร้าง building ไม่ produce resource และไม่นับเป็น CoreTower part
-    /// Cancel = คืน energy + workers เต็ม | Prioritize = completes บน tick ถัดไป
+    /// Cancel = คืน energyCost (workers เป็น reserve pool ไม่ถูกหัก) | Prioritize = completes บน tick ถัดไป
     /// </summary>
     public class ConstructionController : MonoBehaviour
     {
@@ -125,9 +125,8 @@ namespace NuclearReMind
 
             if (data == null) return;
 
-            // คืน resource เต็ม
+            // คืนเฉพาะ energyCost (ต้นทุนสร้าง) — workers เป็น reserve pool ไม่ถูกหักตอนวาง จึงไม่ต้องคืน
             EventManager.Instance.RaiseResourceDelta(ResourceType.Energy, data.energyCost);
-            EventManager.Instance.RaiseResourceDelta(ResourceType.Workers, data.workerRequired);
         }
 
         private void HandlePrioritizeRequested(Vector2Int pos)

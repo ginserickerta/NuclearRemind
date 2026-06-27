@@ -42,8 +42,18 @@ namespace NuclearReMind
         public float energyProduction;
         public int researchPointsPerTick;
 
+        [Header("Consumption (per tick) — เดินระบบ §2.4")]
+        // ต้นทุนเดินเครื่องต่อ tick ที่อาคารกินจากคลัง (ตามตาราง "เดินระบบ" ใน GDD v2.1 §2.4)
+        // ถ้าคลังไม่พอจ่าย consumption → อาคารหยุดผลิต tick นั้น (idle) และไม่กิน resource
+        public float energyConsumption;
+        public float waterConsumption;
+
         [Header("CORE TOWER")]
         public bool isCoreTowerPart;
         public int towerPhaseRequired; // 0 = all phases
+
+        [Header("Power Grid")]
+        public int powerRange = 0;        // จำนวน cell รัศมีที่ปล่อยพลังงาน (0 = ผู้บริโภค)
+        public bool isPowerRelay = false; // true = Power Conduit (ต้องอยู่ในระยะ source ก่อนถึงจะ relay ต่อได้)
     }
 }

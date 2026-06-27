@@ -21,6 +21,7 @@ namespace NuclearReMind.Tests
         private PopulationManager population;
         private CoreTowerManager tower;
         private SaveManager saveManager;
+        private CodexManager codexManager;
         private BuildingVisualSpawner visualSpawner;
         private DilemmaManager dilemmaManager;
         private GameManager gameManager;
@@ -40,8 +41,8 @@ namespace NuclearReMind.Tests
         {
             eventManager = NewComponent<EventManager>("EventManager");
             grid = NewComponent<GridManager>("GridManager");
-            grid.columns = 12;
-            grid.rows = 9;
+            grid.columns = 20;
+            grid.rows = 12;
             grid.tileWidth = 1f;
             grid.tileHeight = 0.5f;
             grid.originOffset = Vector3.zero;
@@ -70,10 +71,17 @@ namespace NuclearReMind.Tests
             population = NewComponent<PopulationManager>("PopulationManager");
 
             tower = NewComponent<CoreTowerManager>("CoreTowerManager");
-            tower.phaseTargets = new float[] { 10f, 10f, 10f };
-            tower.progressPerTick = 10f;
 
             saveManager = NewComponent<SaveManager>("SaveManager");
+
+            // SaveManager.Save() อ่าน CodexManager.Instance.UnlockedIds — ต้องมี instance ในซีนทดสอบ
+            // สร้างแบบ manual (ไม่ผ่าน NewComponent) เพราะ Awake() วน allCodexEntries ต้องตั้งค่า field ก่อน Awake
+            var codexGo = new GameObject("CodexManager");
+            _spawned.Add(codexGo);
+            codexManager = codexGo.AddComponent<CodexManager>();
+            codexManager.allCodexEntries = new CodexEntry[0];
+            TryInvokePrivate(codexManager, "Awake");
+            TryInvokePrivate(codexManager, "OnEnable");
 
             var parentGo = new GameObject("BuildingsParent");
             _spawned.Add(parentGo);
@@ -138,8 +146,8 @@ namespace NuclearReMind.Tests
 
             Assert.AreEqual(energyBefore - habitatData.energyCost, resources.Current.energy, 1e-4f,
                 "ResourceManager ต้องหัก energyCost ตอนวางอาคาร");
-            Assert.AreEqual(workersBefore - habitatData.workerRequired, resources.Current.workers,
-                "ResourceManager ต้องหัก workerRequired ตอนวางอาคาร");
+            Assert.AreEqual(workersBefore, resources.Current.workers,
+                "workers เป็น reserve pool — วางอาคารต้องไม่หัก workers (จองตอน Tick แทน)");
 
             Assert.IsTrue(registry.PlacedBuildings.ContainsKey(new Vector2Int(2, 3)),
                 "BuildingRegistry ต้องบันทึกอาคารที่วางแล้ว");
@@ -154,16 +162,13 @@ namespace NuclearReMind.Tests
         [Test]
         public void TowerPhaseComplete_TriggersDilemma_AndResolutionAppliesEffects()
         {
-            Cell cell = grid.GetCell(0, 0);
-            cell.isOccupied = true;
-            eventManager.RaiseBuildingPlaced(cell, coreTowerData);
-
             DilemmaData triggered = null;
             eventManager.OnDilemmaTriggered += d => triggered = d;
 
-            InvokePrivate(tower, "Tick");
+            // phase 1 เสร็จ (CORE% ข้าม 50%) → CoreTowerManager raise OnTowerPhaseComplete(1)
+            // ทดสอบ wiring: DilemmaManager ต้องเปิด dilemma ที่ trigger "phase_1_complete"
+            eventManager.RaiseTowerPhaseComplete(1);
 
-            Assert.AreEqual(1, tower.Current.currentPhase, "Tower ต้องเข้า phase 2 หลัง progress ครบ phaseTargets[0]");
             Assert.IsNotNull(triggered, "DilemmaManager ต้อง trigger dilemma เมื่อ phase 1 เสร็จ");
             Assert.AreEqual("phase1_test", triggered.dilemmaId);
 
@@ -189,14 +194,9 @@ namespace NuclearReMind.Tests
             panel.SetActive(false);
             hud.gameOverPanel = panel;
 
-            Cell cell = grid.GetCell(0, 0);
-            cell.isOccupied = true;
-            eventManager.RaiseBuildingPlaced(cell, coreTowerData);
+            // CORE% ถึง 100% → CoreTowerManager raise OnTowerComplete
+            eventManager.RaiseTowerComplete();
 
-            for (int i = 0; i < 3; i++)
-                InvokePrivate(tower, "Tick");
-
-            Assert.AreEqual(3, tower.Current.currentPhase, "Tower ต้องผ่านครบ 3 phase");
             Assert.AreEqual(GameManager.GameState.Victory, gameManager.CurrentState,
                 "GameManager ต้องเปลี่ยนเป็น Victory เมื่อ CORE TOWER เสร็จ");
             Assert.IsTrue(panel.activeSelf, "UIManagerHUD ต้องเปิด gameOverPanel ตอน OnGameOver");

@@ -31,5 +31,9 @@ MonoBehaviour:
   radiationProtectionBonus: 0
   energyProduction: 0
   researchPointsPerTick: 2
+  energyConsumption: 0
+  waterConsumption: 0
   isCoreTowerPart: 0
   towerPhaseRequired: 0
+  powerRange: 0
+  isPowerRelay: 0

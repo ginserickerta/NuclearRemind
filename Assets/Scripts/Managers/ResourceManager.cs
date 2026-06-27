@@ -14,7 +14,7 @@ namespace NuclearReMind
         public float maxFood = 500f;
         public float maxWater = 400f;
         public float maxRadiationProtection = 200f;
-        public float maxEnergy = 300f;
+        public float maxEnergy = 1000f; // §10 เริ่มที่ 400 → ต้อง > 400 (ค่า rough, ปรับบาลานซ์ภายหลัง)
         public int maxWorkers = 100;
         public float maxResearchPoints = 500f;
 
@@ -24,13 +24,16 @@ namespace NuclearReMind
         [Header("Critical Threshold (ratio of max)")]
         [Range(0f, 1f)] public float criticalRatio = 0.2f;
 
+        // ค่าเริ่มต้นตาม GDD §10 (หลังซ่อม Shelter): energy 400 / water 100 / food 100 / workers 10
+        // radiationProtection เป็น field legacy (ไม่อยู่ใน §2.1 5-resource ของ v2.1) — คงไว้ก่อน
+        // material / fusionFuel ยังไม่มีใน ResourceData (รอ resource-model refactor)
         public ResourceData Current { get; private set; } = new ResourceData
         {
             food = 100f,
-            water = 80f,
+            water = 100f,
             radiationProtection = 50f,
-            energy = 30f,
-            workers = 20
+            energy = 400f,
+            workers = 10
         };
 
         private float _tickTimer;
@@ -77,10 +80,10 @@ namespace NuclearReMind
 
         private void HandleBuildingPlaced(Cell cell, BuildingData data)
         {
-            // materialCost ยังไม่มี ResourceType ของตัวเองใน ResourceData (ตาม Improve data model) — หักเฉพาะ energy/workers ที่มีอยู่
+            // หักเฉพาะ energyCost (ต้นทุนสร้างครั้งเดียว) — materialCost ยังไม่มี ResourceType ของตัวเอง
+            // workers ไม่ถูกหักถาวร: เป็น reserve pool ที่ถูกจองตาม workerRequired ตอน Tick (ดู worker staffing scale)
             var c = Current;
             c.energy = Mathf.Max(0f, c.energy - data.energyCost);
-            c.workers = Mathf.Max(0, c.workers - data.workerRequired);
             Current = c;
 
             EventManager.Instance.RaiseResourceChanged(Current);
@@ -131,18 +134,38 @@ namespace NuclearReMind
 
             var c = Current;
 
+            // กำลังคน (§A2): workers เป็น reserve pool — รวม workerRequired ของอาคารที่พร้อมเดินเครื่อง
+            // ถ้า demand รวม > จำนวนคนที่มี → ทุกอาคารผลิตตามสัดส่วน workerScale (0..1)
+            int totalWorkersNeeded = 0;
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
             {
-                if (ConstructionController.Instance != null &&
-                    ConstructionController.Instance.IsUnderConstruction(kvp.Key))
-                    continue;
+                if (!IsOperational(kvp.Key)) continue;
+                totalWorkersNeeded += kvp.Value.workerRequired;
+            }
+            float workerScale = totalWorkersNeeded > 0
+                ? Mathf.Min(1f, (float)c.workers / totalWorkersNeeded)
+                : 1f;
+
+            foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
+            {
+                if (!IsOperational(kvp.Key)) continue;
 
                 var data = kvp.Value;
-                c.food += data.foodProduction;
-                c.water += data.waterProduction;
-                c.radiationProtection += data.radiationProtectionBonus;
-                c.energy += data.energyProduction;
-                c.researchPoints += data.researchPointsPerTick;
+
+                // เดินระบบ (§2.4): อาคารต้องจ่ายต้นทุน energy/water ต่อ tick ก่อนจึงจะผลิต
+                // ถ้าคลังไม่พอจ่าย → อาคารหยุด (skip production) และไม่กิน resource tick นั้น
+                if (c.energy < data.energyConsumption || c.water < data.waterConsumption)
+                    continue;
+
+                c.energy -= data.energyConsumption;
+                c.water -= data.waterConsumption;
+
+                // production ปรับตามกำลังคน (§A2) — คนไม่พอ → ผลิตได้สัดส่วน workerScale
+                c.food += data.foodProduction * workerScale;
+                c.water += data.waterProduction * workerScale;
+                c.radiationProtection += data.radiationProtectionBonus * workerScale;
+                c.energy += data.energyProduction * workerScale;
+                c.researchPoints += data.researchPointsPerTick * workerScale;
             }
 
             c.food = Mathf.Clamp(c.food, 0f, maxFood);
@@ -156,6 +179,23 @@ namespace NuclearReMind
 
             EventManager.Instance.RaiseResourceChanged(Current);
             CheckThresholds();
+        }
+
+        /// <summary>
+        /// อาคารพร้อมเดินเครื่องไหม — ไม่อยู่ระหว่างสร้าง และได้รับพลังงานจาก Power Grid
+        /// ใช้ทั้งตอนรวม worker demand และตอนผลิตจริง ให้เกณฑ์ตรงกัน
+        /// </summary>
+        private bool IsOperational(Vector2Int cell)
+        {
+            if (ConstructionController.Instance != null &&
+                ConstructionController.Instance.IsUnderConstruction(cell))
+                return false;
+
+            if (PowerGridManager.Instance != null &&
+                !PowerGridManager.Instance.IsBuildingPowered(cell))
+                return false;
+
+            return true;
         }
 
         private void CheckThresholds()
