@@ -28,3 +28,18 @@ crashlytics-build.properties
 *.aab
 *.unitypackage
 *.app
+
+# Batchmode build/test logs at project root
+/*.log
+/results.xml
+
+# Editor auto-recovery backups
+/Assets/_Recovery/
+/Assets/_Recovery.meta
+
+# Font source archive (already imported into Assets/Resources/Fonts)
+/Kanit(1).zip
+/Kanit(1)/
+
+# Unity AI Assistant generated package
+/ProjectSettings/Packages/com.unity.ai.assistant/
