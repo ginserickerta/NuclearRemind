@@ -27,6 +27,17 @@ namespace NuclearReMind
         public ResourceBarUI energyBar;
         public ResourceBarUI workersBar;
 
+        [Header("Day Cycle")]
+        public Text dayText;    // "DAY 12 / 30"
+        public Text timerText;  // นับถอยหลัง "1:30" (Day 1 = "—")
+
+        [Header("Speed Controls")]
+        public Button pauseButton;   // ⏸ → 0×
+        public Button normalButton;  // 1×
+        public Button fastButton;    // 2×
+        public Color speedSelectedColor = new Color(0.3f, 0.7f, 1f);
+        public Color speedIdleColor = Color.white;
+
         [Header("CORE TOWER Progress")]
         public Slider towerProgressBar;
         public Text towerPhaseText;
@@ -48,7 +59,8 @@ namespace NuclearReMind
         public Color depletedColor = Color.red;
 
         private float _maxFood, _maxWater, _maxRadiationProtection, _maxEnergy, _maxWorkers, _criticalRatio;
-        private float[] _towerPhaseTargets;
+
+        private static readonly string[] PhaseNames = { "Locked", "Cold Assembly", "Plasma Ramp", "Ignition" };
 
         private void Awake()
         {
@@ -67,6 +79,8 @@ namespace NuclearReMind
             EventManager.Instance.OnTowerProgressChanged += HandleTowerProgressChanged;
             EventManager.Instance.OnRiotStarted += HandleRiotStarted;
             EventManager.Instance.OnGameOver += HandleGameOver;
+            EventManager.Instance.OnDayStarted += HandleDayStarted;
+            EventManager.Instance.OnSpeedChanged += HandleSpeedChanged;
         }
 
         private void OnDisable()
@@ -77,6 +91,8 @@ namespace NuclearReMind
             EventManager.Instance.OnTowerProgressChanged -= HandleTowerProgressChanged;
             EventManager.Instance.OnRiotStarted -= HandleRiotStarted;
             EventManager.Instance.OnGameOver -= HandleGameOver;
+            EventManager.Instance.OnDayStarted -= HandleDayStarted;
+            EventManager.Instance.OnSpeedChanged -= HandleSpeedChanged;
         }
 
         private void Start()
@@ -91,11 +107,50 @@ namespace NuclearReMind
             _maxWorkers = rm.maxWorkers;
             _criticalRatio = rm.criticalRatio;
 
-            _towerPhaseTargets = CoreTowerManager.Instance.phaseTargets;
-
             if (gameOverPanel != null) gameOverPanel.SetActive(false);
             if (riotWarning != null) riotWarning.SetActive(false);
             if (strikeWarning != null) strikeWarning.SetActive(false);
+
+            // ปุ่มความเร็ว → raise request ให้ GameManager จัดการ (ไม่เรียก GameManager ตรง)
+            if (pauseButton != null)  pauseButton.onClick.AddListener(() => EventManager.Instance.RaiseSpeedChangeRequested(0f));
+            if (normalButton != null) normalButton.onClick.AddListener(() => EventManager.Instance.RaiseSpeedChangeRequested(1f));
+            if (fastButton != null)   fastButton.onClick.AddListener(() => EventManager.Instance.RaiseSpeedChangeRequested(2f));
+        }
+
+        private void HandleSpeedChanged(float speed)
+        {
+            TintSpeedButton(pauseButton,  Mathf.Approximately(speed, 0f));
+            TintSpeedButton(normalButton, Mathf.Approximately(speed, 1f));
+            TintSpeedButton(fastButton,   speed >= 2f);
+        }
+
+        private void TintSpeedButton(Button button, bool selected)
+        {
+            if (button == null || button.image == null) return;
+            button.image.color = selected ? speedSelectedColor : speedIdleColor;
+        }
+
+        private void HandleDayStarted(int day, bool timed)
+        {
+            if (dayText != null)
+                dayText.text = $"DAY {day} / {GameManager.MaxDay}";
+
+            // Day ที่ไม่จับเวลา (Day 1 tutorial) — ตั้งข้อความครั้งเดียว, Update จะไม่เขียนทับ
+            if (timerText != null && !timed)
+                timerText.text = "—";
+        }
+
+        // อ่าน DayTimeRemaining แบบ read-only query ต่อเฟรม (เทียบเท่าการอ่าน config/registry ของ manager อื่น)
+        // ไม่ใช่การเรียก method เปลี่ยนสถานะข้าม manager
+        private void Update()
+        {
+            if (timerText == null || GameManager.Instance == null) return;
+            if (!GameManager.Instance.DayTimerActive) return; // คงข้อความล่าสุด (เช่น "—" ของ Day 1)
+
+            float t = GameManager.Instance.DayTimeRemaining;
+            int m = Mathf.FloorToInt(t / 60f);
+            int s = Mathf.FloorToInt(t % 60f);
+            timerText.text = $"{m}:{s:00}";
         }
 
         private void HandleResourceChanged(ResourceData data)
@@ -151,19 +206,22 @@ namespace NuclearReMind
 
         private void HandleTowerProgressChanged(TowerData data)
         {
-            int phaseIndex = Mathf.Clamp(data.currentPhase, 0, _towerPhaseTargets.Length - 1);
-            float target = _towerPhaseTargets[phaseIndex];
-
+            // แถบแสดง CORE% (0–100) โดยตรง
             if (towerProgressBar != null)
             {
-                towerProgressBar.maxValue = target;
-                towerProgressBar.value = data.phaseProgress;
+                towerProgressBar.maxValue = 100f;
+                towerProgressBar.value = data.corePercent;
             }
 
             if (towerPhaseText != null)
             {
-                int displayPhase = Mathf.Min(data.currentPhase + 1, _towerPhaseTargets.Length);
-                towerPhaseText.text = $"CORE TOWER — Phase {displayPhase}/{_towerPhaseTargets.Length}";
+                if (!data.isUnlocked)
+                    towerPhaseText.text = "CORE TOWER — ล็อก (Day 11)";
+                else
+                {
+                    int p = Mathf.Clamp(data.currentPhase, 0, PhaseNames.Length - 1);
+                    towerPhaseText.text = $"CORE {data.corePercent:0}% · {PhaseNames[p]} · HEAT {data.coreHeat:0}/{data.heatCap:0}";
+                }
             }
         }
 

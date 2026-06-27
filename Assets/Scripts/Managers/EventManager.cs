@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace NuclearReMind
@@ -35,10 +36,21 @@ namespace NuclearReMind
         public event Action<TowerData> OnTowerProgressChanged;
         public event Action<int> OnTowerPhaseComplete;
         public event Action OnTowerComplete;
+        public event Action<int> OnOverclockModeRequested; // UI → CoreTowerManager (0..3)
+        public event Action<int> OnOverclockModeChanged;   // CoreTowerManager → UI (โหมดปัจจุบัน)
+        public event Action OnScramRequested;              // UI → CoreTowerManager (กดปุ่ม SCRAM)
 
         // ===== Game State =====
         public event Action<GameManager.GameState> OnGameStateChanged;
         public event Action<GameEndType> OnGameOver;
+
+        // ===== Day Cycle (§2.3) =====
+        public event Action<int, bool> OnDayStarted; // (day, isTimed) — Day 1 = tutorial ไม่จับเวลา
+        public event Action<int> OnDayEnded;         // (day ที่เพิ่งจบ) — hook สำหรับ EndOfDay resolve / crisis
+
+        // ===== Speed Control =====
+        public event Action<float> OnSpeedChangeRequested; // UI → GameManager (0=pause, 1=normal, 2=fast)
+        public event Action<float> OnSpeedChanged;         // GameManager → UI (effective timeScale ปัจจุบัน)
 
         // ===== Save/Load =====
         public event Action<SaveData> OnSaveLoaded;
@@ -72,6 +84,12 @@ namespace NuclearReMind
         // ===== Overdrive =====
         public event Action<bool> OnOverdriveToggled;  // true = activate
         public event Action<float> OnTowerDamaged;     // remaining durability
+
+        // ===== Demolition =====
+        public event Action<bool> OnDemolishModeToggled; // true = enter demolish mode
+
+        // ===== Power Grid =====
+        public event Action<HashSet<Vector2Int>> OnPowerGridChanged; // ชุด cell ทั้งหมดที่ได้รับพลังงาน
 
         private void Awake()
         {
@@ -107,10 +125,21 @@ namespace NuclearReMind
         public void RaiseTowerProgressChanged(TowerData data) => OnTowerProgressChanged?.Invoke(data);
         public void RaiseTowerPhaseComplete(int phase) => OnTowerPhaseComplete?.Invoke(phase);
         public void RaiseTowerComplete() => OnTowerComplete?.Invoke();
+        public void RaiseOverclockModeRequested(int mode) => OnOverclockModeRequested?.Invoke(mode);
+        public void RaiseOverclockModeChanged(int mode) => OnOverclockModeChanged?.Invoke(mode);
+        public void RaiseScramRequested() => OnScramRequested?.Invoke();
 
         // ===== Game State =====
         public void RaiseGameStateChanged(GameManager.GameState newState) => OnGameStateChanged?.Invoke(newState);
         public void RaiseGameOver(GameEndType endType) => OnGameOver?.Invoke(endType);
+
+        // ===== Day Cycle =====
+        public void RaiseDayStarted(int day, bool timed) => OnDayStarted?.Invoke(day, timed);
+        public void RaiseDayEnded(int day) => OnDayEnded?.Invoke(day);
+
+        // ===== Speed Control =====
+        public void RaiseSpeedChangeRequested(float speed) => OnSpeedChangeRequested?.Invoke(speed);
+        public void RaiseSpeedChanged(float speed) => OnSpeedChanged?.Invoke(speed);
 
         // ===== Save/Load =====
         public void RaiseSaveLoaded(SaveData data) => OnSaveLoaded?.Invoke(data);
@@ -144,5 +173,11 @@ namespace NuclearReMind
         // ===== Overdrive =====
         public void RaiseOverdriveToggled(bool active) => OnOverdriveToggled?.Invoke(active);
         public void RaiseTowerDamaged(float durability) => OnTowerDamaged?.Invoke(durability);
+
+        // ===== Demolition =====
+        public void RaiseDemolishModeToggled(bool active) => OnDemolishModeToggled?.Invoke(active);
+
+        // ===== Power Grid =====
+        public void RaisePowerGridChanged(HashSet<Vector2Int> powered) => OnPowerGridChanged?.Invoke(powered);
     }
 }
