@@ -19,6 +19,12 @@ namespace NuclearReMind
         private static readonly Color ColorPowered   = Color.white;
         private static readonly Color ColorUnpowered = new Color(0.35f, 0.35f, 0.35f, 1f);
 
+        // ===== Drop shadow (เพิ่มมิติบน light theme — ไม่ใช้ URP/Light2D) =====
+        private const float ShadowWidth   = 0.85f;  // กว้างเงาเทียบ 1 tile
+        private const float ShadowAlpha   = 0.22f;  // ความเข้มเงา (คูณกับ gradient ใน sprite)
+        private const float ShadowYOffset = -0.12f; // เลื่อนลงไปที่ฐานอาคาร
+        private static Sprite _shadowSprite;
+
         private void OnEnable()
         {
             EventManager.Instance.OnBuildingPlaced    += HandleBuildingPlaced;
@@ -105,7 +111,56 @@ namespace NuclearReMind
             spriteRenderer.sortingLayerName = BuildingsSortingLayer;
             spriteRenderer.sortingOrder = position.x + position.y;
 
+            AddShadow(go, position, data);
+
             _spawnedVisuals[position] = go;
+        }
+
+        // เงา ellipse นุ่ม ๆ ใต้อาคาร — child แยก จึงไม่โดน power dimming (ที่อ่าน SpriteRenderer ตัวแม่)
+        private void AddShadow(GameObject parent, Vector2Int position, BuildingData data)
+        {
+            var shadow = new GameObject("Shadow");
+            shadow.transform.SetParent(parent.transform, false);
+            shadow.transform.localPosition = new Vector3(0f, ShadowYOffset, 0f);
+
+            // ขยายเงาตาม footprint อาคาร (size = จำนวน tile กว้าง×ลึก)
+            int footprint = Mathf.Max(1, data.size.x) + Mathf.Max(1, data.size.y);
+            float scale = ShadowWidth * footprint * 0.5f;
+            shadow.transform.localScale = new Vector3(scale, scale, 1f);
+
+            var sr = shadow.AddComponent<SpriteRenderer>();
+            sr.sprite = GetShadowSprite();
+            sr.color = new Color(0f, 0f, 0f, ShadowAlpha);
+            sr.sortingLayerName = BuildingsSortingLayer;
+            sr.sortingOrder = position.x + position.y - 1; // ใต้ตัวอาคาร เหนือพื้น
+        }
+
+        // sprite เงา: ellipse 2:1 ที่ alpha ไล่จากกลาง (1) ออกขอบ (0) — สร้างครั้งเดียว cache ไว้
+        private static Sprite GetShadowSprite()
+        {
+            if (_shadowSprite != null) return _shadowSprite;
+
+            const int w = 128, h = 64;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color[w * h];
+            float cx = w * 0.5f, cy = h * 0.5f;
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float dx = (x - cx) / cx;
+                    float dy = (y - cy) / cy;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy); // 0 กลาง → 1 ขอบ
+                    float a = Mathf.Clamp01(1f - d);
+                    px[y * w + x] = new Color(0f, 0f, 0f, a * a); // soft falloff
+                }
+            }
+
+            tex.SetPixels(px);
+            tex.Apply();
+            _shadowSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), w);
+            return _shadowSprite;
         }
     }
 }
