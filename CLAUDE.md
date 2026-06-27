@@ -94,7 +94,7 @@ events not yet added) is documented in `Assets/Docs/ImproveCLAUDE.md`.
 
 ### Isometric grid — `Assets/Scripts/Systems/GridManager.cs`
 
-Fixed **12×9** grid. Conversion formulas (tested by `GridManagerTests.cs`, 8/8 must pass):
+Fixed **20×12** grid. Conversion formulas (tested by `GridManagerTests.cs`, 8/8 must pass):
 
 ```csharp
 // grid (col, row) -> world
@@ -132,7 +132,7 @@ old save files must still deserialize.
 
 1. Never modify `IsoToWorld()` / `WorldToIso()` in `GridManager.cs` — the math is tested and
    load-bearing.
-2. Never change the grid size away from 12×9 — fixed design constraint.
+2. Never change the grid size away from 20×12 — fixed design constraint.
 3. Never add a `SaveData`/data-struct field without a default value.
 4. Never hardcode resource/cost/production values — they belong in `BuildingData` (or other
    ScriptableObjects).

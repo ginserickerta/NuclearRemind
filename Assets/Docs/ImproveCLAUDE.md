@@ -221,7 +221,7 @@ public class DilemmaData : ScriptableObject {
 
 ## Grid System
 
-- Grid size: **12 × 9** cells (ห้ามเปลี่ยน — เป็น design constraint)
+- Grid size: **20 × 12** cells (ห้ามเปลี่ยน — เป็น design constraint)
 - Isometric angle: 45°
 - Cell size: 64px × 32px (isometric diamond)
 - Origin: bottom-left = (0,0)
@@ -298,7 +298,7 @@ void Update() {
 3. **ห้าม hardcode ค่า resource** — ค่าทั้งหมดต้องมาจาก BuildingData ScriptableObject
 4. **ห้ามเรียก Manager โดยตรงข้าม system** — ใช้ EventManager เท่านั้น
 5. **ห้ามใช้ GameObject.Find() หรือ FindObjectOfType() ใน Update()**
-6. **ห้ามแก้ Grid size จาก 12×9** — เป็น design constraint ของเกม
+6. **ห้ามแก้ Grid size จาก 20×12** — เป็น design constraint ของเกม
 
 ---
 
