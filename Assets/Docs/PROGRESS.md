@@ -14,7 +14,7 @@
 | Gameplay loop (วาง → resource → tower) | 90% |
 | UI / HUD | 75% |
 | เนื้อหาวิทยาศาสตร์นิวเคลียร์ | 55% |
-| Narrative / Dilemma | 5% |
+| Narrative / Dilemma | 40% |
 | Art (sprite จริง) | 5% |
 | Audio | 0% |
 | **รวมทั้งโปรเจกต์** | **~50%** |
@@ -56,7 +56,18 @@
 - `CodexSetup.BuildEntryDefs()` รวม 5 Core + 15 สาขา = **20 entries** → เมนู `Setup Codex System` สร้าง asset + wire ให้อัตโนมัติ
 
 > ⚠️ ต้องรันเมนู `NuclearReMind → Setup Codex System` ใหม่ใน Unity เพื่อ generate asset 15 ตัว + re-wire CodexManager (20 entries)
-> ⚠️ ยังขาด: อาคารสาขา (Agri Dome / Med Center) + dilemma + content QA กับอาจารย์ที่ปรึกษา
+> ⚠️ ยังขาด: อาคารสาขา (Agri Dome / Med Center) + content QA กับอาจารย์ที่ปรึกษา
+
+**Block C — Crisis system (dilemma มี trigger จริง)**
+- **C1** `DilemmaManager` ประเมินเงื่อนไข **day-end** ตอน `OnDayEnded` (track resource/tower state ผ่าน event)
+  รองรับ condition ใหม่: `heat_above_` / `food_below_` / `food_above_` / `energy_below_` / `water_below_` / `day_reached_`
+- **C2–C4** 3 crisis assets (`Editor/CrisisSetup.cs`): Plasma Instability (heat>70), Malignant Outbreak (day≥18),
+  Food Shortage (food<120) — ผูกวิทยาศาสตร์ (cooling/meltdown, เวชศาสตร์นิวเคลียร์, food irradiation)
+- ขยาย `DilemmaData` consequence: เพิ่ม Energy/Water (เดิมมีแค่ Food/Trust/relationship)
+- test: `DilemmaManagerTests` 6 ตัว ✅
+
+> ⚠️ ต้องรันเมนู `NuclearReMind → Setup Crisis Dilemmas` ใหม่ใน Unity เพื่อ generate 3 assets + wire dilemmaPool
+> 🔸 crisis ยังไม่ผูกกับ Codex unlock (ต้องต่อ event เมื่อ CodexManager รองรับ event เพิ่ม) + consequence ยังไม่มี Material/CORE% (ResourceData ไม่มี material)
 > ⚠️ งาน 17–27 มิ.ย. (Block A+B) commit แล้ว — งาน Codex (Block D) นี้ **ยังไม่ได้ commit**
 
 ---
@@ -89,7 +100,7 @@
 | BuildingRegistry | `Managers/BuildingRegistry.cs` | 100% | lookup by name, re-occupy cells หลัง load |
 | UIManagerHUD | `UI/UIManagerHUD.cs` | 60% | resource bars bind real-time — ขาด: Day counter, Speed controls, Alert |
 | TooltipController | `UI/TooltipController.cs` | 80% | 3 ชั้น (name/description/nuclearKnowledge) |
-| DilemmaManager | `Narrative/DilemmaManager.cs` | 40% | โค้ด + popup UI ✅ — มีแค่ **1 asset**, ไม่มี trigger จริงในเกม |
+| DilemmaManager | `Narrative/DilemmaManager.cs` | 75% | popup UI ✅ + **crisis trigger จริง (Block C)** ✅ — 3 crisis assets, day-end conditions, 6 tests |
 | Integration tests | `Tests/EditMode/` | 100% | 12/12 pass (GridManager 8 + Flow 4) |
 
 ### Day 10 — Codex System

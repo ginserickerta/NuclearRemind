@@ -89,25 +89,22 @@
 ## BLOCK C — Crisis Events (วิกฤต 3 ตัว)
 *DilemmaManager มีแค่ 1 asset, ไม่มี trigger จริง*
 
-- [ ] **C1** · Crisis trigger system
-  - เช็กทุก EndOfDay: HEAT>80, zoneA_workers>threshold, food>500/!agriDome
-  - ยิง event → DilemmaManager เปิด popup
-  - ไฟล์: `Managers/CrisisManager.cs` (ใหม่ หรือเพิ่มใน GameManager)
+- [x] **C1** · Crisis trigger system ✅ (27 มิ.ย.)
+  - เพิ่มใน `Narrative/DilemmaManager.cs` (แทน CrisisManager แยก) — ประเมินตอน `OnDayEnded`
+  - condition: heat_above_ / food_below_ / food_above_ / energy_below_ / water_below_ / day_reached_
+  - track resource/tower state ผ่าน OnResourceChanged / OnTowerProgressChanged (ไม่ direct ref)
+  - test: `DilemmaManagerTests` 6 ตัว ✅
+  - 🔸 zoneA_workers ยังไม่มี (ไม่มีระบบ zone worker)
 
-- [ ] **C2** · Crisis 1 · Plasma Instability — DilemmaAsset + consequences
-  - A: −300 Energy, lock 3 workers 1 วัน
-  - B: วิศวกร 4 คน 2 วัน, −150 Material, 50% sick chance
-  - C: −50% Water stock, CORE% −20
+- [~] **C2** · Crisis 1 · Plasma Instability ✅ asset (27 มิ.ย.) — trigger `heat_above_70`
+  - A: −300 Energy −60 Water +5 Trust (ระบายความร้อน) | B: −12 Trust (เดินเครื่องต่อ เสี่ยง)
+  - 🔸 ปรับเป็น 2 choice (DilemmaData รองรับ A/B) — Material/worker-lock/CORE% ยังไม่มีระบบรองรับ
 
-- [ ] **C3** · Crisis 2 · Malignant Outbreak — DilemmaAsset + consequences
-  - A: −200 Energy, 2 วิศวกร → รักษา 10 คน
-  - B: −200 Material, −20 Tritium → รักษา 15 คน
-  - C: กักตัว 4 วัน, เสี่ยงตาย 3 คน
+- [~] **C3** · Crisis 2 · Malignant Outbreak ✅ asset (27 มิ.ย.) — trigger `day_reached_18`
+  - A: −200 Energy −100 Food +8 Trust (รักษาด้วยเภสัชรังสี) | B: −12 Trust (กักตัว)
 
-- [ ] **C4** · Crisis 3 · Food Crisis — DilemmaAsset + consequences
-  - A: −250 Material, วิจัย 3 คน → ผลผลิต +ถาวร
-  - B: −300 Energy, คน 4 คน → spoilage 0%
-  - C: ประสิทธิภาพ −50%, Hope ลด
+- [~] **C4** · Crisis 3 · Food Shortage ✅ asset (27 มิ.ย.) — trigger `food_below_120`
+  - A: −10 Trust (ปันส่วน) | B: −150 Energy +250 Food +3 Trust (ฉายรังสีถนอมอาหาร)
 
 ---
 
@@ -183,6 +180,7 @@
 | — | 27 มิ.ย. | **B1 ✅ + B4 ✅** (CORE TOWER v2.1 refactor) | 45/45 tests ผ่าน, compile สะอาด |
 | — | 27 มิ.ย. | **B2 ✅ + B3 ✅** (overclock UI + SCRAM) → **Block B เสร็จครบ** | 49/49 tests ผ่าน, compile สะอาด |
 | — | 27 มิ.ย. | **D1–D3 เนื้อหา ✅** Codex 15 entries (เกษตร/แพทย์/สิ่งแวดล้อม) ปลดล็อกด้วย RP | รอ generate asset + content QA |
+| — | 27 มิ.ย. | **C1 ✅ + C2–C4 ✅** Crisis trigger (day-end) + 3 crisis assets | +6 tests, รอรันเมนู Setup Crisis Dilemmas |
 | D3 | 27 มิ.ย. | B1 | |
 | D4 | 28 มิ.ย. | B2, B3, B4 | |
 | D5 | 29 มิ.ย. | C1, C2 | |
