@@ -33,12 +33,13 @@ namespace NuclearReMind.Tests
                 Object.DestroyImmediate(obj);
         }
 
-        private Vector2Int Place(int col, int row, int upgradeCost = 40)
+        private Vector2Int Place(int col, int row, int upgradeCost = 40, int upgradeEnergy = 0)
         {
             var b = ScriptableObject.CreateInstance<BuildingData>();
             b.buildingName = "B";
             b.size = new Vector2Int(1, 1);
             b.upgradeIronCost = upgradeCost;
+            b.upgradeEnergyCost = upgradeEnergy;
             _spawned.Add(b);
             eventManager.RaiseBuildingPlaced(new Cell(col, row), b);
             return new Vector2Int(col, row);
@@ -72,6 +73,29 @@ namespace NuclearReMind.Tests
             eventManager.RaiseUpgradeBuildingRequested(cell); // เต็มแล้ว → ไม่ทำ
 
             Assert.AreEqual(3, registry.GetLevel(cell), "cap ที่ maxBuildingLevel (3)");
+        }
+
+        [Test]
+        public void Upgrade_DeductsEnergyToo()
+        {
+            // V4 §6: ค่าอัปมีทั้ง Iron และ Energy (×ระดับ) — energy เริ่ม 200
+            var cell = Place(1, 1, upgradeCost: 40, upgradeEnergy: 50);
+            eventManager.RaiseUpgradeBuildingRequested(cell);
+
+            Assert.AreEqual(2, registry.GetLevel(cell));
+            Assert.AreEqual(60f, resources.Current.iron, 1e-3f, "หักแร่เหล็ก 40");
+            Assert.AreEqual(150f, resources.Current.energy, 1e-3f, "หักพลังงาน 50 (×ระดับ 1)");
+        }
+
+        [Test]
+        public void Upgrade_InsufficientEnergy_Blocked()
+        {
+            var cell = Place(1, 1, upgradeCost: 40, upgradeEnergy: 300); // energy 200 < 300
+            eventManager.RaiseUpgradeBuildingRequested(cell);
+
+            Assert.AreEqual(1, registry.GetLevel(cell), "พลังงานไม่พอ → ไม่อัป");
+            Assert.AreEqual(100f, resources.Current.iron, 1e-3f, "ไม่หักแร่เหล็ก");
+            Assert.AreEqual(200f, resources.Current.energy, 1e-3f, "ไม่หักพลังงาน");
         }
 
         [Test]

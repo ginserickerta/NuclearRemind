@@ -21,7 +21,7 @@ namespace NuclearReMind.EditorTools
         {
             "NuclearReMind/Setup HUD Canvas",
             "NuclearReMind/Setup Tooltip and Dilemma UI",
-            "NuclearReMind/Apply 2.4 Building Balance (L1)",
+            "NuclearReMind/Apply Building Balance (V4 §6)",
             "NuclearReMind/Setup Phase 3 Population",
             "NuclearReMind/Setup Phase 6 Buildings",
             "NuclearReMind/Setup Codex System",

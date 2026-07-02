@@ -15,13 +15,14 @@ namespace NuclearReMind
         public Color validColor = new Color(0f, 1f, 0f, 0.5f);
         public Color invalidColor = new Color(1f, 0f, 0f, 0.5f);
 
-        [Header("Testing - Building Hotbar (กด 1-7 เพื่อเลือกอาคาร)")]
+        [Header("Testing - Building Hotbar (กด 1-9 เพื่อเลือกอาคาร)")]
         public BuildingData[] buildingHotbar;
 
         private static readonly KeyCode[] HotbarKeys =
         {
             KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4,
-            KeyCode.Alpha5, KeyCode.Alpha6, KeyCode.Alpha7
+            KeyCode.Alpha5, KeyCode.Alpha6, KeyCode.Alpha7, KeyCode.Alpha8,
+            KeyCode.Alpha9
         };
 
         private BuildingData selectedBuilding;
@@ -73,7 +74,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
-        /// เช็คปุ่มเลข 1-7 เพื่อเลือกอาคารจาก buildingHotbar และเริ่มวาง
+        /// เช็คปุ่มเลข 1-9 เพื่อเลือกอาคารจาก buildingHotbar และเริ่มวาง
         /// </summary>
         private void HandleHotbarInput()
         {

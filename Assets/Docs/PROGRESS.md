@@ -254,7 +254,11 @@ Spec หลักเปลี่ยนจาก GDD v2.1/v2.2 → **V4 (Develope
 (เคลียร์แล้ว) Overdrive TODOs เดิม cs:25-26 ถูกแทนด้วยโมเดล CORE%/HEAT ใน B1/B4
 ```
 ค้างเชิงดีไซน์: fuel ใช้ Energy เป็น proxy (ยังไม่มี Deuterium/Tritium ใน `ResourceData`),
-cooling ละ engineers/towerLevel/decrees (=0), Mine ยังไม่มี asset + ไม่มีระบบ building level L2–L5
+cooling ละ engineers/towerLevel/decrees (=0)
+
+อัปเดต 2 ก.ค.: Mine มี asset แล้ว (ผลิต Iron 30/90/225 ตามระดับ — hotbar ช่อง 8) ·
+Habitat = ตึก Shelter ขยายเพดานประชากร 20/40/80 (V4 §5) · ค่าอัประดับคิด Iron+Energy ตาม V4 §6
+→ รัน `NuclearReMind → Apply Building Balance (V4 §6)` (หรือ Run All Setups) เพื่อ apply
 
 ---
 

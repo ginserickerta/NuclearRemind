@@ -16,7 +16,7 @@
 |---|------|-------------|
 | 1 | **Setup HUD Canvas** | HUD ครบ + สร้าง GameObject: **TimeManager · QuizManager · QuizPopupController** + ปุ่ม (mode/SCRAM/Coils/train/decree/restart) + Knowledge/Hope bar |
 | 2 | **Setup Tooltip and Dilemma UI** | DilemmaPopupController (ปุ่ม A/B/C) |
-| 3 | **Apply 2.4 Building Balance (L1)** | ค่าผลิต/เดินระบบ L1 |
+| 3 | **Apply Building Balance (V4 §6)** | ค่าผลิต/upkeep/ต้นทุน L1 ตาม §6 + สร้าง **Mine** (ผลิต Iron, ช่อง 8) + Habitat=Shelter (เพดานประชากร §5) + wire hotbar |
 | 4 | **Setup Phase 3 Population** | ตั้งธง Laboratory → ปลดฝึก Engineer/Medic |
 | 5 | **Setup Phase 6 Buildings** | Water→Deuterium, Lab→Tritium (ผลิตที่ L3) |
 | 6 | **Setup Codex System** | 25 codex (5 core + 5 fusion + 15 สาขา) + CodexManager |

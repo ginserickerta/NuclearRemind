@@ -25,11 +25,14 @@ namespace NuclearReMind
         [Header("Population Growth (V4 §5)")]
         public float growthHopeThreshold = 50f; // Hope ≥ ค่านี้จึงเติมประชากร
 
+        [Header("Shelter (V4 §5)")]
+        public int baseShelterCap = 10; // Shelter L1 เริ่มเกม (ไม่ต้องสร้าง) — ตึก Shelter ที่วางเพิ่มต่อยอดจากฐานนี้
+
         public PopulationData Current { get; private set; } = new PopulationData
         {
             workers = 10,     // V4 §5 เริ่ม 10 Worker
             hope = 100f,      // V4 §9 เริ่ม 100
-            shelterCap = 10,  // Shelter L1 (เฟส 6 อัปเป็น L2–L4)
+            shelterCap = 10,  // = baseShelterCap (Shelter L1 §5) — ขยายด้วยตึก Shelter ผ่าน RecalcShelterCap
         };
 
         /// <summary>วิศวกรที่พร้อมประจำหล่อเย็น CORE (เข้าสูตร +4/คน เมื่อมี Poloidal — §8)</summary>
@@ -61,6 +64,8 @@ namespace NuclearReMind
             EventManager.Instance.OnMoraleDelta += HandleMoraleDelta;
             EventManager.Instance.OnDayEnded += HandleDayEnded;
             EventManager.Instance.OnBuildingPlaced += HandleBuildingPlaced;
+            EventManager.Instance.OnBuildingRemoved += HandleBuildingRemoved;
+            EventManager.Instance.OnBuildingUpgraded += HandleBuildingUpgraded;
             EventManager.Instance.OnTrainEngineerRequested += TrainEngineer;
             EventManager.Instance.OnTrainMedicRequested += TrainMedic;
         }
@@ -74,6 +79,8 @@ namespace NuclearReMind
             EventManager.Instance.OnMoraleDelta -= HandleMoraleDelta;
             EventManager.Instance.OnDayEnded -= HandleDayEnded;
             EventManager.Instance.OnBuildingPlaced -= HandleBuildingPlaced;
+            EventManager.Instance.OnBuildingRemoved -= HandleBuildingRemoved;
+            EventManager.Instance.OnBuildingUpgraded -= HandleBuildingUpgraded;
             EventManager.Instance.OnTrainEngineerRequested -= TrainEngineer;
             EventManager.Instance.OnTrainMedicRequested -= TrainMedic;
         }
@@ -99,6 +106,48 @@ namespace NuclearReMind
             if (data == null) return;
             if (data.unlocksEngineerTraining) _engineerUnlocked = true;
             if (data.unlocksMedicTraining) _medicUnlocked = true;
+
+            if (data.shelterCapacity > 0)
+                RecalcShelterCap(placedCell: new Vector2Int(cell.col, cell.row), placedData: data);
+        }
+
+        // ── เพดานประชากรจากตึก Shelter (V4 §5) ────────────────────
+        // เพดาน = ฐานเริ่มเกม 10 + ผลรวมตึก Shelter ที่วางแล้ว (สเกลตามระดับ L1/L2/L3 → +10/+30/+70)
+        // อ่าน BuildingRegistry.PlacedBuildings/GetLevel ตรงได้ — เป็น read-only query ของ registry กลาง
+
+        private void HandleBuildingUpgraded(Vector2Int cell, int newLevel) => RecalcShelterCap();
+
+        private void HandleBuildingRemoved(Vector2Int position) => RecalcShelterCap(removedCell: position);
+
+        private void RecalcShelterCap(Vector2Int? placedCell = null, BuildingData placedData = null,
+            Vector2Int? removedCell = null)
+        {
+            var registry = BuildingRegistry.Instance;
+            if (registry == null) return;
+
+            int cap = baseShelterCap;
+            foreach (var kvp in registry.PlacedBuildings)
+            {
+                if (removedCell.HasValue && kvp.Key == removedCell.Value) continue; // ตึกที่กำลังถูกทุบ
+                cap += ShelterContribution(kvp.Value, registry.GetLevel(kvp.Key));
+            }
+
+            // ลำดับ subscriber ของ OnBuildingPlaced ไม่การันตี — ถ้า registry ยังไม่บันทึกตึกที่เพิ่งวาง บวกเองที่ L1
+            if (placedCell.HasValue && !registry.PlacedBuildings.ContainsKey(placedCell.Value))
+                cap += ShelterContribution(placedData, 1);
+
+            var pop = Current;
+            if (pop.shelterCap == cap) return;
+            pop.shelterCap = cap;
+            Current = pop;
+            EventManager.Instance.RaisePopulationChanged(pop);
+        }
+
+        // L1/L2/L3 → ×1/×3/×7 ของ shelterCapacity (10 → +10/+30/+70; รวมฐาน = 20/40/80 ตาม §5 L2–L4)
+        private static int ShelterContribution(BuildingData data, int level)
+        {
+            if (data == null || data.shelterCapacity <= 0) return 0;
+            return data.shelterCapacity * ((1 << level) - 1);
         }
 
         // ── ฝึกคลาส (Worker → Engineer/Medic) ────────────────────

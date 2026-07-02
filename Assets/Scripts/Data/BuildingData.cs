@@ -57,8 +57,14 @@ namespace NuclearReMind
         public bool unlocksEngineerTraining; // Research Lab → ฝึก Engineer ได้
         public bool unlocksMedicTraining;    // Hospital → ฝึก Medic ได้
 
+        [Header("Shelter (V4 §5)")]
+        // เพดานประชากรฐานที่ตึกนี้เพิ่ม (Shelter = 10) — PopulationManager สเกลตามระดับ
+        // L1/L2/L3 → +10/+30/+70 (รวมฐานเริ่มเกม 10 = 20/40/80 ตามตาราง §5 L2–L4)
+        public int shelterCapacity;
+
         [Header("Upgrade / Fuel (V4 §7/§18 — เฟส 6)")]
         public int upgradeIronCost = 40;  // ต้นทุนอัป 1 ระดับ (×ระดับปัจจุบัน) — L1→L2, L2→L3
+        public int upgradeEnergyCost = 0; // ต้นทุนพลังงานต่ออัป (×ระดับปัจจุบัน — V4 §6 เช่นโรงผลิต E150)
         public float deuteriumProduction; // ผลิต/วัน เฉพาะเมื่อถึงระดับสูงสุด (Water Plant L3 §4)
         public float tritiumProduction;   // ผลิต/วัน เฉพาะเมื่อถึงระดับสูงสุด (Zone B / Lab L3)
 

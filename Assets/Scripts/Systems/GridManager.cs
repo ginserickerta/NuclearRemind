@@ -16,7 +16,8 @@ namespace NuclearReMind
         RadiationShelter,
         Laboratory,
         CoreTower,
-        PowerConduit
+        PowerConduit,
+        Mine
     }
 
     /// <summary>

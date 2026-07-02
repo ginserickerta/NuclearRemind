@@ -41,7 +41,27 @@ namespace NuclearReMind.EditorTools
             "RadiationShelter",
             "Laboratory",
             "CoreTower",
+            "Mine",
         };
+
+        /// <summary>
+        /// สร้าง sprite ของอาคารหนึ่งตัวถ้ายังไม่มีบนดิสก์ แล้วคืน Sprite ที่โหลดได้
+        /// (ให้ setup อื่นเรียกตอนสร้าง BuildingData asset ใหม่ เช่น Mine — ไม่ต้องรัน GenerateAll ทั้งชุด)
+        /// </summary>
+        public static Sprite EnsureBuildingSprite(string name)
+        {
+            string path = Path.Combine(BuildingsFolder, name + ".png");
+            if (AssetDatabase.LoadAssetAtPath<Sprite>(path) == null)
+            {
+                Directory.CreateDirectory(BuildingsFolder);
+                var tex = CreateBuildingTexture(name);
+                ApplySilhouette(tex, BuildingFill, BuildingOutline);
+                WritePng(path, tex);
+                AssetDatabase.Refresh();
+                ConfigureBuildingSprite(path);
+            }
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
 
         [MenuItem("NuclearReMind/Generate Placeholder Sprites")]
         public static void GenerateAll()
@@ -88,6 +108,7 @@ namespace NuclearReMind.EditorTools
                 case "RadiationShelter": return DrawRadiationShelter();
                 case "Laboratory": return DrawLaboratory();
                 case "CoreTower": return DrawCoreTower();
+                case "Mine": return DrawMine();
                 default: return NewCanvas(64, 64);
             }
         }
@@ -235,6 +256,37 @@ namespace NuclearReMind.EditorTools
             FillRect(tex, 45, 100, 114, 108, stripe);
             FillCircle(tex, 80, 168, 16, glow);
             FillCircle(tex, 80, 168, 10, core);
+
+            tex.Apply();
+            return tex;
+        }
+
+        private static Texture2D DrawMine()
+        {
+            // เนินหินมีปากอุโมงค์โค้ง (ช่องโปร่งใส → เป็น outline หลัง silhouette) + คานไม้ค้ำ + กองแร่ข้างปาก
+            var tex = NewCanvas(72, 56);
+            Color rock = new Color(0.45f, 0.42f, 0.40f);
+            Color beam = new Color(0.40f, 0.26f, 0.12f);
+            Color ore = new Color(0.55f, 0.55f, 0.60f);
+
+            // เนินหิน (สามเหลี่ยมยอดมน)
+            FillTriangle(tex, new Vector2(2, 4), new Vector2(69, 4), new Vector2(36, 50), rock);
+            FillEllipse(tex, 36, 40, 14, 10, rock);
+
+            // ปากอุโมงค์ — เจาะเป็นช่องโปร่งใส
+            Color hole = new Color(0, 0, 0, 0);
+            FillRect(tex, 28, 4, 43, 18, hole);
+            FillEllipse(tex, 35, 18, 8, 7, hole);
+
+            // คานไม้ค้ำสองข้าง + คานบน
+            FillRect(tex, 25, 4, 28, 22, beam);
+            FillRect(tex, 43, 4, 46, 22, beam);
+            FillRect(tex, 25, 22, 46, 26, beam);
+
+            // กองแร่ข้างปากอุโมงค์
+            FillCircle(tex, 12, 8, 6, ore);
+            FillCircle(tex, 19, 6, 4, ore);
+            FillCircle(tex, 58, 7, 5, ore);
 
             tex.Apply();
             return tex;

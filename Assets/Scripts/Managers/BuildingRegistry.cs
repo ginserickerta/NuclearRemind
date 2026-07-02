@@ -68,7 +68,7 @@ namespace NuclearReMind
             _levels.Remove(position);
         }
 
-        // อัประดับอาคาร (V4 §7): จ่ายแร่เหล็ก (×ระดับปัจจุบัน) → level++ จนถึง maxBuildingLevel
+        // อัประดับอาคาร (V4 §6/§7): จ่ายแร่เหล็ก + พลังงาน (×ระดับปัจจุบัน) → level++ จนถึง maxBuildingLevel
         private void HandleUpgradeRequested(Vector2Int cell)
         {
             if (!_placedBuildings.TryGetValue(cell, out var data) || data == null) return;
@@ -76,12 +76,18 @@ namespace NuclearReMind
             int level = GetLevel(cell);
             if (level >= maxBuildingLevel) return; // เต็มแล้ว
 
-            int cost = data.upgradeIronCost * level;
+            int ironCost = data.upgradeIronCost * level;
+            int energyCost = data.upgradeEnergyCost * level;
             var rm = ResourceManager.Instance;
-            if (rm != null && rm.Current.iron < cost) return; // แร่เหล็กไม่พอ
+            if (rm != null && (rm.Current.iron < ironCost || rm.Current.energy < energyCost))
+                return; // ทรัพยากรไม่พอ
 
             if (rm != null)
-                EventManager.Instance.RaiseResourceDelta(ResourceType.Iron, -cost);
+            {
+                EventManager.Instance.RaiseResourceDelta(ResourceType.Iron, -ironCost);
+                if (energyCost > 0)
+                    EventManager.Instance.RaiseResourceDelta(ResourceType.Energy, -energyCost);
+            }
 
             _levels[cell] = level + 1;
             EventManager.Instance.RaiseBuildingUpgraded(cell, level + 1);

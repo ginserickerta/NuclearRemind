@@ -7,7 +7,7 @@ namespace NuclearReMind
     /// Hotbar ด้านล่างจอ: แสดงปุ่มสำหรับ building แต่ละประเภท (สูงสุด 8 ช่อง)
     /// คลิกปุ่ม → raise OnBuildingSelectRequested → PlacementController.BeginPlacement
     /// ปุ่มหรี่ลง (dimmed) เมื่อ resource ไม่พอ, highlight เมื่อถูกเลือก
-    /// แป้น 1-7 ยังใช้ได้เหมือนเดิม และ sync highlight กับ UI ด้วย
+    /// แป้น 1-9 ยังใช้ได้เหมือนเดิม และ sync highlight กับ UI ด้วย
     /// </summary>
     public class BuildingSelectionUI : MonoBehaviour
     {
