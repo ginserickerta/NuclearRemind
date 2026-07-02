@@ -90,9 +90,25 @@ namespace NuclearReMind
 
         /// <summary>
         /// เริ่มโหมดวางอาคารด้วยข้อมูลอาคารที่เลือก
+        /// ทรัพยากรไม่พอ / CORE TOWER มีอยู่แล้ว → ไม่เข้าโหมดวาง (ปุ่ม HUD หรี่อยู่แล้ว แต่ hotkey ยังกดได้)
         /// </summary>
         public void BeginPlacement(BuildingData buildingData)
         {
+            if (buildingData == null) return;
+
+            if (!CanAfford(buildingData))
+            {
+                Debug.Log($"[PlacementController] ทรัพยากรไม่พอสร้าง {buildingData.buildingName} " +
+                          $"(ต้องใช้ ⚡{buildingData.energyCost} ⛏{buildingData.ironCost})");
+                return;
+            }
+
+            if (IsUniqueAlreadyPlaced(buildingData))
+            {
+                Debug.Log($"[PlacementController] {buildingData.buildingName} สร้างได้แค่หลังเดียว — มีอยู่ในเมืองแล้ว");
+                return;
+            }
+
             selectedBuilding = buildingData;
             isPlacing = true;
 
@@ -128,9 +144,13 @@ namespace NuclearReMind
 
         /// <summary>
         /// ตรวจสอบว่าวางอาคาร (ตาม footprint ของ selectedBuilding) ที่ตำแหน่งนี้ได้หรือไม่
+        /// รวมเงื่อนไขทรัพยากรพอจ่าย + อาคาร unique (ghost แดงและ ConfirmPlace ใช้ร่วมกัน)
         /// </summary>
         private bool IsPlacementValid(Vector2Int origin)
         {
+            if (!CanAfford(selectedBuilding) || IsUniqueAlreadyPlaced(selectedBuilding))
+                return false;
+
             for (int dx = 0; dx < selectedBuilding.size.x; dx++)
             {
                 for (int dy = 0; dy < selectedBuilding.size.y; dy++)
@@ -144,11 +164,37 @@ namespace NuclearReMind
             return true;
         }
 
+        /// <summary>คลังปัจจุบันพอจ่ายค่าสร้างไหม (ตัวเลขเดียวกับที่ ResourceManager หักตอนวาง)</summary>
+        private static bool CanAfford(BuildingData data)
+        {
+            var rm = ResourceManager.Instance;
+            if (rm == null) return true;
+            return rm.Current.energy >= data.energyCost && rm.Current.iron >= data.ironCost;
+        }
+
+        /// <summary>CORE TOWER สร้างได้แค่หลังเดียว (V4 §8) — เช็กจาก registry ว่ามีอยู่แล้วหรือยัง</summary>
+        private static bool IsUniqueAlreadyPlaced(BuildingData data)
+        {
+            if (data.buildingType != BuildingType.CoreTower) return false;
+
+            var registry = BuildingRegistry.Instance;
+            if (registry == null) return false;
+
+            foreach (var kvp in registry.PlacedBuildings)
+                if (kvp.Value != null && kvp.Value.buildingType == BuildingType.CoreTower)
+                    return true;
+
+            return false;
+        }
+
         /// <summary>
         /// ยืนยันการวางอาคารที่ตำแหน่งปัจจุบัน ถ้าตำแหน่งใช้ได้
         /// </summary>
         public void ConfirmPlace()
         {
+            if (!isPlacing || selectedBuilding == null)
+                return;
+
             if (!IsPlacementValid(currentCell))
             {
                 Debug.Log("[PlacementController] ตำแหน่งนี้วางอาคารไม่ได้");

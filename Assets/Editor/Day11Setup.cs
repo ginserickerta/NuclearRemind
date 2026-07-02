@@ -329,7 +329,7 @@ namespace NuclearReMind.EditorTools
                 rect.anchoredPosition = new Vector2(0f, 4f);
 
                 int count   = placement.buildingHotbar.Length;
-                float width = count * 94f + 8f; // 90px slot + 4px gap, 4px padding masing-masing
+                float width = (count + 1) * 94f + 8f; // 90px slot + 4px gap ต่อช่อง · +1 = ปุ่มทุบอาคาร
                 rect.sizeDelta = new Vector2(width, 118f);
 
                 var bg = panelGO.GetComponent<Image>() ?? panelGO.AddComponent<Image>();

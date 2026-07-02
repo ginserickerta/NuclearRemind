@@ -16,9 +16,6 @@ namespace NuclearReMind
 
         private readonly Dictionary<Vector2Int, GameObject> _spawnedVisuals = new Dictionary<Vector2Int, GameObject>();
 
-        private static readonly Color ColorPowered   = Color.white;
-        private static readonly Color ColorUnpowered = new Color(0.35f, 0.35f, 0.35f, 1f);
-
         // ===== Drop shadow (เพิ่มมิติบน light theme — ไม่ใช้ URP/Light2D) =====
         private const float ShadowWidth   = 0.85f;  // กว้างเงาเทียบ 1 tile
         private const float ShadowAlpha   = 0.22f;  // ความเข้มเงา (คูณกับ gradient ใน sprite)
@@ -30,7 +27,6 @@ namespace NuclearReMind
             EventManager.Instance.OnBuildingPlaced    += HandleBuildingPlaced;
             EventManager.Instance.OnBuildingRemoved   += HandleBuildingRemoved;
             EventManager.Instance.OnSaveLoaded        += HandleSaveLoaded;
-            EventManager.Instance.OnPowerGridChanged  += HandlePowerGridChanged;
         }
 
         private void OnDisable()
@@ -39,18 +35,6 @@ namespace NuclearReMind
             EventManager.Instance.OnBuildingPlaced   -= HandleBuildingPlaced;
             EventManager.Instance.OnBuildingRemoved  -= HandleBuildingRemoved;
             EventManager.Instance.OnSaveLoaded       -= HandleSaveLoaded;
-            EventManager.Instance.OnPowerGridChanged -= HandlePowerGridChanged;
-        }
-
-        private void HandlePowerGridChanged(HashSet<Vector2Int> poweredCells)
-        {
-            foreach (var kvp in _spawnedVisuals)
-            {
-                if (kvp.Value == null) continue;
-                var sr = kvp.Value.GetComponent<SpriteRenderer>();
-                if (sr == null) continue;
-                sr.color = poweredCells.Contains(kvp.Key) ? ColorPowered : ColorUnpowered;
-            }
         }
 
         private void HandleBuildingPlaced(Cell cell, BuildingData data)
@@ -116,7 +100,7 @@ namespace NuclearReMind
             _spawnedVisuals[position] = go;
         }
 
-        // เงา ellipse นุ่ม ๆ ใต้อาคาร — child แยก จึงไม่โดน power dimming (ที่อ่าน SpriteRenderer ตัวแม่)
+        // เงา ellipse นุ่ม ๆ ใต้อาคาร — child แยกจาก SpriteRenderer ตัวแม่
         private void AddShadow(GameObject parent, Vector2Int position, BuildingData data)
         {
             var shadow = new GameObject("Shadow");

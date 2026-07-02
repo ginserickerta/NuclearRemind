@@ -28,8 +28,9 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Crisis Dilemmas",
             "NuclearReMind/Setup Quiz System",
             "NuclearReMind/Setup Decrees",
+            // Power Grid ถอดจาก chain แล้ว — GDD V4 ไม่มีกลไกรัศมีไฟ (ต้นทุนพลังงาน = upkeep §6)
+            // และ setup เดิมจะยัด PowerConduit (no-op) กลับเข้า hotbar — เมนูยังอยู่ ถ้าอยากรันเอง
             "NuclearReMind/Setup Day 11 Systems",
-            "NuclearReMind/Setup Power Grid System",
             "NuclearReMind/Setup Demolition System",
             "NuclearReMind/Setup Grid 43x43",
             "NuclearReMind/Fill Grids (Ground + Fog)",

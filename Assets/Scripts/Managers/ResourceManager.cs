@@ -271,19 +271,14 @@ namespace NuclearReMind
         }
 
         /// <summary>
-        /// อาคารพร้อมเดินเครื่องไหม — ไม่อยู่ระหว่างสร้าง และได้รับพลังงานจาก Power Grid
+        /// อาคารพร้อมเดินเครื่องไหม — แค่ "สร้างเสร็จแล้ว" ก็เดินเครื่องได้
+        /// (V4 §6: ต้นทุนพลังงานของอาคาร = upkeep ต่อวัน — GDD ไม่มีกลไกรัศมีไฟ
+        /// power grid เดิม gate การผลิตด้วย powerRange ที่ไม่เคยถูกตั้ง → ทุกตึกผลิตไม่ได้ทั้งเกม)
         /// </summary>
         private bool IsOperational(Vector2Int cell)
         {
-            if (ConstructionController.Instance != null &&
-                ConstructionController.Instance.IsUnderConstruction(cell))
-                return false;
-
-            if (PowerGridManager.Instance != null &&
-                !PowerGridManager.Instance.IsBuildingPowered(cell))
-                return false;
-
-            return true;
+            return ConstructionController.Instance == null ||
+                   !ConstructionController.Instance.IsUnderConstruction(cell);
         }
 
         private void CheckThresholds()

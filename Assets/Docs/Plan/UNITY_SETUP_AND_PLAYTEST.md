@@ -23,7 +23,7 @@
 | 7 | **Setup Crisis Dilemmas** | 3 crisis A/B/C + DilemmaManager |
 | 8 | **Setup Quiz System** | 10 quiz + wire `allQuizzes` + `linkedQuizIds` (ต้องรัน**หลัง** Crisis + HUD) |
 | 9 | **Setup Decrees** | 2 decree + DecreeManager |
-| 10 | **Setup Day 11 Systems / Power Grid / Demolition** | ระบบเดิม (ถ้ายังไม่ได้ตั้ง) |
+| 10 | **Setup Day 11 Systems / Demolition** | ระบบเดิม (ถ้ายังไม่ได้ตั้ง) — Power Grid ถอดจาก chain แล้ว (GDD ไม่มีรัศมีไฟ, upkeep §6 คือต้นทุนพลังงาน) |
 | 11 | **Setup Grid 43x43** | กริด 43×43 (§18) |
 | 12 | **Fill Grids / Apply Kanit Font** | tile art placeholder + ฟอนต์ |
 | 13 | **Ctrl+S** | Save Scene |

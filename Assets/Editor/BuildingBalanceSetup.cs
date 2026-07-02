@@ -146,16 +146,34 @@ namespace NuclearReMind.Editor
             return data;
         }
 
-        /// <summary>ต่อ Mine เข้า hotbar (PlacementController) + ตาราง restore (BuildingRegistry) ในซีนที่เปิดอยู่</summary>
+        /// <summary>
+        /// ต่อ Mine เข้า hotbar (PlacementController) + ตาราง restore (BuildingRegistry) ในซีนที่เปิดอยู่
+        /// พร้อมถอด PowerConduit ออกจากแถบเลือกตึก (power grid ไม่ gate การผลิตแล้ว — conduit เป็น no-op)
+        /// </summary>
         private static void WireSceneReferences(BuildingData mine)
         {
             if (mine == null) return;
 
+            var conduit = AssetDatabase.LoadAssetAtPath<BuildingData>(Dir + "PowerConduit.asset");
+
             var placement = Object.FindFirstObjectByType<PlacementController>();
-            if (placement != null && AppendIfMissing(ref placement.buildingHotbar, mine))
+            if (placement != null)
             {
-                EditorUtility.SetDirty(placement);
-                Debug.Log($"[BuildingBalanceSetup] เพิ่ม Mine เข้า buildingHotbar (ช่องที่ {placement.buildingHotbar.Length})");
+                bool changed = AppendIfMissing(ref placement.buildingHotbar, mine);
+                changed |= RemoveIfPresent(ref placement.buildingHotbar, conduit);
+                if (changed)
+                {
+                    EditorUtility.SetDirty(placement);
+                    Debug.Log($"[BuildingBalanceSetup] hotbar = {placement.buildingHotbar.Length} ช่อง (Mine เพิ่ม / Conduit ถอด)");
+                }
+
+                // BuildingSelectionUI.buildings เป็น array แยก (serialize คนละก้อน) — sync ให้ตรง hotbar เสมอ
+                var selUI = Object.FindFirstObjectByType<BuildingSelectionUI>();
+                if (selUI != null)
+                {
+                    selUI.buildings = (BuildingData[])placement.buildingHotbar.Clone();
+                    EditorUtility.SetDirty(selUI);
+                }
             }
 
             var registry = Object.FindFirstObjectByType<BuildingRegistry>();
@@ -177,6 +195,15 @@ namespace NuclearReMind.Editor
             var list = array != null ? new List<BuildingData>(array) : new List<BuildingData>();
             if (list.Contains(item)) return false;
             list.Add(item);
+            array = list.ToArray();
+            return true;
+        }
+
+        private static bool RemoveIfPresent(ref BuildingData[] array, BuildingData item)
+        {
+            if (item == null || array == null) return false;
+            var list = new List<BuildingData>(array);
+            if (!list.Remove(item)) return false;
             array = list.ToArray();
             return true;
         }
