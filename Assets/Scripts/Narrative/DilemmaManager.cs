@@ -4,9 +4,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
-    /// ตรวจ trigger condition ของ DilemmaData (เช่น "phase_1_complete", "trust_below_40")
+    /// ตรวจ trigger condition ของ DilemmaData (phase_n_complete, day-end conditions, hope)
     /// แสดง dilemma ผ่าน OnDilemmaTriggered แล้วรอ Popup UI raise OnDilemmaResolved
-    /// เพื่อนำผลของ choice ไปปรับ Resource/Trust/ความสัมพันธ์ผ่าน event
+    /// เพื่อนำผลของ choice ไปปรับ Resource/Hope/ความสัมพันธ์ผ่าน event
     /// </summary>
     public class DilemmaManager : MonoBehaviour
     {
@@ -38,7 +38,7 @@ namespace NuclearReMind
         private void OnEnable()
         {
             EventManager.Instance.OnTowerPhaseComplete += HandleTowerPhaseComplete;
-            EventManager.Instance.OnTrustChanged += HandleTrustChanged;
+            EventManager.Instance.OnMoraleChanged += HandleMoraleChanged;
             EventManager.Instance.OnDilemmaResolved += HandleDilemmaResolved;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
             EventManager.Instance.OnDayEnded += HandleDayEnded;
@@ -50,7 +50,7 @@ namespace NuclearReMind
         {
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnTowerPhaseComplete -= HandleTowerPhaseComplete;
-            EventManager.Instance.OnTrustChanged -= HandleTrustChanged;
+            EventManager.Instance.OnMoraleChanged -= HandleMoraleChanged;
             EventManager.Instance.OnDilemmaResolved -= HandleDilemmaResolved;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
             EventManager.Instance.OnDayEnded -= HandleDayEnded;
@@ -101,15 +101,14 @@ namespace NuclearReMind
             TryTrigger($"phase_{phase}_complete");
         }
 
-        private void HandleTrustChanged(float trust)
+        // trigger ตามขวัญกำลังใจ: "hope_below_30"
+        private void HandleMoraleChanged(float hope)
         {
             foreach (var dilemma in dilemmaPool)
             {
                 if (dilemma == null || _triggeredIds.Contains(dilemma.dilemmaId)) continue;
-                if (!dilemma.triggerCondition.StartsWith("trust_below_")) continue;
 
-                string suffix = dilemma.triggerCondition.Substring("trust_below_".Length);
-                if (int.TryParse(suffix, out int threshold) && trust < threshold)
+                if (TryThreshold(dilemma.triggerCondition, "hope_below_", out float hb) && hope < hb)
                 {
                     Trigger(dilemma);
                     return;
@@ -135,38 +134,50 @@ namespace NuclearReMind
 
             _activeDilemma = dilemma;
             _triggeredIds.Add(dilemma.dilemmaId);
+            TimeManager.Instance?.Pause(PauseReason.CrisisPopup); // หยุดนาฬิกาวันระหว่างตัดสินใจ (V4 §3)
             EventManager.Instance.RaiseDilemmaTriggered(dilemma);
         }
 
-        private void HandleDilemmaResolved(DilemmaData dilemma, bool choiceA)
+        // choiceIndex: 0 = A, 1 = B, 2 = C (V4 §10)
+        private void HandleDilemmaResolved(DilemmaData dilemma, int choiceIndex)
         {
             if (dilemma != _activeDilemma) return;
 
-            float foodChange = choiceA ? dilemma.choiceA_FoodChange : dilemma.choiceB_FoodChange;
-            float energyChange = choiceA ? dilemma.choiceA_EnergyChange : dilemma.choiceB_EnergyChange;
-            float waterChange = choiceA ? dilemma.choiceA_WaterChange : dilemma.choiceB_WaterChange;
-            float trustChange = choiceA ? dilemma.choiceA_TrustChange : dilemma.choiceB_TrustChange;
-            int aethonChange = choiceA ? dilemma.choiceA_AethonRelationChange : dilemma.choiceB_AethonRelationChange;
-            int keranChange = choiceA ? dilemma.choiceA_KeranRelationChange : dilemma.choiceB_KeranRelationChange;
+            float foodChange   = Pick(choiceIndex, dilemma.choiceA_FoodChange,   dilemma.choiceB_FoodChange,   dilemma.choiceC_FoodChange);
+            float energyChange = Pick(choiceIndex, dilemma.choiceA_EnergyChange, dilemma.choiceB_EnergyChange, dilemma.choiceC_EnergyChange);
+            float waterChange  = Pick(choiceIndex, dilemma.choiceA_WaterChange,  dilemma.choiceB_WaterChange,  dilemma.choiceC_WaterChange);
+            float ironChange   = Pick(choiceIndex, dilemma.choiceA_IronChange,   dilemma.choiceB_IronChange,   dilemma.choiceC_IronChange);
+            float hopeChange   = Pick(choiceIndex, dilemma.choiceA_HopeChange,   dilemma.choiceB_HopeChange,   dilemma.choiceC_HopeChange);
+            int aethonChange   = Pick(choiceIndex, dilemma.choiceA_AethonRelationChange, dilemma.choiceB_AethonRelationChange, dilemma.choiceC_AethonRelationChange);
+            int keranChange    = Pick(choiceIndex, dilemma.choiceA_KeranRelationChange,  dilemma.choiceB_KeranRelationChange,  dilemma.choiceC_KeranRelationChange);
+            int idleDays       = Pick(choiceIndex, dilemma.choiceA_ForceReactorIdleDays, dilemma.choiceB_ForceReactorIdleDays, dilemma.choiceC_ForceReactorIdleDays);
 
-            if (foodChange != 0f)
-                EventManager.Instance.RaiseResourceDelta(ResourceType.Food, foodChange);
+            if (foodChange != 0f)   EventManager.Instance.RaiseResourceDelta(ResourceType.Food, foodChange);
+            if (energyChange != 0f) EventManager.Instance.RaiseResourceDelta(ResourceType.Energy, energyChange);
+            if (waterChange != 0f)  EventManager.Instance.RaiseResourceDelta(ResourceType.Water, waterChange);
+            if (ironChange != 0f)   EventManager.Instance.RaiseResourceDelta(ResourceType.Iron, ironChange);
+            if (hopeChange != 0f)   EventManager.Instance.RaiseMoraleDelta(hopeChange);
 
-            if (energyChange != 0f)
-                EventManager.Instance.RaiseResourceDelta(ResourceType.Energy, energyChange);
-
-            if (waterChange != 0f)
-                EventManager.Instance.RaiseResourceDelta(ResourceType.Water, waterChange);
-
-            if (trustChange != 0f)
-                EventManager.Instance.RaiseTrustDelta(trustChange);
+            // วิกฤต 2·B (GDD ล่าสุด): บังคับเตาเดิน Idle N วันเพื่อผลิตไอโซโทปการแพทย์จากฟลักซ์นิวตรอน
+            if (idleDays > 0)
+                CoreTowerManager.Instance?.ForceIdle(idleDays);
 
             AethonRelationship += aethonChange;
             KeranRelationship += keranChange;
             EventManager.Instance.RaiseRelationshipChanged(AethonRelationship, KeranRelationship);
 
+            TimeManager.Instance?.Resume(PauseReason.CrisisPopup); // ปิด crisis popup → นาฬิกาเดินต่อ
+
+            // V4 §16 (T1.E1): หลัง resolve → เด้งควิซที่ผูกกับ dilemma นี้เข้าคิว (dilemma implement IQuizTrigger)
+            // (ถ้ามีควิซผูกอยู่ QuizManager จะ Pause(QuizPopup) ต่อทันที)
+            if (QuizManager.Instance != null)
+                QuizManager.Instance.EnqueueQuizzes(dilemma);
+
             _activeDilemma = null;
         }
+
+        private static float Pick(int i, float a, float b, float c) => i == 0 ? a : (i == 1 ? b : c);
+        private static int Pick(int i, int a, int b, int c) => i == 0 ? a : (i == 1 ? b : c);
 
         private void HandleSaveLoaded(SaveData save)
         {

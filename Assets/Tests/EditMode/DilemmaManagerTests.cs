@@ -109,8 +109,8 @@ namespace NuclearReMind.Tests
 
             eventManager.RaiseTowerProgressChanged(new TowerData { coreHeat = 90f });
             eventManager.RaiseDayEnded(5);
-            eventManager.RaiseDilemmaResolved(crisis, true); // เคลียร์ active
-            eventManager.RaiseDayEnded(6);                   // HEAT ยังสูง
+            eventManager.RaiseDilemmaResolved(crisis, 0); // เคลียร์ active (เลือก A)
+            eventManager.RaiseDayEnded(6);                // HEAT ยังสูง
 
             Assert.AreEqual(1, count, "crisis เดิมต้องไม่เด้งซ้ำ");
         }
@@ -128,10 +128,46 @@ namespace NuclearReMind.Tests
 
             eventManager.RaiseTowerProgressChanged(new TowerData { coreHeat = 80f });
             eventManager.RaiseDayEnded(5);
-            eventManager.RaiseDilemmaResolved(crisis, true);
+            eventManager.RaiseDilemmaResolved(crisis, 0); // A
 
             Assert.Contains((ResourceType.Energy, -300f), deltas, "ต้องหัก Energy ตาม choiceA");
             Assert.Contains((ResourceType.Water, -60f), deltas, "ต้องหัก Water ตาม choiceA");
+        }
+
+        [Test]
+        public void Resolved_ChoiceC_AppliesIronAndHopeDeltas()
+        {
+            var crisis = NewDilemma("heat_crisis", "heat_above_70");
+            crisis.choiceC_IronChange = -250f;
+            crisis.choiceC_HopeChange = -12f;
+            dilemmaManager.dilemmaPool = new[] { crisis };
+
+            var resDeltas = new List<(ResourceType type, float amt)>();
+            float hopeDelta = 0f;
+            eventManager.OnResourceDelta += (t, a) => resDeltas.Add((t, a));
+            eventManager.OnMoraleDelta += h => hopeDelta = h;
+
+            eventManager.RaiseTowerProgressChanged(new TowerData { coreHeat = 80f });
+            eventManager.RaiseDayEnded(5);
+            eventManager.RaiseDilemmaResolved(crisis, 2); // C
+
+            Assert.Contains((ResourceType.Iron, -250f), resDeltas, "choice C ต้องหัก Iron");
+            Assert.AreEqual(-12f, hopeDelta, 1e-4f, "choice C ต้องปรับ Hope");
+        }
+
+        [Test]
+        public void Resolved_ChoiceB_ForceIdle_CommandsReactor()
+        {
+            var tower = NewComponent<CoreTowerManager>("CoreTowerManager");
+
+            var crisis = NewDilemma("outbreak", "day_reached_18");
+            crisis.choiceB_ForceReactorIdleDays = 2; // วิกฤต 2·B: สั่งเตา Idle 2 วัน
+            dilemmaManager.dilemmaPool = new[] { crisis };
+
+            eventManager.RaiseDayEnded(18);
+            eventManager.RaiseDilemmaResolved(crisis, 1); // B
+
+            Assert.AreEqual(2, tower.ForcedIdleDaysRemaining, "choice B ต้องสั่ง ForceIdle(2) ให้เตา");
         }
 
         // ---- reflection helpers (เหมือน GameManagerTests) ----

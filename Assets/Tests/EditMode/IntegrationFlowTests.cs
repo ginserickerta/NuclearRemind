@@ -94,7 +94,7 @@ namespace NuclearReMind.Tests
             dilemmaData.dilemmaId = "phase1_test";
             dilemmaData.triggerCondition = "phase_1_complete";
             dilemmaData.choiceA_FoodChange = 20f;
-            dilemmaData.choiceA_TrustChange = 5f;
+            dilemmaData.choiceA_HopeChange = 5f;
             dilemmaData.choiceA_AethonRelationChange = 1;
             dilemmaData.choiceA_KeranRelationChange = -1;
             _spawned.Add(dilemmaData);
@@ -137,7 +137,7 @@ namespace NuclearReMind.Tests
             Assert.IsTrue(tooltipPanel.activeSelf, "เลือกอาคารแล้ว tooltip panel ต้องเปิด");
 
             float energyBefore = resources.Current.energy;
-            int workersBefore = resources.Current.workers;
+            int workersBefore = population.Current.total;
 
             Cell cell = grid.GetCell(2, 3);
             cell.isOccupied = true;
@@ -146,8 +146,8 @@ namespace NuclearReMind.Tests
 
             Assert.AreEqual(energyBefore - habitatData.energyCost, resources.Current.energy, 1e-4f,
                 "ResourceManager ต้องหัก energyCost ตอนวางอาคาร");
-            Assert.AreEqual(workersBefore, resources.Current.workers,
-                "workers เป็น reserve pool — วางอาคารต้องไม่หัก workers (จองตอน Tick แทน)");
+            Assert.AreEqual(workersBefore, population.Current.total,
+                "workers เป็น reserve pool — วางอาคารต้องไม่หักจำนวนคน (จองตอน Tick แทน)");
 
             Assert.IsTrue(registry.PlacedBuildings.ContainsKey(new Vector2Int(2, 3)),
                 "BuildingRegistry ต้องบันทึกอาคารที่วางแล้ว");
@@ -173,15 +173,15 @@ namespace NuclearReMind.Tests
             Assert.AreEqual("phase1_test", triggered.dilemmaId);
 
             float foodBefore = resources.Current.food;
-            float trustBefore = population.Current.trust;
+            float hopeBefore = population.Current.hope;
 
-            eventManager.RaiseDilemmaResolved(triggered, true);
+            eventManager.RaiseDilemmaResolved(triggered, 0); // เลือก A
 
             Assert.AreEqual(foodBefore + dilemmaData.choiceA_FoodChange, resources.Current.food, 1e-4f,
                 "เลือก choice A ต้องบวก food ตาม choiceA_FoodChange");
-            Assert.AreEqual(Mathf.Clamp(trustBefore + dilemmaData.choiceA_TrustChange, 0f, 100f),
-                population.Current.trust, 1e-4f,
-                "เลือก choice A ต้องปรับ trust ตาม choiceA_TrustChange");
+            Assert.AreEqual(Mathf.Clamp(hopeBefore + dilemmaData.choiceA_HopeChange, 0f, 100f),
+                population.Current.hope, 1e-4f,
+                "เลือก choice A ต้องปรับ Hope ตาม choiceA_HopeChange");
             Assert.AreEqual(1, dilemmaManager.AethonRelationship);
             Assert.AreEqual(-1, dilemmaManager.KeranRelationship);
         }
@@ -211,7 +211,7 @@ namespace NuclearReMind.Tests
             eventManager.RaiseBuildingPlaced(cell, habitatData);
 
             eventManager.RaiseResourceDelta(ResourceType.Food, 50f);
-            eventManager.RaiseTrustDelta(-10f);
+            eventManager.RaiseMoraleDelta(-10f);
 
             ResourceData savedResources = resources.Current;
             PopulationData savedPopulation = population.Current;
@@ -222,7 +222,7 @@ namespace NuclearReMind.Tests
 
             // เปลี่ยนสถานะทั้งหมดให้ต่างจากตอน save เพื่อพิสูจน์ว่า Load() คืนค่าเดิมจริง
             eventManager.RaiseResourceDelta(ResourceType.Food, -1000f);
-            eventManager.RaiseTrustDelta(1000f);
+            eventManager.RaiseMoraleDelta(1000f);
             grid.InitializeGrid();
 
             var stale = new List<GameObject>();
@@ -233,8 +233,8 @@ namespace NuclearReMind.Tests
 
             Assert.AreEqual(savedResources.food, resources.Current.food, 1e-4f,
                 "Load() ต้องคืนค่า food ตามที่ save ไว้");
-            Assert.AreEqual(savedPopulation.trust, population.Current.trust, 1e-4f,
-                "Load() ต้องคืนค่า trust ตามที่ save ไว้");
+            Assert.AreEqual(savedPopulation.hope, population.Current.hope, 1e-4f,
+                "Load() ต้องคืนค่า Hope ตามที่ save ไว้");
             Assert.AreEqual(savedTower.currentPhase, tower.Current.currentPhase,
                 "Load() ต้องคืนค่า tower phase ตามที่ save ไว้");
 

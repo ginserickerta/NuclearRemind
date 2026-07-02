@@ -1,5 +1,48 @@
 # Progress — Nuclear Re:Mind
-> อัปเดตล่าสุด: 2026-06-27 | อ้างอิงแผน: `Plan/TASKS.md` (sprint, deadline 9 ก.ค.) + `ImprovePlan1.csv`
+> อัปเดตล่าสุด: 2026-07-01 | แผนหลักปัจจุบัน: `Final Plan/DEV_PLAN_V4.md` (ยึด GDD V4) · แผนเดิม (v2.x): `Plan/TASKS.md`
+
+---
+
+## 🚀 อัปเดต 30 มิ.ย.–1 ก.ค. 2026 — ย้ายเข้า GDD V4 (เฟส 0–1 เสร็จ)
+
+Spec หลักเปลี่ยนจาก GDD v2.1/v2.2 → **V4 (Developer Handoff Edition)**. โค้ดเดิมทำตาม v2.1/v2.2 จึงมีทั้ง refactor ย้อน + ระบบใหม่. แผนเต็ม + task ทุกเฟส: `Final Plan/DEV_PLAN_V4.md`
+
+**เฟส 0 (30 มิ.ย.) — Refactor ฐานข้อมูล ✅ (25 ไฟล์)**
+- ResourceData → 6 ทรัพยากร (Energy/Water/Food/**Iron**/**Deuterium**/**Tritium**) + **Knowledge**
+- Morale: Hope/Despair (2 ค่า) → **Hope เดี่ยว** (เริ่ม 100) · ถอด Despair/riot/strike
+- GameEndType → {Win, HopeZero, Meltdown, TimeoutLowQ} · material→Iron (`FormerlySerializedAs`)
+- Codex ปลดด้วย event (ไม่จ่าย RP) · Knowledge สะสมอย่างเดียว · แก้ tests 5 ไฟล์
+
+**เฟส 1 (1 ก.ค.) — Quiz + Knowledge ✅ (7 ใหม่ + 7 แก้)**
+- ควิซ **10 ข้อ** (เนื้อหา §12 verbatim · Q4 ฉบับ 2-ขั้นล่าสุด) · `QuizManager` (queue/scoring +8/+3) · `QuizPopupController` (ตอบบังคับ+สีหมวด) · `QuizSetup` editor
+- Knowledge threshold + `KnowBonus` (Expert ≥80 → +0.10 เข้าสูตรเตา) · HUD Knowledge bar
+- ผูกควิซท้ายวิกฤต (Plasma→Q2,Q3 · Outbreak→Q4,Q5 · Food→Q6,Q7)
+- ทำผ่าน multi-agent workflow + verify เอง (แก้ 2 blocker: static `GetById`, ลืมสร้าง QuizManager GameObject)
+
+> ⚠️ เฟส 0-1 **รอ compile + tests ใน Unity** (แก้แบบ headless ไม่มี compiler) + รัน Setup 3 เมนูตามลำดับ: `Setup Crisis Dilemmas` → `Setup HUD Canvas` → `Setup Quiz System`
+
+### 📊 ไทม์ไลน์ความคืบหน้าทั้งหมด (ตั้งแต่เริ่มโปรเจกต์)
+
+| ช่วง | งานหลัก | สถานะ |
+|------|---------|-------|
+| ต้น มิ.ย. (Day 1–7) | รากฐาน: Grid isometric, Camera, Input, Placement, EventManager, BuildingData + tests | ✅ commit |
+| กลาง มิ.ย. (Day 5–10) | Core managers: Resource, Population, CoreTower, Save + Codex 5 core entries | ✅ |
+| 16–17 มิ.ย. | Demolition, Power Grid, Construction queue, gap analysis (vs Frostpunk) | ✅ |
+| 25 มิ.ย. | เขียน GDD v2.1 (`CLAUDE_3`) + CODEX_CONTENT + TASKS (sprint plan) | ✅ |
+| 26–27 มิ.ย. | **Block A** (gameplay loop) · **Block B** (CORE TOWER v2.1) · **Block C** (crisis trigger, 3 dilemma) · **Block D** (Codex 15 branch) | ✅ |
+| 28 มิ.ย. | Hope/Despair (v2.2 §10) + code-review fixes + audit โค้ด↔GDD v2.2 | ✅ |
+| **30 มิ.ย.** | เทียบ v2.2↔V4 · สร้าง `DEV_PLAN_V4` · **เฟส 0** (refactor ฐานข้อมูล) | ✅ implement |
+| **1 ก.ค.** | GDD ฉบับแก้ (Crisis 2·B/Q4) + จัดไฟล์ archive · **เฟส 1** (Quiz/Knowledge) · **เฟส 2** (Reactor: fuel Deuterium/Tritium จริง, cooling เต็มสูตร, พายุ+12, micro-damage, ForceIdle) · **ปิด Gap G1** (สร้าง 5 codex ฟิวชัน + wire ควิซ) | ✅ implement |
+| **1 ก.ค. (ต่อ)** | **เฟส 3** (ประชากร 3 คลาส Worker/Engineer/Medic + ฝึก 1 วัน + Shelter cap + growth +1/วัน + cooling engineers เข้าสูตรเตา) | ✅ implement |
+| **1 ก.ค. (ต่อ)** | **เฟส 4** (Crisis A/B/C 3 ทาง + retarget เป็น Hope/Iron + เนื้อหา §10 3 วิกฤต + ForceIdle วิกฤต 2·B เตาผลิตไอโซโทป) | ✅ implement |
+| **1 ก.ค. (ต่อ)** | **เฟส 5** (TimeManager pause-reason stack + Planning 30s/Live 60s + mode-lock + Placement Pause §15 + quiz/crisis หยุดนาฬิกาวัน) · batch production เลื่อน 5b | ✅ implement |
+| **1 ก.ค. (ต่อ)** | **เฟส 6** (Building levels L1–L3 ผลิต ×1/×3/×7.5 + upgrade กด U + Water L3→Deuterium + Toroidal/Poloidal Coils ปิด stub เฟส 2) | ✅ implement |
+| **1 ก.ค. (ต่อ)** | **เฟส 7** (Endings 3-tier Q-based: True/Normal/GameOver + Defeat Summary + Restart + MetaProgress คลังความรู้ถาวร PlayerPrefs + Decrees 2 ข้อ→cooling/Q10) | ✅ implement |
+| **1 ก.ค. (ต่อ)** | **เฟส 8** (HUD แสดงเฟส Planning/Live + GridSizeSetup 43×43 + checklist `UNITY_SETUP_AND_PLAYTEST.md`) — code polish · playtest/จูน/อาร์ต=Unity | ✅ code |
+| **2 ก.ค.** | **5b** (batch production ตอนจบวัน — event ใหม่ `OnDayProduction` ยิงก่อน `OnDayEnded` การันตีลำดับ ผลิต→บริโภค→เตา/วิกฤต + บริโภค Food/Water 2/คน/วัน + tick 5 วิ เหลือแค่งานก่อสร้าง) · +3 tests | ✅ **122/122 tests ผ่าน** (batchmode) |
+| **🎉 สรุป** | **9/9 เฟส code-complete (0-8) + 5b** — ครบทุกระบบ V4 · เหลืองาน Unity (รัน tests/playtest/จูน/อาร์ต) | ⏳ |
+
+> หมายเหตุ: ส่วนด้านล่างนี้เป็นบันทึกช่วง v2.x (ก่อนย้ายเข้า V4) — เก็บไว้เป็นประวัติ
 
 ---
 
@@ -68,7 +111,25 @@
 
 > ⚠️ ต้องรันเมนู `NuclearReMind → Setup Crisis Dilemmas` ใหม่ใน Unity เพื่อ generate 3 assets + wire dilemmaPool
 > 🔸 crisis ยังไม่ผูกกับ Codex unlock (ต้องต่อ event เมื่อ CodexManager รองรับ event เพิ่ม) + consequence ยังไม่มี Material/CORE% (ResourceData ไม่มี material)
+
+**Phase 1b (28 มิ.ย.) — Hope/Despair (GDD v2.2 §10)** — เทียบ audit เจอว่า trust เดิม ≠ GDD
+- แทน `PopulationData.trust` ด้วย `hope`(เริ่ม 50) + `despair`(เริ่ม 20) เป็น 2 ค่าอิสระ
+- recalc รายวัน (`OnDayEnded`): ขาดทรัพยากร → Hope−5/Despair+5 ต่ออย่าง, ครบ → Hope+3/Despair−2
+- **Hope=0 → Game Over** (`MoraleCollapsed`, GameManager หยุดเกม) · **Despair>80 → จลาจล/สไตรค์**
+- event `OnTrustChanged/Delta` → `OnMoraleChanged/Delta(hope,despair)` · dilemma/crisis consequence → Hope/Despair
+- HUD: trust bar → Hope bar + Despair bar · `GameEndType.TrustCollapsed` → `MoraleCollapsed`
+- tests: `PopulationManagerTests` 6 ตัว + แก้ IntegrationFlow/Dilemma/Crisis
+
+> ⚠️ ต้องรันเมนู `Setup HUD Canvas` (สร้าง Hope/Despair bar) + `Setup Crisis Dilemmas` (regenerate consequence) ใหม่
+> 🔸 save เก่า (ก่อนมี hope/despair) จะโหลดได้ hope=0 → game over ทันที (dev only, ไม่มี save จริง)
 > ⚠️ งาน 17–27 มิ.ย. (Block A+B) commit แล้ว — งาน Codex (Block D) นี้ **ยังไม่ได้ commit**
+
+**Phase 1b — แก้ตาม code-review (#1–#3)** — lifecycle bug รอบ game-over
+- **#1** `GameManager.SetState`: GameOver/Victory → `timeScale=0` (เดิม simulation/นับวันยังเดินต่อหลังเกมจบ)
+- **#2** `PopulationManager._gameOverRaised` latch กัน `OnGameOver` ยิงซ้ำทุกวันเมื่อ Hope ค้างที่ 0 (reset ตอนโหลดเซฟ)
+- **#3** `HandleDayEnded` ข้าม `day<=1` — Day 1 tutorial ไม่คิดขวัญกำลังใจ (GDD §05/§10)
+- tests ล็อกทั้ง 3: `GameManagerTests` +3 (freeze/หยุดวัน/Win ไม่เข้า GameOver), `PopulationManagerTests` +2 (game-over ครั้งเดียว/Day1 ไม่คิด morale)
+- 🔸 #4 (orphan TrustBar/TrustText ใน scene) = งานมือใน Unity
 
 ---
 

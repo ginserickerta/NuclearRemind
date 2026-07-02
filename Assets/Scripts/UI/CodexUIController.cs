@@ -87,7 +87,7 @@ namespace NuclearReMind
         private void HandleResourceChanged(ResourceData data)
         {
             if (researchPointText != null)
-                researchPointText.text = $"RP: {Mathf.FloorToInt(data.researchPoints)}";
+                researchPointText.text = $"ความรู้: {Mathf.FloorToInt(data.knowledge)}";
         }
 
         private void RefreshList()
@@ -105,7 +105,7 @@ namespace NuclearReMind
                 var go = Instantiate(entryButtonPrefab, entryListParent);
                 var label = go.GetComponentInChildren<Text>();
                 if (label != null)
-                    label.text = unlocked ? entry.title : $"[{entry.researchPointCost} RP] {entry.title}";
+                    label.text = unlocked ? entry.title : $"🔒 {entry.title}";
 
                 var btn = go.GetComponent<Button>();
                 if (btn != null)

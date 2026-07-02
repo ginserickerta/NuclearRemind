@@ -10,18 +10,24 @@ namespace NuclearReMind
         public enum GameState { Playing, Paused, GameOver, Victory }
         public GameState CurrentState { get; private set; } = GameState.Playing;
 
-        // ===== Day Cycle (§2.3) =====
+        // ===== Day Cycle (§2.3 / §3) =====
         public const int MaxDay = 30;
 
+        /// <summary>เฟสภายในวัน (V4 §3): Planning วางแผน/วางอาคาร → Live เดินเครื่อง/เหตุการณ์</summary>
+        public enum DayPhase { Planning, Live }
+
         [Header("Day Cycle")]
-        [Tooltip("ความยาววันที่จับเวลา (วินาที) — Day 2–30 ตาม §10 = 90")]
+        [Tooltip("ความยาววันที่จับเวลา (วินาที) — Day 2–30 = 90 (Planning 30 + Live 60)")]
         public float dayLength = 90f;
+        [Tooltip("ช่วง Live (วินาที) — Planning = dayLength − liveSeconds (V4 §3)")]
+        public float liveSeconds = 60f;
         [Tooltip("Day 1 = tutorial ไม่จับเวลา (§2.3)")]
         public bool skipDay1Timer = true;
 
         public int CurrentDay { get; private set; } = 1;
         public float DayTimeRemaining { get; private set; }
         public bool DayTimerActive { get; private set; }
+        public DayPhase CurrentDayPhase { get; private set; } = DayPhase.Planning;
 
         // ===== Speed Control (A4) =====
         // ความเร็วเล่นปัจจุบันเมื่อไม่ pause (1× ปกติ / 2× เร่ง) — pause = timeScale 0 ชั่วคราว
@@ -43,6 +49,7 @@ namespace NuclearReMind
             EventManager.Instance.OnTowerComplete += HandleTowerComplete;
             EventManager.Instance.OnTutorialComplete += HandleTutorialComplete;
             EventManager.Instance.OnSpeedChangeRequested += HandleSpeedChangeRequested;
+            EventManager.Instance.OnGameOver += HandleGameOver;
         }
 
         void OnDisable()
@@ -51,6 +58,17 @@ namespace NuclearReMind
             EventManager.Instance.OnTowerComplete -= HandleTowerComplete;
             EventManager.Instance.OnTutorialComplete -= HandleTutorialComplete;
             EventManager.Instance.OnSpeedChangeRequested -= HandleSpeedChangeRequested;
+            EventManager.Instance.OnGameOver -= HandleGameOver;
+        }
+
+        // จบเกม → บันทึกคลังความรู้ถาวร (§9) · True/Normal = ชนะ (Victory ตั้งแล้ว) · ที่เหลือ = แพ้
+        void HandleGameOver(GameEndType endType)
+        {
+            CaptureMetaProgress();
+
+            if (endType == GameEndType.TrueEnding || endType == GameEndType.NormalEnding) return;
+            if (CurrentState == GameState.GameOver || CurrentState == GameState.Victory) return;
+            SetState(GameState.GameOver);
         }
 
         void Start()
@@ -59,13 +77,15 @@ namespace NuclearReMind
             // normalize timeScale (อาจค้างจาก play session ก่อน) + แจ้ง UI ให้ highlight ความเร็วเริ่มต้น
             Time.timeScale = GameSpeed;
             EventManager.Instance.RaiseSpeedChanged(Time.timeScale);
+            ApplyMetaProgress(); // §9: คืน Knowledge/Codex จากรอบก่อน
             BeginDay(1);
         }
 
+        // CORE% ถึง 100% ระหว่างทาง → ชนะสมบูรณ์ (True Ending, Q ≥ 1.0)
         void HandleTowerComplete()
         {
             SetState(GameState.Victory);
-            EventManager.Instance.RaiseGameOver(GameEndType.Win);
+            EventManager.Instance.RaiseGameOver(GameEndType.TrueEnding);
         }
 
         // จบ tutorial (Day 1) → เริ่มวันที่จับเวลา
@@ -82,10 +102,28 @@ namespace NuclearReMind
             bool timed = !(skipDay1Timer && CurrentDay == 1);
             DayTimeRemaining = timed ? dayLength : 0f;
             DayTimerActive = timed;
+            CurrentDayPhase = DayPhase.Planning; // เริ่มวันด้วยเฟสวางแผน (V4 §3)
+
+            // Planning: ปลดล็อกให้เปลี่ยนโหมดเตาได้ (ล็อกใหม่ตอนเข้า Live)
+            ReactorController()?.UnlockMode();
 
             Debug.Log($"[GameManager] Day {CurrentDay}/{MaxDay} started (timed={timed})");
             EventManager.Instance.RaiseDayStarted(CurrentDay, timed);
+            EventManager.Instance.RaiseDayPhaseChanged(DayPhase.Planning);
         }
+
+        // เข้าเฟส Live (เดินเครื่อง 60s สุดท้ายของวัน) — ล็อกโหมดเตาที่เลือกไว้ (V4 §3)
+        private void EnterLivePhase()
+        {
+            CurrentDayPhase = DayPhase.Live;
+            ReactorController()?.LockMode();
+            EventManager.Instance.RaiseDayPhaseChanged(DayPhase.Live);
+        }
+
+        private static CoreTowerManager ReactorController() => CoreTowerManager.Instance;
+
+        // นาฬิกาวันเดินต่อเมื่อไม่มี pause-reason (placement / quiz / crisis popup) — V4 §15
+        private static bool TimeRunning() => TimeManager.Instance == null || TimeManager.Instance.IsRunning;
 
         /// <summary>จบวันก่อนเวลา — ใช้โดย Tutorial (Day 1) หรือปุ่ม debug</summary>
         public void RequestEndDay()
@@ -100,12 +138,63 @@ namespace NuclearReMind
             int finished = CurrentDay;
 
             Debug.Log($"[GameManager] Day {finished} ended");
+            // ลำดับจบวัน (V4 §3): batch ผลิต+บริโภค (OnDayProduction) → เตา/ขวัญ/วิกฤต (OnDayEnded)
+            EventManager.Instance.RaiseDayProduction(finished);
             EventManager.Instance.RaiseDayEnded(finished);
 
-            // ครบ 30 วัน — ปล่อยให้ระบบ ending (E2) มารับช่วงประเมินผล ตอนนี้แค่หยุดนับ
-            if (finished >= MaxDay) return;
+            // ครบ 30 วัน → ประเมินฉากจบด้วยค่า Q (V4 §14)
+            if (finished >= MaxDay) { EvaluateFinalEnding(); return; }
 
             BeginDay(finished + 1);
+        }
+
+        // ประเมินฉากจบตอน Day 30 (V4 §14): Q≥1.0 True · Q 0.5–0.99 Normal · Q<0.5 แพ้ (TimeoutLowQ)
+        private void EvaluateFinalEnding()
+        {
+            if (CurrentState == GameState.GameOver || CurrentState == GameState.Victory) return;
+
+            float q = CoreTowerManager.Instance != null ? CoreTowerManager.Instance.Q : 0f;
+            if (q >= 1.0f)
+            {
+                SetState(GameState.Victory);
+                EventManager.Instance.RaiseGameOver(GameEndType.TrueEnding);
+            }
+            else if (q >= 0.5f)
+            {
+                SetState(GameState.Victory);
+                EventManager.Instance.RaiseGameOver(GameEndType.NormalEnding);
+            }
+            else
+            {
+                EventManager.Instance.RaiseGameOver(GameEndType.TimeoutLowQ);
+            }
+        }
+
+        // ───────────────────────── MetaProgress (§9) + Restart (§14) ─────────────────────────
+
+        private void ApplyMetaProgress()
+        {
+            MetaProgress.Load();
+            if (MetaProgress.KnowledgeBank > 0)
+                EventManager.Instance.RaiseResourceDelta(ResourceType.Knowledge, MetaProgress.KnowledgeBank);
+            CodexManager.Instance?.RestoreUnlocked(MetaProgress.UnlockedCodex);
+        }
+
+        private void CaptureMetaProgress()
+        {
+            int knowledge = ResourceManager.Instance != null
+                ? Mathf.RoundToInt(ResourceManager.Instance.Current.knowledge) : 0;
+            var codex = CodexManager.Instance != null ? CodexManager.Instance.UnlockedIds : null;
+            MetaProgress.Capture(knowledge, codex);
+        }
+
+        /// <summary>เริ่มเกมใหม่ (V4 §14) — reload scene · คลังความรู้ถาวรคงอยู่ (Knowledge/Codex)</summary>
+        public void Restart()
+        {
+            CaptureMetaProgress();
+            Time.timeScale = 1f;
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            UnityEngine.SceneManagement.SceneManager.LoadScene(scene.buildIndex);
         }
 
         public void SetState(GameState newState)
@@ -115,9 +204,11 @@ namespace NuclearReMind
 
             Time.timeScale = newState switch
             {
-                GameState.Paused  => 0f,
-                GameState.Playing => GameSpeed, // ใช้ความเร็วที่เลือกไว้ (1× หรือ 2×)
-                _                 => 1f,        // GameOver / Victory
+                GameState.Paused   => 0f,
+                GameState.Playing  => GameSpeed, // ใช้ความเร็วที่เลือกไว้ (1× หรือ 2×)
+                GameState.GameOver => 0f,        // จบเกม → freeze simulation ทั้งหมด (tick/day timer หยุดเอง)
+                GameState.Victory  => 0f,        // ชนะ → freeze เช่นกัน (UI เป็น unscaled ยังทำงาน)
+                _                  => 1f,
             };
 
             EventManager.Instance.RaiseGameStateChanged(newState);
@@ -153,16 +244,28 @@ namespace NuclearReMind
                     : GameState.Paused);
             }
 
-            // นับถอยหลังวัน — ใช้ Time.deltaTime (สเกลตาม timeScale ของ pause/ความเร็ว A4)
-            // pause → timeScale 0 → deltaTime 0 → freeze เอง ; เช็ค state ซ้ำกัน race
-            if (DayTimerActive && CurrentState == GameState.Playing)
+            AdvanceTime(Time.deltaTime);
+        }
+
+        /// <summary>
+        /// นับถอยหลังวัน + สลับเฟส Planning→Live + จบวัน (แยกจาก Update ให้เทสต์เรียกได้)
+        /// เดินเฉพาะเมื่อ: จับเวลา & Playing & ไม่มี pause-reason (placement/quiz/crisis — V4 §15)
+        /// </summary>
+        public void AdvanceTime(float deltaTime)
+        {
+            if (!DayTimerActive || CurrentState != GameState.Playing || !TimeRunning())
+                return;
+
+            DayTimeRemaining -= deltaTime;
+
+            // Planning → Live เมื่อเหลือเวลา ≤ ช่วง Live (เช่น เหลือ 60 จาก 90)
+            if (CurrentDayPhase == DayPhase.Planning && DayTimeRemaining <= liveSeconds)
+                EnterLivePhase();
+
+            if (DayTimeRemaining <= 0f)
             {
-                DayTimeRemaining -= Time.deltaTime;
-                if (DayTimeRemaining <= 0f)
-                {
-                    DayTimeRemaining = 0f;
-                    EndDay();
-                }
+                DayTimeRemaining = 0f;
+                EndDay();
             }
         }
     }

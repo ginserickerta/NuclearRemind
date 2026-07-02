@@ -1,7 +1,9 @@
 using UnityEditor;
+using UnityEditor.Events;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace NuclearReMind.EditorTools
@@ -63,14 +65,18 @@ namespace NuclearReMind.EditorTools
 
             hud.foodBar = CreateResourceBar("FoodBar", resourcePanel.transform, font, new Color(0.4f, 0.8f, 0.2f), "\U0001F33F");
             hud.waterBar = CreateResourceBar("WaterBar", resourcePanel.transform, font, new Color(0.2f, 0.6f, 1f), "\U0001F4A7");
-            hud.radiationProtectionBar = CreateResourceBar("RadiationProtectionBar", resourcePanel.transform, font, new Color(0.8f, 0.6f, 1f), "☢");
+            hud.ironBar = CreateResourceBar("IronBar", resourcePanel.transform, font, new Color(0.6f, 0.55f, 0.5f), "⛏");
             hud.energyBar = CreateResourceBar("EnergyBar", resourcePanel.transform, font, new Color(1f, 0.8f, 0.2f), "⚡");
-            hud.workersBar = CreateResourceBar("WorkersBar", resourcePanel.transform, font, new Color(0.8f, 0.8f, 0.8f), "\U0001F477");
 
             // ===== Day panel (top-center, above tower) =====
             var dayPanel = CreatePanel("DayPanel", canvasGO.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -20), new Vector2(240, 52));
+            // พื้น panel ทึบ + ข้อความเข้ม — กัน text ขาวจมหายบน light theme (Palette.CameraBackground = #E9EDF3)
+            var dayBg = dayPanel.AddComponent<Image>();
+            dayBg.color = Palette.PanelBg;
             hud.dayText = CreateText("DayText", dayPanel.transform, font, "DAY 1 / 30", 22, new Vector2(0, -4), new Vector2(240, 28), TextAnchor.UpperCenter);
+            hud.dayText.color = Palette.TextPrimary;
             hud.timerText = CreateText("TimerText", dayPanel.transform, font, "—", 20, new Vector2(0, -30), new Vector2(240, 22), TextAnchor.UpperCenter);
+            hud.timerText.color = Palette.TextMuted;
 
             // ===== Tower panel (top-center, below day panel) =====
             var towerPanel = CreatePanel("TowerPanel", canvasGO.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -80), new Vector2(320, 60));
@@ -78,16 +84,29 @@ namespace NuclearReMind.EditorTools
             hud.towerProgressBar = CreateSlider("TowerProgressBar", towerPanel.transform, new Color(1f, 0.4f, 0.2f), new Vector2(0, -30), new Vector2(320, 20));
 
             // ===== Population panel (top-right) =====
-            var popPanel = CreatePanel("PopulationPanel", canvasGO.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -20), new Vector2(260, 110));
+            var popPanel = CreatePanel("PopulationPanel", canvasGO.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -20), new Vector2(260, 230));
             var popLayout = popPanel.AddComponent<VerticalLayoutGroup>();
             popLayout.spacing = 6f;
             popLayout.childControlHeight = false;
             popLayout.childForceExpandHeight = false;
 
-            hud.populationText = CreateTextRow("PopulationText", popPanel.transform, font, "Population: 50");
-            hud.trustText = CreateTextRow("TrustText", popPanel.transform, font, "Trust: 70%");
-            hud.trustBar = CreateSliderRow("TrustBar", popPanel.transform, new Color(1f, 0.9f, 0.2f));
-            hud.strikeWarning = CreateWarningText("StrikeWarning", popPanel.transform, font, "WORKERS ON STRIKE", Color.red);
+            hud.populationText = CreateTextRow("PopulationText", popPanel.transform, font, "ประชากร 10/10  ·  W10 E0 M0");
+            hud.hopeText = CreateTextRow("HopeText", popPanel.transform, font, "Hope: 100");
+            hud.hopeBar = CreateSliderRow("HopeBar", popPanel.transform, new Color(0.3f, 0.85f, 1f));
+
+            // Knowledge (V4 §16) — ป้าย tier เริ่มที่ "Novice" (Gap G8: ไม่มี initial broadcast จึง bake ค่าเริ่มต้นไว้)
+            hud.knowledgeText = CreateTextRow("KnowledgeText", popPanel.transform, font, "Knowledge: 0 / 100 · Novice");
+            hud.knowledgeBar = CreateSliderRow("KnowledgeBar", popPanel.transform, new Color(0.62f, 0.5f, 1f));
+
+            // ===== Train class buttons (ใต้ Population panel — V4 §5) =====
+            var trainPanel = CreatePanel("TrainPanel", canvasGO.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -258), new Vector2(260, 44));
+            hud.trainEngineerButton = CreateButton("TrainEngineerBtn", trainPanel.transform, font, "ฝึกวิศวกร", new Vector2(-64, 0), new Vector2(122, 36));
+            hud.trainMedicButton    = CreateButton("TrainMedicBtn",    trainPanel.transform, font, "ฝึกแพทย์",  new Vector2(64, 0),  new Vector2(122, 36));
+
+            // ===== Decree buttons (ประกาศฉุกเฉิน — V4 §11) =====
+            var decreePanel = CreatePanel("DecreePanel", canvasGO.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -306), new Vector2(260, 44));
+            hud.decree1Button = CreateButton("Decree1Btn", decreePanel.transform, font, "ประกาศ①", new Vector2(-64, 0), new Vector2(122, 36));
+            hud.decree2Button = CreateButton("Decree2Btn", decreePanel.transform, font, "ประกาศ②", new Vector2(64, 0),  new Vector2(122, 36));
 
             // ===== Speed controls (bottom-center) =====
             var speedPanel = CreatePanel("SpeedPanel", canvasGO.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 20), new Vector2(210, 50));
@@ -147,8 +166,9 @@ namespace NuclearReMind.EditorTools
             coreUI.scramButton = scramBtn;
             EditorUtility.SetDirty(coreUI);
 
-            // ===== Riot warning (center) =====
-            hud.riotWarning = CreateCenterWarning("RiotWarning", canvasGO.transform, font, "RIOT! — Trust Collapsed", Color.red);
+            // ปุ่ม Coils (V4 §6) — wire onClick ตอน runtime ใน UIManagerHUD.Start
+            hud.toroidalButton = CreateButton("ToroidalBtn", corePanel.transform, font, "+Toroidal", new Vector2(-95, -56), new Vector2(160, 30));
+            hud.poloidalButton = CreateButton("PoloidalBtn", corePanel.transform, font, "+Poloidal", new Vector2(95, -56), new Vector2(160, 30));
 
             // ===== Game Over panel (full screen) =====
             var goPanel = CreatePanel("GameOverPanel", canvasGO.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
@@ -159,17 +179,145 @@ namespace NuclearReMind.EditorTools
             goRect.offsetMax = Vector2.zero;
             var goImage = goPanel.AddComponent<Image>();
             goImage.color = new Color(0f, 0f, 0f, 0.75f);
-            hud.gameOverText = CreateText("GameOverText", goPanel.transform, font, "", 36, Vector2.zero, new Vector2(1200, 200), TextAnchor.MiddleCenter);
+            hud.gameOverText = CreateText("GameOverText", goPanel.transform, font, "", 28, new Vector2(0, 40), new Vector2(1200, 240), TextAnchor.MiddleCenter);
             var goTextRect = hud.gameOverText.GetComponent<RectTransform>();
             goTextRect.anchorMin = new Vector2(0.5f, 0.5f);
             goTextRect.anchorMax = new Vector2(0.5f, 0.5f);
+
+            // ปุ่มเริ่มใหม่ (V4 §14) — UIManagerHUD wire onClick + ซ่อน/โชว์ตอนจบเกม
+            hud.restartButton = CreateButton("RestartButton", goPanel.transform, font, "เริ่มใหม่", new Vector2(0, -150), new Vector2(220, 54));
+            hud.restartButton.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 0.5f);
+            hud.restartButton.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.5f);
+
             hud.gameOverPanel = goPanel;
             goPanel.SetActive(false);
+
+            // ===== Quiz popup (V4 §16) — full-screen overlay + dialog, wire QuizPopupController =====
+            SetupQuizPopup(canvasGO.transform, font);
 
             EditorUtility.SetDirty(hud);
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
 
             Debug.Log("[HUDCanvasSetup] สร้าง HUD Canvas และผูก reference เข้า UIManagerHUD สำเร็จ — กด Save Scene (Ctrl+S)");
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  Quiz popup — Decision Quiz (V4 §16 / Gap G9)
+        //  QuizPanel เป็นลูกของ HUDCanvas (สร้างใหม่ทุกครั้งที่รัน setup)
+        //  ส่วน QuizPopupController เป็น GameObject เดี่ยว (found-or-create → รอด re-run)
+        //  แล้ว re-wire reference ชี้ panel children ที่เพิ่งสร้างทุกครั้ง
+        //  ปุ่มตัวเลือก 3 ปุ่ม: onClick ผูกเองตอน runtime ใน QuizPopupController.Start (ส่ง index)
+        //  ที่นี่จึงผูกเฉพาะ Confirm/Close แบบ persistent
+        // ─────────────────────────────────────────────────────────────
+        private static void SetupQuizPopup(Transform canvasTransform, Font font)
+        {
+            // ===== Full-screen overlay (มืด) =====
+            var overlay = CreatePanel("QuizPopupPanel", canvasTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var overlayRect = overlay.GetComponent<RectTransform>();
+            overlayRect.anchorMin = Vector2.zero;
+            overlayRect.anchorMax = Vector2.one;
+            overlayRect.offsetMin = Vector2.zero;
+            overlayRect.offsetMax = Vector2.zero;
+            var overlayImage = overlay.AddComponent<Image>();
+            overlayImage.color = new Color(0f, 0f, 0f, 0.72f);
+
+            // ===== Dialog box (center) =====
+            var dialog = CreatePanel("QuizDialog", overlay.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760, 540));
+            var dialogImage = dialog.AddComponent<Image>();
+            dialogImage.color = new Color(0.10f, 0.11f, 0.14f, 0.97f);
+
+            // แถบสีหมวด (บนสุด) — QuizPopupController จะเปลี่ยนสีตาม category ตอน runtime
+            var categoryGO = new GameObject("QuizCategoryBar", typeof(RectTransform));
+            categoryGO.transform.SetParent(dialog.transform, false);
+            var catRect = categoryGO.GetComponent<RectTransform>();
+            catRect.anchorMin = new Vector2(0f, 1f);
+            catRect.anchorMax = new Vector2(1f, 1f);
+            catRect.pivot = new Vector2(0.5f, 1f);
+            catRect.anchoredPosition = Vector2.zero;
+            catRect.sizeDelta = new Vector2(0, 10);
+            var categoryBar = categoryGO.AddComponent<Image>();
+            categoryBar.color = new Color(0.20f, 0.50f, 0.85f);
+
+            var speakerText = CreateText("QuizSpeakerText", dialog.transform, font, "VESTA", 18, Vector2.zero, Vector2.zero, TextAnchor.UpperLeft);
+            speakerText.fontStyle = FontStyle.Bold;
+            speakerText.color = new Color(0.6f, 0.85f, 1f);
+            AnchorTop(speakerText, 18, new Vector2(720, 24));
+
+            var questionText = CreateText("QuizQuestionText", dialog.transform, font, "คำถาม", 20, Vector2.zero, Vector2.zero, TextAnchor.UpperLeft);
+            questionText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            questionText.verticalOverflow = VerticalWrapMode.Overflow;
+            AnchorTop(questionText, 48, new Vector2(720, 110));
+
+            // ปุ่มตัวเลือก 3 ปุ่ม
+            var optionButtons = new Button[3];
+            var optionTexts = new Text[3];
+            float[] optionY = { 168f, 226f, 284f };
+            for (int i = 0; i < 3; i++)
+            {
+                var btn = CreateButton($"QuizOption{i}", dialog.transform, font, $"ตัวเลือก {i + 1}", Vector2.zero, new Vector2(700, 52));
+                AnchorTop(btn, optionY[i], new Vector2(700, 52));
+                optionButtons[i] = btn;
+                optionTexts[i] = btn.GetComponentInChildren<Text>();
+            }
+
+            var confirmButton = CreateButton("QuizConfirmButton", dialog.transform, font, "ยืนยัน", Vector2.zero, new Vector2(240, 48));
+            AnchorTop(confirmButton, 348, new Vector2(240, 48));
+
+            var explainText = CreateText("QuizExplainText", dialog.transform, font, "", 16, Vector2.zero, Vector2.zero, TextAnchor.UpperLeft);
+            explainText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            explainText.verticalOverflow = VerticalWrapMode.Overflow;
+            explainText.color = new Color(0.9f, 0.92f, 0.8f);
+            AnchorTop(explainText, 348, new Vector2(720, 120));
+            explainText.gameObject.SetActive(false);
+
+            var closeButton = CreateButton("QuizCloseButton", dialog.transform, font, "ปิด", Vector2.zero, new Vector2(200, 46));
+            AnchorTop(closeButton, 478, new Vector2(200, 46));
+            closeButton.gameObject.SetActive(false);
+
+            overlay.SetActive(false);
+
+            // ===== QuizPopupController (GameObject เดี่ยว — รอด re-run) =====
+            var quizGO = GameObject.Find("QuizPopupController") ?? new GameObject("QuizPopupController");
+            var quiz = quizGO.GetComponent<QuizPopupController>() ?? quizGO.AddComponent<QuizPopupController>();
+            quiz.popupPanel = overlay;
+            quiz.categoryBar = categoryBar;
+            quiz.speakerText = speakerText;
+            quiz.questionText = questionText;
+            quiz.explainText = explainText;
+            quiz.optionButtons = optionButtons;
+            quiz.optionTexts = optionTexts;
+            quiz.confirmButton = confirmButton;
+            quiz.closeButton = closeButton;
+
+            // Confirm/Close ผูกแบบ persistent (ปุ่มตัวเลือกผูกเองตอน runtime ใน controller.Start)
+            UnityEventTools.AddPersistentListener(confirmButton.onClick, new UnityAction(quiz.Confirm));
+            UnityEventTools.AddPersistentListener(closeButton.onClick, new UnityAction(quiz.Close));
+
+            EditorUtility.SetDirty(quiz);
+
+            // ===== QuizManager (GameObject เดี่ยว — allQuizzes wire ทีหลังโดย Setup Quiz System) =====
+            // ต้องมี QuizManager ในซีน ไม่งั้นควิซไม่ทำงาน + Setup Quiz System จะ wire allQuizzes ไม่ได้
+            var quizMgrGO = GameObject.Find("QuizManager") ?? new GameObject("QuizManager");
+            if (quizMgrGO.GetComponent<QuizManager>() == null)
+                quizMgrGO.AddComponent<QuizManager>();
+            EditorUtility.SetDirty(quizMgrGO);
+
+            // ===== TimeManager (pause-reason stack — V4 §15/§16) =====
+            var timeMgrGO = GameObject.Find("TimeManager") ?? new GameObject("TimeManager");
+            if (timeMgrGO.GetComponent<TimeManager>() == null)
+                timeMgrGO.AddComponent<TimeManager>();
+            EditorUtility.SetDirty(timeMgrGO);
+        }
+
+        // จัด RectTransform ให้ยึดขอบบนของ dialog แล้วเลื่อนลงตาม yFromTop (px)
+        private static void AnchorTop(Component target, float yFromTop, Vector2 size)
+        {
+            var rect = target.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, -yFromTop);
+            rect.sizeDelta = size;
         }
 
         private static Font LoadFont()

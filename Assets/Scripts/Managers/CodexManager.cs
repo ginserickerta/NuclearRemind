@@ -4,8 +4,8 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
-    /// จัดการ Learning Codex: ติดตาม entry ที่ unlock แล้ว, ตรวจสอบ Research Points
-    /// entry unlock ได้สองทาง: (1) ใช้ RP ซื้อ, (2) auto-unlock เมื่อ event ตรงกับ unlockedByEvent
+    /// จัดการ Learning Codex (V4 §9 — D2): entry ปลดล็อกด้วย "event" หรือการอ่าน (ไม่จ่าย Knowledge)
+    /// ทุกครั้งที่ปลดล็อก → +2 Knowledge (สะสม ไม่ใช้จ่าย) — Knowledge มาจากควิซ/อ่าน Codex
     /// </summary>
     public class CodexManager : MonoBehaviour
     {
@@ -51,32 +51,40 @@ namespace NuclearReMind
         }
 
         /// <summary>
-        /// ผู้เล่นกด unlock entry โดยใช้ Research Points
-        /// ถ้า RP ไม่พอ จะ raise OnCodexUnlockFailed
+        /// ผู้เล่นเปิด/อ่าน entry → ปลดล็อก (V4: ไม่มีค่าใช้จ่าย Knowledge)
         /// </summary>
         public void TryUnlock(CodexEntry entry)
         {
             if (entry == null || _unlockedIds.Contains(entry.entryId))
                 return;
 
-            float currentRP = ResourceManager.Instance.Current.researchPoints;
-
-            if (entry.researchPointCost > 0 && currentRP < entry.researchPointCost)
-            {
-                EventManager.Instance.RaiseCodexUnlockFailed(entry);
-                return;
-            }
-
-            if (entry.researchPointCost > 0)
-                EventManager.Instance.RaiseResourceDelta(ResourceType.ResearchPoints, -entry.researchPointCost);
-
             Unlock(entry);
+        }
+
+        /// <summary>ปลดล็อกด้วย id (เรียกจาก QuizManager เมื่อตอบควิซ — เฟส 1)</summary>
+        public void UnlockById(string entryId)
+        {
+            if (string.IsNullOrEmpty(entryId)) return;
+            if (_entryById.TryGetValue(entryId, out var entry))
+                Unlock(entry);
+        }
+
+        /// <summary>คืน Codex ที่ปลดล็อกข้ามรอบ (MetaProgress §9) — เงียบ ไม่ raise event / ไม่บวก Knowledge</summary>
+        public void RestoreUnlocked(IEnumerable<string> ids)
+        {
+            if (ids == null) return;
+            foreach (var id in ids)
+                if (!string.IsNullOrEmpty(id) && _entryById.ContainsKey(id))
+                    _unlockedIds.Add(id);
         }
 
         private void Unlock(CodexEntry entry)
         {
             if (_unlockedIds.Add(entry.entryId))
+            {
                 EventManager.Instance.RaiseCodexEntryUnlocked(entry);
+                EventManager.Instance.RaiseResourceDelta(ResourceType.Knowledge, 2f); // V4 §9: อ่าน Codex +2
+            }
         }
 
         private void HandleTowerPhaseComplete(int phase)
@@ -89,7 +97,7 @@ namespace NuclearReMind
             foreach (var entry in allCodexEntries)
             {
                 if (entry == null) continue;
-                if (entry.unlockedByEvent == eventId && entry.researchPointCost == 0)
+                if (entry.unlockedByEvent == eventId)
                     Unlock(entry);
             }
         }

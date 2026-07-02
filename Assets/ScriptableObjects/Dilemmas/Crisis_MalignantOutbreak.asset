@@ -25,13 +25,16 @@ MonoBehaviour:
   choiceA_FoodChange: -100
   choiceA_EnergyChange: -200
   choiceA_WaterChange: 0
-  choiceA_TrustChange: 8
+  choiceA_HopeChange: 8
   choiceA_AethonRelationChange: 0
   choiceA_KeranRelationChange: 2
   choiceB_FoodChange: 0
   choiceB_EnergyChange: 0
   choiceB_WaterChange: 0
-  choiceB_TrustChange: -12
+  choiceB_HopeChange: -10
   choiceB_AethonRelationChange: 0
   choiceB_KeranRelationChange: -2
   triggerCondition: day_reached_18
+  linkedQuizIds:
+  - Q4
+  - Q5

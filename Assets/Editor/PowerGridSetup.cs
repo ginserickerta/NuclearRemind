@@ -70,7 +70,7 @@ namespace NuclearReMind.Editor
             conduit.size             = Vector2Int.one;
             conduit.powerRange       = 3;
             conduit.isPowerRelay     = true;
-            conduit.materialCost     = 30;
+            conduit.ironCost         = 30;
             conduit.energyCost       = 15;
             conduit.workerRequired   = 2;
             conduit.energyProduction = -2f; // ดูด energy เล็กน้อยต่อ tick

@@ -19,18 +19,26 @@ namespace NuclearReMind
         public event Action OnPlacementCancelled;
         public event Action<BuildingData> OnBuildingSelected;
 
+        // ===== Building Upgrade / Coils (V4 §6/§7 — เฟส 6) =====
+        public event Action<Vector2Int> OnUpgradeBuildingRequested; // UI → BuildingRegistry (อัประดับอาคาร)
+        public event Action<Vector2Int, int> OnBuildingUpgraded;    // (cell, ระดับใหม่)
+        public event Action OnUpgradeToroidalRequested;             // UI → CoreTower (Toroidal Coils +1)
+        public event Action OnInstallPoloidalRequested;             // UI → CoreTower (Poloidal Coils)
+
         // ===== Resources =====
         public event Action<ResourceData> OnResourceChanged;
         public event Action<ResourceType> OnResourceCritical;
         public event Action<ResourceType> OnResourceDepleted;
         public event Action<ResourceType, float> OnResourceDelta;
 
-        // ===== Population =====
-        public event Action<float> OnTrustChanged;
+        // ===== Population / Morale (Hope เดี่ยว, V4 §9) =====
+        public event Action<float> OnMoraleChanged;              // (hope) — สำหรับ HUD
         public event Action<PopulationData> OnPopulationChanged;
-        public event Action OnWorkerStrike;
-        public event Action OnRiotStarted;
-        public event Action<float> OnTrustDelta;
+        public event Action OnWorkerStrike;                      // legacy (ไม่ใช้แล้ว — คงไว้กัน reference)
+        public event Action<float> OnMoraleDelta;               // (hopeDelta) — จาก dilemma/decree
+        public event Action OnTrainEngineerRequested;           // UI → PopulationManager (ฝึกวิศวกร)
+        public event Action OnTrainMedicRequested;              // UI → PopulationManager (ฝึกแพทย์)
+        public event Action<int> OnEnactDecreeRequested;        // UI → DecreeManager (ประกาศฉุกเฉิน index)
 
         // ===== CORE TOWER =====
         public event Action<TowerData> OnTowerProgressChanged;
@@ -44,9 +52,11 @@ namespace NuclearReMind
         public event Action<GameManager.GameState> OnGameStateChanged;
         public event Action<GameEndType> OnGameOver;
 
-        // ===== Day Cycle (§2.3) =====
+        // ===== Day Cycle (§2.3 / §3) =====
         public event Action<int, bool> OnDayStarted; // (day, isTimed) — Day 1 = tutorial ไม่จับเวลา
+        public event Action<int> OnDayProduction;    // (day ที่เพิ่งจบ) — batch ผลิต+บริโภค ยิงก่อน OnDayEnded เสมอ (V4 §3)
         public event Action<int> OnDayEnded;         // (day ที่เพิ่งจบ) — hook สำหรับ EndOfDay resolve / crisis
+        public event Action<GameManager.DayPhase> OnDayPhaseChanged; // Planning 30s → Live 60s (V4 §3)
 
         // ===== Speed Control =====
         public event Action<float> OnSpeedChangeRequested; // UI → GameManager (0=pause, 1=normal, 2=fast)
@@ -59,12 +69,17 @@ namespace NuclearReMind
 
         // ===== Narrative / Dilemma =====
         public event Action<DilemmaData> OnDilemmaTriggered;
-        public event Action<DilemmaData, bool> OnDilemmaResolved;
+        public event Action<DilemmaData, int> OnDilemmaResolved;  // (dilemma, choiceIndex 0=A/1=B/2=C)
         public event Action<int, int> OnRelationshipChanged; // (aethon, keran)
 
         // ===== Codex =====
         public event Action<CodexEntry> OnCodexEntryUnlocked;
         public event Action<CodexEntry> OnCodexUnlockFailed; // RP ไม่พอ
+
+        // ===== Quiz / Knowledge (V4 §16 — เฟส 1) =====
+        public event Action<float> OnKnowledgeChanged;        // (knowledge 0–100) — สำหรับ HUD/tier
+        public event Action<QuizQuestionSO> OnQuizShown;      // QuizManager → QuizPopupController
+        public event Action<string, bool> OnQuizAnswered;     // (quizId, correct) — ตอบเสร็จแล้ว
 
         // ===== Building Selection (UI → PlacementController) =====
         public event Action<BuildingData> OnBuildingSelectRequested; // UI กด → PlacementController เริ่มวาง
@@ -107,6 +122,10 @@ namespace NuclearReMind
         public void RaiseBuildingRemoved(Vector2Int position) => OnBuildingRemoved?.Invoke(position);
         public void RaisePlacementCancelled() => OnPlacementCancelled?.Invoke();
         public void RaiseBuildingSelected(BuildingData data) => OnBuildingSelected?.Invoke(data);
+        public void RaiseUpgradeBuildingRequested(Vector2Int cell) => OnUpgradeBuildingRequested?.Invoke(cell);
+        public void RaiseBuildingUpgraded(Vector2Int cell, int level) => OnBuildingUpgraded?.Invoke(cell, level);
+        public void RaiseUpgradeToroidalRequested() => OnUpgradeToroidalRequested?.Invoke();
+        public void RaiseInstallPoloidalRequested() => OnInstallPoloidalRequested?.Invoke();
 
         // ===== Resources =====
         public void RaiseResourceChanged(ResourceData data) => OnResourceChanged?.Invoke(data);
@@ -115,11 +134,13 @@ namespace NuclearReMind
         public void RaiseResourceDelta(ResourceType type, float amount) => OnResourceDelta?.Invoke(type, amount);
 
         // ===== Population =====
-        public void RaiseTrustChanged(float newTrust) => OnTrustChanged?.Invoke(newTrust);
+        public void RaiseMoraleChanged(float hope) => OnMoraleChanged?.Invoke(hope);
         public void RaisePopulationChanged(PopulationData data) => OnPopulationChanged?.Invoke(data);
         public void RaiseWorkerStrike() => OnWorkerStrike?.Invoke();
-        public void RaiseRiotStarted() => OnRiotStarted?.Invoke();
-        public void RaiseTrustDelta(float amount) => OnTrustDelta?.Invoke(amount);
+        public void RaiseMoraleDelta(float hopeDelta) => OnMoraleDelta?.Invoke(hopeDelta);
+        public void RaiseTrainEngineerRequested() => OnTrainEngineerRequested?.Invoke();
+        public void RaiseTrainMedicRequested() => OnTrainMedicRequested?.Invoke();
+        public void RaiseEnactDecreeRequested(int index) => OnEnactDecreeRequested?.Invoke(index);
 
         // ===== CORE TOWER =====
         public void RaiseTowerProgressChanged(TowerData data) => OnTowerProgressChanged?.Invoke(data);
@@ -135,7 +156,9 @@ namespace NuclearReMind
 
         // ===== Day Cycle =====
         public void RaiseDayStarted(int day, bool timed) => OnDayStarted?.Invoke(day, timed);
+        public void RaiseDayProduction(int day) => OnDayProduction?.Invoke(day);
         public void RaiseDayEnded(int day) => OnDayEnded?.Invoke(day);
+        public void RaiseDayPhaseChanged(GameManager.DayPhase phase) => OnDayPhaseChanged?.Invoke(phase);
 
         // ===== Speed Control =====
         public void RaiseSpeedChangeRequested(float speed) => OnSpeedChangeRequested?.Invoke(speed);
@@ -148,12 +171,17 @@ namespace NuclearReMind
 
         // ===== Narrative / Dilemma =====
         public void RaiseDilemmaTriggered(DilemmaData data) => OnDilemmaTriggered?.Invoke(data);
-        public void RaiseDilemmaResolved(DilemmaData data, bool choiceA) => OnDilemmaResolved?.Invoke(data, choiceA);
+        public void RaiseDilemmaResolved(DilemmaData data, int choiceIndex) => OnDilemmaResolved?.Invoke(data, choiceIndex);
         public void RaiseRelationshipChanged(int aethon, int keran) => OnRelationshipChanged?.Invoke(aethon, keran);
 
         // ===== Codex =====
         public void RaiseCodexEntryUnlocked(CodexEntry entry) => OnCodexEntryUnlocked?.Invoke(entry);
         public void RaiseCodexUnlockFailed(CodexEntry entry) => OnCodexUnlockFailed?.Invoke(entry);
+
+        // ===== Quiz / Knowledge =====
+        public void RaiseKnowledgeChanged(float knowledge) => OnKnowledgeChanged?.Invoke(knowledge);
+        public void RaiseQuizShown(QuizQuestionSO quiz) => OnQuizShown?.Invoke(quiz);
+        public void RaiseQuizAnswered(string quizId, bool correct) => OnQuizAnswered?.Invoke(quizId, correct);
 
         // ===== Building Selection =====
         public void RaiseBuildingSelectRequested(BuildingData data) => OnBuildingSelectRequested?.Invoke(data);

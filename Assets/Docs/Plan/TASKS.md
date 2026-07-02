@@ -158,8 +158,11 @@
   - confirm → ตรากระแทก "ปึง" + ค้างใน HUD
   - set flag usedSickLabor / usedChildLabor
 
-- [ ] **E4** · Hope/Despair ให้ independent (ถ้า code ยังเป็น inverse)
-  - ตรวจ `PopulationManager.cs` — hope ≠ 100 − despair
+- [x] **E4** · Hope/Despair independent ✅ (28 มิ.ย. — Phase 1b ตาม GDD v2.2 §10)
+  - แทน `trust` เดิมด้วย `hope`(50)/`despair`(20) ใน `PopulationData` — เป็น 2 ค่าอิสระ
+  - recalc รายวัน (OnDayEnded), Hope=0 → GameOver(MoraleCollapsed), Despair>80 → จลาจล
+  - dilemma/crisis consequence → Hope/Despair, event `OnMoraleChanged/OnMoraleDelta`
+  - tests: `PopulationManagerTests` 6 ตัว + แก้ IntegrationFlow/Dilemma/Crisis ให้ใช้ morale
 
 - [ ] **E5** · Build + Test (WebGL หรือ Windows)
   - เทสต์ end-to-end Day 1 → Day 30
@@ -181,6 +184,7 @@
 | — | 27 มิ.ย. | **B2 ✅ + B3 ✅** (overclock UI + SCRAM) → **Block B เสร็จครบ** | 49/49 tests ผ่าน, compile สะอาด |
 | — | 27 มิ.ย. | **D1–D3 เนื้อหา ✅** Codex 15 entries (เกษตร/แพทย์/สิ่งแวดล้อม) ปลดล็อกด้วย RP | รอ generate asset + content QA |
 | — | 27 มิ.ย. | **C1 ✅ + C2–C4 ✅** Crisis trigger (day-end) + 3 crisis assets | +6 tests, รอรันเมนู Setup Crisis Dilemmas |
+| — | 28 มิ.ย. | **Phase 1b ✅** Hope/Despair แทน trust (GDD v2.2 §10) — recalc/gameover/riot | +6 tests, รอรันเมนู Setup HUD + Setup Crisis |
 | D3 | 27 มิ.ย. | B1 | |
 | D4 | 28 มิ.ย. | B2, B3, B4 | |
 | D5 | 29 มิ.ย. | C1, C2 | |

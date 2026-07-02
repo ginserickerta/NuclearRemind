@@ -248,13 +248,16 @@ namespace NuclearReMind
         // ─────────────────────────────────────────
 
         private bool CanAfford(BuildingData data) =>
-            _resources.energy  >= data.energyCost &&
-            _resources.workers >= data.workerRequired;
+            _resources.energy >= data.energyCost &&
+            _resources.iron   >= data.ironCost &&
+            (PopulationManager.Instance == null ||
+             PopulationManager.Instance.Current.total >= data.workerRequired);
 
         private static string BuildCostString(BuildingData data)
         {
             var parts = new System.Collections.Generic.List<string>();
-            if (data.energyCost    > 0) parts.Add($"⚡{data.energyCost}");
+            if (data.energyCost     > 0) parts.Add($"⚡{data.energyCost}");
+            if (data.ironCost       > 0) parts.Add($"⛏{data.ironCost}");
             if (data.workerRequired > 0) parts.Add($"👷{data.workerRequired}");
             return parts.Count > 0 ? string.Join(" ", parts) : "ฟรี";
         }

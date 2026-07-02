@@ -29,6 +29,7 @@ namespace NuclearReMind.Tests
         public void TearDown()
         {
             Time.timeScale = 1f; // คืนค่า global หลังเทสต์ speed control
+            MetaProgress.ResetAll(); // กัน PlayerPrefs รั่วข้ามเทสต์ (HandleGameOver เรียก Capture)
             foreach (var obj in _spawned)
                 Object.DestroyImmediate(obj);
         }
@@ -100,6 +101,42 @@ namespace NuclearReMind.Tests
             Assert.AreEqual(1, gameManager.CurrentDay, "หลังชนะแล้วไม่ควรเดินวันต่อ");
         }
 
+        // ---- fix #1: game over freezes the simulation ----
+
+        [Test]
+        public void GameOverEvent_FreezesTimeScale_AndSetsState()
+        {
+            InvokePrivate(gameManager, "Start"); // Day 1, timeScale = GameSpeed (1)
+
+            eventManager.RaiseGameOver(GameEndType.HopeZero);
+
+            Assert.AreEqual(GameManager.GameState.GameOver, gameManager.CurrentState);
+            Assert.AreEqual(0f, Time.timeScale, 1e-4f, "จบเกม → simulation ต้อง freeze (timeScale 0)");
+        }
+
+        [Test]
+        public void GameOver_StopsDayProgression()
+        {
+            InvokePrivate(gameManager, "Start"); // Day 1
+            gameManager.RequestEndDay();         // → Day 2
+
+            eventManager.RaiseGameOver(GameEndType.HopeZero);
+            gameManager.RequestEndDay();         // ต้องถูกเมิน
+
+            Assert.AreEqual(2, gameManager.CurrentDay, "หลังเกมจบ ไม่ควรเดินวันต่อ");
+        }
+
+        [Test]
+        public void WinEvent_DoesNotEnterGameOverState()
+        {
+            InvokePrivate(gameManager, "Start");
+
+            eventManager.RaiseGameOver(GameEndType.TrueEnding);
+
+            Assert.AreNotEqual(GameManager.GameState.GameOver, gameManager.CurrentState,
+                "True/Normal Ending = ชนะ ไม่ควรเข้า GameOver");
+        }
+
         // ---- A4: speed controls ----
 
         [Test]
@@ -158,6 +195,104 @@ namespace NuclearReMind.Tests
 
             Assert.AreEqual(GameManager.GameState.Victory, gameManager.CurrentState,
                 "เกมจบแล้วไม่ควรเปลี่ยนความเร็ว/สถานะ");
+        }
+
+        // ---- V4 §3: Planning/Live phase + §15 pause gate ----
+
+        [Test]
+        public void AdvanceTime_CrossesIntoLivePhase()
+        {
+            InvokePrivate(gameManager, "Start"); // Day 1
+            gameManager.RequestEndDay();          // → Day 2 (Planning, 90s)
+
+            Assert.AreEqual(GameManager.DayPhase.Planning, gameManager.CurrentDayPhase);
+
+            gameManager.AdvanceTime(31f); // เหลือ 59 ≤ liveSeconds(60) → เข้า Live
+
+            Assert.AreEqual(GameManager.DayPhase.Live, gameManager.CurrentDayPhase, "เหลือ ≤ 60 → เฟส Live");
+            Assert.AreEqual(59f, gameManager.DayTimeRemaining, 1e-3f);
+        }
+
+        [Test]
+        public void AdvanceTime_ToZero_EndsDayAndBeginsNext()
+        {
+            InvokePrivate(gameManager, "Start");
+            gameManager.RequestEndDay();   // → Day 2
+
+            gameManager.AdvanceTime(90f);  // จบวัน → Day 3
+
+            Assert.AreEqual(3, gameManager.CurrentDay);
+            Assert.AreEqual(GameManager.DayPhase.Planning, gameManager.CurrentDayPhase, "วันใหม่เริ่มที่ Planning");
+        }
+
+        [Test]
+        public void AdvanceTime_WhenTimeManagerPaused_DoesNotAdvance()
+        {
+            var timeGO = new GameObject("TimeManager");
+            _spawned.Add(timeGO);
+            var time = timeGO.AddComponent<TimeManager>();
+            TryInvokePrivate(time, "Awake");
+
+            InvokePrivate(gameManager, "Start");
+            gameManager.RequestEndDay();   // → Day 2 (90s)
+
+            time.Pause(PauseReason.Placement); // §15: วางอาคาร → หยุดนาฬิกาวัน
+            gameManager.AdvanceTime(10f);
+
+            Assert.AreEqual(90f, gameManager.DayTimeRemaining, 1e-4f, "pause → นาฬิกาวันต้องไม่เดิน");
+        }
+
+        // ---- V4 §14: endings (Q-based ตอน Day 30) ----
+
+        private void MakeTowerWithQ(float corePercent)
+        {
+            var go = new GameObject("CoreTowerManager");
+            _spawned.Add(go);
+            var t = go.AddComponent<CoreTowerManager>();
+            TryInvokePrivate(t, "Awake");
+            TryInvokePrivate(t, "OnEnable");
+            eventManager.RaiseSaveLoaded(new SaveData
+            {
+                tower = new TowerData { corePercent = corePercent, isUnlocked = true }
+            });
+        }
+
+        [Test]
+        public void FinalEnding_TrueEnding_WhenQAtLeast1()
+        {
+            MakeTowerWithQ(100f); // Q = 1.0
+            GameEndType? end = null;
+            eventManager.OnGameOver += t => end = t;
+
+            InvokePrivate(gameManager, "EvaluateFinalEnding");
+
+            Assert.AreEqual(GameEndType.TrueEnding, end.Value);
+            Assert.AreEqual(GameManager.GameState.Victory, gameManager.CurrentState);
+        }
+
+        [Test]
+        public void FinalEnding_NormalEnding_WhenQBetween05And1()
+        {
+            MakeTowerWithQ(60f); // Q = 0.6
+            GameEndType? end = null;
+            eventManager.OnGameOver += t => end = t;
+
+            InvokePrivate(gameManager, "EvaluateFinalEnding");
+
+            Assert.AreEqual(GameEndType.NormalEnding, end.Value);
+        }
+
+        [Test]
+        public void FinalEnding_TimeoutLowQ_WhenQBelow05()
+        {
+            MakeTowerWithQ(30f); // Q = 0.3
+            GameEndType? end = null;
+            eventManager.OnGameOver += t => end = t;
+
+            InvokePrivate(gameManager, "EvaluateFinalEnding");
+
+            Assert.AreEqual(GameEndType.TimeoutLowQ, end.Value);
+            Assert.AreEqual(GameManager.GameState.GameOver, gameManager.CurrentState);
         }
 
         // ---- reflection helpers (เหมือน IntegrationFlowTests) ----

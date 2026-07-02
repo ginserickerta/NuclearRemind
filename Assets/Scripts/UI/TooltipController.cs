@@ -60,7 +60,7 @@ namespace NuclearReMind
             if (tooltipPanel != null) tooltipPanel.SetActive(true);
 
             if (nameCostText != null)
-                nameCostText.text = $"{data.buildingName}\nMaterial {data.materialCost} / Energy {data.energyCost} / Worker {data.workerRequired}";
+                nameCostText.text = $"{data.buildingName}\nIron {data.ironCost} / Energy {data.energyCost} / Worker {data.workerRequired}";
 
             if (descriptionText != null)
                 descriptionText.text = data.description;

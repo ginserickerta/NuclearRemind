@@ -57,6 +57,10 @@ namespace NuclearReMind
         {
             HandleHotbarInput();
 
+            // อัประดับอาคารใต้เคอร์เซอร์ (กด U — V4 §7) เมื่อไม่ได้อยู่โหมดวาง
+            if (!isPlacing && Input.GetKeyDown(KeyCode.U) && InputManager.Instance != null)
+                EventManager.Instance.RaiseUpgradeBuildingRequested(InputManager.Instance.GetMouseGridPosition());
+
             if (!isPlacing || selectedBuilding == null)
                 return;
 
@@ -90,6 +94,9 @@ namespace NuclearReMind
         {
             selectedBuilding = buildingData;
             isPlacing = true;
+
+            // §15: เข้าโหมดวาง → หยุดนาฬิกาวัน (ghost ยังเลื่อนได้ เพราะไม่แตะ timeScale)
+            TimeManager.Instance?.Pause(PauseReason.Placement);
 
             // ออกจาก demolish mode เมื่อเริ่มวางอาคาร
             if (DemolitionController.Instance != null && DemolitionController.Instance.IsDemolishing)
@@ -191,6 +198,9 @@ namespace NuclearReMind
 
             if (ghostRenderer != null)
                 ghostRenderer.gameObject.SetActive(false);
+
+            // §15: ออกจากโหมดวาง (วาง/ยกเลิก) → นาฬิกาวันเดินต่อ
+            TimeManager.Instance?.Resume(PauseReason.Placement);
 
             EventManager.Instance.RaiseBuildingSelected(null);
         }

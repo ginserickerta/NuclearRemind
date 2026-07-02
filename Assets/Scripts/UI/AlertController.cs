@@ -81,13 +81,14 @@ namespace NuclearReMind
         {
             string label = type switch
             {
-                ResourceType.Food                => "\U0001F33F อาหาร",
-                ResourceType.Water               => "\U0001F4A7 น้ำ",
-                ResourceType.Energy              => "⚡ พลังงาน",
-                ResourceType.RadiationProtection => "☢ การป้องกันรังสี",
-                ResourceType.Workers             => "\U0001F477 คนงาน",
-                ResourceType.ResearchPoints      => "\U0001F9EA แต้มวิจัย",
-                _                                => type.ToString(),
+                ResourceType.Food      => "\U0001F33F อาหาร",
+                ResourceType.Water     => "\U0001F4A7 น้ำ",
+                ResourceType.Energy    => "⚡ พลังงาน",
+                ResourceType.Iron      => "⛏ แร่เหล็ก",
+                ResourceType.Deuterium => "\U0001F9EA ดิวเทอเรียม",
+                ResourceType.Tritium   => "☢ ทริเทียม",
+                ResourceType.Knowledge => "\U0001F4D8 ความรู้",
+                _                      => type.ToString(),
             };
             string suffix = depleted ? "หมดคลังแล้ว!" : "ใกล้หมด";
             string key = (depleted ? "depleted:" : "critical:") + type;

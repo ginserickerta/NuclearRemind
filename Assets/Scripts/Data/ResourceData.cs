@@ -3,29 +3,33 @@ using System;
 namespace NuclearReMind
 {
     /// <summary>
-    /// ทรัพยากรหลักของเมือง Veltara ที่ติดตามผ่าน ResourceManager
+    /// ทรัพยากรหลักของเมือง (V4 §4) — ติดตามผ่าน ResourceManager
+    /// 6 ชนิด: Energy/Water/Food/Iron/Deuterium/Tritium + Knowledge (สะสม 0–100, V4 §9)
+    /// หมายเหตุ: Hope อยู่ที่ PopulationManager / workers อยู่ที่ PopulationData.total
     /// </summary>
     [Serializable]
     public struct ResourceData
     {
-        public float food;
-        public float water;
-        public float radiationProtection;
         public float energy;
-        public int workers;
-        public float researchPoints;   // สะสมจาก Laboratory ทุก tick ใช้ unlock Codex entries
+        public float water;
+        public float food;
+        public float iron;
+        public float deuterium;
+        public float tritium;
+        public float knowledge;   // 0–100 · สะสมจากควิซ/อ่าน Codex (V4 §9) — ไม่ถูกใช้จ่าย
     }
 
     /// <summary>
-    /// ประเภทของทรัพยากรที่ใช้อ้างอิงใน event/UI
+    /// ประเภทของทรัพยากรที่ใช้อ้างอิงใน event/UI (V4 §16)
     /// </summary>
     public enum ResourceType
     {
-        Food,
-        Water,
-        RadiationProtection,
         Energy,
-        Workers,
-        ResearchPoints
+        Water,
+        Food,
+        Iron,
+        Deuterium,
+        Tritium,
+        Knowledge
     }
 }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace NuclearReMind
 {
@@ -31,26 +32,35 @@ namespace NuclearReMind
         public BuildingType buildingType;
 
         [Header("Cost")]
-        public int materialCost;
+        [FormerlySerializedAs("materialCost")]
+        public int ironCost;            // V4: แร่เหล็ก (แทน material) — migrate ค่าเดิมอัตโนมัติ
         public int energyCost;
         public int workerRequired;
 
-        [Header("Production (per tick)")]
+        [Header("Production (ต่อวัน — batch ตอนจบวัน V4 §3/§6)")]
         public float foodProduction;
         public float waterProduction;
-        public float radiationProtectionBonus;
         public float energyProduction;
-        public int researchPointsPerTick;
+        public float ironProduction;    // V4: ผลิตจาก Mine
 
-        [Header("Consumption (per tick) — เดินระบบ §2.4")]
-        // ต้นทุนเดินเครื่องต่อ tick ที่อาคารกินจากคลัง (ตามตาราง "เดินระบบ" ใน GDD v2.1 §2.4)
-        // ถ้าคลังไม่พอจ่าย consumption → อาคารหยุดผลิต tick นั้น (idle) และไม่กิน resource
+        [Header("Consumption (ต่อวัน) — ค่าเดินระบบ V4 §6")]
+        // ต้นทุนเดินเครื่องต่อวันที่อาคารกินจากคลัง (ตาราง "ค่าเดินระบบ/วัน" ใน V4 §6)
+        // ถ้าคลังไม่พอจ่าย consumption → อาคารหยุดผลิตวันนั้น (idle) และไม่กิน resource
         public float energyConsumption;
         public float waterConsumption;
 
         [Header("CORE TOWER")]
         public bool isCoreTowerPart;
         public int towerPhaseRequired; // 0 = all phases
+
+        [Header("Population Training (V4 §5)")]
+        public bool unlocksEngineerTraining; // Research Lab → ฝึก Engineer ได้
+        public bool unlocksMedicTraining;    // Hospital → ฝึก Medic ได้
+
+        [Header("Upgrade / Fuel (V4 §7/§18 — เฟส 6)")]
+        public int upgradeIronCost = 40;  // ต้นทุนอัป 1 ระดับ (×ระดับปัจจุบัน) — L1→L2, L2→L3
+        public float deuteriumProduction; // ผลิต/วัน เฉพาะเมื่อถึงระดับสูงสุด (Water Plant L3 §4)
+        public float tritiumProduction;   // ผลิต/วัน เฉพาะเมื่อถึงระดับสูงสุด (Zone B / Lab L3)
 
         [Header("Power Grid")]
         public int powerRange = 0;        // จำนวน cell รัศมีที่ปล่อยพลังงาน (0 = ผู้บริโภค)

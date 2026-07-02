@@ -3,38 +3,69 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
-    /// ติดตามทรัพยากรหลักของเมือง Veltara (ResourceData) — หักต้นทุนเมื่อวางอาคาร
-    /// และบวก production ของอาคารที่วางแล้วทุก tick
+    /// ติดตามทรัพยากรหลัก (V4 §4) — หักต้นทุนเมื่อวางอาคาร
+    /// ผลิต+บริโภคแบบ batch วันละครั้งตอนจบวัน (OnDayProduction — V4 §3):
+    ///   ผลิต/upkeep รายอาคาร (§6 ค่าต่อวัน) → บริโภค Food/Water 2/คน/วัน (§4)
+    /// 6 ชนิด: Energy/Water/Food/Iron/Deuterium/Tritium + Knowledge (สะสม 0–100)
+    /// จำนวนคนงานสำหรับ worker-scaling ดึงจาก PopulationManager.Current.workers (คลาส Worker)
+    /// tick 5 วิ เหลือหน้าที่เดียว: เดิน progress งานก่อสร้าง (OnGameTick)
     /// </summary>
     public class ResourceManager : MonoBehaviour
     {
         public static ResourceManager Instance { get; private set; }
 
-        [Header("Max Capacity")]
-        public float maxFood = 500f;
-        public float maxWater = 400f;
-        public float maxRadiationProtection = 200f;
-        public float maxEnergy = 1000f; // §10 เริ่มที่ 400 → ต้อง > 400 (ค่า rough, ปรับบาลานซ์ภายหลัง)
-        public int maxWorkers = 100;
-        public float maxResearchPoints = 500f;
+        /// <summary>
+        /// ระดับความรู้ (V4 §9) — โบนัสเป็นบวกล้วน ไม่ลงโทษ
+        /// 0–29 Novice · 30–59 Aware · 60–79 Skilled · 80–100 Expert (knowBonus +0.10)
+        /// </summary>
+        public enum KnowledgeTier { Novice, Aware, Skilled, Expert }
 
-        [Header("Tick")]
+        // V4 §4 ระบุ cap 9999 (= "แทบไม่จำกัด") สำหรับส่วนใหญ่ — แต่ใช้ค่าที่ normalize HUD bar
+        // + critical alert (ratio ของ max) ได้จริง ค่าจริงจะ playtest/จูนในเฟส 8
+        [Header("Max Capacity (display/clamp — V4 §4)")]
+        public float maxEnergy = 2000f;
+        public float maxWater = 1000f;
+        public float maxFood = 500f;          // เกิน 500 → trigger วิกฤตเน่า (V4 §10) — ค่าตายตัว
+        public float maxIron = 1000f;
+        public float maxDeuterium = 500f;
+        public float maxTritium = 500f;
+        public float maxKnowledge = 100f;
+
+        [Header("Tick (ใช้เฉพาะงานก่อสร้าง — production เป็น batch จบวัน)")]
         public float tickInterval = 5f;
+
+        // V4 §4/§18: consumeFoodPerPerson / consumeWaterPerPerson = 2 ต่อวัน
+        [Header("Daily Consumption (V4 §4 — ต่อคนต่อวัน)")]
+        public float consumeFoodPerPerson = 2f;
+        public float consumeWaterPerPerson = 2f;
+
+        // ตัวคูณผลผลิตต่อระดับอาคาร L1/L2/L3 (V4 §18: 60→180→450 = ×1/×3/×7.5)
+        private static readonly float[] LevelProductionMultiplier = { 1f, 3f, 7.5f };
 
         [Header("Critical Threshold (ratio of max)")]
         [Range(0f, 1f)] public float criticalRatio = 0.2f;
 
-        // ค่าเริ่มต้นตาม GDD §10 (หลังซ่อม Shelter): energy 400 / water 100 / food 100 / workers 10
-        // radiationProtection เป็น field legacy (ไม่อยู่ใน §2.1 5-resource ของ v2.1) — คงไว้ก่อน
-        // material / fusionFuel ยังไม่มีใน ResourceData (รอ resource-model refactor)
+        // ค่าเริ่มต้น Day 1 ตาม V4 §4 / §18
         public ResourceData Current { get; private set; } = new ResourceData
         {
-            food = 100f,
-            water = 100f,
-            radiationProtection = 50f,
-            energy = 400f,
-            workers = 10
+            energy = 200f,
+            water = 150f,
+            food = 150f,
+            iron = 100f,
+            deuterium = 0f,
+            tritium = 0f,
+            knowledge = 0f,
         };
+
+        /// <summary>ระดับความรู้ปัจจุบันจาก Current.knowledge (0–100) — ใช้กับ HUD/tier bonus</summary>
+        public KnowledgeTier Tier =>
+            Current.knowledge < 30f ? KnowledgeTier.Novice :
+            Current.knowledge < 60f ? KnowledgeTier.Aware  :
+            Current.knowledge < 80f ? KnowledgeTier.Skilled :
+                                      KnowledgeTier.Expert;
+
+        /// <summary>CORE Efficiency bonus — Expert (Knowledge ≥ 80) ให้ +0.10 ต่อ ΔCORE% (§8)</summary>
+        public float KnowBonus => (Current.knowledge >= 80f) ? 0.10f : 0f;
 
         private float _tickTimer;
 
@@ -53,6 +84,7 @@ namespace NuclearReMind
             EventManager.Instance.OnBuildingPlaced += HandleBuildingPlaced;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
             EventManager.Instance.OnResourceDelta += HandleResourceDelta;
+            EventManager.Instance.OnDayProduction += HandleDayProduction;
         }
 
         private void OnDisable()
@@ -61,6 +93,7 @@ namespace NuclearReMind
             EventManager.Instance.OnBuildingPlaced -= HandleBuildingPlaced;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
             EventManager.Instance.OnResourceDelta -= HandleResourceDelta;
+            EventManager.Instance.OnDayProduction -= HandleDayProduction;
         }
 
         private void Start()
@@ -70,20 +103,31 @@ namespace NuclearReMind
 
         private void Update()
         {
+            // tick หยุดเมื่อนาฬิกาวันถูก pause (วางอาคาร/ควิซ/วิกฤต — V4 §15)
+            if (TimeManager.Instance != null && !TimeManager.Instance.IsRunning)
+                return;
+
             _tickTimer += Time.deltaTime;
             if (_tickTimer < tickInterval)
                 return;
 
             _tickTimer -= tickInterval;
-            Tick();
+            EventManager.Instance.RaiseGameTick(); // เดิน progress ก่อสร้าง (ConstructionController)
+        }
+
+        // จบวัน (V4 §3): ผลิตทั้งวันทีเดียว (batch) → หักการบริโภคของประชากร
+        private void HandleDayProduction(int day)
+        {
+            ApplyDailyProduction();
+            ApplyDailyConsumption();
         }
 
         private void HandleBuildingPlaced(Cell cell, BuildingData data)
         {
-            // หักเฉพาะ energyCost (ต้นทุนสร้างครั้งเดียว) — materialCost ยังไม่มี ResourceType ของตัวเอง
-            // workers ไม่ถูกหักถาวร: เป็น reserve pool ที่ถูกจองตาม workerRequired ตอน Tick (ดู worker staffing scale)
+            // หักต้นทุนสร้างครั้งเดียว (Energy + Iron) — workers เป็น reserve pool (ไม่หักถาวร)
             var c = Current;
             c.energy = Mathf.Max(0f, c.energy - data.energyCost);
+            c.iron   = Mathf.Max(0f, c.iron - data.ironCost);
             Current = c;
 
             EventManager.Instance.RaiseResourceChanged(Current);
@@ -94,48 +138,62 @@ namespace NuclearReMind
         {
             Current = save.resources;
             EventManager.Instance.RaiseResourceChanged(Current);
+            EventManager.Instance.RaiseKnowledgeChanged(Current.knowledge); // sync HUD/tier หลังโหลด
             CheckThresholds();
         }
 
         private void HandleResourceDelta(ResourceType type, float amount)
         {
             var c = Current;
+            float prevKnowledge = c.knowledge;
 
             switch (type)
             {
-                case ResourceType.Food:
-                    c.food = Mathf.Clamp(c.food + amount, 0f, maxFood);
+                case ResourceType.Energy:
+                    c.energy = Mathf.Clamp(c.energy + amount, 0f, maxEnergy);
                     break;
                 case ResourceType.Water:
                     c.water = Mathf.Clamp(c.water + amount, 0f, maxWater);
                     break;
-                case ResourceType.RadiationProtection:
-                    c.radiationProtection = Mathf.Clamp(c.radiationProtection + amount, 0f, maxRadiationProtection);
+                case ResourceType.Food:
+                    c.food = Mathf.Clamp(c.food + amount, 0f, maxFood);
                     break;
-                case ResourceType.Energy:
-                    c.energy = Mathf.Clamp(c.energy + amount, 0f, maxEnergy);
+                case ResourceType.Iron:
+                    c.iron = Mathf.Clamp(c.iron + amount, 0f, maxIron);
                     break;
-                case ResourceType.Workers:
-                    c.workers = Mathf.Clamp(c.workers + Mathf.RoundToInt(amount), 0, maxWorkers);
+                case ResourceType.Deuterium:
+                    c.deuterium = Mathf.Clamp(c.deuterium + amount, 0f, maxDeuterium);
                     break;
-                case ResourceType.ResearchPoints:
-                    c.researchPoints = Mathf.Clamp(c.researchPoints + amount, 0f, maxResearchPoints);
+                case ResourceType.Tritium:
+                    c.tritium = Mathf.Clamp(c.tritium + amount, 0f, maxTritium);
+                    break;
+                case ResourceType.Knowledge:
+                    c.knowledge = Mathf.Clamp(c.knowledge + amount, 0f, maxKnowledge);
                     break;
             }
 
             Current = c;
             EventManager.Instance.RaiseResourceChanged(Current);
+            // OnKnowledgeChanged ยิงเฉพาะเมื่อ knowledge ขยับจริง (G8: ไม่มี broadcast ตั้งต้น)
+            if (!Mathf.Approximately(c.knowledge, prevKnowledge))
+                EventManager.Instance.RaiseKnowledgeChanged(c.knowledge);
             CheckThresholds();
         }
 
-        private void Tick()
+        /// <summary>
+        /// ผลิตทั้งวันทีเดียว (batch — V4 §3/§6): อาคารจ่าย upkeep ต่อวันก่อนจึงผลิต
+        /// ปรับตามกำลังคน (workerScale) × ตัวคูณระดับ L1/L2/L3
+        /// </summary>
+        public void ApplyDailyProduction()
         {
-            EventManager.Instance.RaiseGameTick();
-
             var c = Current;
 
-            // กำลังคน (§A2): workers เป็น reserve pool — รวม workerRequired ของอาคารที่พร้อมเดินเครื่อง
-            // ถ้า demand รวม > จำนวนคนที่มี → ทุกอาคารผลิตตามสัดส่วน workerScale (0..1)
+            // กำลังคน (§A2): ใช้เฉพาะคลาส Worker (Engineer/Medic ไม่ประจำโรงผลิต)
+            // ถ้า demand รวม > จำนวน Worker → ทุกอาคารผลิตตามสัดส่วน workerScale (0..1)
+            int totalWorkers = PopulationManager.Instance != null
+                ? PopulationManager.Instance.Current.workers
+                : 0;
+
             int totalWorkersNeeded = 0;
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
             {
@@ -143,7 +201,7 @@ namespace NuclearReMind
                 totalWorkersNeeded += kvp.Value.workerRequired;
             }
             float workerScale = totalWorkersNeeded > 0
-                ? Mathf.Min(1f, (float)c.workers / totalWorkersNeeded)
+                ? Mathf.Min(1f, (float)totalWorkers / totalWorkersNeeded)
                 : 1f;
 
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
@@ -152,28 +210,38 @@ namespace NuclearReMind
 
                 var data = kvp.Value;
 
-                // เดินระบบ (§2.4): อาคารต้องจ่ายต้นทุน energy/water ต่อ tick ก่อนจึงจะผลิต
-                // ถ้าคลังไม่พอจ่าย → อาคารหยุด (skip production) และไม่กิน resource tick นั้น
+                // ค่าเดินระบบ/วัน (V4 §6): อาคารต้องจ่าย energy/water ของวันนั้นก่อนจึงจะผลิต
                 if (c.energy < data.energyConsumption || c.water < data.waterConsumption)
                     continue;
 
                 c.energy -= data.energyConsumption;
                 c.water -= data.waterConsumption;
 
-                // production ปรับตามกำลังคน (§A2) — คนไม่พอ → ผลิตได้สัดส่วน workerScale
-                c.food += data.foodProduction * workerScale;
-                c.water += data.waterProduction * workerScale;
-                c.radiationProtection += data.radiationProtectionBonus * workerScale;
-                c.energy += data.energyProduction * workerScale;
-                c.researchPoints += data.researchPointsPerTick * workerScale;
+                // ผลิตปรับตามกำลังคน (§A2) × ตัวคูณระดับอาคาร L1/L2/L3 = ×1/×3/×7.5 (V4 §18)
+                int level = BuildingRegistry.Instance.GetLevel(kvp.Key);
+                float lvlMul = LevelProductionMultiplier[Mathf.Clamp(level - 1, 0, LevelProductionMultiplier.Length - 1)];
+                float scale = workerScale * lvlMul;
+
+                c.food   += data.foodProduction * scale;
+                c.water  += data.waterProduction * scale;
+                c.energy += data.energyProduction * scale;
+                c.iron   += data.ironProduction * scale;
+
+                // เชื้อเพลิงฟิวชันผลิตเฉพาะเมื่ออัปถึงระดับสูงสุด (Water L3 → Deuterium, Zone B/Lab L3 → Tritium)
+                if (level >= BuildingRegistry.Instance.maxBuildingLevel)
+                {
+                    c.deuterium += data.deuteriumProduction * workerScale;
+                    c.tritium   += data.tritiumProduction * workerScale;
+                }
             }
 
-            c.food = Mathf.Clamp(c.food, 0f, maxFood);
-            c.water = Mathf.Clamp(c.water, 0f, maxWater);
-            c.radiationProtection = Mathf.Clamp(c.radiationProtection, 0f, maxRadiationProtection);
             c.energy = Mathf.Clamp(c.energy, 0f, maxEnergy);
-            c.workers = Mathf.Clamp(c.workers, 0, maxWorkers);
-            c.researchPoints = Mathf.Clamp(c.researchPoints, 0f, maxResearchPoints);
+            c.water  = Mathf.Clamp(c.water, 0f, maxWater);
+            c.food   = Mathf.Clamp(c.food, 0f, maxFood);
+            c.iron   = Mathf.Clamp(c.iron, 0f, maxIron);
+            c.deuterium = Mathf.Clamp(c.deuterium, 0f, maxDeuterium);
+            c.tritium   = Mathf.Clamp(c.tritium, 0f, maxTritium);
+            c.knowledge = Mathf.Clamp(c.knowledge, 0f, maxKnowledge);
 
             Current = c;
 
@@ -182,8 +250,28 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// การบริโภคของประชากรต่อวัน (V4 §4): Food/Water คนละ 2 ต่อวัน (ทุกคลาส)
+        /// คลังไม่พอ → clamp 0 แล้ว CheckThresholds ยิง OnResourceDepleted
+        /// ให้ PopulationManager หัก Hope ตอน OnDayEnded (V4 §9 อาหารขาด)
+        /// </summary>
+        public void ApplyDailyConsumption()
+        {
+            int population = PopulationManager.Instance != null
+                ? PopulationManager.Instance.Current.total
+                : 0;
+            if (population <= 0) return;
+
+            var c = Current;
+            c.food  = Mathf.Max(0f, c.food  - consumeFoodPerPerson  * population);
+            c.water = Mathf.Max(0f, c.water - consumeWaterPerPerson * population);
+            Current = c;
+
+            EventManager.Instance.RaiseResourceChanged(Current);
+            CheckThresholds();
+        }
+
+        /// <summary>
         /// อาคารพร้อมเดินเครื่องไหม — ไม่อยู่ระหว่างสร้าง และได้รับพลังงานจาก Power Grid
-        /// ใช้ทั้งตอนรวม worker demand และตอนผลิตจริง ให้เกณฑ์ตรงกัน
         /// </summary>
         private bool IsOperational(Vector2Int cell)
         {
@@ -200,11 +288,11 @@ namespace NuclearReMind
 
         private void CheckThresholds()
         {
-            CheckResource(Current.food, maxFood, ResourceType.Food);
-            CheckResource(Current.water, maxWater, ResourceType.Water);
-            CheckResource(Current.radiationProtection, maxRadiationProtection, ResourceType.RadiationProtection);
             CheckResource(Current.energy, maxEnergy, ResourceType.Energy);
-            CheckResource(Current.workers, maxWorkers, ResourceType.Workers);
+            CheckResource(Current.water, maxWater, ResourceType.Water);
+            CheckResource(Current.food, maxFood, ResourceType.Food);
+            CheckResource(Current.iron, maxIron, ResourceType.Iron);
+            // Deuterium/Tritium/Knowledge เริ่มที่ 0 โดยตั้งใจ — ไม่ alert depletion
         }
 
         private void CheckResource(float amount, float max, ResourceType type)

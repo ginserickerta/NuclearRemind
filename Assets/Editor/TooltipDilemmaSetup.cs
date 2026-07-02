@@ -111,21 +111,29 @@ namespace NuclearReMind.EditorTools
             scenarioRect.pivot = new Vector2(0.5f, 1f);
             scenarioRect.anchoredPosition = new Vector2(0, -20);
 
-            // Choice A button (bottom-left)
-            var choiceAButton = CreateButton("ChoiceAButton", dialog.transform, font, "Choice A", new Color(0.2f, 0.5f, 0.8f), new Vector2(320, 60));
+            // Choice A button (bottom-left) — V4 §10: 3 ทาง A/B/C
+            var choiceAButton = CreateButton("ChoiceAButton", dialog.transform, font, "Choice A", new Color(0.2f, 0.5f, 0.8f), new Vector2(230, 60));
             var choiceARect = choiceAButton.GetComponent<RectTransform>();
             choiceARect.anchorMin = new Vector2(0f, 0f);
             choiceARect.anchorMax = new Vector2(0f, 0f);
             choiceARect.pivot = new Vector2(0f, 0f);
             choiceARect.anchoredPosition = new Vector2(20, 20);
 
-            // Choice B button (bottom-right)
-            var choiceBButton = CreateButton("ChoiceBButton", dialog.transform, font, "Choice B", new Color(0.8f, 0.4f, 0.2f), new Vector2(320, 60));
+            // Choice B button (bottom-center)
+            var choiceBButton = CreateButton("ChoiceBButton", dialog.transform, font, "Choice B", new Color(0.5f, 0.45f, 0.2f), new Vector2(230, 60));
             var choiceBRect = choiceBButton.GetComponent<RectTransform>();
-            choiceBRect.anchorMin = new Vector2(1f, 0f);
-            choiceBRect.anchorMax = new Vector2(1f, 0f);
-            choiceBRect.pivot = new Vector2(1f, 0f);
-            choiceBRect.anchoredPosition = new Vector2(-20, 20);
+            choiceBRect.anchorMin = new Vector2(0.5f, 0f);
+            choiceBRect.anchorMax = new Vector2(0.5f, 0f);
+            choiceBRect.pivot = new Vector2(0.5f, 0f);
+            choiceBRect.anchoredPosition = new Vector2(0, 20);
+
+            // Choice C button (bottom-right) — ซ่อนเองถ้า dilemma ไม่มี choice C (controller จัดการ)
+            var choiceCButton = CreateButton("ChoiceCButton", dialog.transform, font, "Choice C", new Color(0.8f, 0.4f, 0.2f), new Vector2(230, 60));
+            var choiceCRect = choiceCButton.GetComponent<RectTransform>();
+            choiceCRect.anchorMin = new Vector2(1f, 0f);
+            choiceCRect.anchorMax = new Vector2(1f, 0f);
+            choiceCRect.pivot = new Vector2(1f, 0f);
+            choiceCRect.anchoredPosition = new Vector2(-20, 20);
 
             overlay.SetActive(false);
 
@@ -138,11 +146,14 @@ namespace NuclearReMind.EditorTools
             controller.scenarioText = scenarioText;
             controller.choiceAText = choiceAButton.GetComponentInChildren<Text>();
             controller.choiceBText = choiceBButton.GetComponentInChildren<Text>();
+            controller.choiceCText = choiceCButton.GetComponentInChildren<Text>();
             controller.choiceAButton = choiceAButton.GetComponent<Button>();
             controller.choiceBButton = choiceBButton.GetComponent<Button>();
+            controller.choiceCButton = choiceCButton.GetComponent<Button>();
 
             UnityEventTools.AddPersistentListener(controller.choiceAButton.onClick, new UnityAction(controller.ChooseA));
             UnityEventTools.AddPersistentListener(controller.choiceBButton.onClick, new UnityAction(controller.ChooseB));
+            UnityEventTools.AddPersistentListener(controller.choiceCButton.onClick, new UnityAction(controller.ChooseC));
 
             EditorUtility.SetDirty(controller);
         }

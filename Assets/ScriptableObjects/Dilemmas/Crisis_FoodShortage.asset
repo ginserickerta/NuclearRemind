@@ -24,13 +24,16 @@ MonoBehaviour:
   choiceA_FoodChange: 0
   choiceA_EnergyChange: 0
   choiceA_WaterChange: 0
-  choiceA_TrustChange: -10
+  choiceA_HopeChange: -8
   choiceA_AethonRelationChange: 1
   choiceA_KeranRelationChange: 0
   choiceB_FoodChange: 250
   choiceB_EnergyChange: -150
   choiceB_WaterChange: 0
-  choiceB_TrustChange: 3
+  choiceB_HopeChange: 5
   choiceB_AethonRelationChange: 0
   choiceB_KeranRelationChange: 1
   triggerCondition: food_below_120
+  linkedQuizIds:
+  - Q6
+  - Q7
