@@ -69,13 +69,14 @@ namespace NuclearReMind.EditorTools
             hud.energyBar = CreateResourceBar("EnergyBar", resourcePanel.transform, font, new Color(1f, 0.8f, 0.2f), "⚡");
 
             // ===== Day panel (top-center, above tower) =====
-            var dayPanel = CreatePanel("DayPanel", canvasGO.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -20), new Vector2(240, 52));
+            // กว้าง 320/สูง 64 เผื่อ line height ของ Kanit (สูงกว่า Arial ~1.5×) — ข้อความไม่โดน truncate
+            var dayPanel = CreatePanel("DayPanel", canvasGO.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -20), new Vector2(320, 64));
             // พื้น panel ทึบ + ข้อความเข้ม — กัน text ขาวจมหายบน light theme (Palette.CameraBackground = #E9EDF3)
             var dayBg = dayPanel.AddComponent<Image>();
             dayBg.color = Palette.PanelBg;
-            hud.dayText = CreateText("DayText", dayPanel.transform, font, "DAY 1 / 30", 22, new Vector2(0, -4), new Vector2(240, 28), TextAnchor.UpperCenter);
+            hud.dayText = CreateText("DayText", dayPanel.transform, font, "DAY 1 / 30", 22, new Vector2(0, -4), new Vector2(320, 30), TextAnchor.UpperCenter);
             hud.dayText.color = Palette.TextPrimary;
-            hud.timerText = CreateText("TimerText", dayPanel.transform, font, "—", 20, new Vector2(0, -30), new Vector2(240, 22), TextAnchor.UpperCenter);
+            hud.timerText = CreateText("TimerText", dayPanel.transform, font, "—", 20, new Vector2(0, -32), new Vector2(320, 26), TextAnchor.UpperCenter);
             hud.timerText.color = Palette.TextMuted;
 
             // ===== Tower panel (top-center, below day panel) =====
@@ -108,8 +109,9 @@ namespace NuclearReMind.EditorTools
             hud.decree1Button = CreateButton("Decree1Btn", decreePanel.transform, font, "ประกาศ①", new Vector2(-64, 0), new Vector2(122, 36));
             hud.decree2Button = CreateButton("Decree2Btn", decreePanel.transform, font, "ประกาศ②", new Vector2(64, 0),  new Vector2(122, 36));
 
-            // ===== Speed controls (bottom-center) =====
-            var speedPanel = CreatePanel("SpeedPanel", canvasGO.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 20), new Vector2(210, 50));
+            // ===== Speed controls (top-center ขวาของ DayPanel) =====
+            // เดิมอยู่ bottom-center (0,20) ทับ BuildingSelectionPanel hotbar — ย้ายไปคู่กับนาฬิกาวัน
+            var speedPanel = CreatePanel("SpeedPanel", canvasGO.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(280, -20), new Vector2(210, 50));
             hud.pauseButton  = CreateButton("PauseButton",  speedPanel.transform, font, "II", new Vector2(-70, 0), new Vector2(60, 40));
             hud.normalButton = CreateButton("NormalButton", speedPanel.transform, font, "1x", new Vector2(0, 0),   new Vector2(60, 40));
             hud.fastButton   = CreateButton("FastButton",   speedPanel.transform, font, "2x", new Vector2(70, 0),  new Vector2(60, 40));
@@ -139,8 +141,9 @@ namespace NuclearReMind.EditorTools
             alertController.font = font;
             EditorUtility.SetDirty(alertController);
 
-            // ===== CORE TOWER overclock panel (bottom-center, เหนือ speed panel) =====
-            var corePanel = CreatePanel("CoreTowerPanel", canvasGO.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 80), new Vector2(380, 150));
+            // ===== CORE TOWER overclock panel (bottom-center, เหนือ hotbar) =====
+            // hotbar (BuildingSelectionPanel) กิน y 4–122 — เริ่มที่ 130 กันทับ
+            var corePanel = CreatePanel("CoreTowerPanel", canvasGO.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 130), new Vector2(380, 150));
 
             var coreStatus = CreateText("CoreStatusText", corePanel.transform, font, "CORE TOWER — ล็อก (Day 11)", 16, new Vector2(0, 58), new Vector2(370, 22), TextAnchor.MiddleCenter);
             var coreBar = CreateSlider("CoreBar", corePanel.transform, new Color(0.3f, 0.8f, 1f), new Vector2(0, 34), new Vector2(360, 16));
@@ -403,6 +406,7 @@ namespace NuclearReMind.EditorTools
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleRight;
             text.text = content;
+            text.verticalOverflow = VerticalWrapMode.Overflow; // กัน Kanit โดน truncate ทั้งบรรทัด
             return text;
         }
 
@@ -459,6 +463,8 @@ namespace NuclearReMind.EditorTools
             text.color = Color.white;
             text.alignment = anchor;
             text.text = content;
+            // Kanit line height สูงกว่ากล่องที่วางไว้ — default Truncate จะตัดทั้งบรรทัดจนมองไม่เห็น
+            text.verticalOverflow = VerticalWrapMode.Overflow;
             return text;
         }
 
