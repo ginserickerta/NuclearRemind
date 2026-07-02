@@ -10,7 +10,7 @@ namespace NuclearReMind
     ///   fuelEff = min(1, stock/FuelNeed[mode]) + KnowBonus (Expert +0.10) · cap 1.10
     ///   cooling = 15 + waterUsed/10 + coolingEngineers×4 + min(toroidalLv,3)×10
     ///   HEAT: warn 80 (micro-damage CORE%−2 ถ้าไม่มี Poloidal) · meltdown 100 · พายุ +12 (Day 25–30)
-    /// stub รอเฟสอื่น: coolingEngineers (เฟส 3) · toroidalLv/Poloidal (เฟส 6) · แหล่ง Deuterium/Tritium (เฟส 6/3)
+    /// เชื่อมครบทุกเฟสแล้ว: coolingEngineers จาก PopulationManager (เฟส 3) · Coils (เฟส 6) · Deuterium/Tritium จาก Water/Lab L3 (เฟส 6)
     /// </summary>
     public class CoreTowerManager : MonoBehaviour
     {
@@ -188,7 +188,7 @@ namespace NuclearReMind
             if (waterUsed > 0f)
                 EventManager.Instance.RaiseResourceDelta(ResourceType.Water, -waterUsed);
 
-            // coolingEngineers นับเฉพาะเมื่อมี Poloidal Coils (§8) — จริงในเฟส 3, ตอนนี้ stub = 0
+            // coolingEngineers นับเฉพาะเมื่อมี Poloidal Coils (§8) — ดึงจาก PopulationManager จริง (เฟส 3 ปิด stub แล้ว)
             int coolEng = (hasPoloidalCoils && PopulationManager.Instance != null)
                 ? PopulationManager.Instance.AssignedCoolingEngineers : 0;
             int decreeCooling = DecreeManager.Instance != null ? DecreeManager.Instance.CoolingLaborBonus : 0;

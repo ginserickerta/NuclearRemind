@@ -94,7 +94,7 @@ namespace NuclearReMind
             EventManager.Instance.RaiseResourceDelta(ResourceType.Knowledge, reward);
 
             // ปลด Codex เมื่อมีลิงก์ — เห็น explain แล้วทั้งถูก/ผิด (D6/G6)
-            // codexUnlockId ว่าง → UnlockById เป็น no-op (G1: 5 หัวข้อฟิวชันยังไม่มี CodexEntry บนดิสก์)
+            // codexUnlockId ว่าง → UnlockById เป็น no-op (ปัจจุบันทั้ง 10 ข้อมี id ครบ — G1 ปิดแล้ว, fusion codex 5 ตัวอยู่บนดิสก์)
             if (!string.IsNullOrEmpty(quiz.codexUnlockId))
                 CodexManager.Instance?.UnlockById(quiz.codexUnlockId);
 
