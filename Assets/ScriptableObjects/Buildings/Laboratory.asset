@@ -23,17 +23,21 @@ MonoBehaviour:
   sprite: {fileID: 21300000, guid: 7a172904a4adeb440bb77f3654c97394, type: 3}
   size: {x: 1, y: 1}
   buildingType: 6
-  materialCost: 35
+  ironCost: 35
   energyCost: 8
   workerRequired: 3
   foodProduction: 0
   waterProduction: 0
-  radiationProtectionBonus: 0
   energyProduction: 0
-  researchPointsPerTick: 2
+  ironProduction: 0
   energyConsumption: 0
   waterConsumption: 0
   isCoreTowerPart: 0
   towerPhaseRequired: 0
+  unlocksEngineerTraining: 1
+  unlocksMedicTraining: 1
+  upgradeIronCost: 40
+  deuteriumProduction: 0
+  tritiumProduction: 4
   powerRange: 0
   isPowerRelay: 0
