@@ -106,6 +106,9 @@ namespace NuclearReMind
         // ===== Power Grid =====
         public event Action<HashSet<Vector2Int>> OnPowerGridChanged; // ชุด cell ทั้งหมดที่ได้รับพลังงาน
 
+        // ===== Notice (toast แจ้งเหตุผลจากการกระทำผู้เล่น เช่น ฝึกคลาสไม่ได้ — AlertController แสดง) =====
+        public event Action<string> OnNotice;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -207,5 +210,8 @@ namespace NuclearReMind
 
         // ===== Power Grid =====
         public void RaisePowerGridChanged(HashSet<Vector2Int> powered) => OnPowerGridChanged?.Invoke(powered);
+
+        // ===== Notice =====
+        public void RaiseNotice(string message) => OnNotice?.Invoke(message);
     }
 }

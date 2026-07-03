@@ -82,6 +82,37 @@ namespace NuclearReMind.Tests
         }
 
         [Test]
+        public void Notice_ShowsAlert()
+        {
+            eventManager.RaiseNotice("ต้องสร้างห้องปฏิบัติการก่อน");
+            Assert.AreEqual(1, alert.ActiveAlertCount);
+        }
+
+        [Test]
+        public void Notice_DifferentMessages_ShowSeparately()
+        {
+            eventManager.RaiseNotice("ต้องสร้างห้องปฏิบัติการก่อน");
+            eventManager.RaiseNotice("ทรัพยากรไม่พอ");
+            Assert.AreEqual(2, alert.ActiveAlertCount);
+        }
+
+        [Test]
+        public void Notice_SameMessage_Debounced()
+        {
+            eventManager.RaiseNotice("ทรัพยากรไม่พอ");
+            eventManager.RaiseNotice("ทรัพยากรไม่พอ");
+            Assert.AreEqual(1, alert.ActiveAlertCount);
+        }
+
+        [Test]
+        public void Notice_EmptyMessage_Ignored()
+        {
+            eventManager.RaiseNotice("");
+            eventManager.RaiseNotice(null);
+            Assert.AreEqual(0, alert.ActiveAlertCount);
+        }
+
+        [Test]
         public void BuildResourceAlert_KeysAndLabels()
         {
             var (depKey, depMsg) = AlertController.BuildResourceAlert(ResourceType.Energy, depleted: true);

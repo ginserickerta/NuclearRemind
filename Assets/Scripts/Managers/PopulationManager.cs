@@ -151,29 +151,30 @@ namespace NuclearReMind
         }
 
         // ── ฝึกคลาส (Worker → Engineer/Medic) ────────────────────
-        /// <summary>ฝึกวิศวกร — ต้องมี Research Lab, มี Worker ว่าง, จ่าย Food/Energy · เสร็จวันถัดไป</summary>
+        // เหตุผลที่ฝึกไม่ได้ทุกกรณี → toast ผ่าน Notice (AlertController) แทนที่จะเงียบ (เดิม Debug.Log อย่างเดียว)
+        /// <summary>ฝึกวิศวกร — ต้องมีห้องปฏิบัติการ, มี Worker ว่าง, จ่าย Food/Energy · เสร็จวันถัดไป</summary>
         public void TrainEngineer()
         {
-            if (!_engineerUnlocked) { Debug.Log("[Population] ต้องมี Research Lab ก่อนฝึกวิศวกร"); return; }
-            TryTrain(trainEngineerFood, trainEngineerEnergy, isEngineer: true);
+            if (!_engineerUnlocked) { Notice("ต้องสร้างห้องปฏิบัติการก่อนจึงจะฝึกวิศวกรได้"); return; }
+            TryTrain(trainEngineerFood, trainEngineerEnergy, isEngineer: true, className: "วิศวกร");
         }
 
-        /// <summary>ฝึกแพทย์ — ต้องมี Hospital, มี Worker ว่าง, จ่าย Food/Energy · เสร็จวันถัดไป</summary>
+        /// <summary>ฝึกแพทย์ — ต้องมีห้องปฏิบัติการ (ชั่วคราวจน Hospital มา), มี Worker ว่าง, จ่าย Food/Energy · เสร็จวันถัดไป</summary>
         public void TrainMedic()
         {
-            if (!_medicUnlocked) { Debug.Log("[Population] ต้องมี Hospital ก่อนฝึกแพทย์"); return; }
-            TryTrain(trainMedicFood, trainMedicEnergy, isEngineer: false);
+            if (!_medicUnlocked) { Notice("ต้องสร้างห้องปฏิบัติการก่อนจึงจะฝึกแพทย์ได้"); return; }
+            TryTrain(trainMedicFood, trainMedicEnergy, isEngineer: false, className: "แพทย์");
         }
 
-        private void TryTrain(int foodCost, int energyCost, bool isEngineer)
+        private void TryTrain(int foodCost, int energyCost, bool isEngineer, string className)
         {
             var pop = Current;
-            if (pop.workers <= 0) { Debug.Log("[Population] ไม่มี Worker ว่างให้ฝึก"); return; }
+            if (pop.workers <= 0) { Notice("ไม่มีคนงานว่างให้ฝึก (ต้องมี Worker อย่างน้อย 1 คน)"); return; }
 
             var rm = ResourceManager.Instance;
             if (rm != null && (rm.Current.food < foodCost || rm.Current.energy < energyCost))
             {
-                Debug.Log("[Population] ทรัพยากรไม่พอฝึก");
+                Notice($"ทรัพยากรไม่พอ — ฝึก{className}ต้องใช้ Food {foodCost} + Energy {energyCost}");
                 return;
             }
 
@@ -188,6 +189,14 @@ namespace NuclearReMind
             if (isEngineer) _pendingEngineers++; else _pendingMedics++;
 
             EventManager.Instance.RaisePopulationChanged(Current);
+            Notice($"เริ่มฝึก{className} — จะพร้อมใช้งานเมื่อจบวัน");
+        }
+
+        // แจ้งเหตุผล/ผลการฝึกเป็น toast (AlertController) + log ไว้ debug
+        private static void Notice(string message)
+        {
+            Debug.Log($"[Population] {message}");
+            EventManager.Instance?.RaiseNotice(message);
         }
 
         // ── สิ้นวัน: ขวัญ + ฝึกเสร็จ + เติมประชากร (V4 §5/§9) ──────

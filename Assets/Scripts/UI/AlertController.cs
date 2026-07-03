@@ -44,6 +44,7 @@ namespace NuclearReMind
             EventManager.Instance.OnResourceCritical += HandleResourceCritical;
             EventManager.Instance.OnResourceDepleted += HandleResourceDepleted;
             EventManager.Instance.OnDilemmaTriggered += HandleDilemmaTriggered;
+            EventManager.Instance.OnNotice           += HandleNotice;
         }
 
         private void OnDisable()
@@ -52,6 +53,7 @@ namespace NuclearReMind
             EventManager.Instance.OnResourceCritical -= HandleResourceCritical;
             EventManager.Instance.OnResourceDepleted -= HandleResourceDepleted;
             EventManager.Instance.OnDilemmaTriggered -= HandleDilemmaTriggered;
+            EventManager.Instance.OnNotice           -= HandleNotice;
         }
 
         // ───────────────────────────── Event handlers ─────────────────────────────
@@ -72,6 +74,13 @@ namespace NuclearReMind
         {
             string id = data != null ? data.dilemmaId : "unknown";
             TryShow($"crisis:{id}", "⚠ เกิดสถานการณ์วิกฤต — ต้องตัดสินใจ");
+        }
+
+        // toast แจ้งเหตุผลจากการกระทำผู้เล่น (เช่น ฝึกคลาสไม่ได้) — key = ข้อความเอง กันเด้งซ้ำระหว่างยังค้าง
+        private void HandleNotice(string message)
+        {
+            if (string.IsNullOrEmpty(message)) return;
+            TryShow($"notice:{message}", message);
         }
 
         // ───────────────────────────── Core ─────────────────────────────

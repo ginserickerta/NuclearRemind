@@ -104,6 +104,47 @@ namespace NuclearReMind.Tests
         }
 
         [Test]
+        public void TrainEngineer_WithoutLab_RaisesNotice()
+        {
+            string notice = null;
+            eventManager.OnNotice += m => notice = m;
+
+            population.TrainEngineer();
+
+            Assert.IsNotNull(notice, "ฝึกไม่ได้ต้องแจ้งเหตุผล (toast) ไม่ใช่เงียบ");
+            StringAssert.Contains("ห้องปฏิบัติการ", notice);
+        }
+
+        [Test]
+        public void TrainEngineer_InsufficientResources_RaisesNotice()
+        {
+            UnlockTraining(engineer: true, medic: false);
+            // ดูดทรัพยากรให้ต่ำกว่าต้นทุนฝึก (Food 30 + Energy 50)
+            eventManager.RaiseResourceDelta(ResourceType.Food, -1000);
+            eventManager.RaiseResourceDelta(ResourceType.Energy, -1000);
+
+            string notice = null;
+            eventManager.OnNotice += m => notice = m;
+            population.TrainEngineer();
+
+            Assert.AreEqual(10, population.Current.workers, "ทรัพยากรไม่พอ → ไม่ดึง Worker");
+            StringAssert.Contains("ทรัพยากรไม่พอ", notice);
+        }
+
+        [Test]
+        public void TrainEngineer_Success_RaisesNotice()
+        {
+            UnlockTraining(engineer: true, medic: false);
+
+            string notice = null;
+            eventManager.OnNotice += m => notice = m;
+            population.TrainEngineer();
+
+            Assert.AreEqual(9, population.Current.workers);
+            StringAssert.Contains("เริ่มฝึก", notice);
+        }
+
+        [Test]
         public void TrainMedic_ConvertsWorkerToMedic_After1Day()
         {
             UnlockTraining(engineer: false, medic: true);
