@@ -63,8 +63,12 @@ namespace NuclearReMind.EditorTools
             resourceLayout.childControlHeight = false;
             resourceLayout.childForceExpandHeight = false;
 
-            hud.foodBar = CreateResourceBar("FoodBar", resourcePanel.transform, font, new Color(0.4f, 0.8f, 0.2f), "\U0001F33F");
-            hud.waterBar = CreateResourceBar("WaterBar", resourcePanel.transform, font, new Color(0.2f, 0.6f, 1f), "\U0001F4A7");
+            // Food/Water ใช้ sprite icon — 🌿💧 เป็น emoji นอก BMP (surrogate pair) legacy Text วาดไม่ได้
+            // ⛏⚡ อยู่ใน BMP เรนเดอร์ผ่าน OS font fallback ได้ จึงคงเป็น text
+            hud.foodBar = CreateResourceBar("FoodBar", resourcePanel.transform, font, new Color(0.4f, 0.8f, 0.2f), "F",
+                PlaceholderSpriteGenerator.EnsureIconSprite("IconFood"));
+            hud.waterBar = CreateResourceBar("WaterBar", resourcePanel.transform, font, new Color(0.2f, 0.6f, 1f), "W",
+                PlaceholderSpriteGenerator.EnsureIconSprite("IconWater"));
             hud.ironBar = CreateResourceBar("IronBar", resourcePanel.transform, font, new Color(0.6f, 0.55f, 0.5f), "⛏");
             hud.energyBar = CreateResourceBar("EnergyBar", resourcePanel.transform, font, new Color(1f, 0.8f, 0.2f), "⚡");
 
@@ -355,16 +359,30 @@ namespace NuclearReMind.EditorTools
             return go;
         }
 
-        private static UIManagerHUD.ResourceBarUI CreateResourceBar(string name, Transform parent, Font font, Color fillColor, string icon)
+        private static UIManagerHUD.ResourceBarUI CreateResourceBar(string name, Transform parent, Font font, Color fillColor, string icon, Sprite iconSprite = null)
         {
             var row = new GameObject(name, typeof(RectTransform));
             row.transform.SetParent(parent, false);
             var rowRect = row.GetComponent<RectTransform>();
             rowRect.sizeDelta = new Vector2(260, 26);
 
-            // icon emoji ด้านซ้ายสุด
-            var iconText = CreateText(name + "Icon", row.transform, font, icon, 18, new Vector2(2, 0), new Vector2(24, 24), TextAnchor.MiddleCenter);
-            var iconRect = iconText.GetComponent<RectTransform>();
+            // icon ด้านซ้ายสุด — sprite ถ้ามี (emoji นอก BMP วาดไม่ได้) ไม่งั้นใช้ text
+            RectTransform iconRect;
+            if (iconSprite != null)
+            {
+                var iconGO = new GameObject(name + "Icon", typeof(RectTransform));
+                iconGO.transform.SetParent(row.transform, false);
+                var img = iconGO.AddComponent<Image>();
+                img.sprite = iconSprite;
+                img.preserveAspect = true;
+                iconRect = iconGO.GetComponent<RectTransform>();
+                iconRect.sizeDelta = new Vector2(22, 22);
+            }
+            else
+            {
+                var iconText = CreateText(name + "Icon", row.transform, font, icon, 18, new Vector2(2, 0), new Vector2(24, 24), TextAnchor.MiddleCenter);
+                iconRect = iconText.GetComponent<RectTransform>();
+            }
             iconRect.anchorMin = new Vector2(0f, 0.5f);
             iconRect.anchorMax = new Vector2(0f, 0.5f);
             iconRect.pivot = new Vector2(0f, 0.5f);

@@ -13,8 +13,13 @@ namespace NuclearReMind
         // ขนาด bar (หน่วย world)
         private const float BarWidth  = 1.0f;
         private const float BarHeight = 0.16f;
-        private const int   SortBg    = 10;
-        private const int   SortFill  = 11;
+
+        // ต้องอยู่ layer "Buildings" — sorting layer เรียง Default → Ground → Buildings → FogOfWar
+        // (ค่าเดิมอยู่ Default = โดนทั้งพื้นและตึกทับจนมองไม่เห็น)
+        // order สูงกว่าตึกทุกหลัง (BuildingVisualSpawner ใช้ col+row ≤ ~86)
+        private const string SortLayer = "Buildings";
+        private const int    SortBg    = 500;
+        private const int    SortFill  = 501;
 
         private static readonly Color BgColor   = new Color(0.05f, 0.05f, 0.08f, 0.9f);
         private static readonly Color FillColor = new Color(0.30f, 0.85f, 1.00f, 1f);
@@ -91,6 +96,7 @@ namespace NuclearReMind
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
             sr.color = color;
+            sr.sortingLayerName = SortLayer;
             sr.sortingOrder = sortingOrder;
             return go;
         }

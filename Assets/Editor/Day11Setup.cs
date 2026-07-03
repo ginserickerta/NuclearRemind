@@ -80,14 +80,10 @@ namespace NuclearReMind.EditorTools
 
         private static void SetupBuildingQueueUI(GameObject hudCanvas, Font font)
         {
-            // สร้าง entry prefab ก่อน
+            // สร้าง entry prefab ใหม่ทุกครั้ง — overwrite เวอร์ชันเก่าที่ label ✕/↑ ใช้ glyph
+            // ที่ Kanit ไม่มี + กล่อง 16px โดน line height ของ Kanit truncate ทั้งบรรทัด
             var entryPrefabPath = $"{PrefabPath}/QueueEntry.prefab";
-            var entryPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(entryPrefabPath);
-
-            if (entryPrefab == null)
-            {
-                entryPrefab = CreateQueueEntryPrefab(entryPrefabPath, font);
-            }
+            var entryPrefab = CreateQueueEntryPrefab(entryPrefabPath, font);
 
             // สร้าง BuildingQueuePanel ใน HUDCanvas (bottom-right)
             var panelGO = GetOrCreate("BuildingQueuePanel", hudCanvas.transform);
@@ -160,6 +156,7 @@ namespace NuclearReMind.EditorTools
             var txt = txtGO.AddComponent<Text>();
             txt.font = font; txt.fontSize = 11; txt.alignment = TextAnchor.MiddleCenter;
             txt.color = new Color(0.9f, 0.9f, 0.4f); txt.text = "0/10";
+            txt.verticalOverflow = VerticalWrapMode.Overflow; // กัน Kanit โดน truncate ในกล่อง 14px
 
             // CancelBtn (top-left ✕)
             var cancelGO = new GameObject("CancelBtn", typeof(RectTransform));
@@ -177,8 +174,11 @@ namespace NuclearReMind.EditorTools
             cLblRect.anchorMin = Vector2.zero; cLblRect.anchorMax = Vector2.one;
             cLblRect.offsetMin = Vector2.zero; cLblRect.offsetMax = Vector2.zero;
             var cLblTxt = cLblGO.AddComponent<Text>();
-            cLblTxt.font = font; cLblTxt.fontSize = 11; cLblTxt.text = "✕";
+            // "X" แทน "✕" (U+2715) — Kanit ไม่มี glyph นั้น + overflow กันกล่อง 16px truncate
+            cLblTxt.font = font; cLblTxt.fontSize = 12; cLblTxt.fontStyle = FontStyle.Bold; cLblTxt.text = "X";
             cLblTxt.alignment = TextAnchor.MiddleCenter; cLblTxt.color = Color.white;
+            cLblTxt.verticalOverflow = VerticalWrapMode.Overflow;
+            cLblTxt.horizontalOverflow = HorizontalWrapMode.Overflow;
 
             // PrioritizeBtn (top-right ↑)
             var prioGO = new GameObject("PrioritizeBtn", typeof(RectTransform));
@@ -196,8 +196,11 @@ namespace NuclearReMind.EditorTools
             pLblRect.anchorMin = Vector2.zero; pLblRect.anchorMax = Vector2.one;
             pLblRect.offsetMin = Vector2.zero; pLblRect.offsetMax = Vector2.zero;
             var pLblTxt = pLblGO.AddComponent<Text>();
-            pLblTxt.font = font; pLblTxt.fontSize = 11; pLblTxt.text = "↑";
+            // "^" แทน "↑" (U+2191) — Kanit ไม่มี glyph นั้น + overflow กันกล่อง 16px truncate
+            pLblTxt.font = font; pLblTxt.fontSize = 14; pLblTxt.fontStyle = FontStyle.Bold; pLblTxt.text = "^";
             pLblTxt.alignment = TextAnchor.MiddleCenter; pLblTxt.color = Color.white;
+            pLblTxt.verticalOverflow = VerticalWrapMode.Overflow;
+            pLblTxt.horizontalOverflow = HorizontalWrapMode.Overflow;
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(temp, path);
             Object.DestroyImmediate(temp);

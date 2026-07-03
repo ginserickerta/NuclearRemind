@@ -45,6 +45,58 @@ namespace NuclearReMind.EditorTools
         };
 
         /// <summary>
+        /// สร้าง icon sprite ขนาดเล็กสำหรับ HUD (เช่นแถบ Food/Water — emoji 🌿💧 อยู่นอก BMP
+        /// legacy Text วาดไม่ได้) — สร้างเฉพาะเมื่อยังไม่มีบนดิสก์ แล้วคืน Sprite
+        /// </summary>
+        public static Sprite EnsureIconSprite(string name)
+        {
+            const string iconsFolder = "Assets/Sprites/Icons";
+            string path = Path.Combine(iconsFolder, name + ".png");
+            if (AssetDatabase.LoadAssetAtPath<Sprite>(path) == null)
+            {
+                Directory.CreateDirectory(iconsFolder);
+                Texture2D tex = name == "IconFood" ? DrawIconFood()
+                              : name == "IconWater" ? DrawIconWater()
+                              : NewCanvas(48, 48);
+                WritePng(path, tex);
+                AssetDatabase.Refresh();
+                ConfigureSprite(path, 48);
+            }
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        // ต้นอ่อน 🌿 — ลำต้น + ใบซ้าย/ขวา/ยอด (สี HUD จะไม่ tint เพิ่ม จึงวาดสีจริง)
+        private static Texture2D DrawIconFood()
+        {
+            var tex = NewCanvas(48, 48);
+            Color stem = new Color(0.25f, 0.55f, 0.18f);
+            Color leaf = new Color(0.40f, 0.78f, 0.25f);
+
+            FillRect(tex, 22, 4, 25, 30, stem);
+            FillEllipse(tex, 13, 26, 10, 6, leaf);
+            FillEllipse(tex, 35, 32, 10, 6, leaf);
+            FillEllipse(tex, 24, 41, 7, 6, leaf);
+
+            tex.Apply();
+            return tex;
+        }
+
+        // หยดน้ำ 💧 — วงกลมฐาน + สามเหลี่ยมชี้ขึ้น + ไฮไลต์
+        private static Texture2D DrawIconWater()
+        {
+            var tex = NewCanvas(48, 48);
+            Color water = new Color(0.20f, 0.55f, 0.95f);
+            Color shine = new Color(0.65f, 0.85f, 1f);
+
+            FillCircle(tex, 24, 17, 13, water);
+            FillTriangle(tex, new Vector2(11, 20), new Vector2(37, 20), new Vector2(24, 45), water);
+            FillCircle(tex, 19, 14, 3, shine);
+
+            tex.Apply();
+            return tex;
+        }
+
+        /// <summary>
         /// สร้าง sprite ของอาคารหนึ่งตัวถ้ายังไม่มีบนดิสก์ แล้วคืน Sprite ที่โหลดได้
         /// (ให้ setup อื่นเรียกตอนสร้าง BuildingData asset ใหม่ เช่น Mine — ไม่ต้องรัน GenerateAll ทั้งชุด)
         /// </summary>
