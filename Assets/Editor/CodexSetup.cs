@@ -298,18 +298,25 @@ namespace NuclearReMind.EditorTools
             ui.detailContent.verticalOverflow = VerticalWrapMode.Overflow;
             ui.detailContent.lineSpacing = 1.3f;
 
-            // ── ปุ่ม Codex ใน HUD (bottom-left) ──
+            // ── ปุ่ม Codex ใน HUD (ซ้ายล่าง เหนือ TooltipPanel) ──
+            // TooltipPanel กิน (20,20)–(440,200) ตอนเลือกวางอาคาร — ปุ่มอยู่ y 210 พ้นกัน
+            // label ไม่ใช้ 📖 (emoji นอก BMP — legacy Text วาดไม่ได้ เห็นเป็นช่องว่าง)
             var codexBtnGO = GameObject.Find("CodexToggleButton");
             if (codexBtnGO == null)
             {
-                var btn = CreateButton("CodexToggleButton", hudCanvas.transform, font, "📖 Codex", 16,
-                    new Vector2(20, 20), new Vector2(120, 36));
-                var rect = btn.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0, 0); rect.anchorMax = new Vector2(0, 0);
-                rect.pivot = new Vector2(0, 0);
+                var btn = CreateButton("CodexToggleButton", hudCanvas.transform, font, "Codex", 16,
+                    new Vector2(20, 210), new Vector2(120, 36));
                 btn.onClick.AddListener(() => ui.Toggle());
                 EnsureImage(btn.gameObject).color = new Color(0.1f, 0.15f, 0.28f, 0.9f);
+                codexBtnGO = btn.gameObject;
             }
+
+            // ตั้งตำแหน่งเสมอ (แม้ปุ่มมีอยู่แล้วจากรอบก่อน) — รันซ้ำแล้วตำแหน่งใหม่ถูก apply
+            var btnRect = codexBtnGO.GetComponent<RectTransform>();
+            btnRect.anchorMin = new Vector2(0, 0); btnRect.anchorMax = new Vector2(0, 0);
+            btnRect.pivot = new Vector2(0, 0);
+            btnRect.anchoredPosition = new Vector2(20, 210);
+            EditorUtility.SetDirty(codexBtnGO);
 
             EditorUtility.SetDirty(ui);
         }
