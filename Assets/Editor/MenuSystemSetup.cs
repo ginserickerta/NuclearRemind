@@ -131,6 +131,7 @@ namespace NuclearReMind.EditorTools
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.04f, 0.05f, 0.09f, 1f);
             camGO.tag = "MainCamera";
+            camGO.AddComponent<AudioListener>();
 
             var canvasGO = new GameObject("MenuCanvas", typeof(RectTransform));
             var canvas = canvasGO.AddComponent<Canvas>();
@@ -139,7 +140,11 @@ namespace NuclearReMind.EditorTools
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
             canvasGO.AddComponent<GraphicRaycaster>();
-            EnsureEventSystem();
+
+            // ⚠ ห้ามใช้ EnsureEventSystem ที่นี่ — ตอน setup ซีนนี้ถูกสร้าง additive ขณะ Gamescene
+            // ยังเปิดอยู่ FindFirstObjectByType จะไปเจอ EventSystem ของ Gamescene แล้วข้ามการสร้าง
+            // → MainMenu.unity ไม่มี EventSystem = ปุ่มกดไม่ได้ทั้งจอ · ซีนใหม่ว่างเปล่า สร้างเสมอ
+            CreateEventSystem();
 
             // พื้นหลังไล่เฉดเข้ม
             var bg = NewUI("Background", canvasGO.transform);
@@ -257,9 +262,15 @@ namespace NuclearReMind.EditorTools
             r.sizeDelta = size;
         }
 
+        // ใช้ได้เฉพาะซีนเกม (เช็กว่ามีอยู่แล้วข้ามได้) — ซีนใหม่ที่สร้าง additive ต้อง CreateEventSystem ตรง
         private static void EnsureEventSystem()
         {
             if (Object.FindFirstObjectByType<EventSystem>() != null) return;
+            CreateEventSystem();
+        }
+
+        private static void CreateEventSystem()
+        {
             var es = new GameObject("EventSystem", typeof(RectTransform));
             es.AddComponent<EventSystem>();
             es.AddComponent<StandaloneInputModule>();
