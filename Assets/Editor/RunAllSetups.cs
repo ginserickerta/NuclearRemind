@@ -32,6 +32,8 @@ namespace NuclearReMind.EditorTools
             // และ setup เดิมจะยัด PowerConduit (no-op) กลับเข้า hotbar — เมนูยังอยู่ ถ้าอยากรันเอง
             "NuclearReMind/Setup Day 11 Systems",
             "NuclearReMind/Setup Demolition System",
+            "NuclearReMind/Setup Pause Menu", // PauseCanvas แยกจาก HUDCanvas — กด ESC ตอนเล่น
+
             "NuclearReMind/Setup Grid 43x43",
             "NuclearReMind/Fill Grids (Ground + Fog)",
             "NuclearReMind/Apply Kanit Font (Scene + Prefabs)",

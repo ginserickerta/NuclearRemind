@@ -28,6 +28,11 @@
 | 12 | **Fill Grids / Apply Kanit Font** | tile art placeholder + ฟอนต์ |
 | 13 | **Ctrl+S** | Save Scene |
 
+> **เมนู (นอก chain — รันแยกครั้งเดียว):** `Setup Menu System (Main + Pause)`
+> - สร้าง `MainMenu.unity` (build index 0 = เปิดเกมมาที่เมนูหลัก) + PauseCanvas ใน Gamescene (กด **ESC** ตอนเล่น)
+> - `Setup Pause Menu` อยู่ใน Run All Setups แล้ว (PauseCanvas แยกจาก HUDCanvas จึงไม่โดนลบ) แต่ `Setup Main Menu Scene` ต้องรันเองเพราะสร้างซีนใหม่
+> - ทดสอบเมนูหลัก: เปิด `MainMenu.unity` แล้วกด Play (Play ใช้ซีนที่เปิดอยู่ — ตัว build ถึงจะเริ่มที่ index 0 เอง)
+
 ## 3 · ล้าง orphan GameObject (เฟส 0–5 ถอด field)
 Setup HUD Canvas สร้างของใหม่ให้ แต่ถ้ามี GameObject/ref เก่าค้างในซีน ให้ลบมือ:
 - `DespairBar` · `RiotWarning` · `StrikeWarning` · `WorkersBar` · `RadiationProtectionBar` (ถอดเฟส 0)
