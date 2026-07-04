@@ -32,12 +32,14 @@ MonoBehaviour:
   energyProduction: 60
   ironProduction: 0
   energyConsumption: 0
-  waterConsumption: 2
+  waterConsumption: 0
   isCoreTowerPart: 0
   towerPhaseRequired: 0
   unlocksEngineerTraining: 0
   unlocksMedicTraining: 0
+  shelterCapacity: 0
   upgradeIronCost: 40
+  upgradeEnergyCost: 150
   deuteriumProduction: 0
   tritiumProduction: 0
   powerRange: 0

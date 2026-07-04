@@ -36,7 +36,9 @@ MonoBehaviour:
   towerPhaseRequired: 0
   unlocksEngineerTraining: 1
   unlocksMedicTraining: 1
+  shelterCapacity: 0
   upgradeIronCost: 40
+  upgradeEnergyCost: 0
   deuteriumProduction: 0
   tritiumProduction: 4
   powerRange: 0

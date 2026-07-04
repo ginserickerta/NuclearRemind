@@ -22,7 +22,7 @@ MonoBehaviour:
   sprite: {fileID: 21300000, guid: f9a2422733e4ba34492249cae6b5d51f, type: 3}
   size: {x: 1, y: 1}
   buildingType: 3
-  ironCost: 25
+  ironCost: 30
   energyCost: 10
   workerRequired: 1
   foodProduction: 0
@@ -35,7 +35,9 @@ MonoBehaviour:
   towerPhaseRequired: 0
   unlocksEngineerTraining: 0
   unlocksMedicTraining: 0
+  shelterCapacity: 0
   upgradeIronCost: 40
+  upgradeEnergyCost: 150
   deuteriumProduction: 8
   tritiumProduction: 0
   powerRange: 0
