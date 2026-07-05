@@ -3,58 +3,145 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
-    /// ควบคุมกล้อง Orthographic: เลื่อนด้วย WASD และ Zoom ด้วย Scroll
+    /// กล้อง Orthographic สไตล์ city builder:
+    /// - WASD/ลูกศร เลื่อนแบบมีแรงเฉื่อย (SmoothDamp เร่ง/หน่วงนุ่ม ไม่กระตุก)
+    /// - คลิกกลางค้างแล้วลาก = จับแมพเลื่อน (จุดใต้เมาส์ตรึงอยู่กับที่)
+    /// - Scroll ซูมแบบ ease เข้าหาตำแหน่งเมาส์ (zoom-to-cursor)
+    /// - ความเร็วเลื่อนสเกลตามระยะซูม (ซูมไกล = เลื่อนไว, ซูมใกล้ = ละเอียด)
+    /// - clamp ไม่ให้ศูนย์กลางกล้องหลุดขอบแมพ (อ่านมุมกริดจาก GridManager)
+    /// ใช้ unscaledDeltaTime ทั้งหมด — กล้องยังเลื่อน/ซูมได้ระหว่าง pause (timeScale 0)
     /// </summary>
     public class CameraController : MonoBehaviour
     {
-        [Header("Pan")]
-        public float panSpeed = 10f;
+        [Header("Pan (WASD/ลูกศร)")]
+        public float panSpeed = 12f;          // ความเร็วที่ซูมระดับกลาง (สเกลตามซูมอัตโนมัติ)
+        public float panSmoothTime = 0.18f;   // เวลาหน่วงเร่ง/เบรก (วินาที) — ยิ่งมากยิ่งลื่นไหล
+        public bool zoomScalesPanSpeed = true;
+
+        [Header("Drag Pan (คลิกกลางลาก)")]
+        public bool enableDragPan = true;
 
         [Header("Zoom")]
-        public float zoomSpeed = 10f;
+        public float zoomStepPerNotch = 1.6f; // ขนาดซูมต่อ 1 คลิกล้อเมาส์
+        public float zoomSmoothTime = 0.12f;  // ease ของซูม
         public float minZoom = 3f;
         public float maxZoom = 15f;
+        public bool zoomToCursor = true;      // ซูมเข้าหาจุดใต้เมาส์ (มาตรฐาน city builder)
+
+        [Header("Map Bounds")]
+        public bool clampToGrid = true;
+        public float boundsPadding = 2f;      // ยอมให้เลยขอบแมพได้กี่หน่วย world
 
         private Camera cam;
+        private Vector2 _panVelocity;   // ความเร็วปัจจุบัน (มีแรงเฉื่อย)
+        private Vector2 _panDampVel;    // state ภายในของ SmoothDamp
+        private float _targetZoom;
+        private float _zoomVel;
+        private bool _dragging;
+        private Vector3 _dragOriginWorld;
 
         private void Awake()
         {
             cam = GetComponent<Camera>();
             cam.orthographic = true;
+            _targetZoom = Mathf.Clamp(cam.orthographicSize, minZoom, maxZoom);
         }
 
         private void Update()
         {
-            HandlePan();
-            HandleZoom();
+            float dt = Time.unscaledDeltaTime; // ไม่ผูก timeScale — เลื่อนดูเมืองระหว่าง pause ได้
+            HandleKeyboardPan(dt);
+            HandleDragPan();
+            HandleZoom(dt);
+            if (clampToGrid) ClampToBounds();
         }
 
-        /// <summary>
-        /// เลื่อนกล้องด้วย WASD
-        /// </summary>
-        private void HandlePan()
+        // ── คีย์บอร์ด: SmoothDamp ความเร็วเข้าหาเป้า → มีช่วงเร่งตอนเริ่มกด และไหลต่อนิดๆ ตอนปล่อย ──
+        private void HandleKeyboardPan(float dt)
         {
-            Vector3 move = Vector3.zero;
+            var input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+            if (input.sqrMagnitude > 1f) input.Normalize(); // เดินทแยงไม่เร็วกว่าแนวตรง
 
-            if (Input.GetKey(KeyCode.W)) move.y += 1f;
-            if (Input.GetKey(KeyCode.S)) move.y -= 1f;
-            if (Input.GetKey(KeyCode.A)) move.x -= 1f;
-            if (Input.GetKey(KeyCode.D)) move.x += 1f;
+            // ซูมไกล (orthographicSize ใหญ่) → เลื่อนเร็วขึ้นตามสัดส่วน เพื่อความรู้สึกคงที่บนจอ
+            float speed = panSpeed;
+            if (zoomScalesPanSpeed)
+                speed *= cam.orthographicSize / ((minZoom + maxZoom) * 0.5f);
 
-            transform.position += move * panSpeed * Time.deltaTime;
+            Vector2 targetVel = input * speed;
+            _panVelocity = Vector2.SmoothDamp(_panVelocity, targetVel, ref _panDampVel,
+                panSmoothTime, Mathf.Infinity, dt);
+
+            if (_panVelocity.sqrMagnitude > 1e-6f)
+                transform.position += (Vector3)(_panVelocity * dt);
         }
 
-        /// <summary>
-        /// ซูมกล้องด้วย scroll wheel
-        /// </summary>
-        private void HandleZoom()
+        // ── คลิกกลางลาก: ตรึงจุด world ใต้เมาส์ตอนเริ่มลากไว้ใต้เมาส์ตลอด (แมพติดมือ) ──
+        private void HandleDragPan()
         {
-            float scroll = Input.GetAxis("Mouse ScrollWheel");
-            if (Mathf.Approximately(scroll, 0f))
-                return;
+            if (!enableDragPan) return;
 
-            cam.orthographicSize -= scroll * zoomSpeed;
-            cam.orthographicSize = Mathf.Clamp(cam.orthographicSize, minZoom, maxZoom);
+            if (Input.GetMouseButtonDown(2))
+            {
+                _dragging = true;
+                _dragOriginWorld = cam.ScreenToWorldPoint(Input.mousePosition);
+            }
+            if (Input.GetMouseButtonUp(2))
+                _dragging = false;
+
+            if (!_dragging) return;
+
+            Vector3 diff = _dragOriginWorld - cam.ScreenToWorldPoint(Input.mousePosition);
+            diff.z = 0f;
+            transform.position += diff;
+
+            // ระหว่างลาก ตัดแรงเฉื่อยคีย์บอร์ดทิ้ง — ไม่ให้สองระบบแย่งกล้องกัน
+            _panVelocity = Vector2.zero;
+            _panDampVel = Vector2.zero;
+        }
+
+        // ── ซูม: scroll ตั้งเป้า → SmoothDamp ตาม + ชดเชยตำแหน่งให้จุดใต้เมาส์อยู่กับที่ ──
+        private void HandleZoom(float dt)
+        {
+            float scroll = Input.GetAxis("Mouse ScrollWheel"); // ±0.1 ต่อ notch
+            if (!Mathf.Approximately(scroll, 0f))
+                _targetZoom = Mathf.Clamp(_targetZoom - scroll * 10f * zoomStepPerNotch, minZoom, maxZoom);
+
+            if (Mathf.Approximately(cam.orthographicSize, _targetZoom)) return;
+
+            Vector3 mouseWorldBefore = zoomToCursor ? cam.ScreenToWorldPoint(Input.mousePosition) : default;
+
+            cam.orthographicSize = Mathf.SmoothDamp(cam.orthographicSize, _targetZoom, ref _zoomVel,
+                zoomSmoothTime, Mathf.Infinity, dt);
+
+            if (zoomToCursor)
+            {
+                // ขยับกล้องให้จุด world ใต้เมาส์เดิมกลับมาอยู่ใต้เมาส์ — ได้ฟีล "ซูมเข้าหาสิ่งที่ชี้"
+                Vector3 mouseWorldAfter = cam.ScreenToWorldPoint(Input.mousePosition);
+                Vector3 offset = mouseWorldBefore - mouseWorldAfter;
+                offset.z = 0f;
+                transform.position += offset;
+            }
+        }
+
+        // ── กันกล้องหลุดขอบแมพ — ใช้มุมทั้ง 4 ของกริด isometric (รูปขนมเปียกปูน) เป็นกรอบ ──
+        private void ClampToBounds()
+        {
+            var grid = GridManager.Instance;
+            if (grid == null) return;
+
+            Vector3 c00 = grid.IsoToWorld(0, 0);
+            Vector3 c10 = grid.IsoToWorld(grid.columns - 1, 0);
+            Vector3 c01 = grid.IsoToWorld(0, grid.rows - 1);
+            Vector3 c11 = grid.IsoToWorld(grid.columns - 1, grid.rows - 1);
+
+            var p = transform.position;
+            p.x = Mathf.Clamp(p.x,
+                Mathf.Min(c00.x, c10.x, c01.x, c11.x) - boundsPadding,
+                Mathf.Max(c00.x, c10.x, c01.x, c11.x) + boundsPadding);
+            p.y = Mathf.Clamp(p.y,
+                Mathf.Min(c00.y, c10.y, c01.y, c11.y) - boundsPadding,
+                Mathf.Max(c00.y, c10.y, c01.y, c11.y) + boundsPadding);
+            transform.position = p;
         }
     }
 }
