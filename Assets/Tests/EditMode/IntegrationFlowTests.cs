@@ -179,9 +179,10 @@ namespace NuclearReMind.Tests
 
             Assert.AreEqual(foodBefore + dilemmaData.choiceA_FoodChange, resources.Current.food, 1e-4f,
                 "เลือก choice A ต้องบวก food ตาม choiceA_FoodChange");
-            Assert.AreEqual(Mathf.Clamp(hopeBefore + dilemmaData.choiceA_HopeChange, 0f, 100f),
+            Assert.AreEqual(
+                Mathf.Clamp(hopeBefore + dilemmaData.choiceA_HopeChange + dilemmaManager.resolveHopeBonus, 0f, 100f),
                 population.Current.hope, 1e-4f,
-                "เลือก choice A ต้องปรับ Hope ตาม choiceA_HopeChange");
+                "เลือก choice A ต้องปรับ Hope ตาม choiceA_HopeChange + โบนัสแก้วิกฤตสำเร็จ (V4 §9 +5)");
             Assert.AreEqual(1, dilemmaManager.AethonRelationship);
             Assert.AreEqual(-1, dilemmaManager.KeranRelationship);
         }

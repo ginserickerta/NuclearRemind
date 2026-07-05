@@ -43,21 +43,59 @@ namespace NuclearReMind.Tests
             Assert.AreEqual(0, population.Current.engineers);
         }
 
-        // ── ขวัญกำลังใจ (คงพฤติกรรมเดิม) ──────────────────────────
+        // ── ขวัญกำลังใจ (V4 §9/§18 Hope deltas) ──────────────────────────
         [Test]
-        public void DayEnded_WithShortage_LowersHope()
+        public void DayEnded_FoodShortage_LowersHope10()
         {
             eventManager.RaiseResourceDepleted(ResourceType.Food);
             eventManager.RaiseDayEnded(2);
-            Assert.AreEqual(95f, population.Current.hope, 1e-4f, "ขาด 1 อย่าง → Hope -5");
+            Assert.AreEqual(90f, population.Current.hope, 1e-4f, "อาหารขาด → Hope −10/วัน (§18)");
         }
 
         [Test]
-        public void DayEnded_NoShortage_RecoversHope()
+        public void DayEnded_WithMedic_NoShortage_Recovers2()
+        {
+            InjectPop(workers: 5, hope: 80f, shelterCap: 20, medics: 1);
+            eventManager.RaiseDayEnded(2);
+            Assert.AreEqual(82f, population.Current.hope, 1e-4f, "มี Medic + ไม่ขาดของ → Hope +2/วัน (§18)");
+        }
+
+        [Test]
+        public void DayEnded_NoMedic_NoRecovery()
         {
             eventManager.RaiseMoraleDelta(-20f); // 100 → 80
             eventManager.RaiseDayEnded(2);
-            Assert.AreEqual(83f, population.Current.hope, 1e-4f, "ไม่ขาด → Hope +3");
+            Assert.AreEqual(80f, population.Current.hope, 1e-4f, "ไม่มี Medic → ไม่ฟื้น (§18: ฟื้นต้องมี Medic)");
+        }
+
+        // ── คนตาย (V4 §9: Hope −5/คน) ────────────────────────────
+        [Test]
+        public void Deaths_ReduceWorkers_AndHope()
+        {
+            eventManager.RaisePopulationDeaths(3);
+            Assert.AreEqual(7, population.Current.workers, "ตาย 3 → Worker เหลือ 7");
+            Assert.AreEqual(85f, population.Current.hope, 1e-4f, "Hope −5/คน × 3 = −15");
+        }
+
+        [Test]
+        public void Deaths_TakeWorkersFirst_ThenMedics()
+        {
+            InjectPop(workers: 1, hope: 100f, shelterCap: 20, engineers: 2, medics: 1);
+            eventManager.RaisePopulationDeaths(2);
+
+            Assert.AreEqual(0, population.Current.workers, "Worker ตายก่อน");
+            Assert.AreEqual(0, population.Current.medics, "หมด Worker → Medic ตายต่อ");
+            Assert.AreEqual(2, population.Current.engineers, "Engineer รักษาไว้ท้ายสุด (แรงหล่อเย็น)");
+        }
+
+        [Test]
+        public void Deaths_ClampedToPopulation()
+        {
+            InjectPop(workers: 2, hope: 100f, shelterCap: 20);
+            eventManager.RaisePopulationDeaths(5);
+
+            Assert.AreEqual(0, population.Current.total, "ตายได้ไม่เกินจำนวนที่มี");
+            Assert.AreEqual(90f, population.Current.hope, 1e-4f, "หัก Hope ตามจำนวนที่ตายจริง (2 คน)");
         }
 
         [Test]
@@ -177,7 +215,7 @@ namespace NuclearReMind.Tests
         public void Growth_Blocked_WhenHopeLow()
         {
             InjectPop(workers: 5, hope: 40f, shelterCap: 20);
-            eventManager.RaiseDayEnded(2); // 40+3 = 43 < 50
+            eventManager.RaiseDayEnded(2); // ไม่มี Medic → hope คง 40 < 50
             Assert.AreEqual(5, population.Current.workers, "Hope < 50 → ไม่โต");
         }
 

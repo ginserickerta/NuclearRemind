@@ -14,9 +14,10 @@ namespace NuclearReMind
     {
         public static PopulationManager Instance { get; private set; }
 
-        [Header("Morale Tuning (V4 §9 — จูนจริงเฟส 8)")]
-        public float hopeLossPerShortage = 5f;
-        public float hopeRecoveryPerDay = 3f;
+        [Header("Morale Tuning (V4 §9 — Hope deltas ตามตาราง §18)")]
+        public float hopeLossFoodShortage = 10f; // อาหารขาด −10/วัน
+        public float hopeRecoveryWithMedic = 2f; // มี Medic ≥1 + ไม่ขาดของ → +2/วัน
+        public float hopeLossPerDeath = 5f;      // คนตาย −5/คน (จากทางเลือกวิกฤต/Decree)
 
         [Header("Training Cost (V4 §5)")]
         public int trainEngineerFood = 30, trainEngineerEnergy = 50;
@@ -68,6 +69,7 @@ namespace NuclearReMind
             EventManager.Instance.OnBuildingUpgraded += HandleBuildingUpgraded;
             EventManager.Instance.OnTrainEngineerRequested += TrainEngineer;
             EventManager.Instance.OnTrainMedicRequested += TrainMedic;
+            EventManager.Instance.OnPopulationDeaths += HandlePopulationDeaths;
         }
 
         private void OnDisable()
@@ -83,6 +85,7 @@ namespace NuclearReMind
             EventManager.Instance.OnBuildingUpgraded -= HandleBuildingUpgraded;
             EventManager.Instance.OnTrainEngineerRequested -= TrainEngineer;
             EventManager.Instance.OnTrainMedicRequested -= TrainMedic;
+            EventManager.Instance.OnPopulationDeaths -= HandlePopulationDeaths;
         }
 
         private void Start()
@@ -199,6 +202,27 @@ namespace NuclearReMind
             EventManager.Instance?.RaiseNotice(message);
         }
 
+        // ── คนตาย (V4 §9): จากทางเลือกวิกฤต/Decree — Hope −5/คน · ดึงจาก Worker ก่อน ──
+        private void HandlePopulationDeaths(int count)
+        {
+            if (count <= 0) return;
+
+            var pop = Current;
+            int remaining = Mathf.Min(count, pop.total);
+            if (remaining <= 0) return;
+
+            int dead = remaining;
+            int fromWorkers = Mathf.Min(pop.workers, remaining);
+            pop.workers -= fromWorkers; remaining -= fromWorkers;
+            int fromMedics = Mathf.Min(pop.medics, remaining);
+            pop.medics -= fromMedics; remaining -= fromMedics;
+            pop.engineers -= Mathf.Min(pop.engineers, remaining);
+
+            pop.hope -= hopeLossPerDeath * dead;
+            Notice($"สูญเสียประชากร {dead} คน — ขวัญกำลังใจสั่นคลอน (Hope −{hopeLossPerDeath * dead:0})");
+            ApplyAndBroadcast(pop);
+        }
+
         // ── สิ้นวัน: ขวัญ + ฝึกเสร็จ + เติมประชากร (V4 §5/§9) ──────
         private void HandleDayEnded(int day)
         {
@@ -206,10 +230,11 @@ namespace NuclearReMind
 
             var pop = Current;
 
-            // 1) ขวัญกำลังใจ
-            int shortages = _depletedResources.Count;
-            if (shortages > 0) pop.hope -= hopeLossPerShortage * shortages;
-            else pop.hope += hopeRecoveryPerDay;
+            // 1) ขวัญกำลังใจ (ตาราง Hope deltas §18): อาหารขาด −10/วัน · ฟื้น +2/วัน เมื่อมี Medic และไม่ขาดของ
+            if (_depletedResources.Contains(ResourceType.Food))
+                pop.hope -= hopeLossFoodShortage;
+            else if (_depletedResources.Count == 0 && pop.medics > 0)
+                pop.hope += hopeRecoveryWithMedic;
 
             // 2) ฝึกคลาสเสร็จ (1 วัน) — Worker ถูกดึงไปแล้วตอนสั่งฝึก
             pop.engineers += _pendingEngineers; _pendingEngineers = 0;

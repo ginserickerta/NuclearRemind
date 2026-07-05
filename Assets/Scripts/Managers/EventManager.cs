@@ -109,6 +109,9 @@ namespace NuclearReMind
         // ===== Notice (toast แจ้งเหตุผลจากการกระทำผู้เล่น เช่น ฝึกคลาสไม่ได้ — AlertController แสดง) =====
         public event Action<string> OnNotice;
 
+        // ===== Population Deaths (V4 §9: คนตาย → Hope −5/คน · จากทางเลือกวิกฤต/Decree) =====
+        public event Action<int> OnPopulationDeaths; // จำนวนคนที่เสียชีวิต
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -213,5 +216,8 @@ namespace NuclearReMind
 
         // ===== Notice =====
         public void RaiseNotice(string message) => OnNotice?.Invoke(message);
+
+        // ===== Population Deaths =====
+        public void RaisePopulationDeaths(int count) => OnPopulationDeaths?.Invoke(count);
     }
 }

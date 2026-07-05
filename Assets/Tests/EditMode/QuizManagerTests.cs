@@ -188,6 +188,31 @@ namespace NuclearReMind.Tests
 
         // ---- factory helpers ----
 
+        // ---- Q1: สกัด Deuterium ครั้งแรก (V4 §12 TechUnlock — QuizManager ฟัง OnResourceChanged) ----
+
+        [Test]
+        public void FirstDeuterium_TriggersQ1()
+        {
+            Configure(MakeQuiz("Q1", correctIndex: 0));
+
+            eventManager.RaiseResourceDelta(ResourceType.Deuterium, 5f);
+
+            Assert.AreEqual(1, _shown.Count, "Deuterium > 0 ครั้งแรก → เด้ง Q1");
+            Assert.AreEqual("Q1", _shown[0].id);
+        }
+
+        [Test]
+        public void DeuteriumAgain_DoesNotRepeatQ1()
+        {
+            Configure(MakeQuiz("Q1", correctIndex: 0));
+
+            eventManager.RaiseResourceDelta(ResourceType.Deuterium, 5f);
+            quiz.SubmitAnswer(0); // ตอบปิดข้อแรก
+            eventManager.RaiseResourceDelta(ResourceType.Deuterium, 5f);
+
+            Assert.AreEqual(1, _shown.Count, "Q1 เด้งครั้งเดียว (latch + กันถามซ้ำ)");
+        }
+
         private QuizQuestionSO MakeQuiz(string id, int correctIndex, int reward = 8,
             string codexUnlockId = "", QuizCategory category = QuizCategory.Reactor)
         {

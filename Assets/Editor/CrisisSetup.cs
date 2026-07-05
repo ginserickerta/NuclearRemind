@@ -9,8 +9,8 @@ namespace NuclearReMind.EditorTools
     /// Block C — สร้าง 3 crisis DilemmaData assets + wire เข้า DilemmaManager.dilemmaPool
     /// รันผ่านเมนู NuclearReMind / Setup Crisis Dilemmas
     ///
-    /// crisis เหล่านี้ trigger ด้วยเงื่อนไข day-end ที่ DilemmaManager ประเมินตอน OnDayEnded:
-    ///   heat_above_70 / day_reached_18 / food_below_120
+    /// crisis เหล่านี้ trigger ด้วยเงื่อนไข day-end ที่ DilemmaManager ประเมินตอน OnDayEnded (V4 §10/§18):
+    ///   Plasma: heat_above_80|q_above_0.3 · Outbreak: day_reached_20 · Food: food_above_500 (เน่าเพราะกักตุน)
     /// เนื้อหาผูกกับวิทยาศาสตร์นิวเคลียร์ (cooling/meltdown, เวชศาสตร์นิวเคลียร์, food irradiation)
     /// </summary>
     public static class CrisisSetup
@@ -60,6 +60,7 @@ namespace NuclearReMind.EditorTools
             asset.choiceA_AethonRelationChange = def.aAethon;
             asset.choiceA_KeranRelationChange  = def.aKeran;
             asset.choiceA_ForceReactorIdleDays = def.aIdle;
+            asset.choiceA_Deaths               = def.aDeaths;
 
             asset.choiceB_FoodChange   = def.bFood;
             asset.choiceB_EnergyChange = def.bEnergy;
@@ -69,6 +70,7 @@ namespace NuclearReMind.EditorTools
             asset.choiceB_AethonRelationChange = def.bAethon;
             asset.choiceB_KeranRelationChange  = def.bKeran;
             asset.choiceB_ForceReactorIdleDays = def.bIdle;
+            asset.choiceB_Deaths               = def.bDeaths;
 
             asset.choiceC_FoodChange   = def.cFood;
             asset.choiceC_EnergyChange = def.cEnergy;
@@ -78,6 +80,7 @@ namespace NuclearReMind.EditorTools
             asset.choiceC_AethonRelationChange = def.cAethon;
             asset.choiceC_KeranRelationChange  = def.cKeran;
             asset.choiceC_ForceReactorIdleDays = def.cIdle;
+            asset.choiceC_Deaths               = def.cDeaths;
 
             EditorUtility.SetDirty(asset);
         }
@@ -118,7 +121,7 @@ namespace NuclearReMind.EditorTools
             new CrisisDef
             {
                 id = "Crisis_PlasmaInstability",
-                trigger = "heat_above_70",
+                trigger = "heat_above_80|q_above_0.3", // V4 §10: HEAT > 80 หรือ Q > 0.3 (~Day 17)
                 scenario =
 @"⚠️ วิกฤต 1: เสถียรภาพพลาสมา
 
@@ -136,7 +139,7 @@ namespace NuclearReMind.EditorTools
             new CrisisDef
             {
                 id = "Crisis_MalignantOutbreak",
-                trigger = "day_reached_18",
+                trigger = "day_reached_20", // V4 §10: ~Day 20 (proxy — ยังไม่มีระบบส่งคนเข้า Zone A)
                 scenario =
 @"⚠️ วิกฤต 2: โรคกลายพันธุ์
 
@@ -146,20 +149,20 @@ namespace NuclearReMind.EditorTools
                 aEnergy = -200, aHope = 5, aKeran = 1,
                 bText = "B · ผลิตไอโซโทปการแพทย์จากเตา — เตาเดิน Idle 1 วัน ผลิตยา รักษาครบ",
                 bIron = -200, bHope = 8, bKeran = 2, bIdle = 1,
-                cText = "C · ฆ่าเชื้อแกมมา + กักตัว — ประหยัด แต่เสี่ยงเสียชีวิต อาหารหมด",
-                cFood = -100, cHope = -15, cKeran = -2,
+                cText = "C · ฆ่าเชื้อแกมมา + กักตัว — ประหยัด แต่เสียชีวิต 3 คน อาหารตึง",
+                cFood = -100, cHope = -15, cKeran = -2, cDeaths = 3, // V4 §10: เสี่ยงเสียชีวิต 3 คน (Hope −5/คน หักโดย PopulationManager)
             },
 
             // ── วิกฤต 3: Food Crisis (พันธุ์พืช/ถนอมอาหาร) ──
             new CrisisDef
             {
                 id = "Crisis_FoodShortage",
-                trigger = "food_below_120",
+                trigger = "food_above_500", // V4 §10: กักตุนเกิน 500 → เน่าเสีย (~Day 24) — เดิม food_below_120 กลับด้านจากสเปก
                 scenario =
-@"⚠️ วิกฤต 3: เสบียงเน่า/ขาดแคลน
+@"⚠️ วิกฤต 3: เสบียงเน่า
 
-อาหารร่อยหรอและเน่าเร็ว เทคโนโลยีนิวเคลียร์ช่วยได้ 2 ทาง — ปรับปรุงพันธุ์ด้วยรังสี
-หรือฉายรังสีถนอมอาหาร — หรือจะรัดเข็มขัดด้วยการลดปันส่วน?",
+คลังอาหารล้น 500 หน่วยจนเริ่มเน่าเสียเร็วกว่าปกติ 3 เท่า เทคโนโลยีนิวเคลียร์ช่วยได้ 2 ทาง —
+ปรับปรุงพันธุ์ด้วยรังสี หรือฉายรังสีถนอมอาหาร — หรือจะรัดเข็มขัดด้วยการลดปันส่วน?",
                 aText = "A · เพาะเมล็ดกลายพันธุ์ (รังสี) — แก้ต้นเหตุ ใช้แร่เหล็ก",
                 aIron = -250, aHope = 5, aAethon = 1,
                 bText = "B · ฉายรังสีถนอมด้วยโคบอลต์-60 — หยุดเน่า ใช้พลังงานมาก",
@@ -172,9 +175,9 @@ namespace NuclearReMind.EditorTools
         private struct CrisisDef
         {
             public string id, trigger, scenario, aText, bText, cText;
-            public float aFood, aEnergy, aWater, aIron, aHope; public int aAethon, aKeran, aIdle;
-            public float bFood, bEnergy, bWater, bIron, bHope; public int bAethon, bKeran, bIdle;
-            public float cFood, cEnergy, cWater, cIron, cHope; public int cAethon, cKeran, cIdle;
+            public float aFood, aEnergy, aWater, aIron, aHope; public int aAethon, aKeran, aIdle, aDeaths;
+            public float bFood, bEnergy, bWater, bIron, bHope; public int bAethon, bKeran, bIdle, bDeaths;
+            public float cFood, cEnergy, cWater, cIron, cHope; public int cAethon, cKeran, cIdle, cDeaths;
         }
     }
 }

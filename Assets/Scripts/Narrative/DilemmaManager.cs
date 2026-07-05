@@ -15,6 +15,9 @@ namespace NuclearReMind
         [Header("Dilemma Pool")]
         public DilemmaData[] dilemmaPool;
 
+        [Header("Morale (V4 §9)")]
+        public float resolveHopeBonus = 5f; // แก้วิกฤตสำเร็จ (เลือกทางใดก็ได้) → Hope +5
+
         public int AethonRelationship { get; private set; }
         public int KeranRelationship { get; private set; }
 
@@ -79,7 +82,18 @@ namespace NuclearReMind
 
         private bool MatchesDayEndCondition(string condition, int day)
         {
+            if (string.IsNullOrEmpty(condition)) return false;
+
+            // "a|b" = เข้าเงื่อนไขอย่างใดอย่างหนึ่ง (V4 §10 วิกฤต 1: "heat_above_80|q_above_0.3")
+            if (condition.IndexOf('|') >= 0)
+            {
+                foreach (var part in condition.Split('|'))
+                    if (MatchesDayEndCondition(part, day)) return true;
+                return false;
+            }
+
             if (TryThreshold(condition, "heat_above_",   out float h)) return _tower.coreHeat   >= h;
+            if (TryThreshold(condition, "q_above_",      out float q)) return _tower.corePercent >= q * 100f; // Q = CORE%/100 (§8)
             if (TryThreshold(condition, "food_below_",   out float fb)) return _resources.food   <= fb;
             if (TryThreshold(condition, "food_above_",   out float fa)) return _resources.food   >= fa;
             if (TryThreshold(condition, "energy_below_", out float e)) return _resources.energy  <= e;
@@ -93,7 +107,9 @@ namespace NuclearReMind
             value = 0f;
             return !string.IsNullOrEmpty(condition)
                 && condition.StartsWith(prefix)
-                && float.TryParse(condition.Substring(prefix.Length), out value);
+                && float.TryParse(condition.Substring(prefix.Length),
+                       System.Globalization.NumberStyles.Float,
+                       System.Globalization.CultureInfo.InvariantCulture, out value); // "0.3" ต้องไม่ขึ้นกับ culture เครื่อง
         }
 
         private void HandleTowerPhaseComplete(int phase)
@@ -151,12 +167,17 @@ namespace NuclearReMind
             int aethonChange   = Pick(choiceIndex, dilemma.choiceA_AethonRelationChange, dilemma.choiceB_AethonRelationChange, dilemma.choiceC_AethonRelationChange);
             int keranChange    = Pick(choiceIndex, dilemma.choiceA_KeranRelationChange,  dilemma.choiceB_KeranRelationChange,  dilemma.choiceC_KeranRelationChange);
             int idleDays       = Pick(choiceIndex, dilemma.choiceA_ForceReactorIdleDays, dilemma.choiceB_ForceReactorIdleDays, dilemma.choiceC_ForceReactorIdleDays);
+            int deaths         = Pick(choiceIndex, dilemma.choiceA_Deaths, dilemma.choiceB_Deaths, dilemma.choiceC_Deaths);
 
             if (foodChange != 0f)   EventManager.Instance.RaiseResourceDelta(ResourceType.Food, foodChange);
             if (energyChange != 0f) EventManager.Instance.RaiseResourceDelta(ResourceType.Energy, energyChange);
             if (waterChange != 0f)  EventManager.Instance.RaiseResourceDelta(ResourceType.Water, waterChange);
             if (ironChange != 0f)   EventManager.Instance.RaiseResourceDelta(ResourceType.Iron, ironChange);
-            if (hopeChange != 0f)   EventManager.Instance.RaiseMoraleDelta(hopeChange);
+
+            // V4 §9: แก้วิกฤตสำเร็จ +5 (บวกเพิ่มจากผลเฉพาะของทางเลือก) — ตายให้ PopulationManager หัก −5/คนเอง
+            float totalHope = hopeChange + resolveHopeBonus;
+            if (totalHope != 0f) EventManager.Instance.RaiseMoraleDelta(totalHope);
+            if (deaths > 0) EventManager.Instance.RaisePopulationDeaths(deaths);
 
             // วิกฤต 2·B (GDD ล่าสุด): บังคับเตาเดิน Idle N วันเพื่อผลิตไอโซโทปการแพทย์จากฟลักซ์นิวตรอน
             if (idleDays > 0)

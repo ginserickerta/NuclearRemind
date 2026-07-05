@@ -35,9 +35,10 @@ namespace NuclearReMind
         private static readonly Color ColWrong    = new Color(0.80f, 0.35f, 0.35f); // ข้อที่เลือกผิด (แดง)
 
         private QuizQuestionSO _activeQuiz;
-        private int _selectedIndex = -1;
+        private int _selectedIndex = -1;     // index ตามตำแหน่งบนจอ (แปลงกลับเป็น index จริงตอน submit)
         private bool _revealed;              // เฉลยแล้ว — กันเปลี่ยนคำตอบ
         private Color[] _baseColors;         // สีปุ่มเดิม (ไว้รีเซ็ตตอนถามข้อใหม่)
+        private int[] _displayToOriginal;    // ตำแหน่งบนจอ → index จริงใน quiz.options (สับใหม่ทุกข้อ กันจำตำแหน่งข้อถูก)
 
         private void OnEnable()
         {
@@ -81,13 +82,17 @@ namespace NuclearReMind
             if (speakerText != null) speakerText.text = quiz.speaker;
             if (questionText != null) questionText.text = quiz.question;
 
-            // เติมป้าย + รีเซ็ตสี/สถานะปุ่มตัวเลือก
+            // สับตำแหน่งตัวเลือก (V4 §12) — ข้อถูกไม่อยู่ตำแหน่งเดิมทุกครั้งที่เด้ง
+            int optionCount = quiz.options != null ? quiz.options.Length : 0;
+            _displayToOriginal = MakeShuffledIndices(optionCount);
+
+            // เติมป้าย (ตามลำดับที่สับแล้ว) + รีเซ็ตสี/สถานะปุ่มตัวเลือก
             if (optionButtons != null)
             {
                 for (int i = 0; i < optionButtons.Length; i++)
                 {
                     var btn = optionButtons[i];
-                    bool hasOption = quiz.options != null && i < quiz.options.Length;
+                    bool hasOption = i < optionCount;
                     if (btn != null)
                     {
                         btn.gameObject.SetActive(hasOption);
@@ -96,7 +101,7 @@ namespace NuclearReMind
                             btn.image.color = _baseColors[i];
                     }
                     if (optionTexts != null && i < optionTexts.Length && optionTexts[i] != null)
-                        optionTexts[i].text = hasOption ? quiz.options[i] : "";
+                        optionTexts[i].text = hasOption ? quiz.options[_displayToOriginal[i]] : "";
                 }
             }
 
@@ -141,7 +146,10 @@ namespace NuclearReMind
             if (_activeQuiz == null || _selectedIndex < 0 || _revealed) return;
             _revealed = true;
 
-            int correct = _activeQuiz.correctIndex;
+            // แปลง correctIndex (index จริง) → ตำแหน่งบนจอ เพื่อไฮไลต์ให้ถูกปุ่ม
+            int correct = _displayToOriginal != null
+                ? System.Array.IndexOf(_displayToOriginal, _activeQuiz.correctIndex)
+                : _activeQuiz.correctIndex;
             if (optionButtons != null)
             {
                 for (int i = 0; i < optionButtons.Length; i++)
@@ -169,7 +177,10 @@ namespace NuclearReMind
         {
             if (_activeQuiz == null) return;
 
-            int answer = _selectedIndex;
+            // แปลงตำแหน่งบนจอกลับเป็น index จริงใน quiz.options ก่อนส่งให้ QuizManager ตัดสินถูก/ผิด
+            int answer = (_displayToOriginal != null && _selectedIndex >= 0 && _selectedIndex < _displayToOriginal.Length)
+                ? _displayToOriginal[_selectedIndex]
+                : _selectedIndex;
             _activeQuiz = null;
             _selectedIndex = -1;
             _revealed = false;
@@ -177,6 +188,22 @@ namespace NuclearReMind
             // ซ่อน panel ก่อน — ถ้ามีข้อต่อไปในคิว SubmitAnswer จะ raise OnQuizShown เปิด panel ใหม่เอง
             if (popupPanel != null) popupPanel.SetActive(false);
             QuizManager.Instance.SubmitAnswer(answer);
+        }
+
+        /// <summary>
+        /// สร้าง permutation 0..count-1 แบบ Fisher–Yates สำหรับสับตำแหน่งตัวเลือก
+        /// (static + คืน array ให้เทสต์ตรวจว่าเป็น permutation ครบตัวได้)
+        /// </summary>
+        public static int[] MakeShuffledIndices(int count)
+        {
+            var indices = new int[count];
+            for (int i = 0; i < count; i++) indices[i] = i;
+            for (int i = count - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                (indices[i], indices[j]) = (indices[j], indices[i]);
+            }
+            return indices;
         }
 
         private static Color ColorFor(QuizCategory category)

@@ -28,6 +28,7 @@ namespace NuclearReMind
         public int choiceA_AethonRelationChange;
         public int choiceA_KeranRelationChange;
         public int choiceA_ForceReactorIdleDays; // วิกฤต 2·B: บังคับเตา Idle N วัน (ผลิตไอโซโทป)
+        public int choiceA_Deaths;               // คนตายจากทางเลือกนี้ (V4 §9/§10 — Hope −5/คน)
 
         [Header("Choice B Consequences")]
         public float choiceB_FoodChange;
@@ -38,6 +39,7 @@ namespace NuclearReMind
         public int choiceB_AethonRelationChange;
         public int choiceB_KeranRelationChange;
         public int choiceB_ForceReactorIdleDays;
+        public int choiceB_Deaths;
 
         [Header("Choice C Consequences")]
         public float choiceC_FoodChange;
@@ -48,11 +50,13 @@ namespace NuclearReMind
         public int choiceC_AethonRelationChange;
         public int choiceC_KeranRelationChange;
         public int choiceC_ForceReactorIdleDays;
+        public int choiceC_Deaths;
 
         [Header("Trigger")]
         // exact: "phase_1_complete" | "hope_below_30"
-        // day-end (ประเมินตอน OnDayEnded): "heat_above_70" | "food_below_120" | "food_above_500"
-        //   | "energy_below_100" | "water_below_80" | "day_reached_18"
+        // day-end (ประเมินตอน OnDayEnded): "heat_above_80" | "food_below_120" | "food_above_500"
+        //   | "energy_below_100" | "water_below_80" | "day_reached_20" | "q_above_0.3" (Q = CORE%/100)
+        // เชื่อมหลายเงื่อนไขแบบ "อย่างใดอย่างหนึ่ง" ด้วย | เช่น "heat_above_80|q_above_0.3" (วิกฤต 1 §10)
         public string triggerCondition;
 
         [Header("Linked Quizzes (V4 §16)")]

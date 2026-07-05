@@ -55,6 +55,107 @@ namespace NuclearReMind.Tests
         }
 
         [Test]
+        public void DayEnded_QAboveThreshold_TriggersCrisis()
+        {
+            // V4 §10 วิกฤต 1: Q > 0.3 (Q = CORE%/100)
+            var crisis = NewDilemma("plasma", "q_above_0.3");
+            dilemmaManager.dilemmaPool = new[] { crisis };
+
+            DilemmaData triggered = null;
+            eventManager.OnDilemmaTriggered += d => triggered = d;
+
+            eventManager.RaiseTowerProgressChanged(new TowerData { corePercent = 35f });
+            eventManager.RaiseDayEnded(17);
+
+            Assert.AreEqual(crisis, triggered, "CORE 35% = Q 0.35 ≥ 0.3 ต้อง trigger");
+        }
+
+        [Test]
+        public void DayEnded_OrCondition_EitherSideTriggers()
+        {
+            // "heat_above_80|q_above_0.3" — เข้าเงื่อนไขอย่างใดอย่างหนึ่งก็ trigger (V4 §10)
+            var crisis = NewDilemma("plasma", "heat_above_80|q_above_0.3");
+            dilemmaManager.dilemmaPool = new[] { crisis };
+
+            DilemmaData triggered = null;
+            eventManager.OnDilemmaTriggered += d => triggered = d;
+
+            // heat ต่ำ แต่ Q สูงพอ → trigger จากฝั่งขวา
+            eventManager.RaiseTowerProgressChanged(new TowerData { coreHeat = 40f, corePercent = 40f });
+            eventManager.RaiseDayEnded(17);
+
+            Assert.AreEqual(crisis, triggered, "Q 0.4 ≥ 0.3 ต้อง trigger แม้ HEAT ต่ำ");
+        }
+
+        [Test]
+        public void DayEnded_OrCondition_NeitherSide_NoTrigger()
+        {
+            var crisis = NewDilemma("plasma", "heat_above_80|q_above_0.3");
+            dilemmaManager.dilemmaPool = new[] { crisis };
+
+            DilemmaData triggered = null;
+            eventManager.OnDilemmaTriggered += d => triggered = d;
+
+            eventManager.RaiseTowerProgressChanged(new TowerData { coreHeat = 40f, corePercent = 20f });
+            eventManager.RaiseDayEnded(17);
+
+            Assert.IsNull(triggered, "ทั้ง HEAT และ Q ต่ำกว่าเกณฑ์ → ไม่ trigger");
+        }
+
+        [Test]
+        public void DayEnded_FoodAboveThreshold_TriggersSpoilage()
+        {
+            // V4 §10 วิกฤต 3: กักตุนอาหารเกิน 500 → เน่า (เดิม food_below กลับด้าน)
+            var crisis = NewDilemma("food_spoil", "food_above_500");
+            dilemmaManager.dilemmaPool = new[] { crisis };
+
+            DilemmaData triggered = null;
+            eventManager.OnDilemmaTriggered += d => triggered = d;
+
+            eventManager.RaiseResourceChanged(new ResourceData { food = 500f });
+            eventManager.RaiseDayEnded(24);
+
+            Assert.AreEqual(crisis, triggered, "food 500 ≥ 500 ต้อง trigger วิกฤตเน่า");
+        }
+
+        [Test]
+        public void Resolve_WithDeaths_RaisesPopulationDeaths()
+        {
+            var crisis = NewDilemma("outbreak", "day_reached_20");
+            crisis.choiceC_Deaths = 3; // วิกฤต 2·C: เสียชีวิต 3 คน (V4 §10)
+            dilemmaManager.dilemmaPool = new[] { crisis };
+
+            DilemmaData triggered = null;
+            eventManager.OnDilemmaTriggered += d => triggered = d;
+            int deaths = 0;
+            eventManager.OnPopulationDeaths += n => deaths = n;
+
+            eventManager.RaiseDayEnded(20);
+            eventManager.RaiseDilemmaResolved(triggered, 2); // เลือก C
+
+            Assert.AreEqual(3, deaths, "เลือกทางที่มีคนตาย → raise OnPopulationDeaths(3)");
+        }
+
+        [Test]
+        public void Resolve_AddsCrisisResolvedHopeBonus()
+        {
+            var crisis = NewDilemma("any", "day_reached_5");
+            crisis.choiceA_HopeChange = -8f;
+            dilemmaManager.dilemmaPool = new[] { crisis };
+
+            DilemmaData triggered = null;
+            eventManager.OnDilemmaTriggered += d => triggered = d;
+            float moraleDelta = float.NaN;
+            eventManager.OnMoraleDelta += v => moraleDelta = v;
+
+            eventManager.RaiseDayEnded(5);
+            eventManager.RaiseDilemmaResolved(triggered, 0);
+
+            Assert.AreEqual(-8f + dilemmaManager.resolveHopeBonus, moraleDelta, 1e-4f,
+                "Hope สุทธิ = ผลของทางเลือก + โบนัสแก้วิกฤตสำเร็จ (V4 §9 +5)");
+        }
+
+        [Test]
         public void DayEnded_HeatBelowThreshold_NoTrigger()
         {
             var crisis = NewDilemma("heat_crisis", "heat_above_70");

@@ -23,6 +23,8 @@ namespace NuclearReMind
         private readonly Queue<QuizQuestionSO> _pending = new Queue<QuizQuestionSO>();
         private QuizQuestionSO _current;                                       // ควิซที่กำลังแสดง (null = ไม่มี)
 
+        private bool _q1Fired; // Q1 ยิงครั้งเดียวเมื่อ Deuterium > 0 ครั้งแรก (latch — in-memory เช่นเดียวกับ _answered)
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -31,6 +33,26 @@ namespace NuclearReMind
                 return;
             }
             Instance = this;
+        }
+
+        private void OnEnable()
+        {
+            EventManager.Instance.OnResourceChanged += HandleResourceChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (EventManager.Instance == null) return;
+            EventManager.Instance.OnResourceChanged -= HandleResourceChanged;
+        }
+
+        // Q1 (V4 §12/§16 — TechUnlock): "สกัด Deuterium ครั้งแรก" → เด้งควิซเชื้อเพลิงฟิวชัน
+        // Deuterium ผลิตจาก Water Plant L3 (~Day 11 ตามไทม์ไลน์ §17)
+        private void HandleResourceChanged(ResourceData data)
+        {
+            if (_q1Fired || data.deuterium <= 0f) return;
+            _q1Fired = true;
+            TriggerByIds("Q1");
         }
 
         /// <summary>คืน QuizQuestionSO จาก id (เช่น "Q4") — ใช้โดย DilemmaData/สคริปต์อื่น · scan ตรง allQuizzes (N≤10)</summary>
