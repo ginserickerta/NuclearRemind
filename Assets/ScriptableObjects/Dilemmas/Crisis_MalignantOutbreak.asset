@@ -26,8 +26,8 @@ MonoBehaviour:
     \u0E23\u0E31\u0E01\u0E29\u0E32\u0E04\u0E23\u0E1A"
   choiceCText: "C \xB7 \u0E06\u0E48\u0E32\u0E40\u0E0A\u0E37\u0E49\u0E2D\u0E41\u0E01\u0E21\u0E21\u0E32
     + \u0E01\u0E31\u0E01\u0E15\u0E31\u0E27 \u2014 \u0E1B\u0E23\u0E30\u0E2B\u0E22\u0E31\u0E14
-    \u0E41\u0E15\u0E48\u0E40\u0E2A\u0E35\u0E48\u0E22\u0E07\u0E40\u0E2A\u0E35\u0E22\u0E0A\u0E35\u0E27\u0E34\u0E15
-    \u0E2D\u0E32\u0E2B\u0E32\u0E23\u0E2B\u0E21\u0E14"
+    \u0E41\u0E15\u0E48\u0E40\u0E2A\u0E35\u0E22\u0E0A\u0E35\u0E27\u0E34\u0E15 3 \u0E04\u0E19
+    \u0E2D\u0E32\u0E2B\u0E32\u0E23\u0E15\u0E36\u0E07"
   choiceA_FoodChange: 0
   choiceA_EnergyChange: -200
   choiceA_WaterChange: 0
@@ -36,6 +36,7 @@ MonoBehaviour:
   choiceA_AethonRelationChange: 0
   choiceA_KeranRelationChange: 1
   choiceA_ForceReactorIdleDays: 0
+  choiceA_Deaths: 0
   choiceB_FoodChange: 0
   choiceB_EnergyChange: 0
   choiceB_WaterChange: 0
@@ -44,6 +45,7 @@ MonoBehaviour:
   choiceB_AethonRelationChange: 0
   choiceB_KeranRelationChange: 2
   choiceB_ForceReactorIdleDays: 1
+  choiceB_Deaths: 0
   choiceC_FoodChange: -100
   choiceC_EnergyChange: 0
   choiceC_WaterChange: 0
@@ -52,7 +54,8 @@ MonoBehaviour:
   choiceC_AethonRelationChange: 0
   choiceC_KeranRelationChange: -2
   choiceC_ForceReactorIdleDays: 0
-  triggerCondition: day_reached_18
+  choiceC_Deaths: 3
+  triggerCondition: day_reached_20
   linkedQuizIds:
   - Q4
   - Q5

@@ -31,6 +31,7 @@ MonoBehaviour:
   choiceA_AethonRelationChange: 1
   choiceA_KeranRelationChange: 0
   choiceA_ForceReactorIdleDays: 0
+  choiceA_Deaths: 0
   choiceB_FoodChange: 0
   choiceB_EnergyChange: 0
   choiceB_WaterChange: 0
@@ -39,6 +40,7 @@ MonoBehaviour:
   choiceB_AethonRelationChange: -1
   choiceB_KeranRelationChange: 0
   choiceB_ForceReactorIdleDays: 0
+  choiceB_Deaths: 0
   choiceC_FoodChange: 0
   choiceC_EnergyChange: 0
   choiceC_WaterChange: -200
@@ -47,7 +49,8 @@ MonoBehaviour:
   choiceC_AethonRelationChange: 0
   choiceC_KeranRelationChange: 0
   choiceC_ForceReactorIdleDays: 0
-  triggerCondition: heat_above_70
+  choiceC_Deaths: 0
+  triggerCondition: heat_above_80|q_above_0.3
   linkedQuizIds:
   - Q2
   - Q3
