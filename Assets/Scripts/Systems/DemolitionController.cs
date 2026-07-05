@@ -95,6 +95,13 @@ namespace NuclearReMind
             if (!BuildingRegistry.Instance.PlacedBuildings.TryGetValue(_hoveredCell, out var data))
                 return;
 
+            // CORE TOWER มากับแมพและสร้างคืนไม่ได้ (ไม่อยู่ใน hotbar) — ทุบแล้วเกมตัน จึงห้ามทุบ
+            if (data.buildingType == BuildingType.CoreTower)
+            {
+                EventManager.Instance.RaiseNotice("CORE TOWER คือหัวใจของภารกิจ — ทุบทิ้งไม่ได้");
+                return;
+            }
+
             Debug.Log($"[DemolitionController] ทุบ {data.buildingName} ที่ ({_hoveredCell.x},{_hoveredCell.y})");
 
             // cascade: GridManager.HandleBuildingRemoved → free cells

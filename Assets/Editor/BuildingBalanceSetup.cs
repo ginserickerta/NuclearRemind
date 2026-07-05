@@ -148,23 +148,26 @@ namespace NuclearReMind.Editor
 
         /// <summary>
         /// ต่อ Mine เข้า hotbar (PlacementController) + ตาราง restore (BuildingRegistry) ในซีนที่เปิดอยู่
-        /// พร้อมถอด PowerConduit ออกจากแถบเลือกตึก (power grid ไม่ gate การผลิตแล้ว — conduit เป็น no-op)
+        /// ถอด PowerConduit (no-op หลังเลิก gate การผลิต) และ CORE TOWER (มากับแมพ — PrePlacedBuilding
+        /// วางกลางกริดให้ตอนเริ่มเกม ผู้เล่นไม่ต้องลากวาง) ออกจากแถบเลือกตึก
         /// </summary>
         private static void WireSceneReferences(BuildingData mine)
         {
             if (mine == null) return;
 
             var conduit = AssetDatabase.LoadAssetAtPath<BuildingData>(Dir + "PowerConduit.asset");
+            var coreTower = AssetDatabase.LoadAssetAtPath<BuildingData>(Dir + "CoreTower.asset");
 
             var placement = Object.FindFirstObjectByType<PlacementController>();
             if (placement != null)
             {
                 bool changed = AppendIfMissing(ref placement.buildingHotbar, mine);
                 changed |= RemoveIfPresent(ref placement.buildingHotbar, conduit);
+                changed |= RemoveIfPresent(ref placement.buildingHotbar, coreTower);
                 if (changed)
                 {
                     EditorUtility.SetDirty(placement);
-                    Debug.Log($"[BuildingBalanceSetup] hotbar = {placement.buildingHotbar.Length} ช่อง (Mine เพิ่ม / Conduit ถอด)");
+                    Debug.Log($"[BuildingBalanceSetup] hotbar = {placement.buildingHotbar.Length} ช่อง (Mine เพิ่ม / Conduit+CoreTower ถอด)");
                 }
 
                 // BuildingSelectionUI.buildings เป็น array แยก (serialize คนละก้อน) — sync ให้ตรง hotbar เสมอ
@@ -183,11 +186,39 @@ namespace NuclearReMind.Editor
                 Debug.Log("[BuildingBalanceSetup] เพิ่ม Mine เข้า BuildingRegistry.allBuildingData");
             }
 
+            EnsurePrePlacedCoreTower(coreTower);
+
             if (placement == null || registry == null)
                 Debug.LogWarning("[BuildingBalanceSetup] ไม่พบ PlacementController/BuildingRegistry ในซีน — " +
                                  "เปิด Gamescene.unity แล้วรันเมนูนี้อีกครั้งเพื่อ wire Mine เข้า hotbar");
             else
                 EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        }
+
+        /// <summary>
+        /// สร้าง GameObject "PrePlacedCoreTower" (PrePlacedBuilding) — วาง CORE TOWER กลางกริดตอนเริ่มเกม
+        /// ตำแหน่งคำนวณจากขนาดกริดจริงในซีน (43×43, ตึก 3×3 → origin (20,20) กินช่อง 20–22)
+        /// </summary>
+        private static void EnsurePrePlacedCoreTower(BuildingData coreTower)
+        {
+            if (coreTower == null)
+            {
+                Debug.LogWarning("[BuildingBalanceSetup] ไม่พบ CoreTower.asset — ข้าม pre-place");
+                return;
+            }
+
+            var grid = Object.FindFirstObjectByType<GridManager>();
+            int columns = grid != null ? grid.columns : 43;
+            int rows = grid != null ? grid.rows : 43;
+            var origin = new Vector2Int((columns - coreTower.size.x) / 2, (rows - coreTower.size.y) / 2);
+
+            var go = GameObject.Find("PrePlacedCoreTower");
+            if (go == null) go = new GameObject("PrePlacedCoreTower");
+            var pre = go.GetComponent<PrePlacedBuilding>() ?? go.AddComponent<PrePlacedBuilding>();
+            pre.building = coreTower;
+            pre.cell = origin;
+            EditorUtility.SetDirty(pre);
+            Debug.Log($"[BuildingBalanceSetup] PrePlacedCoreTower ที่ ({origin.x},{origin.y}) ขนาด {coreTower.size.x}×{coreTower.size.y}");
         }
 
         private static bool AppendIfMissing(ref BuildingData[] array, BuildingData item)

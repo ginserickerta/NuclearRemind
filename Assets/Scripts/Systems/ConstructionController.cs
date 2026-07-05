@@ -40,6 +40,7 @@ namespace NuclearReMind
             EventManager.Instance.OnSaveLoaded                += HandleSaveLoaded;
             EventManager.Instance.OnConstructionCancelRequested     += HandleCancelRequested;
             EventManager.Instance.OnConstructionPrioritizeRequested += HandlePrioritizeRequested;
+            EventManager.Instance.OnConstructionCompleteRequested   += HandleCompleteRequested;
         }
 
         private void OnDisable()
@@ -51,6 +52,7 @@ namespace NuclearReMind
             EventManager.Instance.OnSaveLoaded                -= HandleSaveLoaded;
             EventManager.Instance.OnConstructionCancelRequested     -= HandleCancelRequested;
             EventManager.Instance.OnConstructionPrioritizeRequested -= HandlePrioritizeRequested;
+            EventManager.Instance.OnConstructionCompleteRequested   -= HandleCompleteRequested;
         }
 
         // ─────────────────────────────────────────
@@ -127,6 +129,20 @@ namespace NuclearReMind
 
             // คืนเฉพาะ energyCost (ต้นทุนสร้าง) — workers เป็น reserve pool ไม่ถูกหักตอนวาง จึงไม่ต้องคืน
             EventManager.Instance.RaiseResourceDelta(ResourceType.Energy, data.energyCost);
+        }
+
+        // สร้างเสร็จทันที (ข้ามคิว) — ใช้กับตึกที่มากับแมพ (PrePlacedBuilding เช่น CORE TOWER กลางเมือง)
+        private void HandleCompleteRequested(Vector2Int pos)
+        {
+            if (!_progress.ContainsKey(pos)) return;
+
+            _progress.Remove(pos);
+            _queue.Remove(pos);
+            DestroyProgressUI(pos);
+
+            if (BuildingRegistry.Instance != null &&
+                BuildingRegistry.Instance.PlacedBuildings.TryGetValue(pos, out var data))
+                EventManager.Instance.RaiseConstructionComplete(pos, data);
         }
 
         private void HandlePrioritizeRequested(Vector2Int pos)

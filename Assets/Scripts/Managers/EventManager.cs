@@ -112,6 +112,9 @@ namespace NuclearReMind
         // ===== Population Deaths (V4 §9: คนตาย → Hope −5/คน · จากทางเลือกวิกฤต/Decree) =====
         public event Action<int> OnPopulationDeaths; // จำนวนคนที่เสียชีวิต
 
+        // ===== Pre-placed (ตึกที่มากับแมพ เช่น CORE TOWER กลางเมือง — สร้างเสร็จทันที ไม่เข้าคิวก่อสร้าง) =====
+        public event Action<Vector2Int> OnConstructionCompleteRequested;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -219,5 +222,8 @@ namespace NuclearReMind
 
         // ===== Population Deaths =====
         public void RaisePopulationDeaths(int count) => OnPopulationDeaths?.Invoke(count);
+
+        // ===== Pre-placed =====
+        public void RaiseConstructionCompleteRequested(Vector2Int cell) => OnConstructionCompleteRequested?.Invoke(cell);
     }
 }
