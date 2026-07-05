@@ -43,7 +43,7 @@ namespace NuclearReMind
     }
 
     /// <summary>
-    /// จัดการ Isometric Grid ขนาด 12x9 ของเมือง Veltara
+    /// จัดการ Isometric Grid ของเมือง Veltara (ขนาดกำหนดใน Inspector — ค่า default 20×12)
     /// แปลงพิกัด grid (col, row) <-> world position และเก็บสถานะของแต่ละ Cell
     /// </summary>
     public class GridManager : MonoBehaviour
