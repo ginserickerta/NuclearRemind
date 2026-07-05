@@ -145,6 +145,9 @@ namespace NuclearReMind.EditorTools
             alertController.font = font;
             EditorUtility.SetDirty(alertController);
 
+            // ===== Hotkey Help (ปุ่ม "คีย์ลัด" ซ้ายล่าง เหนือปุ่ม Codex + แผงสรุปปุ่ม เปิด/ปิดด้วย F1) =====
+            SetupHotkeyHelp(canvasGO, font);
+
             // ===== CORE TOWER overclock panel (bottom-center, เหนือ hotbar) =====
             // hotbar (BuildingSelectionPanel) กิน y 4–122 — เริ่มที่ 130 กันทับ
             var corePanel = CreatePanel("CoreTowerPanel", canvasGO.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 130), new Vector2(380, 150));
@@ -315,6 +318,62 @@ namespace NuclearReMind.EditorTools
                 timeMgrGO.AddComponent<TimeManager>();
             EditorUtility.SetDirty(timeMgrGO);
         }
+
+        // ===== Hotkey Help: แผงสรุปคีย์ลัดทั้งเกม (ซ้ายกลางจอ) + ปุ่ม toggle + F1 =====
+        private static void SetupHotkeyHelp(GameObject canvasGO, Font font)
+        {
+            // แผง: ซ้ายกลางจอ — พ้น TooltipPanel (ล่าง y ถึง 200) และ ResourcePanel (บนซ้าย)
+            var panel = CreatePanel("HotkeyHelpPanel", canvasGO.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20, -30), new Vector2(470, 430));
+            var bg = panel.AddComponent<Image>();
+            bg.color = new Color(0.05f, 0.06f, 0.11f, 0.93f);
+
+            var title = CreateText("HelpTitle", panel.transform, font, "คีย์ลัด", 22, new Vector2(0, -14), new Vector2(430, 28), TextAnchor.MiddleCenter);
+            var titleRect = title.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0.5f, 1f); titleRect.anchorMax = new Vector2(0.5f, 1f);
+            titleRect.pivot = new Vector2(0.5f, 1f);
+            title.color = new Color(0.5f, 0.9f, 1f);
+            title.fontStyle = FontStyle.Bold;
+
+            var body = CreateText("HelpBody", panel.transform, font, HotkeyHelpText(), 17, new Vector2(0, -50), new Vector2(430, 360), TextAnchor.UpperLeft);
+            var bodyRect = body.GetComponent<RectTransform>();
+            bodyRect.anchorMin = new Vector2(0.5f, 1f); bodyRect.anchorMax = new Vector2(0.5f, 1f);
+            bodyRect.pivot = new Vector2(0.5f, 1f);
+            body.lineSpacing = 1.25f;
+            body.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            // ปุ่ม toggle — ซ้ายล่าง เหนือปุ่ม Codex (Codex อยู่ (20,210) สูง 36 — CodexSetup สร้างทีหลังในลำดับ chain)
+            var toggleBtn = CreateButton("HotkeyHelpButton", canvasGO.transform, font, "คีย์ลัด (F1)", new Vector2(20, 254), new Vector2(120, 36));
+            var btnRect = toggleBtn.GetComponent<RectTransform>();
+            btnRect.anchorMin = Vector2.zero; btnRect.anchorMax = Vector2.zero;
+            btnRect.pivot = Vector2.zero;
+            toggleBtn.image.color = new Color(0.1f, 0.15f, 0.28f, 0.9f);
+            var btnLabel = toggleBtn.GetComponentInChildren<Text>();
+            if (btnLabel != null) { btnLabel.fontSize = 15; btnLabel.color = Color.white; }
+
+            var helpGO = GameObject.Find("HotkeyHelpController") ?? new GameObject("HotkeyHelpController");
+            var help = helpGO.GetComponent<HotkeyHelpController>() ?? helpGO.AddComponent<HotkeyHelpController>();
+            help.helpPanel = panel;
+            UnityEventTools.AddPersistentListener(toggleBtn.onClick, new UnityAction(help.Toggle));
+            EditorUtility.SetDirty(help);
+
+            panel.SetActive(false); // เริ่มซ่อน — เปิดด้วยปุ่ม/F1
+        }
+
+        private static string HotkeyHelpText() =>
+            "การวางอาคาร\n" +
+            "   1–7 — เลือกอาคารจากแถบล่าง\n" +
+            "   คลิกซ้าย — วางอาคาร / ยืนยัน\n" +
+            "   คลิกขวา — ยกเลิกการวาง / ออกโหมดทุบ\n" +
+            "   U — อัประดับอาคารใต้เมาส์ (จ่ายแร่+พลังงาน)\n\n" +
+            "กล้อง\n" +
+            "   WASD / ลูกศร — เลื่อนกล้อง\n" +
+            "   คลิกกลางค้างลาก — จับแมพเลื่อน\n" +
+            "   Scroll — ซูมเข้าหาตำแหน่งเมาส์\n\n" +
+            "เกม\n" +
+            "   Space — หยุด / เล่นต่อ\n" +
+            "   ESC — เมนูหยุดชั่วคราว\n" +
+            "   F5 / F9 — บันทึก / โหลดเกม\n" +
+            "   F1 — เปิด/ปิดหน้าต่างนี้";
 
         // จัด RectTransform ให้ยึดขอบบนของ dialog แล้วเลื่อนลงตาม yFromTop (px)
         private static void AnchorTop(Component target, float yFromTop, Vector2 size)
