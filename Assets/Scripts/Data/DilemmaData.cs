@@ -29,6 +29,8 @@ namespace NuclearReMind
         public int choiceA_KeranRelationChange;
         public int choiceA_ForceReactorIdleDays; // วิกฤต 2·B: บังคับเตา Idle N วัน (ผลิตไอโซโทป)
         public int choiceA_Deaths;               // คนตายจากทางเลือกนี้ (V4 §9/§10 — Hope −5/คน)
+        [TextArea(2, 6)]
+        public string choiceA_AfterText;         // บทหลังเลือก (Story Guide: [ระบบ]/NPC/ความคิด — ว่าง = ข้าม)
 
         [Header("Choice B Consequences")]
         public float choiceB_FoodChange;
@@ -40,6 +42,8 @@ namespace NuclearReMind
         public int choiceB_KeranRelationChange;
         public int choiceB_ForceReactorIdleDays;
         public int choiceB_Deaths;
+        [TextArea(2, 6)]
+        public string choiceB_AfterText;
 
         [Header("Choice C Consequences")]
         public float choiceC_FoodChange;
@@ -51,6 +55,8 @@ namespace NuclearReMind
         public int choiceC_KeranRelationChange;
         public int choiceC_ForceReactorIdleDays;
         public int choiceC_Deaths;
+        [TextArea(2, 6)]
+        public string choiceC_AfterText;
 
         [Header("Trigger")]
         // exact: "phase_1_complete" | "hope_below_30"
@@ -64,17 +70,57 @@ namespace NuclearReMind
         // wire โดย QuizSetup — map เป็น SO จริงผ่าน QuizManager.GetById ตอน GetLinkedQuizzes()
         public string[] linkedQuizIds;
 
+        [Header("Per-choice Quizzes (Story Guide — quizRef รายทางเลือก)")]
+        // ควิซเฉพาะทางเลือก: ถ้าทางเลือกที่ผู้เล่นกดมีรายการของตัวเอง จะใช้แทน linkedQuizIds
+        // (เช่น วิกฤตอาหาร: A → mutation_breeding, B → food_irradiation, C → ไม่มีควิซ)
+        // ว่าง/ไม่กำหนด = fallback ไป linkedQuizIds ตามพฤติกรรมเดิม
+        public string[] choiceA_QuizIds;
+        public string[] choiceB_QuizIds;
+        public string[] choiceC_QuizIds;
+
         /// <summary>
         /// IQuizTrigger: แปลง linkedQuizIds → QuizQuestionSO[] (ข้าม id ที่หาไม่เจอ/ว่าง)
         /// QuizManager.EnqueueQuizzes(this) เรียกเมธอดนี้เพื่อเอาควิซที่ผูกไว้เข้าคิว
         /// </summary>
-        public QuizQuestionSO[] GetLinkedQuizzes()
+        public QuizQuestionSO[] GetLinkedQuizzes() => MapIdsToQuizzes(linkedQuizIds);
+
+        /// <summary>
+        /// id ควิซของทางเลือกที่ผู้เล่นกด (0=A/1=B/2=C) — Story Guide quizRef รายทางเลือก
+        /// ทางเลือกไม่มีรายการของตัวเอง (ว่าง/null) หรือ index นอกช่วง → fallback ไป linkedQuizIds
+        /// เป็น pure function ให้เทสต์ตรวจ logic ได้โดยไม่ต้องมี QuizManager
+        /// </summary>
+        public string[] GetQuizIdsForChoice(int choiceIndex)
         {
-            if (linkedQuizIds == null || linkedQuizIds.Length == 0)
+            string[] perChoice = choiceIndex switch
+            {
+                0 => choiceA_QuizIds,
+                1 => choiceB_QuizIds,
+                2 => choiceC_QuizIds,
+                _ => null,
+            };
+            return (perChoice != null && perChoice.Length > 0) ? perChoice : linkedQuizIds;
+        }
+
+        /// <summary>ควิซของทางเลือกที่กด (map id → SO) — DilemmaManager ใช้ตอน resolve</summary>
+        public QuizQuestionSO[] GetLinkedQuizzesForChoice(int choiceIndex)
+            => MapIdsToQuizzes(GetQuizIdsForChoice(choiceIndex));
+
+        /// <summary>บทหลังเลือกของทางเลือกที่กด (0=A/1=B/2=C) — ว่าง/นอกช่วง = ไม่มี</summary>
+        public string GetAfterText(int choiceIndex) => choiceIndex switch
+        {
+            0 => choiceA_AfterText,
+            1 => choiceB_AfterText,
+            2 => choiceC_AfterText,
+            _ => null,
+        };
+
+        private static QuizQuestionSO[] MapIdsToQuizzes(string[] ids)
+        {
+            if (ids == null || ids.Length == 0)
                 return System.Array.Empty<QuizQuestionSO>();
 
-            var quizzes = new List<QuizQuestionSO>(linkedQuizIds.Length);
-            foreach (var id in linkedQuizIds)
+            var quizzes = new List<QuizQuestionSO>(ids.Length);
+            foreach (var id in ids)
             {
                 if (string.IsNullOrEmpty(id)) continue;
                 var quiz = QuizManager.Instance != null ? QuizManager.Instance.GetById(id) : null;
