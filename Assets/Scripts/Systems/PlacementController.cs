@@ -25,12 +25,28 @@ namespace NuclearReMind
             KeyCode.Alpha9
         };
 
+        public static PlacementController Instance { get; private set; }
+
         private BuildingData selectedBuilding;
         private Vector2Int currentCell;
         private bool isPlacing;
 
+        /// <summary>กำลังอยู่โหมดวางอาคาร (read-only — PauseMenuController ใช้เช็คก่อนเปิดเมนูจาก ESC)</summary>
+        public bool IsPlacing => isPlacing;
+
+        /// <summary>เฟรมล่าสุดที่ ESC ถูกใช้ยกเลิกการวาง — กัน PauseMenu เปิดซ้อนในเฟรมเดียวกัน
+        /// (ลำดับ Update ระหว่างสองสคริปต์ไม่การันตี จึงต้องเช็คทั้ง IsPlacing และเฟรมนี้)</summary>
+        public int LastEscCancelFrame { get; private set; } = -1;
+
         private void Awake()
         {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
+
             if (ghostRenderer != null)
                 ghostRenderer.gameObject.SetActive(false);
         }
@@ -69,8 +85,12 @@ namespace NuclearReMind
 
             if (Input.GetMouseButtonDown(0))
                 ConfirmPlace();
-            else if (Input.GetMouseButtonDown(1))
+            else if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape)) // §15: ยกเลิก = คลิกขวา หรือ Esc
+            {
+                if (Input.GetKeyDown(KeyCode.Escape))
+                    LastEscCancelFrame = Time.frameCount;
                 CancelPlacement();
+            }
         }
 
         /// <summary>

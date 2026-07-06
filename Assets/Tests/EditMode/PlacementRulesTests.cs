@@ -9,6 +9,7 @@ namespace NuclearReMind.Tests
     /// กติกาการวางอาคาร (V4 §6/§8):
     /// - ทรัพยากรไม่พอ → เข้าโหมดวาง/ยืนยันวางไม่ได้ (เดิมวางได้แล้วคลัง clamp 0 เงียบๆ)
     /// - CORE TOWER สร้างได้แค่หลังเดียว
+    /// - เข้าโหมดวาง → นาฬิกาวันหยุด, วาง/ยกเลิก → เดินต่อ (V4 §15)
     /// </summary>
     public class PlacementRulesTests
     {
@@ -18,6 +19,7 @@ namespace NuclearReMind.Tests
         private ResourceManager resources;   // เริ่มต้น energy 200 / iron 100
         private BuildingRegistry registry;
         private PlacementController placement;
+        private TimeManager time;
 
         [SetUp]
         public void SetUp()
@@ -27,6 +29,7 @@ namespace NuclearReMind.Tests
             NewComponent<GridManager>("GridManager"); // ให้ GetCell/footprint ใช้งานได้ (default 20×12)
             registry = NewComponent<BuildingRegistry>("BuildingRegistry");
             registry.allBuildingData = new BuildingData[0];
+            time = NewComponent<TimeManager>("TimeManager");
             placement = NewComponent<PlacementController>("PlacementController");
         }
 
@@ -101,6 +104,43 @@ namespace NuclearReMind.Tests
             foreach (var kvp in registry.PlacedBuildings)
                 if (kvp.Value.buildingType == BuildingType.CoreTower) towers++;
             Assert.AreEqual(1, towers, "CORE TOWER มีได้หลังเดียว");
+        }
+
+        // ── V4 §15: หยุดเวลาตอนวางอาคาร ────────────────────────────
+
+        [Test]
+        public void BeginPlacement_PausesDayClock()
+        {
+            placement.BeginPlacement(NewBuilding("Farm", 0, 0));
+
+            Assert.IsTrue(time.IsPaused(PauseReason.Placement), "เข้าโหมดวาง → มีเหตุหยุด Placement");
+            Assert.IsFalse(time.IsRunning, "นาฬิกาวันต้องหยุดระหว่างวาง (V4 §15)");
+        }
+
+        [Test]
+        public void ConfirmPlace_ResumesDayClock()
+        {
+            placement.BeginPlacement(NewBuilding("Farm", 0, 0));
+            placement.ConfirmPlace(); // วางสำเร็จที่ (0,0)
+
+            Assert.IsTrue(time.IsRunning, "วางเสร็จ → นาฬิกาเดินต่อ (V4 §15)");
+        }
+
+        [Test]
+        public void CancelPlacement_ResumesDayClock()
+        {
+            placement.BeginPlacement(NewBuilding("Farm", 0, 0));
+            placement.CancelPlacement();
+
+            Assert.IsTrue(time.IsRunning, "ยกเลิกการวาง → นาฬิกาเดินต่อ (V4 §15)");
+        }
+
+        [Test]
+        public void BlockedPlacement_DoesNotPauseClock()
+        {
+            placement.BeginPlacement(NewBuilding("Pricey", ironCost: 999, energyCost: 0)); // ไม่เข้าโหมดวาง
+
+            Assert.IsTrue(time.IsRunning, "เข้าโหมดวางไม่สำเร็จ (ของไม่พอ) → นาฬิกาต้องไม่ถูกหยุดค้าง");
         }
 
         [Test]

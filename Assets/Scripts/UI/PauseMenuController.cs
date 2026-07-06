@@ -47,6 +47,15 @@ namespace NuclearReMind
                             || gm.CurrentState == GameManager.GameState.Victory))
                 return;
 
+            // §15: ESC ระหว่างโหมดวาง/ทุบ = ยกเลิกโหมดนั้น (controller ของโหมดจัดการเอง) ไม่เปิดเมนูซ้อน
+            // ลำดับ Update ของสคริปต์ไม่การันตี จึงเช็คทั้ง "ยังอยู่ในโหมด" และ "เพิ่งถูกยกเลิกด้วย ESC เฟรมนี้"
+            var placement = PlacementController.Instance;
+            if (placement != null && (placement.IsPlacing || placement.LastEscCancelFrame == Time.frameCount))
+                return;
+            var demolition = DemolitionController.Instance;
+            if (demolition != null && (demolition.IsDemolishing || demolition.LastEscCancelFrame == Time.frameCount))
+                return;
+
             if (_isOpen) Resume();
             else Open();
         }

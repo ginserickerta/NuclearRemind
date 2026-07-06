@@ -64,12 +64,26 @@ namespace NuclearReMind.Tests
             Assert.IsTrue(time.IsRunning, "เหตุเดียวกดซ้ำ → ปลดครั้งเดียวก็พอ");
         }
 
+        [Test]
+        public void DemolishMode_Toggle_PausesAndResumesClock()
+        {
+            var em = NewComponent<EventManager>("EventManager");
+            NewComponent<DemolitionController>("DemolitionController");
+
+            em.RaiseDemolishModeToggled(true);
+            Assert.IsTrue(time.IsPaused(PauseReason.Demolition), "เข้าโหมดทุบ → หยุดนาฬิกาวัน (เจตนา §15)");
+
+            em.RaiseDemolishModeToggled(false);
+            Assert.IsTrue(time.IsRunning, "ออกจากโหมดทุบ → นาฬิกาเดินต่อ");
+        }
+
         private T NewComponent<T>(string name) where T : Component
         {
             var go = new GameObject(name);
             _spawned.Add(go);
             var component = go.AddComponent<T>();
             TryInvokePrivate(component, "Awake");
+            TryInvokePrivate(component, "OnEnable");
             return component;
         }
 

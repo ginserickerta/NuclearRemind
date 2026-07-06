@@ -187,7 +187,10 @@ namespace NuclearReMind
             float t = GameManager.Instance.DayTimeRemaining;
             int m = Mathf.FloorToInt(t / 60f);
             int s = Mathf.FloorToInt(t % 60f);
-            timerText.text = $"{m}:{s:00}";
+
+            // §15: มีเหตุหยุดนาฬิกา (วางอาคาร/ทุบ/ควิซ/วิกฤต) → บอกผู้เล่นชัด ๆ ว่าเวลาหยุด ไม่ใช่บั๊ก
+            bool clockPaused = TimeManager.Instance != null && !TimeManager.Instance.IsRunning;
+            timerText.text = clockPaused ? $"หยุด · {m}:{s:00}" : $"{m}:{s:00}";
         }
 
         private void HandleResourceChanged(ResourceData data)

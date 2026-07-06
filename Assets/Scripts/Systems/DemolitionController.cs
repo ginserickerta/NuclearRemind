@@ -6,8 +6,9 @@ namespace NuclearReMind
     /// จัดการโหมดทุบอาคาร:
     /// — hover บน occupied cell → แสดง highlight สีแดง
     /// — คลิกซ้าย → ทุบอาคาร (raise OnBuildingRemoved + คืน workers)
-    /// — คลิกขวา หรือกดปุ่ม Demolish อีกครั้ง → ออกจากโหมด
+    /// — คลิกขวา / Esc หรือกดปุ่ม Demolish อีกครั้ง → ออกจากโหมด
     /// อาคารที่กำลังก่อสร้างต้องยกเลิกผ่าน BuildingQueueUI แทน
+    /// ระหว่างอยู่ในโหมด นาฬิกาวันหยุด (เจตนาเดียวกับโหมดวาง — V4 §15 "ให้คิด ไม่ใช่รีบ")
     /// </summary>
     public class DemolitionController : MonoBehaviour
     {
@@ -21,6 +22,9 @@ namespace NuclearReMind
         public Color cannotDemolishColor = new Color(0.55f, 0.55f, 0.55f, 0.3f);
 
         public bool IsDemolishing => _isDemolishing;
+
+        /// <summary>เฟรมล่าสุดที่ ESC ถูกใช้ออกจากโหมดทุบ — กัน PauseMenu เปิดซ้อนในเฟรมเดียวกัน</summary>
+        public int LastEscCancelFrame { get; private set; } = -1;
 
         private bool _isDemolishing;
         private Vector2Int _hoveredCell;
@@ -38,6 +42,9 @@ namespace NuclearReMind
 
         private void OnDisable()
         {
+            // ถ้าถูกปิดกลางโหมดทุบ (เช่นเปลี่ยนซีน) — ปลดเหตุหยุดเวลาไว้ก่อน กันนาฬิกาค้าง
+            if (_isDemolishing) TimeManager.Instance?.Resume(PauseReason.Demolition);
+
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnDemolishModeToggled -= HandleDemolishModeToggled;
         }
@@ -47,6 +54,11 @@ namespace NuclearReMind
             _isDemolishing = active;
             if (highlightRenderer != null)
                 highlightRenderer.gameObject.SetActive(false);
+
+            // §15: โหมดทุบ = การตัดสินใจผังเช่นเดียวกับโหมดวาง → หยุดนาฬิกาวันจนกว่าจะออกจากโหมด
+            // (Resume ตอน active=false ปลอดภัยเสมอ — ถ้าไม่มีเหตุนี้ค้างอยู่ HashSet.Remove เป็น no-op)
+            if (active) TimeManager.Instance?.Pause(PauseReason.Demolition);
+            else TimeManager.Instance?.Resume(PauseReason.Demolition);
         }
 
         private void Update()
@@ -57,8 +69,12 @@ namespace NuclearReMind
 
             if (Input.GetMouseButtonDown(0))
                 TryDemolish();
-            else if (Input.GetMouseButtonDown(1))
+            else if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape)) // §15: ออกจากโหมด = คลิกขวา หรือ Esc
+            {
+                if (Input.GetKeyDown(KeyCode.Escape))
+                    LastEscCancelFrame = Time.frameCount;
                 EventManager.Instance.RaiseDemolishModeToggled(false);
+            }
         }
 
         private void UpdateHighlight()

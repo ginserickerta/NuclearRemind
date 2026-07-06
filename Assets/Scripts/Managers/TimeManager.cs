@@ -6,7 +6,7 @@ namespace NuclearReMind
     /// <summary>
     /// เหตุที่ทำให้ "นาฬิกาวัน" หยุด (V4 §15/§16) — ซ้อนกันได้หลายเหตุ
     /// </summary>
-    public enum PauseReason { Placement, QuizPopup, CrisisPopup, Manual }
+    public enum PauseReason { Placement, QuizPopup, CrisisPopup, Manual, Demolition }
 
     /// <summary>
     /// จัดการ "นาฬิกาวัน" หยุด/เดิน ผ่าน pause-reason stack (V4 §15/§16)
