@@ -33,6 +33,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Day 11 Systems",
             "NuclearReMind/Setup Demolition System",
             "NuclearReMind/Setup Pause Menu", // PauseCanvas แยกจาก HUDCanvas — กด ESC ตอนเล่น
+            "NuclearReMind/Setup Story UI",   // StoryCanvas แยกเช่นกัน — การ์ดเนื้อเรื่อง + Records + อนุสรณ์
 
             "NuclearReMind/Setup Grid 43x43",
             "NuclearReMind/Fill Grids (Ground + Fog)",

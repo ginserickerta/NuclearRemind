@@ -17,7 +17,8 @@ namespace NuclearReMind
         Laboratory,
         CoreTower,
         PowerConduit,
-        Mine
+        Mine,
+        Memorial   // อนุสรณ์ทีมสร้างหอคอย (Story Guide §4) — pre-placed, คลิกเปิดแผงรายชื่อ
     }
 
     /// <summary>
