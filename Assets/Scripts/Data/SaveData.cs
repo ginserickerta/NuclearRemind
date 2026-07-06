@@ -21,5 +21,9 @@ namespace NuclearReMind
         public int keranRelationship;
         public List<Vector2Int> underConstructionCells = new List<Vector2Int>();
         public List<int> constructionProgress = new List<int>();
+
+        // ===== Story (Story Guide) — มีค่า default เสมอ: เซฟรุ่นเก่ายังโหลดได้ =====
+        public List<string> firedStoryBeats = new List<string>();  // beatId ที่เล่นไปแล้ว (ยิงครั้งเดียวต่อรอบ)
+        public List<string> archivedRecords = new List<string>();  // recordId ที่กู้คืนแล้ว (แผง Records)
     }
 }

@@ -115,6 +115,14 @@ namespace NuclearReMind
         // ===== Pre-placed (ตึกที่มากับแมพ เช่น CORE TOWER กลางเมือง — สร้างเสร็จทันที ไม่เข้าคิวก่อสร้าง) =====
         public event Action<Vector2Int> OnConstructionCompleteRequested;
 
+        // ===== Story (Story Guide — StoryDirector คุมลำดับ record → infoCard → crisis → outcome → quiz) =====
+        public event Action<DilemmaData> OnDilemmaTriggerRequested; // StoryDirector → DilemmaManager (วิกฤตเข้า pipeline ปกติ)
+        public event Action<RecordCardSO> OnStoryRecordShown;       // StoryDirector → Card UI (การ์ดบันทึกกู้คืน)
+        public event Action<InfoCardSO> OnStoryInfoShown;           // StoryDirector → Card UI (การ์ดความรู้ — ก่อนควิซเสมอ)
+        public event Action<string> OnStoryOutcomeShown;            // StoryDirector → Card UI (บทหลังเลือก afterText)
+        public event Action OnStoryCardDismissed;                   // Card UI → StoryDirector (ผู้เล่นกดปิดการ์ด → เดินลำดับต่อ)
+        public event Action<RecordCardSO> OnRecordArchived;         // StoryDirector → RecordsPanel (บันทึกเข้าแผงย้อนอ่าน)
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -225,5 +233,13 @@ namespace NuclearReMind
 
         // ===== Pre-placed =====
         public void RaiseConstructionCompleteRequested(Vector2Int cell) => OnConstructionCompleteRequested?.Invoke(cell);
+
+        // ===== Story =====
+        public void RaiseDilemmaTriggerRequested(DilemmaData dilemma) => OnDilemmaTriggerRequested?.Invoke(dilemma);
+        public void RaiseStoryRecordShown(RecordCardSO record) => OnStoryRecordShown?.Invoke(record);
+        public void RaiseStoryInfoShown(InfoCardSO infoCard) => OnStoryInfoShown?.Invoke(infoCard);
+        public void RaiseStoryOutcomeShown(string afterText) => OnStoryOutcomeShown?.Invoke(afterText);
+        public void RaiseStoryCardDismissed() => OnStoryCardDismissed?.Invoke();
+        public void RaiseRecordArchived(RecordCardSO record) => OnRecordArchived?.Invoke(record);
     }
 }

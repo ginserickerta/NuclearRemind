@@ -94,6 +94,13 @@ namespace NuclearReMind
                 save.constructionProgress   = progress;
             }
 
+            // Story (read-only query แบบเดียวกับ CodexManager.UnlockedIds) — ไม่มี StoryDirector = list ว่าง (default)
+            if (StoryDirector.Instance != null)
+            {
+                save.firedStoryBeats = new List<string>(StoryDirector.Instance.FiredBeatIds);
+                save.archivedRecords = StoryDirector.Instance.ArchivedRecordIds;
+            }
+
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
             {
                 save.placedBuildings.Add(kvp.Key);

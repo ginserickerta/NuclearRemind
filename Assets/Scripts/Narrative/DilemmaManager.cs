@@ -24,6 +24,11 @@ namespace NuclearReMind
         private readonly HashSet<string> _triggeredIds = new HashSet<string>();
         private DilemmaData _activeDilemma;
 
+        // วิกฤตที่ StoryDirector สั่ง (Story Guide): ควิซหลัง resolve ให้ StoryDirector จัดคิวเอง
+        // (ลำดับบังคับ Outcome → Quiz) · ถ้ามีวิกฤตอื่นแสดงอยู่ → เก็บไว้เล่นต่อทันทีที่จบ
+        private bool _activeIsStoryDriven;
+        private DilemmaData _pendingStoryDilemma;
+
         // state ล่าสุดสำหรับประเมิน crisis ตอน OnDayEnded (อ่านผ่าน event ไม่ direct reference manager อื่น)
         private ResourceData _resources;
         private TowerData _tower;
@@ -47,6 +52,7 @@ namespace NuclearReMind
             EventManager.Instance.OnDayEnded += HandleDayEnded;
             EventManager.Instance.OnResourceChanged += HandleResourceChanged;
             EventManager.Instance.OnTowerProgressChanged += HandleTowerProgressChanged;
+            EventManager.Instance.OnDilemmaTriggerRequested += HandleDilemmaTriggerRequested;
         }
 
         private void OnDisable()
@@ -59,6 +65,27 @@ namespace NuclearReMind
             EventManager.Instance.OnDayEnded -= HandleDayEnded;
             EventManager.Instance.OnResourceChanged -= HandleResourceChanged;
             EventManager.Instance.OnTowerProgressChanged -= HandleTowerProgressChanged;
+            EventManager.Instance.OnDilemmaTriggerRequested -= HandleDilemmaTriggerRequested;
+        }
+
+        // ── วิกฤตจาก StoryDirector (Story Guide) ──────────────────────────
+        // เข้า pipeline เดียวกับวิกฤตปกติ (pause/resolve/effects) — ถ้ามีวิกฤตค้างอยู่ให้รอคิว
+        private void HandleDilemmaTriggerRequested(DilemmaData dilemma)
+        {
+            if (dilemma == null) return;
+
+            if (_activeDilemma != null)
+            {
+                _pendingStoryDilemma = dilemma; // เล่นต่อทันทีที่วิกฤตปัจจุบัน resolve (ท้าย HandleDilemmaResolved)
+                return;
+            }
+            TriggerStoryDriven(dilemma);
+        }
+
+        private void TriggerStoryDriven(DilemmaData dilemma)
+        {
+            Trigger(dilemma);
+            _activeIsStoryDriven = _activeDilemma == dilemma;
         }
 
         private void HandleResourceChanged(ResourceData data) => _resources = data;
@@ -80,37 +107,12 @@ namespace NuclearReMind
             }
         }
 
+        // ตรรกะประเมินย้ายไป StatCondition (ใช้ร่วมกับ StoryDirector) — พฤติกรรมเดิมทุกอย่าง
         private bool MatchesDayEndCondition(string condition, int day)
-        {
-            if (string.IsNullOrEmpty(condition)) return false;
-
-            // "a|b" = เข้าเงื่อนไขอย่างใดอย่างหนึ่ง (V4 §10 วิกฤต 1: "heat_above_80|q_above_0.3")
-            if (condition.IndexOf('|') >= 0)
-            {
-                foreach (var part in condition.Split('|'))
-                    if (MatchesDayEndCondition(part, day)) return true;
-                return false;
-            }
-
-            if (TryThreshold(condition, "heat_above_",   out float h)) return _tower.coreHeat   >= h;
-            if (TryThreshold(condition, "q_above_",      out float q)) return _tower.corePercent >= q * 100f; // Q = CORE%/100 (§8)
-            if (TryThreshold(condition, "food_below_",   out float fb)) return _resources.food   <= fb;
-            if (TryThreshold(condition, "food_above_",   out float fa)) return _resources.food   >= fa;
-            if (TryThreshold(condition, "energy_below_", out float e)) return _resources.energy  <= e;
-            if (TryThreshold(condition, "water_below_",  out float w)) return _resources.water   <= w;
-            if (TryThreshold(condition, "day_reached_",  out float d)) return day               >= d;
-            return false;
-        }
+            => StatCondition.Matches(condition, day, _resources, _tower);
 
         private static bool TryThreshold(string condition, string prefix, out float value)
-        {
-            value = 0f;
-            return !string.IsNullOrEmpty(condition)
-                && condition.StartsWith(prefix)
-                && float.TryParse(condition.Substring(prefix.Length),
-                       System.Globalization.NumberStyles.Float,
-                       System.Globalization.CultureInfo.InvariantCulture, out value); // "0.3" ต้องไม่ขึ้นกับ culture เครื่อง
-        }
+            => StatCondition.TryThreshold(condition, prefix, out value);
 
         private void HandleTowerPhaseComplete(int phase)
         {
@@ -189,12 +191,22 @@ namespace NuclearReMind
 
             TimeManager.Instance?.Resume(PauseReason.CrisisPopup); // ปิด crisis popup → นาฬิกาเดินต่อ
 
-            // V4 §16 (T1.E1): หลัง resolve → เด้งควิซที่ผูกกับ dilemma นี้เข้าคิว (dilemma implement IQuizTrigger)
-            // (ถ้ามีควิซผูกอยู่ QuizManager จะ Pause(QuizPopup) ต่อทันที)
-            if (QuizManager.Instance != null)
-                QuizManager.Instance.EnqueueQuizzes(dilemma);
+            // V4 §16 (T1.E1): หลัง resolve → เด้งควิซเข้าคิว
+            // - ควิซรายทางเลือก (Story Guide quizRef): ทางเลือกที่กดมีรายการของตัวเอง → ใช้แทน linkedQuizIds
+            // - วิกฤตจาก StoryDirector: ข้าม — StoryDirector ยิงเองหลังการ์ดบทสรุป (ลำดับ Outcome → Quiz)
+            if (!_activeIsStoryDriven && QuizManager.Instance != null)
+                QuizManager.Instance.TriggerByIds(dilemma.GetQuizIdsForChoice(choiceIndex));
+            _activeIsStoryDriven = false;
 
             _activeDilemma = null;
+
+            // มีวิกฤตเนื้อเรื่องรอคิวอยู่ → เล่นต่อทันที (StoryDirector รอ OnDilemmaTriggered ของตัวนั้น)
+            if (_pendingStoryDilemma != null)
+            {
+                var next = _pendingStoryDilemma;
+                _pendingStoryDilemma = null;
+                TriggerStoryDriven(next);
+            }
         }
 
         private static float Pick(int i, float a, float b, float c) => i == 0 ? a : (i == 1 ? b : c);
