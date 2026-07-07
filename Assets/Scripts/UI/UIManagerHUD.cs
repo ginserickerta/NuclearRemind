@@ -288,13 +288,26 @@ namespace NuclearReMind
 
             if (gameOverText == null) return;
 
+            // การ์ดสรุปจบเกม — ข้อความ Story Guide §4 ENDINGS (💀/🌥 นอก BMP legacy Text วาดไม่ได้ — ไม่ใช้)
             string msg = endType switch
             {
-                GameEndType.TrueEnding   => "☀️ TRUE ENDING — จุดเตาฟิวชันสำเร็จ (Q ≥ 1.0) กางโล่พลาสมารับพายุ!",
-                GameEndType.NormalEnding => "🌥 NORMAL ENDING — โล่กางได้บางส่วน (Q 0.5–0.99) เมืองบาดเจ็บแต่รอด",
-                GameEndType.HopeZero     => "💀 ขวัญเมืองหมด (Hope = 0) — ประชาชนสิ้นศรัทธา เมืองล่มสลาย",
-                GameEndType.Meltdown     => "💀 เตาหลอมละลาย (HEAT ≥ 100) — เร่งเครื่องเกินกำลังหล่อเย็น",
-                GameEndType.TimeoutLowQ  => "💀 หมดเวลา 30 วัน · Q < 0.5 — โล่พลาสมาไม่สำเร็จ",
+                GameEndType.TrueEnding =>
+                    "ภารกิจสำเร็จ — แสงแรกของโลกใหม่\n" +
+                    "โล่พลาสมากางรับคลื่นรังสีไว้ทั้งหมด เสียงพายุเงียบลง\n" +
+                    "ปฏิกิริยาฟิวชันถึงจุดเสถียร Q = 1.0 · Veltara ปลอดภัย\n" +
+                    "ต้นไม้ต้นแรกผลิใบในดินที่เคยเป็นพิษ\n\n" +
+                    "Kova: นายทำได้ วิศวกร ที่พวกเราทั้งทีมทำไม่สำเร็จ\n" +
+                    "▸ ความคิด: Elara... ทุกคน ผมส่งรายงานไม่ทันในวันนั้น แต่คราวนี้ผมส่งมันถึงแล้ว\n" +
+                    "พลังงานสะอาด ไม่ได้เกิดจากความสมบูรณ์แบบ แต่เกิดจากคนที่กล้ารับผิดชอบมัน",
+                GameEndType.NormalEnding =>
+                    "ภารกิจสำเร็จบางส่วน — เมืองที่ยังต้องซ่อม\n" +
+                    "เตาติด แต่ไม่ถึงจุดเสถียรเต็มที่ โล่พลาสมากางได้ครึ่งเดียว\n" +
+                    "พายุผ่านไป แต่เมืองบาดเจ็บ\n\n" +
+                    "Kova: มันไม่เพอร์เฟกต์ แต่เราก็ยังอยู่\n" +
+                    "▸ ความคิด: ยังไม่จบ ยังมีงานให้ทำอีกมาก แต่เมืองนี้ยังมีพรุ่งนี้",
+                GameEndType.HopeZero     => "GAME OVER — ขวัญเมืองหมด\nHope = 0 · ประชาชนหมดศรัทธา เมืองล่มสลาย",
+                GameEndType.Meltdown     => "GAME OVER — เตาหลอมละลาย\nHEAT ≥ 100 · เร่งเครื่องเกินกำลังหล่อเย็น",
+                GameEndType.TimeoutLowQ  => "GAME OVER — หมดเวลา\nหมดเวลา 30 วัน แต่ค่า Q ยังไม่ถึงเป้า",
                 _ => ""
             };
 
@@ -304,7 +317,8 @@ namespace NuclearReMind
             int knowledge = ResourceManager.Instance != null
                 ? Mathf.RoundToInt(ResourceManager.Instance.Current.knowledge) : 0;
 
-            gameOverText.text = $"{msg}\n\nวันที่ {day} · Q {q:0.00} · Knowledge {knowledge}\n(คลังความรู้ถูกเก็บถาวรสำหรับรอบหน้า)";
+            gameOverText.text = $"{msg}\n\nวันที่ {day} · Q {q:0.00} · Knowledge {knowledge}\n" +
+                                "ความรู้ที่คุณได้ — ไม่มีวันหาย เริ่มใหม่แล้วไปให้ไกลกว่าเดิม";
         }
     }
 }

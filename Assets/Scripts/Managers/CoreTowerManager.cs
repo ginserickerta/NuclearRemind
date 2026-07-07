@@ -248,9 +248,8 @@ namespace NuclearReMind
                 Current = t;
                 EventManager.Instance.RaiseTowerPhaseComplete(completed);
 
-                // เข้า Phase 3 Ignition (จบ Phase 2) → เด้งควิซ Q8, Q9 (V4 §12)
-                if (completed == 2)
-                    QuizManager.Instance?.TriggerByIds("Q8", "Q9");
+                // Q8/Q9 ไม่ยิงตรงนี้แล้ว — ย้ายไป StoryBeat "storm_first_light" (Day 25)
+                // ให้ InfoCard ฟิวชันเด้งก่อนควิซตามกฎเหล็ก Story Guide (ความรู้มาก่อนควิซ)
             }
         }
 

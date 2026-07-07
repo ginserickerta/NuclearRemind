@@ -6,17 +6,27 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
-    /// Block C — สร้าง 3 crisis DilemmaData assets + wire เข้า DilemmaManager.dilemmaPool
+    /// Block C — สร้าง 3 crisis DilemmaData assets (เนื้อหา Story Guide §4 — เฟส 4 story content)
     /// รันผ่านเมนู NuclearReMind / Setup Crisis Dilemmas
     ///
-    /// crisis เหล่านี้ trigger ด้วยเงื่อนไข day-end ที่ DilemmaManager ประเมินตอน OnDayEnded (V4 §10/§18):
-    ///   Plasma: heat_above_80|q_above_0.3 · Outbreak: day_reached_20 · Food: food_above_500 (เน่าเพราะกักตุน)
-    /// เนื้อหาผูกกับวิทยาศาสตร์นิวเคลียร์ (cooling/meltdown, เวชศาสตร์นิวเคลียร์, food irradiation)
+    /// ★ วิกฤตทั้ง 3 เป็น "story-driven" แล้ว: StoryBeat (OnStatThreshold) เป็นคนยิงผ่าน
+    ///   OnDilemmaTriggerRequested เพื่อให้ InfoCard เด้งก่อนวิกฤต (ความรู้มาก่อนควิซ)
+    ///   → WirePool จึง "ไม่ใส่" วิกฤตเหล่านี้เข้า DilemmaManager.dilemmaPool (กันยิงซ้ำสองทาง)
+    ///   triggerCondition บน asset คงไว้เป็นเอกสาร — ตัวจริงอยู่ที่ StoryBeatSO.triggerParam (StorySetup)
     /// </summary>
     public static class CrisisSetup
     {
         private const string Folder = "Assets/ScriptableObjects/Dilemmas";
         private const string ScenePath = "Assets/Scenes/Gamescene.unity";
+
+        // dilemma ที่ StoryDirector เป็นเจ้าของ (ยิงผ่าน beat) — ห้ามเข้า pool ของ DilemmaManager
+        internal static readonly string[] StoryDrivenIds =
+        {
+            "Crisis_PlasmaInstability",
+            "Crisis_MalignantOutbreak",
+            "Crisis_FoodShortage",
+            "Crisis_DecreeEmergency", // สร้างโดย StorySetup (เฟส 4) — กันหลุดเข้า pool ตอนรัน CrisisSetup ซ้ำ
+        };
 
         [MenuItem("NuclearReMind/Setup Crisis Dilemmas")]
         public static void SetupAll()
@@ -82,10 +92,16 @@ namespace NuclearReMind.EditorTools
             asset.choiceC_ForceReactorIdleDays = def.cIdle;
             asset.choiceC_Deaths               = def.cDeaths;
 
+            // บทหลังเลือก (Story Guide afterTextTH) — StoryDirector โชว์เป็นการ์ดบทสรุปก่อนควิซ
+            asset.choiceA_AfterText = def.aAfter;
+            asset.choiceB_AfterText = def.bAfter;
+            asset.choiceC_AfterText = def.cAfter;
+
             EditorUtility.SetDirty(asset);
         }
 
-        // assign DilemmaData ทั้งหมดใน folder (เดิม + ใหม่) เข้า DilemmaManager.dilemmaPool
+        // assign DilemmaData ใน folder เข้า DilemmaManager.dilemmaPool — ยกเว้น story-driven
+        // (วิกฤตเนื้อเรื่องยิงผ่าน StoryBeat → OnDilemmaTriggerRequested เท่านั้น กันเด้งซ้ำสองทาง)
         private static void WirePool()
         {
             if (EditorSceneManager.GetActiveScene().path != ScenePath)
@@ -103,7 +119,8 @@ namespace NuclearReMind.EditorTools
             foreach (var g in guids)
             {
                 var d = AssetDatabase.LoadAssetAtPath<DilemmaData>(AssetDatabase.GUIDToAssetPath(g));
-                if (d != null) pool.Add(d);
+                if (d != null && System.Array.IndexOf(StoryDrivenIds, d.dilemmaId) < 0)
+                    pool.Add(d);
             }
 
             mgr.dilemmaPool = pool.ToArray();
@@ -113,68 +130,107 @@ namespace NuclearReMind.EditorTools
             Debug.Log($"[CrisisSetup] wire dilemmaPool = {pool.Count} dilemmas");
         }
 
-        // เนื้อหา 3 วิกฤต A/B/C ตาม V4 §10 · ผูกควิซ (linkedQuizIds) ตั้งโดย QuizSetup:
-        //   Plasma→Q2,Q3 · Outbreak→Q4,Q5 · Food→Q6,Q7
+        // เนื้อหา 3 วิกฤต A/B/C — ข้อความไทย verbatim จาก Story Guide §4 (ห้ามแปล/แต่งใหม่)
+        // ควิซ: Plasma→Q2,Q3 · Outbreak→Q4,Q5 (linkedQuizIds) · Food→รายทางเลือก A=Q6/B=Q7/C=ไม่มี (QuizSetup)
+        // effect ที่ guide ระบุแต่เกมไม่มีระบบรองรับ (workersReassigned/radSickRisk/yieldPct/
+        // spoilRate/quarantineDays/deferredCrisis) — ข้ามไว้ก่อน · deferredCrisis น้ำ/อาหาร = เฟส 5
         private static CrisisDef[] BuildDefs() => new[]
         {
-            // ── วิกฤต 1: Plasma Instability (สนามแม่เหล็กคู่) ──
+            // ── วิกฤต 1: เสถียรภาพพลาสมา (~Day 17 — beat crisis_plasma_stability) ──
             new CrisisDef
             {
                 id = "Crisis_PlasmaInstability",
-                trigger = "heat_above_80|q_above_0.3", // V4 §10: HEAT > 80 หรือ Q > 0.3 (~Day 17)
+                trigger = "heat_above_80|q_above_0.3", // เอกสาร — ตัวจริงอยู่ที่ StoryBeat.triggerParam
                 scenario =
-@"⚠️ วิกฤต 1: เสถียรภาพพลาสมา
+@"⚠️ วิกฤต: เสถียรภาพพลาสมา
 
-พลาสมาหลายร้อยล้านองศาในเตาเริ่มบิดเบี้ยว เสี่ยงหลุดชนผนังและถ่ายเทความร้อนเข้าตัวอาคาร
-มีเวลาไม่กี่วันก่อนเตาจะเข้าสู่ภาวะ Meltdown — จะเสริมการกักพลาสมาอย่างไร?",
-                aText = "A · เร่งสนามแม่เหล็กวงแหวน (Overdrive Toroidal) — เปลืองพลังงานหนัก",
-                aEnergy = -300, aHope = 5, aAethon = 1,
-                bText = "B · ซ่อมขดลวดด้วยมือ — ใช้แร่เหล็ก เสี่ยงคนป่วย",
-                bIron = -150, bHope = -8, bAethon = -1,
-                cText = "C · ฉีดสารหล่อเย็นฉุกเฉิน — ผ่านง่าย แต่เปลืองน้ำ เสี่ยงวิกฤตน้ำตามมา",
-                cWater = -200, cHope = 2,
+สนามแม่เหล็กเริ่มเอาไม่อยู่
+พลาสมาในเตาร้อนหลายล้านองศา ถูกกักด้วยสนามแม่เหล็ก
+สนามเริ่มไม่นิ่ง ถ้าพลาสมาหลุดชนผนัง เตาจะหลอมละลาย",
+                aText = "A · เร่งสนามแม่เหล็กเติมกำลัง (พลังงาน −300)",
+                aEnergy = -300, aAethon = 1,
+                aAfter =
+@"[ระบบ] สนามแม่เหล็กเสถียร · HEAT กลับสู่ระดับปลอดภัย
+[ระบบ] พลังงานสำรองหมด · ไฟทั้งเมืองดับชั่วคราว
+Kova: รอดแล้ว แต่คืนนี้มืดทั้งเมือง หวังว่าคุ้มนะ
+▸ ความคิด: แลกไฟทั้งเมืองกับเตาหนึ่งคืน... คุ้มไหม",
+                bText = "B · ซ่อมขดลวดด้วยมือ (แร่เหล็ก −150 · เสี่ยงคนป่วยรังสี)",
+                bIron = -150, bHope = -1, bAethon = -1,
+                bAfter =
+@"[ระบบ] ขดลวดซ่อมเสร็จใน 2 วัน · เตากลับมาเสถียร
+[ระบบ] วิศวกร 2 คนได้รับรังสีเกินขนาด
+Kova: ซ่อมได้ แต่คนของเราไม่ใช่อะไหล่
+▸ ความคิด: สองคน... ที่ผมส่งลงไปเอง",
+                cText = "C · ฉีดสารหล่อเย็นฉุกเฉิน (น้ำ −200)",
+                cWater = -200,
+                cAfter =
+@"[ระบบ] HEAT ลดฮวบทันที · เตาปลอดภัยชั่วคราว
+[ระบบ] คลังน้ำลดลง 50%
+▸ ความคิด: น้ำหายไปครึ่งคลัง... เดี๋ยวได้เจอปัญหาใหม่แน่",
             },
 
-            // ── วิกฤต 2: Malignant Outbreak (เวชศาสตร์นิวเคลียร์) ──
+            // ── วิกฤต 2: โรคจากรังสี (~Day 20 — beat crisis_radiation_disease) ──
             new CrisisDef
             {
                 id = "Crisis_MalignantOutbreak",
-                trigger = "day_reached_20", // V4 §10: ~Day 20 (proxy — ยังไม่มีระบบส่งคนเข้า Zone A)
+                trigger = "day_reached_20", // เอกสาร — guide: ZoneA_workers>threshold (ยังไม่มีระบบ Zone A → ใช้วันแทน)
                 scenario =
-@"⚠️ วิกฤต 2: โรคกลายพันธุ์
+@"⚠️ วิกฤต: โรคจากรังสี
 
-ฝุ่นรังสีทำให้คนงานเขตเหมืองลึกเกิดเซลล์กลายพันธุ์ ป่วยพร้อมกันหลายคน
-เวชศาสตร์นิวเคลียร์ทำงาน 2 ขั้น — วินิจฉัย (PET/SPECT) แล้วจึงรักษา — จะจัดการอย่างไร?",
-                aText = "A · สแกน PET/SPECT คัดกรอง — รักษาบางส่วน (ใช้พลังงาน)",
-                aEnergy = -200, aHope = 5, aKeran = 1,
-                bText = "B · ผลิตไอโซโทปการแพทย์จากเตา — เตาเดิน Idle 1 วัน ผลิตยา รักษาครบ",
-                bIron = -200, bHope = 8, bKeran = 2, bIdle = 1,
-                cText = "C · ฆ่าเชื้อแกมมา + กักตัว — ประหยัด แต่เสียชีวิต 3 คน อาหารตึง",
-                cFood = -100, cHope = -15, cKeran = -2, cDeaths = 3, // V4 §10: เสี่ยงเสียชีวิต 3 คน (Hope −5/คน หักโดย PopulationManager)
+คนงานล้มป่วยพร้อมกัน
+คนงานที่ขุดแร่ 15 คนเกิดเนื้อร้าย เนื้อเยื่อโตผิดปกติ
+ฟาร์มกับโรงน้ำชะงักเพราะคนล้ม",
+                aText = "A · สแกนคัดกรอง PET / SPECT (พลังงาน −200)",
+                aEnergy = -200, aKeran = 1,
+                aAfter =
+@"[ระบบ] สแกนพบตำแหน่งเนื้อร้าย · รักษาเฉพาะจุด 10 คนหาย
+Mira: เห็นก่อนถึงรักษาถูกจุด แต่อีกห้าคนหนักเกินไปแล้ว",
+                bText = "B · บำบัดด้วยสารเภสัชรังสี (แร่ −200 · เตา Idle 1 วัน)",
+                bIron = -200, bKeran = 2, bIdle = 1,
+                bAfter =
+@"[ระบบ] เตาเปลี่ยนโหมดผลิตไอโซโทปการแพทย์ 1 วัน
+[ระบบ] คนงานทั้ง 15 คนฟื้น กลับมาทำงาน
+Mira: รังสีที่คนกลัวกันนี่ วันนี้มันช่วยชีวิตคนสิบห้าคน",
+                cText = "C · กักตัว รอให้หายเอง (เสี่ยงเสียชีวิต)",
+                cHope = -3, cKeran = -2, cDeaths = 3, // Hope −5/คนตาย หักเพิ่มโดย PopulationManager
+                cAfter =
+@"[ระบบ] ไม่มีการรักษา · 4 วันผ่านไป เสียชีวิต 3 คน
+[ระบบ] แรงงานฟาร์มขาด · อาหารเริ่มหมด (วิกฤตซ้อน)
+▸ ความคิด: ผมเลือกไม่รักษาพวกเขา...",
             },
 
-            // ── วิกฤต 3: Food Crisis (พันธุ์พืช/ถนอมอาหาร) ──
+            // ── วิกฤต 3: วิกฤตอาหาร (~Day 24 — beat crisis_food_spoilage) ──
             new CrisisDef
             {
                 id = "Crisis_FoodShortage",
-                trigger = "food_above_500", // V4 §10: กักตุนเกิน 500 → เน่าเสีย (~Day 24) — เดิม food_below_120 กลับด้านจากสเปก
+                trigger = "food_above_500", // เอกสาร — guide: foodStored>500||noAgriDome
                 scenario =
-@"⚠️ วิกฤต 3: เสบียงเน่า
+@"⚠️ วิกฤต: วิกฤตอาหาร
 
-คลังอาหารล้น 500 หน่วยจนเริ่มเน่าเสียเร็วกว่าปกติ 3 เท่า เทคโนโลยีนิวเคลียร์ช่วยได้ 2 ทาง —
-ปรับปรุงพันธุ์ด้วยรังสี หรือฉายรังสีถนอมอาหาร — หรือจะรัดเข็มขัดด้วยการลดปันส่วน?",
-                aText = "A · เพาะเมล็ดกลายพันธุ์ (รังสี) — แก้ต้นเหตุ ใช้แร่เหล็ก",
-                aIron = -250, aHope = 5, aAethon = 1,
-                bText = "B · ฉายรังสีถนอมด้วยโคบอลต์-60 — หยุดเน่า ใช้พลังงานมาก",
-                bEnergy = -300, bHope = 5, bKeran = 1,
-                cText = "C · ลดปันส่วนอาหาร — ประหยัด แต่ Hope ดิ่ง เสี่ยงจลาจล",
-                cHope = -12,
+เสบียงเน่าเพราะรังสี
+คลังอาหารเน่าเร็วกว่าปกติสามเท่า เพราะรังสีปนเปื้อน
+ถ้าคนอดตาย หอคอยก็ไม่มีความหมาย",
+                aText = "A · เพาะเมล็ดกลายพันธุ์ (แร่เหล็ก −250)",
+                aIron = -250, aAethon = 1,
+                aAfter =
+@"[ระบบ] ปลดล็อกแปลงพืชสายพันธุ์ทนรังสี · ผลผลิต +100%
+▸ ความคิด: พืชโตในดินที่เป็นพิษได้... ใครจะเชื่อ",
+                bText = "B · ฉายรังสีถนอมด้วยโคบอลต์-60 (พลังงาน −300)",
+                bEnergy = -300, bKeran = 1,
+                bAfter =
+@"[ระบบ] เสบียงผ่านห้องฉายรังสีแกมมา · หยุดเน่าทันที
+Kova: ฉายรังสีอาหาร ไม่ได้แปลว่าอาหารมีรังสีนะ คนละเรื่อง",
+                cText = "C · ลดปันส่วนอาหาร (Hope ดิ่ง · เสี่ยงจลาจล)",
+                cHope = -3,
+                cAfter =
+@"[ระบบ] ทุกคนได้อาหารครึ่งเดียว · แรงงานอ่อนแรง งานช้าลง 50%
+▸ ความคิด: พวกเขาหิว... แต่เราไม่มีทางเลือกอื่นแล้วเหรอ",
             },
         };
 
         private struct CrisisDef
         {
-            public string id, trigger, scenario, aText, bText, cText;
+            public string id, trigger, scenario, aText, bText, cText, aAfter, bAfter, cAfter;
             public float aFood, aEnergy, aWater, aIron, aHope; public int aAethon, aKeran, aIdle, aDeaths;
             public float bFood, bEnergy, bWater, bIron, bHope; public int bAethon, bKeran, bIdle, bDeaths;
             public float cFood, cEnergy, cWater, cIron, cHope; public int cAethon, cKeran, cIdle, cDeaths;

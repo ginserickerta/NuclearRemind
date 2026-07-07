@@ -100,27 +100,47 @@ namespace NuclearReMind.EditorTools
             Debug.Log($"[QuizSetup] wire QuizManager.allQuizzes = {quizzes.Count} quizzes");
         }
 
-        // ผูกควิซเข้ากับ crisis dilemma (V4 T1.E1): Plasma→Q2,Q3 · Outbreak→Q4,Q5 · Food→Q6,Q7
+        // ผูกควิซเข้ากับ crisis dilemma: Plasma→Q2,Q3 · Outbreak→Q4,Q5 (ทุกทางเลือก)
+        // Food → รายทางเลือก (Story Guide quizRef): A=Q6 (mutation) · B=Q7 (irradiation) · C=ไม่มีควิซ
+        //   (linkedQuizIds ต้องว่าง — ไม่งั้นทางเลือก C จะ fallback ไปเด้ง Q6,Q7 ทั้งคู่)
         private static void WireDilemmas()
         {
             WireDilemma("Crisis_PlasmaInstability", "Q2", "Q3");
             WireDilemma("Crisis_MalignantOutbreak", "Q4", "Q5");
-            WireDilemma("Crisis_FoodShortage",      "Q6", "Q7");
+            WireDilemmaPerChoice("Crisis_FoodShortage",
+                a: new[] { "Q6" }, b: new[] { "Q7" }, c: new string[0]);
         }
 
         private static void WireDilemma(string dilemmaId, params string[] quizIds)
         {
-            string path = $"{DilemmaFolder}/{dilemmaId}.asset";
-            var d = AssetDatabase.LoadAssetAtPath<DilemmaData>(path);
-            if (d == null)
-            {
-                Debug.LogWarning($"[QuizSetup] ไม่พบ dilemma {path} — รัน NuclearReMind/Setup Crisis Dilemmas ก่อน");
-                return;
-            }
+            var d = LoadDilemma(dilemmaId);
+            if (d == null) return;
 
             d.linkedQuizIds = quizIds;
             EditorUtility.SetDirty(d);
             Debug.Log($"[QuizSetup] wire {dilemmaId}.linkedQuizIds = [{string.Join(", ", quizIds)}]");
+        }
+
+        private static void WireDilemmaPerChoice(string dilemmaId, string[] a, string[] b, string[] c)
+        {
+            var d = LoadDilemma(dilemmaId);
+            if (d == null) return;
+
+            d.linkedQuizIds  = new string[0]; // fallback ว่าง — ทางเลือกที่ไม่มีรายการ = ไม่มีควิซ
+            d.choiceA_QuizIds = a;
+            d.choiceB_QuizIds = b;
+            d.choiceC_QuizIds = c;
+            EditorUtility.SetDirty(d);
+            Debug.Log($"[QuizSetup] wire {dilemmaId} per-choice: A=[{string.Join(",", a)}] B=[{string.Join(",", b)}] C=[{string.Join(",", c)}]");
+        }
+
+        private static DilemmaData LoadDilemma(string dilemmaId)
+        {
+            string path = $"{DilemmaFolder}/{dilemmaId}.asset";
+            var d = AssetDatabase.LoadAssetAtPath<DilemmaData>(path);
+            if (d == null)
+                Debug.LogWarning($"[QuizSetup] ไม่พบ dilemma {path} — รัน NuclearReMind/Setup Crisis Dilemmas ก่อน");
+            return d;
         }
 
         // ─────────────────────────────────────────────
