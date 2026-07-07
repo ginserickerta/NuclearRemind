@@ -22,4 +22,5 @@ MonoBehaviour:
   npcLinePre: 
   innerVoiceAfter: 
   logLines: []
+  logLinesDaily: 0
   noteTH: 

@@ -20,9 +20,9 @@ MonoBehaviour:
   choiceAText: "A \xB7 \u0E44\u0E21\u0E48\u0E2D\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E01\u0E32\u0E28
     \u2014 \u0E2B\u0E32\u0E17\u0E32\u0E07\u0E2D\u0E37\u0E48\u0E19"
   choiceBText: "B \xB7 \u0E40\u0E01\u0E13\u0E11\u0E4C\u0E1C\u0E39\u0E49\u0E1B\u0E48\u0E27\u0E22\u0E23\u0E48\u0E27\u0E21\u0E07\u0E32\u0E19
-    (Hope \u22128)"
+    (\u0E2B\u0E25\u0E48\u0E2D\u0E40\u0E22\u0E47\u0E19 +6 \xB7 Hope \u22128)"
   choiceCText: "C \xB7 \u0E14\u0E36\u0E07\u0E41\u0E23\u0E07\u0E07\u0E32\u0E19\u0E40\u0E14\u0E47\u0E01
-    (Hope \u221215)"
+    (\u0E2B\u0E25\u0E48\u0E2D\u0E40\u0E22\u0E47\u0E19 +12 \xB7 Hope \u221215)"
   choiceA_FoodChange: 0
   choiceA_EnergyChange: 0
   choiceA_WaterChange: 0
@@ -67,6 +67,9 @@ MonoBehaviour:
   - Q10
   choiceC_QuizIds:
   - Q10
+  choiceA_CoolingWorkers: 0
+  choiceB_CoolingWorkers: 6
+  choiceC_CoolingWorkers: 12
   choiceA_DeferredCrisis: 
   choiceB_DeferredCrisis: 
   choiceC_DeferredCrisis: 

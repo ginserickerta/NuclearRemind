@@ -62,6 +62,9 @@ MonoBehaviour:
   choiceA_QuizIds: []
   choiceB_QuizIds: []
   choiceC_QuizIds: []
+  choiceA_CoolingWorkers: 0
+  choiceB_CoolingWorkers: 0
+  choiceC_CoolingWorkers: 0
   choiceA_DeferredCrisis: 
   choiceB_DeferredCrisis: 
   choiceC_DeferredCrisis: 
