@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c131463f6b61cbf47b6a4f51fa063300, type: 3}
+  m_Name: Beat_deferred_water_crisis
+  m_EditorClassIdentifier: NuclearReMind::NuclearReMind.StoryBeatSO
+  beatId: deferred_water_crisis
+  triggerType: 7
+  triggerParam: water
+  record: {fileID: 0}
+  infoCard: {fileID: 0}
+  crisis: {fileID: 11400000, guid: 408ae5e82f9f00f42aea1cf5e7e3af85, type: 2}
+  quiz: []
+  npcLinePre: 
+  innerVoiceAfter: 
+  logLines: []
+  noteTH: "\u0E15\u0E32\u0E21\u0E2B\u0E25\u0E31\u0E07\u0E1E\u0E25\u0E32\u0E2A\u0E21\u0E32
+    C (\u0E09\u0E35\u0E14\u0E2A\u0E32\u0E23\u0E2B\u0E25\u0E48\u0E2D\u0E40\u0E22\u0E47\u0E19
+    \u2014 \u0E19\u0E49\u0E33\u0E2B\u0E32\u0E22\u0E04\u0E23\u0E36\u0E48\u0E07\u0E04\u0E25\u0E31\u0E07)
+    \xB7 guide \u0E23\u0E30\u0E1A\u0E38\u0E41\u0E04\u0E48\u0E04\u0E35\u0E22\u0E4C
+    water \u2014 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E41\u0E15\u0E48\u0E07\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E15\u0E32\u0E21\u0E42\u0E17\u0E19"

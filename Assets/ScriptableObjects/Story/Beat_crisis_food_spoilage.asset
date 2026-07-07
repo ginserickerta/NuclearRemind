@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c131463f6b61cbf47b6a4f51fa063300, type: 3}
+  m_Name: Beat_crisis_food_spoilage
+  m_EditorClassIdentifier: NuclearReMind::NuclearReMind.StoryBeatSO
+  beatId: crisis_food_spoilage
+  triggerType: 4
+  triggerParam: food_above_500
+  record: {fileID: 0}
+  infoCard: {fileID: 11400000, guid: 67de29f23afb9734dbe2d32c0975cf77, type: 2}
+  crisis: {fileID: 11400000, guid: be43b5fc5cf02b040a361f8da4c312bb, type: 2}
+  quiz: []
+  npcLinePre: 
+  innerVoiceAfter: 
+  logLines: []
+  noteTH: "~Day 24 \xB7 \u0E04\u0E27\u0E34\u0E0B\u0E23\u0E32\u0E22\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01:
+    A\u2192Q6 (mutation) \xB7 B\u2192Q7 (irradiation) \xB7 C\u2192\u0E44\u0E21\u0E48\u0E21\u0E35"

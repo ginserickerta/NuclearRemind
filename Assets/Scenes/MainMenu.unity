@@ -798,7 +798,7 @@ MonoBehaviour:
     m_FontStyle: 1
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 84
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -884,7 +884,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "NSC 2026 \xB7 \u0E17\u0E35\u0E21\u0E1E\u0E31\u0E12\u0E19\u0E32 Veltara"
+  m_Text: "NSC 2026 \xB7 \u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E01\u0E32\u0E23\u0E40\u0E23\u0E35\u0E22\u0E19\u0E23\u0E39\u0E49"
 --- !u!222 &1553945498
 CanvasRenderer:
   m_ObjectHideFlags: 0

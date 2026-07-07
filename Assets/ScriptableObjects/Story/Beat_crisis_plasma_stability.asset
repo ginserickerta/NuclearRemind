@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c131463f6b61cbf47b6a4f51fa063300, type: 3}
+  m_Name: Beat_crisis_plasma_stability
+  m_EditorClassIdentifier: NuclearReMind::NuclearReMind.StoryBeatSO
+  beatId: crisis_plasma_stability
+  triggerType: 4
+  triggerParam: heat_above_80|q_above_0.3
+  record: {fileID: 0}
+  infoCard: {fileID: 11400000, guid: b7c035bc5141f8d4f90f24fc7d88ff2c, type: 2}
+  crisis: {fileID: 11400000, guid: fe67e1602ef3e6e4ab2bf407f1e65998, type: 2}
+  quiz: []
+  npcLinePre: 
+  innerVoiceAfter: 
+  logLines: []
+  noteTH: "~Day 17 \xB7 \u0E04\u0E27\u0E34\u0E0B Q2,Q3 \u0E1C\u0E39\u0E01\u0E17\u0E35\u0E48
+    crisis.linkedQuizIds (\u0E22\u0E34\u0E07\u0E2B\u0E25\u0E31\u0E07 Outcome \u0E17\u0E38\u0E01\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01)"
