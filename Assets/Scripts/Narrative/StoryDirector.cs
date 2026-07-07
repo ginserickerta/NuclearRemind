@@ -21,16 +21,29 @@ namespace NuclearReMind
         /// <summary>CardUIController (เฟส 3) ตั้ง true ตอน OnEnable — ก่อนหน้านั้นการ์ดเป็น toast + auto-advance</summary>
         public static bool CardUIAvailable = false;
 
+        // วิกฤตซ้อน (deferredCrisis §4): เลือกทาง C แล้วปัญหาใหม่ตามมาอีก N วัน
+        private const int DeferredCrisisDelayDays = 2;
+
+        // "coolingWorkerShortage" (decree_emergency §4) = จบวันระหว่างพายุที่ HEAT ≥ 70
+        // (พายุ +12/วัน เกินกำลังหล่อเย็น — decree ให้ CoolingLaborBonus เข้าสูตรหล่อเย็นแก้ตรงจุด)
+        private const string CoolingShortageKeyword = "coolingWorkerShortage";
+        private const string CoolingShortageCondition = "heat_above_70";
+
         private enum Step { Idle, Record, Info, Crisis, Outcome, Quiz }
         private Step _step = Step.Idle;
         private StoryBeatSO _activeBeat;
         private int _crisisChoice = -1;
+        private int _currentDay = 1;
 
         private readonly HashSet<string> _fired = new HashSet<string>();
         private readonly List<string> _firedOrder = new List<string>();      // ตามลำดับที่ยิง — ลงเซฟ
         private readonly List<RecordCardSO> _archived = new List<RecordCardSO>();
         private readonly Queue<StoryBeatSO> _pendingBeats = new Queue<StoryBeatSO>();
         private readonly Queue<string> _pendingLogLines = new Queue<string>(); // logLines กระจายวันละบรรทัด (ลางพายุ)
+
+        // วิกฤตซ้อนที่รอวันยิง — list คู่ index (JsonUtility ไม่รองรับ dict) · ลงเซฟ
+        private readonly List<string> _deferredKeys = new List<string>();
+        private readonly List<int> _deferredFireDays = new List<int>();
 
         // latch — ยิงครั้งแรกครั้งเดียว (แบบเดียวกับ Q1 ใน QuizManager)
         private bool _deuteriumFired, _reactorStartFired;
@@ -56,6 +69,10 @@ namespace NuclearReMind
 
         /// <summary>การ์ดบันทึกที่กู้คืนแล้ว ตามลำดับ (ให้ RecordsPanel ย้อนอ่าน)</summary>
         public IReadOnlyList<RecordCardSO> ArchivedRecords => _archived;
+
+        /// <summary>วิกฤตซ้อนที่รอวันยิง (read-only ให้ SaveManager — คู่ index กับ DeferredCrisisFireDays)</summary>
+        public IReadOnlyList<string> DeferredCrisisKeys => _deferredKeys;
+        public IReadOnlyList<int> DeferredCrisisFireDays => _deferredFireDays;
 
         private void Awake()
         {
@@ -96,9 +113,25 @@ namespace NuclearReMind
 
         private void HandleDayStarted(int day, bool timed)
         {
+            _currentDay = day;
+
             // logLines ของ beat แบบกระจาย (ลางพายุ §4) — ปล่อยวันละบรรทัด "ไม่รวบ"
             if (_pendingLogLines.Count > 0)
                 Notice(_pendingLogLines.Dequeue());
+
+            // วิกฤตซ้อนที่ครบกำหนด → ยิง beat OnDeferredCrisis ที่คีย์ตรงกัน (คีย์ใช้ครั้งเดียว)
+            for (int i = _deferredKeys.Count - 1; i >= 0; i--)
+            {
+                if (day < _deferredFireDays[i]) continue;
+                string key = _deferredKeys[i];
+                _deferredKeys.RemoveAt(i);
+                _deferredFireDays.RemoveAt(i);
+
+                foreach (var beat in beats)
+                    if (Eligible(beat) && beat.triggerType == StoryTriggerType.OnDeferredCrisis
+                        && beat.triggerParam == key)
+                        FireBeat(beat);
+            }
 
             foreach (var beat in beats)
             {
@@ -131,11 +164,10 @@ namespace NuclearReMind
                             FireBeat(beat);
                         break;
                     case StoryTriggerType.OnStormActive:
-                        // ระหว่างพายุ (Day 25–30): param ว่าง = ยิงเลย · ไม่ว่างประเมินแบบ StatCondition
-                        // (คีย์เวิร์ดเฉพาะเช่น "coolingWorkerShortage" จะนิยามตอนใส่เนื้อหา — ไม่รู้จัก = ไม่ยิง)
+                        // ระหว่างพายุ (Day 25–30): param ว่าง = ยิงเลย · "coolingWorkerShortage" = HEAT ≥ 70
+                        // (หล่อเย็นตามพายุไม่ทัน) · คีย์อื่นประเมินแบบ StatCondition · ไม่รู้จัก = ไม่ยิง
                         if (day >= CoreTowerManager.StormStartDay && day <= GameManager.MaxDay
-                            && (string.IsNullOrEmpty(beat.triggerParam)
-                                || StatCondition.Matches(beat.triggerParam, day, _resources, _tower)))
+                            && StormParamMatches(beat.triggerParam, day))
                             FireBeat(beat);
                         break;
                 }
@@ -175,6 +207,14 @@ namespace NuclearReMind
 
         private bool Eligible(StoryBeatSO beat)
             => beat != null && !string.IsNullOrEmpty(beat.beatId) && !_fired.Contains(beat.beatId);
+
+        // เงื่อนไข OnStormActive: ว่าง = จริงเสมอ · คีย์เวิร์ดพิเศษแปลงเป็นเงื่อนไข StatCondition ก่อนประเมิน
+        private bool StormParamMatches(string param, int day)
+        {
+            if (string.IsNullOrEmpty(param)) return true;
+            string condition = param == CoolingShortageKeyword ? CoolingShortageCondition : param;
+            return StatCondition.Matches(condition, day, _resources, _tower);
+        }
 
         // ═════════════════ Beat playback (state machine) ═════════════════
 
@@ -302,6 +342,14 @@ namespace NuclearReMind
 
         private void HandleDilemmaResolved(DilemmaData dilemma, int choiceIndex)
         {
+            // วิกฤตซ้อน (deferredCrisis §4): จดคีย์ก่อน guard — ใช้ได้กับทุก dilemma ไม่เฉพาะของ beat
+            string deferred = dilemma != null ? dilemma.GetDeferredCrisis(choiceIndex) : null;
+            if (!string.IsNullOrEmpty(deferred) && !_deferredKeys.Contains(deferred))
+            {
+                _deferredKeys.Add(deferred);
+                _deferredFireDays.Add(_currentDay + DeferredCrisisDelayDays);
+            }
+
             if (_step != Step.Crisis || _activeBeat == null || dilemma != _activeBeat.crisis) return;
             _crisisChoice = choiceIndex;
             Advance(Step.Outcome);
@@ -346,6 +394,20 @@ namespace NuclearReMind
                     if (record != null && !_archived.Contains(record))
                         _archived.Add(record);
                 }
+
+            // วิกฤตซ้อนที่ค้างรอวันยิง — list คู่ index (เซฟเก่าไม่มี field → default ว่าง ปลอดภัย)
+            _deferredKeys.Clear();
+            _deferredFireDays.Clear();
+            if (save.deferredCrisisKeys != null && save.deferredCrisisDays != null)
+            {
+                int n = Mathf.Min(save.deferredCrisisKeys.Count, save.deferredCrisisDays.Count);
+                for (int i = 0; i < n; i++)
+                    if (!string.IsNullOrEmpty(save.deferredCrisisKeys[i]))
+                    {
+                        _deferredKeys.Add(save.deferredCrisisKeys[i]);
+                        _deferredFireDays.Add(save.deferredCrisisDays[i]);
+                    }
+            }
 
             // latch ตามสถานะเซฟ — ไม่ยิงซ้ำหลังโหลด
             _deuteriumFired = save.resources.deuterium > 0f;

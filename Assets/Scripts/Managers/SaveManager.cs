@@ -99,6 +99,8 @@ namespace NuclearReMind
             {
                 save.firedStoryBeats = new List<string>(StoryDirector.Instance.FiredBeatIds);
                 save.archivedRecords = StoryDirector.Instance.ArchivedRecordIds;
+                save.deferredCrisisKeys = new List<string>(StoryDirector.Instance.DeferredCrisisKeys);
+                save.deferredCrisisDays = new List<int>(StoryDirector.Instance.DeferredCrisisFireDays);
             }
 
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)

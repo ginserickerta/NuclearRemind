@@ -26,6 +26,8 @@ namespace NuclearReMind.EditorTools
             "Crisis_MalignantOutbreak",
             "Crisis_FoodShortage",
             "Crisis_DecreeEmergency", // สร้างโดย StorySetup (เฟส 4) — กันหลุดเข้า pool ตอนรัน CrisisSetup ซ้ำ
+            "Crisis_WaterAftermath",  // วิกฤตซ้อน (เฟส 5) — ยิงผ่าน beat OnDeferredCrisis เท่านั้น
+            "Crisis_FoodAftermath",
         };
 
         [MenuItem("NuclearReMind/Setup Crisis Dilemmas")]
@@ -97,6 +99,11 @@ namespace NuclearReMind.EditorTools
             asset.choiceB_AfterText = def.bAfter;
             asset.choiceC_AfterText = def.cAfter;
 
+            // วิกฤตซ้อน (deferredCrisis §4) — StoryDirector ยิง beat OnDeferredCrisis หลังหน่วง 2 วัน
+            asset.choiceA_DeferredCrisis = def.aDeferred;
+            asset.choiceB_DeferredCrisis = def.bDeferred;
+            asset.choiceC_DeferredCrisis = def.cDeferred;
+
             EditorUtility.SetDirty(asset);
         }
 
@@ -162,7 +169,7 @@ Kova: รอดแล้ว แต่คืนนี้มืดทั้งเ�
 Kova: ซ่อมได้ แต่คนของเราไม่ใช่อะไหล่
 ▸ ความคิด: สองคน... ที่ผมส่งลงไปเอง",
                 cText = "C · ฉีดสารหล่อเย็นฉุกเฉิน (น้ำ −200)",
-                cWater = -200,
+                cWater = -200, cDeferred = "water", // guide: deferredCrisis "water" — วิกฤตน้ำตามมาอีก 2 วัน
                 cAfter =
 @"[ระบบ] HEAT ลดฮวบทันที · เตาปลอดภัยชั่วคราว
 [ระบบ] คลังน้ำลดลง 50%
@@ -193,6 +200,7 @@ Mira: เห็นก่อนถึงรักษาถูกจุด แต�
 Mira: รังสีที่คนกลัวกันนี่ วันนี้มันช่วยชีวิตคนสิบห้าคน",
                 cText = "C · กักตัว รอให้หายเอง (เสี่ยงเสียชีวิต)",
                 cHope = -3, cKeran = -2, cDeaths = 3, // Hope −5/คนตาย หักเพิ่มโดย PopulationManager
+                cDeferred = "food", // guide: deferredCrisis "food" — แรงงานฟาร์มขาด วิกฤตอาหารตามมา
                 cAfter =
 @"[ระบบ] ไม่มีการรักษา · 4 วันผ่านไป เสียชีวิต 3 คน
 [ระบบ] แรงงานฟาร์มขาด · อาหารเริ่มหมด (วิกฤตซ้อน)
@@ -231,6 +239,7 @@ Kova: ฉายรังสีอาหาร ไม่ได้แปลว่�
         private struct CrisisDef
         {
             public string id, trigger, scenario, aText, bText, cText, aAfter, bAfter, cAfter;
+            public string aDeferred, bDeferred, cDeferred;
             public float aFood, aEnergy, aWater, aIron, aHope; public int aAethon, aKeran, aIdle, aDeaths;
             public float bFood, bEnergy, bWater, bIron, bHope; public int bAethon, bKeran, bIdle, bDeaths;
             public float cFood, cEnergy, cWater, cIron, cHope; public int cAethon, cKeran, cIdle, cDeaths;

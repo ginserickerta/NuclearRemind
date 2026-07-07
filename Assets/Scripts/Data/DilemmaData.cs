@@ -78,6 +78,13 @@ namespace NuclearReMind
         public string[] choiceB_QuizIds;
         public string[] choiceC_QuizIds;
 
+        [Header("Deferred Crisis (Story Guide — วิกฤตซ้อนจากทางเลือก)")]
+        // คีย์วิกฤตซ้อน เช่น "water" (พลาสมา C ฉีดสารหล่อเย็น) / "food" (โรครังสี C กักตัว)
+        // StoryDirector จดตอน resolve แล้วยิง beat OnDeferredCrisis ที่ param ตรงกันหลังหน่วง 2 วัน · ว่าง = ไม่มี
+        public string choiceA_DeferredCrisis;
+        public string choiceB_DeferredCrisis;
+        public string choiceC_DeferredCrisis;
+
         /// <summary>
         /// IQuizTrigger: แปลง linkedQuizIds → QuizQuestionSO[] (ข้าม id ที่หาไม่เจอ/ว่าง)
         /// QuizManager.EnqueueQuizzes(this) เรียกเมธอดนี้เพื่อเอาควิซที่ผูกไว้เข้าคิว
@@ -104,6 +111,15 @@ namespace NuclearReMind
         /// <summary>ควิซของทางเลือกที่กด (map id → SO) — DilemmaManager ใช้ตอน resolve</summary>
         public QuizQuestionSO[] GetLinkedQuizzesForChoice(int choiceIndex)
             => MapIdsToQuizzes(GetQuizIdsForChoice(choiceIndex));
+
+        /// <summary>คีย์วิกฤตซ้อนของทางเลือกที่กด (0=A/1=B/2=C) — ว่าง/นอกช่วง = ไม่มี</summary>
+        public string GetDeferredCrisis(int choiceIndex) => choiceIndex switch
+        {
+            0 => choiceA_DeferredCrisis,
+            1 => choiceB_DeferredCrisis,
+            2 => choiceC_DeferredCrisis,
+            _ => null,
+        };
 
         /// <summary>บทหลังเลือกของทางเลือกที่กด (0=A/1=B/2=C) — ว่าง/นอกช่วง = ไม่มี</summary>
         public string GetAfterText(int choiceIndex) => choiceIndex switch

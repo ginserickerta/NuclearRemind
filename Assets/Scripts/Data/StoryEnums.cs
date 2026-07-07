@@ -27,8 +27,15 @@ namespace NuclearReMind
         /// <summary>พายุรังสีมาถึง (วันแรกของช่วงพายุ — CoreTowerManager.StormStartDay)</summary>
         OnStormApproach,
 
-        /// <summary>ระหว่างพายุ + เงื่อนไขเพิ่มใน triggerParam (เช่น "coolingWorkerShortage")</summary>
+        /// <summary>ระหว่างพายุ + เงื่อนไขเพิ่มใน triggerParam — ประเมินตอนจบวัน
+        /// คีย์เวิร์ดพิเศษ "coolingWorkerShortage" = HEAT ≥ 70 (หล่อเย็นตามพายุ +12/วันไม่ทัน)
+        /// คีย์อื่นประเมินแบบ StatCondition ปกติ · ว่าง = ยิงทันทีที่พายุมา</summary>
         OnStormActive,
+
+        /// <summary>วิกฤตซ้อนจากทางเลือกของวิกฤตก่อนหน้า (Story Guide deferredCrisis)
+        /// triggerParam = คีย์ เช่น "water"/"food" — StoryDirector จดคีย์ตอน resolve
+        /// (DilemmaData.choiceX_DeferredCrisis) แล้วยิง beat นี้หลังหน่วง 2 วัน</summary>
+        OnDeferredCrisis,
     }
 
     /// <summary>

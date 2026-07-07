@@ -13,12 +13,13 @@ namespace NuclearReMind.EditorTools
     ///   1. RecordCardSO 4 ใบ (บันทึก Dr. Elara Vane #01/#02/#03/#สุดท้าย)
     ///   2. InfoCardSO 6 ใบ (ความรู้ก่อนควิซ/วิกฤต — Energy/Reactor/Medical/Food/Fusion/Ethics)
     ///   3. MemorialSO + BuildingData "อนุสรณ์" + PrePlacedBuilding ในฐาน (คลิกเปิดแผงรายชื่อ)
-    ///   4. Crisis_DecreeEmergency (DilemmaData ใหม่ — ประกาศฉุกเฉิน · ไม่เข้า dilemmaPool)
-    ///   5. StoryBeatSO 10 beat เรียงตามไทม์ไลน์ → wire เข้า StoryDirector.beats
+    ///   4. Crisis_DecreeEmergency + วิกฤตซ้อน Water/FoodAftermath (DilemmaData ใหม่ · ไม่เข้า dilemmaPool)
+    ///   5. StoryBeatSO 12 beat เรียงตามไทม์ไลน์ → wire เข้า StoryDirector.beats
     ///
     /// การแมปที่ต่างจาก guide (จดไว้ใน noteTH ของ beat ด้วย):
     ///   - crisis_radiation_disease: trigger "ZoneA_workers>threshold" → "day_reached_20" (ไม่มีระบบ Zone A)
-    ///   - decree_emergency: param "coolingWorkerShortage" ยังไม่มีนิยามใน StatCondition → beat หลับ (เฟส 5 ปลุก)
+    ///   - decree_emergency: "coolingWorkerShortage" = จบวันระหว่างพายุที่ HEAT ≥ 70 (นิยามใน StoryDirector)
+    ///   - deferredCrisis water/food: guide ระบุแค่คีย์ — เนื้อหาวิกฤตซ้อนแต่งเพิ่มตามโทน guide
     ///   - tutorial_day1 ข้าม — ใช้ TutorialManager เดิม (guide ก็ระบุ "ใช้ระบบ tutorial ที่มีอยู่")
     /// </summary>
     public static class StorySetup
@@ -38,11 +39,12 @@ namespace NuclearReMind.EditorTools
             var infos = CreateInfoCards();
             var memorial = CreateMemorialAssets(out var memorialBuilding);
             var decreeCrisis = CreateDecreeCrisis();
+            CreateAftermathCrises(out var waterAftermath, out var foodAftermath);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            var beats = CreateBeats(records, infos, decreeCrisis);
+            var beats = CreateBeats(records, infos, decreeCrisis, waterAftermath, foodAftermath);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -249,12 +251,67 @@ Mira: เราชนะพายุไปทำไม ถ้าไม่เห�
         }
 
         // ─────────────────────────────────────────────
+        //  4b. วิกฤตซ้อน (เฟส 5 — guide ระบุแค่คีย์ deferredCrisis: water/food · เนื้อหาแต่งเพิ่มตามโทน guide)
+        //      2 ทางเลือก (ปุ่ม C ซ่อนเองเมื่อ choiceCText ว่าง) · ไม่มีควิซ (ไม่มีความรู้ใหม่) · ไม่เข้า pool
+        // ─────────────────────────────────────────────
+        private static void CreateAftermathCrises(out DilemmaData water, out DilemmaData food)
+        {
+            water = CreateOrLoad<DilemmaData>($"{DilemmaFolder}/Crisis_WaterAftermath.asset");
+            water.dilemmaId = "Crisis_WaterAftermath";
+            water.triggerCondition = ""; // ยิงผ่าน beat deferred_water_crisis เท่านั้น
+            water.scenarioText =
+@"⚠️ วิกฤตซ้อน: น้ำไม่พอ
+
+คลังน้ำที่หายไปครึ่งหนึ่งจากการฉีดสารหล่อเย็นเริ่มส่งผล
+ประชาชนต่อแถวรับปันส่วนน้ำ โรงอาหารต้องหยุดครึ่งวัน
+ต้องหาน้ำกลับมาก่อนที่คนจะล้ม";
+            water.choiceAText = "A · เร่งกำลังโรงผลิตน้ำ (พลังงาน −150)";
+            water.choiceA_EnergyChange = -150;
+            water.choiceA_AfterText =
+@"[ระบบ] โรงน้ำเดินเครื่องเต็มกำลัง · คลังน้ำเริ่มฟื้น
+Kova: ไฟที่เหลือน้อยลงอีก แต่คนต้องมีน้ำก่อน";
+            water.choiceBText = "B · ปันส่วนน้ำอย่างเข้มงวด (Hope −5)";
+            water.choiceB_HopeChange = -5;
+            water.choiceB_AfterText =
+@"[ระบบ] จำกัดน้ำคนละครึ่งส่วน · เมืองเงียบลง
+▸ ความคิด: เข้าแถวรับน้ำ... ภาพที่ผมไม่อยากเห็นอีกแล้ว";
+            water.choiceCText = "";
+            water.linkedQuizIds = new string[0];
+            EditorUtility.SetDirty(water);
+
+            food = CreateOrLoad<DilemmaData>($"{DilemmaFolder}/Crisis_FoodAftermath.asset");
+            food.dilemmaId = "Crisis_FoodAftermath";
+            food.triggerCondition = "";
+            food.scenarioText =
+@"⚠️ วิกฤตซ้อน: แรงงานฟาร์มขาด
+
+คนที่เสียไปคือแรงงานฟาร์ม
+ผลผลิตอาหารตกต่อเนื่อง คลังเสบียงลดลงทุกวัน
+ต้องอุดช่องว่างก่อนฤดูพายุจะมาถึง";
+            food.choiceAText = "A · ดึงคนจากงานก่อสร้างไปฟาร์ม (พลังงาน −100)";
+            food.choiceA_EnergyChange = -100;
+            food.choiceA_AfterText =
+@"[ระบบ] ฟาร์มกลับมาเดินเต็มกำลัง · งานก่อสร้างช้าลง
+Kova: คนเท่าเดิม งานเท่าเดิม ต้องมีอะไรช้าลงสักอย่าง";
+            food.choiceBText = "B · ลดปันส่วนอาหารชั่วคราว (Hope −5)";
+            food.choiceB_HopeChange = -5;
+            food.choiceB_AfterText =
+@"[ระบบ] ทุกคนได้อาหารน้อยลงจนกว่าฟาร์มจะฟื้น
+▸ ความคิด: ผมสัญญากับพวกเขาไว้ว่ามันจะดีขึ้น...";
+            food.choiceCText = "";
+            food.linkedQuizIds = new string[0];
+            EditorUtility.SetDirty(food);
+        }
+
+        // ─────────────────────────────────────────────
         //  5. StoryBeats — เรียงตามไทม์ไลน์ §4
         // ─────────────────────────────────────────────
         private static StoryBeatSO[] CreateBeats(
             Dictionary<string, RecordCardSO> records,
             Dictionary<string, InfoCardSO> infos,
-            DilemmaData decreeCrisis)
+            DilemmaData decreeCrisis,
+            DilemmaData waterAftermath,
+            DilemmaData foodAftermath)
         {
             var plasmaCrisis  = LoadAsset<DilemmaData>($"{DilemmaFolder}/Crisis_PlasmaInstability.asset");
             var outbreakCrisis = LoadAsset<DilemmaData>($"{DilemmaFolder}/Crisis_MalignantOutbreak.asset");
@@ -313,6 +370,19 @@ Mira: เราชนะพายุไปทำไม ถ้าไม่เห�
                 b.noteTH = "~Day 24 · ควิซรายทางเลือก: A→Q6 (mutation) · B→Q7 (irradiation) · C→ไม่มี";
             }));
 
+            // ── วิกฤตซ้อน (เฟส 5 — deferredCrisis §4): ยิง 2 วันหลังเลือกทาง C ของวิกฤตแม่ ──
+            beats.Add(Beat("deferred_water_crisis", StoryTriggerType.OnDeferredCrisis, "water", b =>
+            {
+                b.crisis = waterAftermath;
+                b.noteTH = "ตามหลังพลาสมา C (ฉีดสารหล่อเย็น — น้ำหายครึ่งคลัง) · guide ระบุแค่คีย์ water — เนื้อหาแต่งเพิ่มตามโทน";
+            }));
+
+            beats.Add(Beat("deferred_food_crisis", StoryTriggerType.OnDeferredCrisis, "food", b =>
+            {
+                b.crisis = foodAftermath;
+                b.noteTH = "ตามหลังโรครังสี C (กักตัว — แรงงานฟาร์มขาด) · guide ระบุแค่คีย์ food — เนื้อหาแต่งเพิ่มตามโทน";
+            }));
+
             // ── PHASE 4 · foreshadow_storm — ลางพายุ กระจายวันละบรรทัด Day 20→23 ──
             beats.Add(Beat("foreshadow_storm", StoryTriggerType.OnDay, "20", b =>
             {
@@ -349,12 +419,12 @@ Mira: เราชนะพายุไปทำไม ถ้าไม่เห�
                            "Q8,Q9 ย้ายมาจาก CoreTowerManager phase-complete เพื่อให้ InfoCard นำก่อน";
             }));
 
-            // ── decree_emergency — การ์ดจริยธรรม (หลับจนเฟส 5 นิยาม coolingWorkerShortage) ──
+            // ── decree_emergency — การ์ดจริยธรรม (เฟส 5 ปลุกแล้ว) ──
             beats.Add(Beat("decree_emergency", StoryTriggerType.OnStormActive, "coolingWorkerShortage", b =>
             {
                 b.infoCard = infos["alara"];
                 b.crisis = decreeCrisis;
-                b.noteTH = "★ param ยังไม่มีนิยามใน StatCondition → beat ไม่ยิง (เฟส 5 ปลุก + ต่อ coolingWorkers) · " +
+                b.noteTH = "coolingWorkerShortage = จบวันระหว่างพายุที่ HEAT ≥ 70 (หล่อเย็นตามพายุ +12/วันไม่ทัน) · " +
                            "ดาบสองคม: B/C ทำ Hope ร่วง อาจถึง 0 = แพ้ — ALARA ในรูปการตัดสินใจ";
             }));
 

@@ -115,6 +115,32 @@ namespace NuclearReMind.Tests
         }
 
         [Test]
+        public void DeferredKeys_UsedByCrises_HaveMatchingDeferredBeats()
+        {
+            var beats = RequireBeats();
+
+            var beatKeys = new HashSet<string>();
+            foreach (var beat in beats)
+                if (beat.triggerType == StoryTriggerType.OnDeferredCrisis && !string.IsNullOrEmpty(beat.triggerParam))
+                    beatKeys.Add(beat.triggerParam);
+
+            foreach (var guid in AssetDatabase.FindAssets("t:DilemmaData", new[] { "Assets/ScriptableObjects/Dilemmas" }))
+            {
+                var d = AssetDatabase.LoadAssetAtPath<DilemmaData>(AssetDatabase.GUIDToAssetPath(guid));
+                if (d == null) continue;
+
+                for (int choice = 0; choice < 3; choice++)
+                {
+                    string key = d.GetDeferredCrisis(choice);
+                    if (string.IsNullOrEmpty(key)) continue;
+                    Assert.IsTrue(beatKeys.Contains(key),
+                        $"{d.dilemmaId} ทางเลือก {(char)('A' + choice)} ตั้ง deferredCrisis '{key}' " +
+                        "แต่ไม่มี beat OnDeferredCrisis ที่ param ตรงกัน — วิกฤตซ้อนจะหายเงียบ");
+                }
+            }
+        }
+
+        [Test]
         public void DecreeCrisis_NotWiredIntoAnyPoolTrigger_AndQ10OnBAndCOnly()
         {
             var decree = AssetDatabase.LoadAssetAtPath<DilemmaData>(
