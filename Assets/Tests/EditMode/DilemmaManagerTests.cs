@@ -253,7 +253,9 @@ namespace NuclearReMind.Tests
             eventManager.RaiseDilemmaResolved(crisis, 2); // C
 
             Assert.Contains((ResourceType.Iron, -250f), resDeltas, "choice C ต้องหัก Iron");
-            Assert.AreEqual(-12f, hopeDelta, 1e-4f, "choice C ต้องปรับ Hope");
+            // Hope สุทธิ = ของทางเลือก (−12) + โบนัสแก้วิกฤตสำเร็จ (V4 §9: เลือกทางใดก็ได้ +5) = −7
+            Assert.AreEqual(-12f + dilemmaManager.resolveHopeBonus, hopeDelta, 1e-4f,
+                "choice C ต้องปรับ Hope ของทางเลือก + โบนัสแก้วิกฤต");
         }
 
         [Test]
