@@ -28,7 +28,8 @@ namespace NuclearReMind
         [Header("บรรยากาศ (optional — โชว์เป็นข้อความในการ์ด/log)")]
         [TextArea(1, 3)] public string npcLinePre;      // บทพูด NPC ก่อนเข้า beat เช่น "Kova: ..."
         [TextArea(1, 3)] public string innerVoiceAfter; // เสียงในใจ Auren ปิดท้าย beat (ตัวเอียงท้ายการ์ด)
-        [TextArea(1, 2)] public string[] logLines;      // beat แบบกระจายหลายบรรทัด (เช่น ลางพายุ Day 20–23)
+        [TextArea(1, 2)] public string[] logLines;      // ข้อความ log หลายบรรทัดของ beat (ระบบ/NPC/เควสต์)
+        public bool logLinesDaily;                      // true = ปล่อยวันละบรรทัดไม่รวบ (ลางพายุ Day 20–23) · false = โชว์ทุกบรรทัดทันที
 
         [TextArea(1, 4)] public string noteTH; // โน้ตสำหรับทีม — ไม่โชว์ผู้เล่น
 

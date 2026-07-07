@@ -78,6 +78,13 @@ namespace NuclearReMind
         public string[] choiceB_QuizIds;
         public string[] choiceC_QuizIds;
 
+        [Header("Cooling Workers (Story Guide decree_emergency — effects coolingWorkers)")]
+        // แรงงานหล่อเย็นที่ได้จากทางเลือก — DecreeManager ฟัง OnDilemmaResolved แล้วบวกเข้า CoolingLaborBonus
+        // หน่วยเดียวกับ DecreeSO.coolingLaborGain (แต้มหล่อเย็นเข้าสูตร §8) · 0 = ไม่มี
+        public int choiceA_CoolingWorkers;
+        public int choiceB_CoolingWorkers;
+        public int choiceC_CoolingWorkers;
+
         [Header("Deferred Crisis (Story Guide — วิกฤตซ้อนจากทางเลือก)")]
         // คีย์วิกฤตซ้อน เช่น "water" (พลาสมา C ฉีดสารหล่อเย็น) / "food" (โรครังสี C กักตัว)
         // StoryDirector จดตอน resolve แล้วยิง beat OnDeferredCrisis ที่ param ตรงกันหลังหน่วง 2 วัน · ว่าง = ไม่มี
@@ -111,6 +118,15 @@ namespace NuclearReMind
         /// <summary>ควิซของทางเลือกที่กด (map id → SO) — DilemmaManager ใช้ตอน resolve</summary>
         public QuizQuestionSO[] GetLinkedQuizzesForChoice(int choiceIndex)
             => MapIdsToQuizzes(GetQuizIdsForChoice(choiceIndex));
+
+        /// <summary>แต้มแรงงานหล่อเย็นของทางเลือกที่กด (0=A/1=B/2=C) — นอกช่วง = 0</summary>
+        public int GetCoolingWorkers(int choiceIndex) => choiceIndex switch
+        {
+            0 => choiceA_CoolingWorkers,
+            1 => choiceB_CoolingWorkers,
+            2 => choiceC_CoolingWorkers,
+            _ => 0,
+        };
 
         /// <summary>คีย์วิกฤตซ้อนของทางเลือกที่กด (0=A/1=B/2=C) — ว่าง/นอกช่วง = ไม่มี</summary>
         public string GetDeferredCrisis(int choiceIndex) => choiceIndex switch

@@ -31,9 +31,9 @@
 ## 2. เช็คซีนหลังรัน Run All Setups
 
 - Hierarchy มี: `StoryCanvas` · `StoryDirector` · `CardUIController` · `RecordsPanelController` · `MemorialPanelController` · `PrePlacedMemorial`
-- Inspector ของ `StoryDirector`: **beats = 12** เรียงตามไทม์ไลน์
+- Inspector ของ `StoryDirector`: **beats = 14** เรียงตามไทม์ไลน์ (รวม tutorial_day1 + tutorial_first_power)
 - Inspector ของ `DilemmaManager`: **dilemmaPool = 0** (วิกฤตทุกใบยิงผ่าน beat แล้ว — ถ้าไม่ว่างแปลว่ารัน Crisis Setup เวอร์ชันเก่า)
-- Project: `Assets/ScriptableObjects/Story/` มี 23 asset (Beat×12 · Record×4 · Info×6 · Memorial×1) · `Dilemmas/` มี 6
+- Project: `Assets/ScriptableObjects/Story/` มี 25 asset (Beat×14 · Record×4 · Info×6 · Memorial×1) · `Dilemmas/` มี 6
 
 ---
 
@@ -41,6 +41,8 @@
 
 | # | ทำให้เกิด | ต้องเห็น |
 |---|---|---|
+| 0 | เริ่มเกม Day 1 | Kova: "วิศวกรใหม่สินะ..." + toast **[เควสต์] ทำให้เมืองมีไฟ** + ความคิด "ที่นี่มืดสนิท... เริ่มจากไฟก่อน" |
+| 0b | สร้าง**โรงไฟฟ้า**หลังแรกเสร็จ | 3 toast รวดเดียว: "[ระบบ] เครื่องกำเนิดไฟฟ้าเริ่มทำงาน · พลังงาน +60/วัน" → "Kova: ดี ที่เหลือคิดเองเป็นแล้ว" → ความคิด "เมืองนี้ยังไม่ตายซะทีเดียว" |
 | 1 | สร้าง**ห้องปฏิบัติการ**จนเสร็จ | การ์ด **บันทึก #01 — เชื้อเพลิงในน้ำ** เด้งกลางจอ เวลาหยุด (HUD ขึ้น "หยุด") · กดปิดแล้วเวลาเดินต่อ |
 | 2 | กดปุ่ม **"บันทึก"** (ซ้ายล่าง เหนือปุ่มคีย์ลัด) | แผง Records เปิด มีบันทึก #01 กดย้อนอ่านได้ |
 | 3 | **คลิกตึกอนุสรณ์** (2×2 ข้างขวาหอคอย) | แผงรายชื่อ 6 คน — มี **ELARA VANE** · toast "▸ ความคิด: คนพวกนี้เคยอยู่ที่นี่..." เด้ง**ครั้งแรกครั้งเดียว** |
@@ -54,7 +56,7 @@
 | 9 | เริ่มวัน 20–23 | **ลางพายุวันละ 1 บรรทัด** (เซนเซอร์เพี้ยน → Kova → ท้องฟ้า → สภาพอากาศ) ไม่รวบทีเดียว |
 | 10 | เริ่มวัน 23 | การ์ด **บันทึก #สุดท้าย — รายงานเตือนพายุ** + ความคิด "รายงานที่ผมเอาไปส่ง..." |
 | 11 | เริ่มวัน 25 | Kova ตะโกน + แจ้งพายุ → การ์ดความรู้**ฟิวชัน** → **Q8, Q9** · จากนี้ heat +12/วัน |
-| 12 | จบวันช่วงพายุที่ **HEAT ≥ 70** | การ์ดทบทวน **ALARA** → **ประกาศฉุกเฉิน**: A ไม่มีควิซ · B (−8) / C (−15) → **Q10** |
+| 12 | จบวันช่วงพายุที่ **HEAT ≥ 70** | การ์ดทบทวน **ALARA** → **ประกาศฉุกเฉิน**: A ไม่มีควิซ · B (หล่อเย็น +6 · Hope −8) / C (หล่อเย็น +12 · Hope −15) → **Q10** · เลือก B/C แล้ววันถัดไป HEAT ต้องไต่ช้าลง |
 | 13 | CORE ถึง 100% | **True Ending** "ภารกิจสำเร็จ — แสงแรกของโลกใหม่" (บทเต็ม + สถิติ + ข้อความให้กำลังใจ) |
 | 13b | ทางแพ้ | Hope 0 / HEAT ≥ 100 / หมดเวลา → GAME OVER ตามแบบ · Q 0.5–0.99 → Normal Ending |
 | 14 | **F5 เซฟ** กลางเรื่อง → **F9 โหลด** | beat ที่เล่นแล้ว**ไม่เด้งซ้ำ** · แผง Records ยังครบ · วิกฤตซ้อนที่ค้างยัง**มาตามนัด** |
@@ -79,4 +81,5 @@
 - ตัวเลข effect ทุกวิกฤต = ค่าตั้งต้นจาก guide ("ปรับ balance ได้") — แก้ที่ `CrisisSetup.cs`/`StorySetup.cs` แล้วรัน setup ซ้ำ
 - ชื่อ 5 คนบนอนุสรณ์ (นอกจาก ELARA VANE) แต่งไว้ให้ก่อน — แก้ได้ที่ `Story/Memorial_veltara.asset`
 - วิกฤตซ้อน 2 ใบ (น้ำ/อาหาร) guide ให้แค่คีย์ — เนื้อหาแต่งเพิ่มตามโทน แก้ได้ที่ `StorySetup.CreateAftermathCrises`
-- effect ที่เกมยังไม่มีระบบรองรับถูกข้ามไว้ (จดใน comment): workersReassigned, radSickRisk, yieldPct, spoilRate, coolingWorkers +1 ของ decree
+- effect ที่เกมยังไม่มีระบบรองรับถูกข้ามไว้ (จดใน comment): workersReassigned, radSickRisk, yieldPct, spoilRate, hopePerDay/patientDeathRisk ของ decree B
+- ~~coolingWorkers +1 ของ decree~~ → ทำแล้ว: B/C ให้แต้มหล่อเย็น +6/+12 ผ่าน `DilemmaData.choiceX_CoolingWorkers` + `DecreeManager` (สเกลเดียวกับปุ่มประกาศ ①②) — หมายเหตุ: แต้มนี้ยังไม่ลงเซฟ (ข้อจำกัดเดียวกับ decree ปุ่ม ①② เดิม)

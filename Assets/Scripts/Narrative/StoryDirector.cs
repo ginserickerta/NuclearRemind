@@ -236,12 +236,16 @@ namespace NuclearReMind
             if (!string.IsNullOrEmpty(_activeBeat.npcLinePre))
                 Notice(_activeBeat.npcLinePre);
 
-            // logLines: บรรทัดแรกทันที ที่เหลือปล่อยวันละบรรทัดตอนเริ่มวันถัดไป
+            // logLines: บรรทัดแรกทันที · logLinesDaily = ที่เหลือปล่อยวันละบรรทัด (ลางพายุ "ไม่รวบ")
+            //           ไม่ daily = โชว์ทุกบรรทัดทันที (เช่น ปฏิกิริยาโรงไฟฟ้าแรก / แจ้งพายุ)
             if (_activeBeat.logLines != null && _activeBeat.logLines.Length > 0)
             {
                 Notice(_activeBeat.logLines[0]);
                 for (int i = 1; i < _activeBeat.logLines.Length; i++)
-                    _pendingLogLines.Enqueue(_activeBeat.logLines[i]);
+                {
+                    if (_activeBeat.logLinesDaily) _pendingLogLines.Enqueue(_activeBeat.logLines[i]);
+                    else Notice(_activeBeat.logLines[i]);
+                }
             }
 
             Advance(Step.Record);

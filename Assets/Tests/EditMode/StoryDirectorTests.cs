@@ -105,6 +105,43 @@ namespace NuclearReMind.Tests
             CollectionAssert.AreEqual(new[] { "b_lab" }, director.FiredBeatIds);
         }
 
+        // ── logLines: daily = ปล่อยวันละบรรทัด · ไม่ daily = โชว์รวดเดียว ──
+
+        [Test]
+        public void LogLines_NotDaily_AllShownImmediately()
+        {
+            var beat = NewBeat("b_power", StoryTriggerType.OnDay, "2");
+            beat.logLines = new[] { "[ระบบ] ไฟมา", "Kova: ดี" };
+            beat.logLinesDaily = false;
+            SetBeats(beat);
+
+            var notices = new List<string>();
+            eventManager.OnNotice += notices.Add;
+            eventManager.RaiseDayStarted(2, true);
+
+            Assert.Contains("[ระบบ] ไฟมา", notices, "บรรทัดแรกโชว์ทันที");
+            Assert.Contains("Kova: ดี", notices, "ไม่ daily → บรรทัดถัดไปโชว์วันเดียวกัน ไม่ค้างคิว");
+        }
+
+        [Test]
+        public void LogLines_Daily_SpreadOneLinePerDay()
+        {
+            var beat = NewBeat("b_foreshadow", StoryTriggerType.OnDay, "20");
+            beat.logLines = new[] { "ลาง 1", "ลาง 2" };
+            beat.logLinesDaily = true;
+            SetBeats(beat);
+
+            var notices = new List<string>();
+            eventManager.OnNotice += notices.Add;
+
+            eventManager.RaiseDayStarted(20, true);
+            Assert.Contains("ลาง 1", notices);
+            CollectionAssert.DoesNotContain(notices, "ลาง 2", "daily → บรรทัด 2 รอวันถัดไป");
+
+            eventManager.RaiseDayStarted(21, true);
+            Assert.Contains("ลาง 2", notices, "วันถัดไปปล่อยบรรทัดถัดไป");
+        }
+
         // ── Trigger: Deuterium latch ──────────────────────────
 
         [Test]

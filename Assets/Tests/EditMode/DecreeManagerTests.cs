@@ -8,6 +8,7 @@ namespace NuclearReMind.Tests
     /// <summary>
     /// V4 §11 — ประกาศฉุกเฉิน: ให้แรงงานหล่อเย็น (CoolingLaborBonus) แลก Hope ทันที + ต่อวัน,
     /// ประกาศซ้ำไม่สะสม
+    /// + Story Guide decree_emergency: ทางเลือกวิกฤตที่มี coolingWorkers → บวก CoolingLaborBonus ผ่าน OnDilemmaResolved
     /// </summary>
     public class DecreeManagerTests
     {
@@ -75,6 +76,35 @@ namespace NuclearReMind.Tests
             eventManager.RaiseDayEnded(26);
 
             Assert.AreEqual(-3f, perDay, 1e-4f, "ระหว่างใช้ decree → Hope -3/วัน");
+        }
+
+        // ── Story Guide decree_emergency — coolingWorkers ผ่านทางเลือกวิกฤต ──
+
+        [Test]
+        public void DilemmaChoice_WithCoolingWorkers_AddsBonus()
+        {
+            var d = ScriptableObject.CreateInstance<DilemmaData>();
+            d.dilemmaId = "Crisis_DecreeEmergency";
+            d.choiceB_CoolingWorkers = 6;
+            d.choiceC_CoolingWorkers = 12;
+            _spawned.Add(d);
+
+            eventManager.RaiseDilemmaResolved(d, 0); // A ไม่ออกประกาศ
+            Assert.AreEqual(0, decreeManager.CoolingLaborBonus, "A ไม่มี coolingWorkers → ไม่บวก");
+
+            eventManager.RaiseDilemmaResolved(d, 2); // C ดึงแรงงานเด็ก
+            Assert.AreEqual(12, decreeManager.CoolingLaborBonus, "C → หล่อเย็น +12 (สเกลเดียวกับ Decree2)");
+        }
+
+        [Test]
+        public void DilemmaChoice_WithoutCoolingWorkers_DoesNothing()
+        {
+            var d = ScriptableObject.CreateInstance<DilemmaData>();
+            d.dilemmaId = "Crisis_FoodShortage"; // วิกฤตทั่วไป — ไม่มี coolingWorkers
+            _spawned.Add(d);
+
+            eventManager.RaiseDilemmaResolved(d, 1);
+            Assert.AreEqual(0, decreeManager.CoolingLaborBonus, "วิกฤตที่ไม่มี coolingWorkers → ไม่กระทบ");
         }
 
         private T NewComponent<T>(string name) where T : Component

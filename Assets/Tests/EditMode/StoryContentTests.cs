@@ -153,6 +153,11 @@ namespace NuclearReMind.Tests
             Assert.IsEmpty(decree.GetQuizIdsForChoice(0) ?? new string[0], "A ไม่ออกประกาศ → ไม่มีควิซ");
             CollectionAssert.AreEqual(new[] { "Q10" }, decree.GetQuizIdsForChoice(1), "B → alara_price");
             CollectionAssert.AreEqual(new[] { "Q10" }, decree.GetQuizIdsForChoice(2), "C → alara_price");
+
+            // guide effects coolingWorkers +1 — ผู้เล่นจ่าย Hope ต้อง "ได้ผล" จริง (แต้มหล่อเย็นสเกลปุ่ม ①②)
+            Assert.AreEqual(0, decree.GetCoolingWorkers(0), "A ไม่ออกประกาศ → ไม่ได้หล่อเย็น");
+            Assert.Greater(decree.GetCoolingWorkers(1), 0, "B ต้องได้แรงงานหล่อเย็น — ไม่งั้นเสีย Hope ฟรี");
+            Assert.Greater(decree.GetCoolingWorkers(2), 0, "C ต้องได้แรงงานหล่อเย็น — ไม่งั้นเสีย Hope ฟรี");
         }
     }
 }

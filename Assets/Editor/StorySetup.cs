@@ -14,13 +14,14 @@ namespace NuclearReMind.EditorTools
     ///   2. InfoCardSO 6 ใบ (ความรู้ก่อนควิซ/วิกฤต — Energy/Reactor/Medical/Food/Fusion/Ethics)
     ///   3. MemorialSO + BuildingData "อนุสรณ์" + PrePlacedBuilding ในฐาน (คลิกเปิดแผงรายชื่อ)
     ///   4. Crisis_DecreeEmergency + วิกฤตซ้อน Water/FoodAftermath (DilemmaData ใหม่ · ไม่เข้า dilemmaPool)
-    ///   5. StoryBeatSO 12 beat เรียงตามไทม์ไลน์ → wire เข้า StoryDirector.beats
+    ///   5. StoryBeatSO 14 beat เรียงตามไทม์ไลน์ → wire เข้า StoryDirector.beats
     ///
     /// การแมปที่ต่างจาก guide (จดไว้ใน noteTH ของ beat ด้วย):
     ///   - crisis_radiation_disease: trigger "ZoneA_workers>threshold" → "day_reached_20" (ไม่มีระบบ Zone A)
     ///   - decree_emergency: "coolingWorkerShortage" = จบวันระหว่างพายุที่ HEAT ≥ 70 (นิยามใน StoryDirector)
+    ///     · effects coolingWorkers +1 ของ guide map เป็นแต้มหล่อเย็น +6/+12 (สเกลเดียวกับ decree ปุ่ม ①②)
     ///   - deferredCrisis water/food: guide ระบุแค่คีย์ — เนื้อหาวิกฤตซ้อนแต่งเพิ่มตามโทน guide
-    ///   - tutorial_day1 ข้าม — ใช้ TutorialManager เดิม (guide ก็ระบุ "ใช้ระบบ tutorial ที่มีอยู่")
+    ///   - tutorial_day1: บทสนทนา/เควสต์แรก/ปฏิกิริยาโรงไฟฟ้าแรก = beat (toast) · tutorialSteps ยังอยู่ที่ TutorialManager popup เดิม
     /// </summary>
     public static class StorySetup
     {
@@ -208,7 +209,8 @@ namespace NuclearReMind.EditorTools
         // ─────────────────────────────────────────────
         //  4. ประกาศฉุกเฉิน (§4 decree_emergency) — DilemmaData ใหม่ · ไม่เข้า pool
         //     (CrisisSetup.StoryDrivenIds กันไว้แล้ว) · B/C → Q10 · A ไม่มีควิซ
-        //     effect ที่ระบบยังไม่รองรับ (coolingWorkers +1 / hopePerDay / patientDeathRisk) = เฟส 5
+        //     effects coolingWorkers +1 → แต้มหล่อเย็น +6/+12 ผ่าน DecreeManager (สเกลเดียวกับปุ่ม ①②)
+        //     effect ที่ระบบยังไม่รองรับ (hopePerDay / patientDeathRisk) ข้ามไว้
         // ─────────────────────────────────────────────
         private static DilemmaData CreateDecreeCrisis()
         {
@@ -228,14 +230,16 @@ namespace NuclearReMind.EditorTools
 @"[ระบบ] ไม่เกณฑ์กลุ่มเปราะบาง · เมืองต้องบีบทรัพยากรให้พอ
 ชาวเมือง: ขอบคุณที่ไม่ทิ้งพวกเรา แม้ในวันที่ยากที่สุด";
 
-            d.choiceBText = "B · เกณฑ์ผู้ป่วยร่วมงาน (Hope −8)";
+            d.choiceBText = "B · เกณฑ์ผู้ป่วยร่วมงาน (หล่อเย็น +6 · Hope −8)";
             d.choiceB_HopeChange = -8;
+            d.choiceB_CoolingWorkers = 6;  // guide: coolingWorkers +1 — สเกลเดียวกับ Decree1_SickLabor
             d.choiceB_AfterText =
 @"[ระบบ] ผู้ป่วยถูกเรียกออกมาทำงานในเขตเสี่ยงรังสี
 Mira: เราชนะพายุไปทำไม ถ้าไม่เหลือใครให้ช่วย";
 
-            d.choiceCText = "C · ดึงแรงงานเด็ก (Hope −15)";
+            d.choiceCText = "C · ดึงแรงงานเด็ก (หล่อเย็น +12 · Hope −15)";
             d.choiceC_HopeChange = -15;
+            d.choiceC_CoolingWorkers = 12; // guide: coolingWorkers +1 — สเกลเดียวกับ Decree2_ChildLabor
             d.choiceC_AfterText =
 @"[ระบบ] เด็กถูกส่งไปทำงานเบาในเขตหล่อเย็น
 ชาวเมือง: นี่คือสิ่งที่เราหนีมา ไม่ใช่สิ่งที่เราอยากสร้าง";
@@ -322,6 +326,31 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
 
             var beats = new List<StoryBeatSO>();
 
+            // ── PHASE 1 · tutorial_day1 (§4) — จุดเดียวที่ไกด์ หลังจากนี้ปล่อยผู้เล่นเรียนรู้เอง ──
+            beats.Add(Beat("tutorial_day1", StoryTriggerType.OnDay, "1", b =>
+            {
+                b.npcLinePre = "Kova: วิศวกรใหม่สินะ ที่นี่เหลือแค่นี้แหละ เริ่มจากไฟ น้ำ อาหาร";
+                b.logLines = new[]
+                {
+                    "[เควสต์] ทำให้เมืองมีไฟ — ไม่มีพลังงาน สร้างหรืออัปเกรดเครื่องกำเนิดไฟฟ้า",
+                };
+                b.innerVoiceAfter = "ที่นี่มืดสนิท... เริ่มจากไฟก่อน";
+                b.noteTH = "guide firstQuest แสดงเป็น log (ไม่มีระบบเควสต์แยก) · tutorialSteps 3 ข้อ " +
+                           "อยู่ที่ป๊อปอัป TutorialManager เดิม (guide: ใช้ระบบ tutorial ที่มีอยู่)";
+            }));
+
+            // ── tutorial_first_power (§4 onFirstPowerPlantBuilt) — ปฏิกิริยาโรงไฟฟ้าหลังแรก ──
+            beats.Add(Beat("tutorial_first_power", StoryTriggerType.OnBuildingBuilt, "โรงไฟฟ้า", b =>
+            {
+                b.logLines = new[]
+                {
+                    "[ระบบ] เครื่องกำเนิดไฟฟ้าเริ่มทำงาน · พลังงาน +60/วัน",
+                    "Kova: ดี ที่เหลือคิดเองเป็นแล้ว",
+                };
+                b.innerVoiceAfter = "เมืองนี้ยังไม่ตายซะทีเดียว";
+                b.noteTH = "logLines โชว์รวดเดียว (logLinesDaily=false) · triggerParam = buildingName ไทยของ PowerPlant.asset";
+            }));
+
             // ── PHASE 2 · recover_record_01 — สร้างห้องวิจัย → เริ่มกู้คืนข้อมูล ──
             beats.Add(Beat("recover_record_01", StoryTriggerType.OnBuildingBuilt, "ห้องปฏิบัติการ", b =>
             {
@@ -393,6 +422,7 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
                     "▸ ความคิด: ท้องฟ้ากลางคืนสีแปลกๆ... หรือผมคิดไปเอง",
                     "[ระบบ] ตรวจพบความผิดปกติของสภาพอากาศเหนือ Veltara",
                 };
+                b.logLinesDaily = true; // §4 sequence: "เด้งกระจายหลายวัน ไม่รวบ"
                 b.noteTH = "พายุไม่เฉลย ค่อยๆ ปูให้ผู้เล่นเอะใจเอง (บรรทัดแรก Day 20 · ที่เหลือวันละบรรทัด)";
             }));
 
@@ -409,9 +439,10 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
             beats.Add(Beat("storm_first_light", StoryTriggerType.OnStormApproach, "", b =>
             {
                 b.npcLinePre = "Kova: มันมาจริงๆ นั่นแหละที่เครื่องฉันพยายามเตือน! เตาต้องติดเต็มร้อย ไม่งั้นละลาย!";
-                b.logLines = new[]
+                b.logLines = new[] // crisisAlert §4 verbatim — โชว์รวดเดียว (ไม่ daily)
                 {
-                    "[ระบบ] พายุรังสีเคลื่อนเข้า Veltara · ท้องฟ้าเปลี่ยนเป็นสีม่วง เซนเซอร์ทั่วเมืองร้องเตือน · ทางเดียวที่จะรอด: ดันเตาให้ถึง 100%",
+                    "[ระบบ] พายุรังสีเคลื่อนเข้า Veltara · ท้องฟ้าเปลี่ยนเป็นสีม่วง เซนเซอร์ทั่วเมืองร้องเตือน",
+                    "[ระบบ] อุณหภูมิแกนเตาจะเพิ่มต่อเนื่องตราบที่พายุยังอยู่ · ทางเดียวที่จะรอด: ดันเตาให้ถึง 100%",
                 };
                 b.infoCard = infos["fusion"];
                 b.quiz = NonNull(q8, q9);
@@ -445,6 +476,7 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
             beat.npcLinePre = "";
             beat.innerVoiceAfter = "";
             beat.logLines = new string[0];
+            beat.logLinesDaily = false;
             beat.noteTH = "";
             fill(beat);
             EditorUtility.SetDirty(beat);

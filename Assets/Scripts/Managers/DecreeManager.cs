@@ -35,6 +35,7 @@ namespace NuclearReMind
         {
             EventManager.Instance.OnEnactDecreeRequested += EnactDecree;
             EventManager.Instance.OnDayEnded += HandleDayEnded;
+            EventManager.Instance.OnDilemmaResolved += HandleDilemmaResolved;
         }
 
         private void OnDisable()
@@ -42,6 +43,7 @@ namespace NuclearReMind
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnEnactDecreeRequested -= EnactDecree;
             EventManager.Instance.OnDayEnded -= HandleDayEnded;
+            EventManager.Instance.OnDilemmaResolved -= HandleDilemmaResolved;
         }
 
         /// <summary>ประกาศใช้ decree index (จากปุ่ม UI) — ได้หล่อเย็น + Hope ดิ่งทันที + เด้ง Q10</summary>
@@ -63,6 +65,17 @@ namespace NuclearReMind
                 QuizManager.Instance?.TriggerByIds(d.linkedQuizIds);
 
             Debug.Log($"[Decree] ประกาศ {d.id}: +{d.coolingLaborGain} หล่อเย็น, Hope {d.hopeImmediate}");
+        }
+
+        // แรงงานหล่อเย็นจากทางเลือกวิกฤต (Story Guide decree_emergency: effects coolingWorkers)
+        // เช่น ประกาศฉุกเฉิน B/C — Hope/ควิซเดินทาง DilemmaManager ตามปกติ ที่นี่รับแค่แต้มหล่อเย็น
+        private void HandleDilemmaResolved(DilemmaData dilemma, int choiceIndex)
+        {
+            int gain = dilemma != null ? dilemma.GetCoolingWorkers(choiceIndex) : 0;
+            if (gain <= 0) return;
+
+            CoolingLaborBonus += gain;
+            Debug.Log($"[Decree] {dilemma.dilemmaId} ทางเลือก {(char)('A' + choiceIndex)}: แรงงานหล่อเย็น +{gain}");
         }
 
         // Hope ดิ่งต่อวันระหว่าง decree ยังใช้อยู่ (V4 §11)
