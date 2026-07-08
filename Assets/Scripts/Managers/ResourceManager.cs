@@ -119,6 +119,7 @@ namespace NuclearReMind
         private void HandleDayProduction(int day)
         {
             ApplyDailyProduction();
+            ApplyDailySpoilage();   // Story Guide §4: อาหารเน่า (วิกฤตอาหาร) — ระหว่างผลิตกับบริโภค
             ApplyDailyConsumption();
         }
 
@@ -190,9 +191,12 @@ namespace NuclearReMind
 
             // กำลังคน (§A2): ใช้เฉพาะคลาส Worker (Engineer/Medic ไม่ประจำโรงผลิต)
             // ถ้า demand รวม > จำนวน Worker → ทุกอาคารผลิตตามสัดส่วน workerScale (0..1)
-            int totalWorkers = PopulationManager.Instance != null
+            int rawWorkers = PopulationManager.Instance != null
                 ? PopulationManager.Instance.Current.workers
                 : 0;
+            // Story Guide §4: หักคนงานที่ถูกดึงชั่วคราว (busy/quarantine จากทางเลือกวิกฤต) ออกจากกำลังผลิต
+            int totalWorkers = CrisisEffectMath.EffectiveWorkers(
+                rawWorkers, CrisisEffectManager.Instance != null ? CrisisEffectManager.Instance.BusyWorkers : 0);
 
             int totalWorkersNeeded = 0;
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
@@ -203,6 +207,10 @@ namespace NuclearReMind
             float workerScale = totalWorkersNeeded > 0
                 ? Mathf.Min(1f, (float)totalWorkers / totalWorkersNeeded)
                 : 1f;
+
+            // Story Guide §4: ตัวคูณจากทางเลือกวิกฤต — ประสิทธิภาพงาน (Food C −50%) และผลผลิตอาหาร (Food A +100%)
+            float efficiency = CrisisEffectManager.Instance != null ? CrisisEffectManager.Instance.WorkerEfficiencyMultiplier : 1f;
+            float foodYield  = CrisisEffectManager.Instance != null ? CrisisEffectManager.Instance.FoodYieldMultiplier : 1f;
 
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
             {
@@ -220,9 +228,9 @@ namespace NuclearReMind
                 // ผลิตปรับตามกำลังคน (§A2) × ตัวคูณระดับอาคาร L1/L2/L3 = ×1/×3/×7.5 (V4 §18)
                 int level = BuildingRegistry.Instance.GetLevel(kvp.Key);
                 float lvlMul = LevelProductionMultiplier[Mathf.Clamp(level - 1, 0, LevelProductionMultiplier.Length - 1)];
-                float scale = workerScale * lvlMul;
+                float scale = workerScale * lvlMul * efficiency;
 
-                c.food   += data.foodProduction * scale;
+                c.food   += data.foodProduction * scale * foodYield;
                 c.water  += data.waterProduction * scale;
                 c.energy += data.energyProduction * scale;
                 c.iron   += data.ironProduction * scale;
@@ -264,6 +272,24 @@ namespace NuclearReMind
             var c = Current;
             c.food  = Mathf.Max(0f, c.food  - consumeFoodPerPerson  * population);
             c.water = Mathf.Max(0f, c.water - consumeWaterPerPerson * population);
+            Current = c;
+
+            EventManager.Instance.RaiseResourceChanged(Current);
+            CheckThresholds();
+        }
+
+        /// <summary>
+        /// อาหารเน่าต่อวัน (Story Guide §4 วิกฤตอาหาร — "เน่าเพราะรังสีปนเปื้อน")
+        /// อัตราเน่ามาจาก CrisisEffectManager.FoodSpoilRatePerDay (ปกติ 0 · ทางเลือก B ฉายรังสี→หยุดเน่า)
+        /// เดินระหว่างผลิตกับบริโภค (produce → spoil → consume) · ไม่มี manager/rate 0 = ไม่ทำอะไร
+        /// </summary>
+        public void ApplyDailySpoilage()
+        {
+            float rate = CrisisEffectManager.Instance != null ? CrisisEffectManager.Instance.FoodSpoilRatePerDay : 0f;
+            if (rate <= 0f) return;
+
+            var c = Current;
+            c.food = CrisisEffectMath.Spoil(c.food, rate);
             Current = c;
 
             EventManager.Instance.RaiseResourceChanged(Current);

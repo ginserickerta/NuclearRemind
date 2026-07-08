@@ -108,6 +108,12 @@ namespace NuclearReMind.EditorTools
             asset.choiceB_DeferredCrisis = def.bDeferred;
             asset.choiceC_DeferredCrisis = def.cDeferred;
 
+            // Story Guide §4 effects (yield/spoil/efficiency/busy/heat/exposure/sick/riot) — CrisisEffectManager อ่านตอน resolve
+            asset.choiceA_Effects = def.aEffects ?? new CrisisChoiceEffects();
+            asset.choiceB_Effects = def.bEffects ?? new CrisisChoiceEffects();
+            asset.choiceC_Effects = def.cEffects ?? new CrisisChoiceEffects();
+            asset.inducedSpoilRatePerDay = def.inducedSpoil;
+
             EditorUtility.SetDirty(asset);
         }
 
@@ -143,8 +149,8 @@ namespace NuclearReMind.EditorTools
 
         // เนื้อหา 3 วิกฤต A/B/C — ข้อความไทย verbatim จาก Story Guide §4 (ห้ามแปล/แต่งใหม่)
         // ควิซ: Plasma→Q2,Q3 · Outbreak→Q4,Q5 (linkedQuizIds) · Food→รายทางเลือก A=Q6/B=Q7/C=ไม่มี (QuizSetup)
-        // effect ที่ guide ระบุแต่เกมไม่มีระบบรองรับ (workersReassigned/radSickRisk/yieldPct/
-        // spoilRate/quarantineDays/deferredCrisis) — ข้ามไว้ก่อน · deferredCrisis น้ำ/อาหาร = เฟส 5
+        // effect เต็มระบบแล้ว (workersReassigned/radSickRisk/yieldPct/spoilRate/quarantineDays/riot/hopePerDay)
+        // ผ่าน choiceX_Effects → CrisisEffectManager (Story Guide §4) · deferredCrisis น้ำ/อาหาร = เฟส 5
         private static CrisisDef[] BuildDefs() => new[]
         {
             // ── วิกฤต 1: เสถียรภาพพลาสมา (~Day 17 — beat crisis_plasma_stability) ──
@@ -172,12 +178,16 @@ Kova: รอดแล้ว แต่คืนนี้มืดทั้งเ�
 [ระบบ] วิศวกร 2 คนได้รับรังสีเกินขนาด
 Kova: ซ่อมได้ แต่คนของเราไม่ใช่อะไหล่
 ▸ ความคิด: สองคน... ที่ผมส่งลงไปเอง",
-                cText = "C · ฉีดสารหล่อเย็นฉุกเฉิน (น้ำ −200)",
-                cWater = -200, cDeferred = "water", // guide: deferredCrisis "water" — วิกฤตน้ำตามมาอีก 2 วัน
+                cText = "C · ฉีดสารหล่อเย็นฉุกเฉิน (น้ำ −50%)",
+                cDeferred = "water", // guide: deferredCrisis "water" — วิกฤตน้ำตามมาอีก 2 วัน · น้ำ −50% ผ่าน cEffects
                 cAfter =
 @"[ระบบ] HEAT ลดฮวบทันที · เตาปลอดภัยชั่วคราว
 [ระบบ] คลังน้ำลดลง 50%
 ▸ ความคิด: น้ำหายไปครึ่งคลัง... เดี๋ยวได้เจอปัญหาใหม่แน่",
+                // Story Guide §4: ดึงคน + ลด HEAT ให้ปลอดภัยจริง · B รังสีเกิน (exposure+ป่วย) · C ลด CORE + น้ำ −50%
+                aEffects = new CrisisChoiceEffects { busyWorkers = 3, busyDays = 1, coreHeatReduction = 60f },
+                bEffects = new CrisisChoiceEffects { busyWorkers = 4, busyDays = 2, coreHeatReduction = 50f, radExposureInjected = 25f, sickInjected = 2 },
+                cEffects = new CrisisChoiceEffects { coreReduction = 20f, coreHeatReduction = 60f, waterReductionPct = -0.5f },
             },
 
             // ── วิกฤต 2: โรคจากรังสี (~Day 20 — beat crisis_radiation_disease) ──
@@ -209,6 +219,10 @@ Mira: รังสีที่คนกลัวกันนี่ วันน�
 @"[ระบบ] ไม่มีการรักษา · 4 วันผ่านไป เสียชีวิต 3 คน
 [ระบบ] แรงงานฟาร์มขาด · อาหารเริ่มหมด (วิกฤตซ้อน)
 ▸ ความคิด: ผมเลือกไม่รักษาพวกเขา...",
+                // Story Guide §4: A สแกน→เหลือป่วยหนัก 5 · B บำบัด→หายหมด (sick 0) · C กักตัว 4 วัน (busy)
+                aEffects = new CrisisChoiceEffects { busyWorkers = 2, busyDays = 1, setsSick = true, sickValue = 5 },
+                bEffects = new CrisisChoiceEffects { setsSick = true, sickValue = 0 },
+                cEffects = new CrisisChoiceEffects { busyWorkers = 4, busyDays = 4 },
             },
 
             // ── วิกฤต 3: วิกฤตอาหาร (~Day 24 — beat crisis_food_spoilage) ──
@@ -237,6 +251,11 @@ Kova: ฉายรังสีอาหาร ไม่ได้แปลว่�
                 cAfter =
 @"[ระบบ] ทุกคนได้อาหารครึ่งเดียว · แรงงานอ่อนแรง งานช้าลง 50%
 ▸ ความคิด: พวกเขาหิว... แต่เราไม่มีทางเลือกอื่นแล้วเหรอ",
+                // Story Guide §4: อาหารเน่า (inducedSpoil) · A พืชกลายพันธุ์ +100% · B ฉายรังสีหยุดเน่า · C งานช้า −50% + จลาจล
+                inducedSpoil = 0.15f,
+                aEffects = new CrisisChoiceEffects { busyWorkers = 3, busyDays = 2, foodYieldPct = 1.0f },
+                bEffects = new CrisisChoiceEffects { busyWorkers = 4, busyDays = 1, stopSpoilage = true },
+                cEffects = new CrisisChoiceEffects { workerEfficiencyPct = -0.5f, efficiencyDays = 3, riotRisk = true },
             },
         };
 
@@ -247,6 +266,9 @@ Kova: ฉายรังสีอาหาร ไม่ได้แปลว่�
             public float aFood, aEnergy, aWater, aIron, aHope; public int aAethon, aKeran, aIdle, aDeaths;
             public float bFood, bEnergy, bWater, bIron, bHope; public int bAethon, bKeran, bIdle, bDeaths;
             public float cFood, cEnergy, cWater, cIron, cHope; public int cAethon, cKeran, cIdle, cDeaths;
+            // Story Guide §4 extended effects (ต่อทางเลือก) + อัตราเน่าที่วิกฤตนี้เหนี่ยวนำ
+            public CrisisChoiceEffects aEffects, bEffects, cEffects;
+            public float inducedSpoil;
         }
     }
 }

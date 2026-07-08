@@ -92,6 +92,17 @@ namespace NuclearReMind
         public string choiceB_DeferredCrisis;
         public string choiceC_DeferredCrisis;
 
+        [Header("Extended Effects (Story Guide §4 — effect ที่เดิม 'ข้ามไว้' · CrisisEffectManager อ่านตอน resolve)")]
+        // yield / spoil / efficiency / busy workers / heat–core reduction / exposure / sick / hopePerDay / riot
+        // ค่า default 0/false = ไม่มีผล (ดู CrisisChoiceEffects) — author ผ่าน CrisisSetup/StorySetup
+        public CrisisChoiceEffects choiceA_Effects = new CrisisChoiceEffects();
+        public CrisisChoiceEffects choiceB_Effects = new CrisisChoiceEffects();
+        public CrisisChoiceEffects choiceC_Effects = new CrisisChoiceEffects();
+
+        // อัตราเน่าของคลังอาหารต่อวันเมื่อ "วิกฤตนี้" เกิด (Story Guide วิกฤตอาหาร — "เน่าเพราะรังสีปนเปื้อน")
+        // CrisisEffectManager ตั้ง FoodSpoilRatePerDay ตอน resolve (เว้นทางเลือกที่ stopSpoilage=หยุดเน่า) · 0 = ไม่เน่า
+        public float inducedSpoilRatePerDay;
+
         /// <summary>
         /// IQuizTrigger: แปลง linkedQuizIds → QuizQuestionSO[] (ข้าม id ที่หาไม่เจอ/ว่าง)
         /// QuizManager.EnqueueQuizzes(this) เรียกเมธอดนี้เพื่อเอาควิซที่ผูกไว้เข้าคิว
@@ -134,6 +145,15 @@ namespace NuclearReMind
             0 => choiceA_DeferredCrisis,
             1 => choiceB_DeferredCrisis,
             2 => choiceC_DeferredCrisis,
+            _ => null,
+        };
+
+        /// <summary>ผลกระทบเพิ่มเติมของทางเลือกที่กด (0=A/1=B/2=C) — CrisisEffectManager ใช้ตอน resolve · null = นอกช่วง</summary>
+        public CrisisChoiceEffects GetEffects(int choiceIndex) => choiceIndex switch
+        {
+            0 => choiceA_Effects,
+            1 => choiceB_Effects,
+            2 => choiceC_Effects,
             _ => null,
         };
 

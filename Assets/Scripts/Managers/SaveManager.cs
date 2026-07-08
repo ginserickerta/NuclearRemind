@@ -106,6 +106,20 @@ namespace NuclearReMind
             // ค่าเสี่ยงรังสีสะสม (§4) — read-only query แบบเดียวกับ Story/Codex · ไม่มี manager = 0
             save.radiationExposure = RadiationManager.Instance != null ? RadiationManager.Instance.CurrentExposure : 0f;
 
+            // ผลกระทบวิกฤต (§4) — read-only query · ไม่มี manager = คง default (multiplier=1) ใน SaveData
+            if (CrisisEffectManager.Instance != null)
+            {
+                var ce = CrisisEffectManager.Instance;
+                save.foodYieldMultiplier = ce.FoodYieldMultiplier;
+                save.foodSpoilRatePerDay = ce.FoodSpoilRatePerDay;
+                save.workerEfficiencyMultiplier = ce.WorkerEfficiencyMultiplier;
+                save.workerEfficiencyDaysRemaining = ce.WorkerEfficiencyDaysRemaining;
+                save.busyWorkerCounts = new List<int>(ce.BusyWorkerCounts);
+                save.busyWorkerDays = new List<int>(ce.BusyWorkerDays);
+                save.hopeDrainPerDay = new List<float>(ce.HopeDrainPerDay);
+                save.hopeDrainDays = new List<int>(ce.HopeDrainDays);
+            }
+
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
             {
                 save.placedBuildings.Add(kvp.Key);

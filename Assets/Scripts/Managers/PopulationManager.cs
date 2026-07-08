@@ -70,6 +70,8 @@ namespace NuclearReMind
             EventManager.Instance.OnTrainEngineerRequested += TrainEngineer;
             EventManager.Instance.OnTrainMedicRequested += TrainMedic;
             EventManager.Instance.OnPopulationDeaths += HandlePopulationDeaths;
+            EventManager.Instance.OnPopulationSickInjected += HandlePopulationSickInjected;
+            EventManager.Instance.OnPopulationSickSet += HandlePopulationSickSet;
         }
 
         private void OnDisable()
@@ -86,6 +88,8 @@ namespace NuclearReMind
             EventManager.Instance.OnTrainEngineerRequested -= TrainEngineer;
             EventManager.Instance.OnTrainMedicRequested -= TrainMedic;
             EventManager.Instance.OnPopulationDeaths -= HandlePopulationDeaths;
+            EventManager.Instance.OnPopulationSickInjected -= HandlePopulationSickInjected;
+            EventManager.Instance.OnPopulationSickSet -= HandlePopulationSickSet;
         }
 
         private void Start()
@@ -217,10 +221,30 @@ namespace NuclearReMind
             int fromMedics = Mathf.Min(pop.medics, remaining);
             pop.medics -= fromMedics; remaining -= fromMedics;
             pop.engineers -= Mathf.Min(pop.engineers, remaining);
+            pop.sick = Mathf.Max(0, pop.sick - dead); // คนตายลดจำนวนผู้ป่วยด้วย (Story Guide §4 — patientDeathRisk)
 
             pop.hope -= hopeLossPerDeath * dead;
             Notice($"สูญเสียประชากร {dead} คน — ขวัญกำลังใจสั่นคลอน (Hope −{hopeLossPerDeath * dead:0})");
             ApplyAndBroadcast(pop);
+        }
+
+        // ── ป่วยจากรังสี (Story Guide §4 วิกฤตโรครังสี) — CrisisEffectManager สั่งผ่าน event ──
+        // sick = ป้ายกำกับ "จำนวนคนป่วย" เหนือประชากรเดิม (subset · clamp ≤ total) ไม่กระทบการบริโภค/กำลังผลิตโดยตรง
+        private void HandlePopulationSickInjected(int count)
+        {
+            if (count <= 0) return;
+            var pop = Current;
+            pop.sick = Mathf.Clamp(pop.sick + count, 0, pop.total);
+            Current = pop;
+            EventManager.Instance.RaisePopulationChanged(pop);
+        }
+
+        private void HandlePopulationSickSet(int count)
+        {
+            var pop = Current;
+            pop.sick = Mathf.Clamp(count, 0, pop.total);
+            Current = pop;
+            EventManager.Instance.RaisePopulationChanged(pop);
         }
 
         // ── สิ้นวัน: ขวัญ + ฝึกเสร็จ + เติมประชากร (V4 §5/§9) ──────
@@ -235,6 +259,10 @@ namespace NuclearReMind
                 pop.hope -= hopeLossFoodShortage;
             else if (_depletedResources.Count == 0 && pop.medics > 0)
                 pop.hope += hopeRecoveryWithMedic;
+
+            // 1.5) ฟื้นจากรังสี (Story Guide §4): Medic รักษาได้ min(sick, medics)/วัน เมื่ออาหารไม่ขาด (สมมาตรกับ +Hope)
+            if (pop.sick > 0 && pop.medics > 0 && !_depletedResources.Contains(ResourceType.Food))
+                pop.sick = Mathf.Max(0, pop.sick - pop.medics);
 
             // 2) ฝึกคลาสเสร็จ (1 วัน) — Worker ถูกดึงไปแล้วตอนสั่งฝึก
             pop.engineers += _pendingEngineers; _pendingEngineers = 0;

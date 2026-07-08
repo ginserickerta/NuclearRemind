@@ -95,6 +95,17 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// เพิ่มค่าเสี่ยงรังสีสะสมจากทางเลือกวิกฤต (Story Guide §4 Plasma B — "วิศวกร 2 คนได้รับรังสีเกิน")
+        /// ทำให้ radSickRisk มีผลจริง: ดัน exposure เข้าใกล้ threshold ของ beat โรครังสีได้ (CrisisEffectManager สั่ง)
+        /// </summary>
+        public void AddExposure(float amount)
+        {
+            if (amount <= 0f) return;
+            CurrentExposure += amount;
+            EventManager.Instance.RaiseRadiationExposureChanged(CurrentExposure);
+        }
+
+        /// <summary>
         /// รังสีสะสมของวันนี้ = max(0, แหล่ง − ป้องกัน) — pure ให้เทสต์ตรวจ balance ได้โดยไม่ต้องมี scene/event
         /// </summary>
         public float ComputeDailyExposure(int mines, int shelters, int medics, float coreHeat)

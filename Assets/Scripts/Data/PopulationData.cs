@@ -15,6 +15,11 @@ namespace NuclearReMind
         public float hope;      // เริ่ม 100 — ถึง 0 = แพ้
         public int shelterCap;  // เพดานประชากรรวม (Shelter L1–L4)
 
+        // ป่วยจากรังสี (Story Guide §4 วิกฤตโรครังสี) — ป้ายกำกับ "จำนวนคนป่วย" เหนือประชากรเดิม
+        // (ไม่นับซ้ำใน total/ไม่กระทบการบริโภค — กำลังผลิตที่หายชั่วคราวใช้ CrisisEffectManager.BusyWorkers แทน)
+        // ใช้เป็นกลุ่มเสี่ยงของ patientDeathRisk + ฟื้นด้วย Medic ต่อวัน · default 0 = เซฟเก่าโหลดได้
+        public int sick;
+
         /// <summary>จำนวนประชากรรวมทุกคลาส (คำนวณ ไม่ serialize)</summary>
         public int total => workers + engineers + medics;
     }

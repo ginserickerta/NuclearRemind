@@ -29,5 +29,16 @@ namespace NuclearReMind
         public List<int> deferredCrisisDays = new List<int>();       // วันที่จะยิง (เลขวันเกม)
 
         public float radiationExposure; // ค่าเสี่ยงรังสีสะสม (RadiationManager §4) — default 0: เซฟเก่าโหลดได้
+
+        // ===== Crisis Effects (Story Guide §4 — CrisisEffectManager) — default ปลอดภัย: เซฟเก่าโหลดได้ =====
+        // ★ multiplier ต้องเริ่ม 1f (ไม่ใช่ 0) ไม่งั้นเซฟเก่าจะทำให้ผลผลิตอาหารเป็น 0
+        public float foodYieldMultiplier = 1f;
+        public float foodSpoilRatePerDay = 0f;
+        public float workerEfficiencyMultiplier = 1f;
+        public int workerEfficiencyDaysRemaining = 0;
+        public List<int> busyWorkerCounts = new List<int>();   // คู่ index กับ busyWorkerDays
+        public List<int> busyWorkerDays = new List<int>();
+        public List<float> hopeDrainPerDay = new List<float>(); // คู่ index กับ hopeDrainDays
+        public List<int> hopeDrainDays = new List<int>();
     }
 }

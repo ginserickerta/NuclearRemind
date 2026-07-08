@@ -289,6 +289,33 @@ namespace NuclearReMind
             EventManager.Instance.RaiseTowerProgressChanged(Current);
         }
 
+        /// <summary>
+        /// ลด HEAT ตอนแก้วิกฤต (Story Guide §4 พลาสมา — afterText "HEAT กลับสู่ระดับปลอดภัย")
+        /// เหมือน Scram แต่ไม่มีเงื่อนไข HEAT≥90/cooldown (วิกฤตเป็นคนสั่ง ไม่ใช่ปุ่มผู้เล่น) · clamp ≥ 0
+        /// ปิดบั๊ก "แก้พลาสมาเสร็จแล้ว HEAT ยังสูงจนหลอมทันที" (เดิมไม่มีอะไรลด HEAT ตอน resolve)
+        /// </summary>
+        public void ReduceHeat(float amount)
+        {
+            if (amount <= 0f || !Current.isUnlocked) return;
+            var t = Current;
+            t.coreHeat = Mathf.Max(0f, t.coreHeat - amount);
+            Current = t;
+            EventManager.Instance.RaiseTowerProgressChanged(Current);
+        }
+
+        /// <summary>
+        /// ลด CORE% ตอนแก้วิกฤต (Story Guide §4 พลาสมา C — q:-0.2 = CORE% −20) · clamp ≥ 0
+        /// ไม่ถอย currentPhase (invariant เดียวกับ Scram — เฟสเดินหน้าอย่างเดียว)
+        /// </summary>
+        public void ReduceCore(float amount)
+        {
+            if (amount <= 0f || !Current.isUnlocked) return;
+            var t = Current;
+            t.corePercent = Mathf.Max(0f, t.corePercent - amount);
+            Current = t;
+            EventManager.Instance.RaiseTowerProgressChanged(Current);
+        }
+
         /// <summary>ล็อกโหมดเตา (เรียกตอนเข้าเฟส Live) — เปลี่ยนโหมดไม่ได้จนกว่าจะ Planning วันถัดไป (V4 §3)</summary>
         public void LockMode() => _modeLocked = true;
         /// <summary>ปลดล็อกโหมด (เรียกตอนเริ่มวัน/Planning)</summary>

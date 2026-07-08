@@ -210,7 +210,7 @@ namespace NuclearReMind.EditorTools
         //  4. ประกาศฉุกเฉิน (§4 decree_emergency) — DilemmaData ใหม่ · ไม่เข้า pool
         //     (CrisisSetup.StoryDrivenIds กันไว้แล้ว) · B/C → Q10 · A ไม่มีควิซ
         //     effects coolingWorkers +1 → แต้มหล่อเย็น +6/+12 ผ่าน DecreeManager (สเกลเดียวกับปุ่ม ①②)
-        //     effect ที่ระบบยังไม่รองรับ (hopePerDay / patientDeathRisk) ข้ามไว้
+        //     effect hopePerDay/patientDeathRisk เต็มระบบแล้วผ่าน choiceB_Effects → CrisisEffectManager (§4)
         // ─────────────────────────────────────────────
         private static DilemmaData CreateDecreeCrisis()
         {
@@ -233,6 +233,8 @@ namespace NuclearReMind.EditorTools
             d.choiceBText = "B · เกณฑ์ผู้ป่วยร่วมงาน (หล่อเย็น +6 · Hope −8)";
             d.choiceB_HopeChange = -8;
             d.choiceB_CoolingWorkers = 6;  // guide: coolingWorkers +1 — สเกลเดียวกับ Decree1_SickLabor
+            // guide effects: hopePerDay -3 (ดาบสองคม Hope ดิ่งต่อวัน 4 วัน) + patientDeathRisk 0.2 (ผู้ป่วยเสี่ยงตายในเขตรังสี)
+            d.choiceB_Effects = new CrisisChoiceEffects { hopePerDay = -3f, hopePerDayDays = 4, patientDeathRisk = 0.2f };
             d.choiceB_AfterText =
 @"[ระบบ] ผู้ป่วยถูกเรียกออกมาทำงานในเขตเสี่ยงรังสี
 Mira: เราชนะพายุไปทำไม ถ้าไม่เหลือใครให้ช่วย";

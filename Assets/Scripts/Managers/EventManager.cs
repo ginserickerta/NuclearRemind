@@ -115,6 +115,10 @@ namespace NuclearReMind
         // ===== Population Deaths (V4 §9: คนตาย → Hope −5/คน · จากทางเลือกวิกฤต/Decree) =====
         public event Action<int> OnPopulationDeaths; // จำนวนคนที่เสียชีวิต
 
+        // ===== Population Sick (Story Guide §4 วิกฤตโรครังสี — CrisisEffectManager → PopulationManager) =====
+        public event Action<int> OnPopulationSickInjected; // +n คนป่วย (เช่น Plasma B วิศวกร 2 คน)
+        public event Action<int> OnPopulationSickSet;      // ตั้งจำนวนป่วยเป็น n (เช่น Outbreak A→5, B→0)
+
         // ===== Pre-placed (ตึกที่มากับแมพ เช่น CORE TOWER กลางเมือง — สร้างเสร็จทันที ไม่เข้าคิวก่อสร้าง) =====
         public event Action<Vector2Int> OnConstructionCompleteRequested;
 
@@ -236,6 +240,10 @@ namespace NuclearReMind
 
         // ===== Population Deaths =====
         public void RaisePopulationDeaths(int count) => OnPopulationDeaths?.Invoke(count);
+
+        // ===== Population Sick =====
+        public void RaisePopulationSickInjected(int count) => OnPopulationSickInjected?.Invoke(count);
+        public void RaisePopulationSickSet(int count) => OnPopulationSickSet?.Invoke(count);
 
         // ===== Pre-placed =====
         public void RaiseConstructionCompleteRequested(Vector2Int cell) => OnConstructionCompleteRequested?.Invoke(cell);
