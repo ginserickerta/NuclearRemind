@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -317,8 +318,29 @@ namespace NuclearReMind
             int knowledge = ResourceManager.Instance != null
                 ? Mathf.RoundToInt(ResourceManager.Instance.Current.knowledge) : 0;
 
+            // Knowledge Summary (Story Guide §4 true_ending onEnd): สรุปหัวข้อความรู้/Codex ที่ปลดล็อกรอบนี้
             gameOverText.text = $"{msg}\n\nวันที่ {day} · Q {q:0.00} · Knowledge {knowledge}\n" +
+                                CollectKnowledgeSummary() +
                                 "ความรู้ที่คุณได้ — ไม่มีวันหาย เริ่มใหม่แล้วไปให้ไกลกว่าเดิม";
+        }
+
+        // รวมชื่อหัวข้อ Codex ที่ปลดล็อกแล้ว เรียงตามลำดับนิยามใน allCodexEntries (คงที่)
+        private static string CollectKnowledgeSummary()
+        {
+            var codex = CodexManager.Instance;
+            if (codex == null || codex.allCodexEntries == null) return "";
+            var titles = new List<string>();
+            foreach (var e in codex.allCodexEntries)
+                if (e != null && codex.IsUnlocked(e.entryId) && !string.IsNullOrEmpty(e.title))
+                    titles.Add(e.title);
+            return FormatKnowledgeSummary(titles);
+        }
+
+        /// <summary>จัดรูปสรุปคลังความรู้ (pure — ให้เทสต์ตรวจได้) · ว่าง = ยังไม่ปลดหัวข้อใด</summary>
+        public static string FormatKnowledgeSummary(IReadOnlyList<string> unlockedTitles)
+        {
+            if (unlockedTitles == null || unlockedTitles.Count == 0) return "";
+            return $"▸ คลังความรู้ที่ปลดล็อก ({unlockedTitles.Count}):\n{string.Join(" · ", unlockedTitles)}\n\n";
         }
     }
 }
