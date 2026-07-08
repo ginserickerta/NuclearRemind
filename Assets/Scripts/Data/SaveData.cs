@@ -27,5 +27,7 @@ namespace NuclearReMind
         public List<string> archivedRecords = new List<string>();  // recordId ที่กู้คืนแล้ว (แผง Records)
         public List<string> deferredCrisisKeys = new List<string>(); // วิกฤตซ้อนที่รอวันยิง (คู่ index กับ deferredCrisisDays)
         public List<int> deferredCrisisDays = new List<int>();       // วันที่จะยิง (เลขวันเกม)
+
+        public float radiationExposure; // ค่าเสี่ยงรังสีสะสม (RadiationManager §4) — default 0: เซฟเก่าโหลดได้
     }
 }

@@ -40,6 +40,9 @@ namespace NuclearReMind
         public event Action OnTrainMedicRequested;              // UI → PopulationManager (ฝึกแพทย์)
         public event Action<int> OnEnactDecreeRequested;        // UI → DecreeManager (ประกาศฉุกเฉิน index)
 
+        // ===== Radiation (Story Guide §4 — วิกฤตโรครังสี "Zone A") =====
+        public event Action<float> OnRadiationExposureChanged;  // RadiationManager → StoryDirector/HUD (exposure สะสม)
+
         // ===== CORE TOWER =====
         public event Action<TowerData> OnTowerProgressChanged;
         public event Action<int> OnTowerPhaseComplete;
@@ -158,6 +161,9 @@ namespace NuclearReMind
         public void RaiseTrainEngineerRequested() => OnTrainEngineerRequested?.Invoke();
         public void RaiseTrainMedicRequested() => OnTrainMedicRequested?.Invoke();
         public void RaiseEnactDecreeRequested(int index) => OnEnactDecreeRequested?.Invoke(index);
+
+        // ===== Radiation =====
+        public void RaiseRadiationExposureChanged(float exposure) => OnRadiationExposureChanged?.Invoke(exposure);
 
         // ===== CORE TOWER =====
         public void RaiseTowerProgressChanged(TowerData data) => OnTowerProgressChanged?.Invoke(data);

@@ -25,6 +25,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Phase 3 Population",
             "NuclearReMind/Setup Phase 6 Buildings",
             "NuclearReMind/Setup Codex System",
+            "NuclearReMind/Setup Radiation System", // RadiationManager — exposure สะสม (Zone A §4)
             "NuclearReMind/Setup Crisis Dilemmas",
             "NuclearReMind/Setup Quiz System",
             "NuclearReMind/Setup Decrees",

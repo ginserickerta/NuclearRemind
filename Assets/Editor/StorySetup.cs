@@ -17,7 +17,7 @@ namespace NuclearReMind.EditorTools
     ///   5. StoryBeatSO 14 beat เรียงตามไทม์ไลน์ → wire เข้า StoryDirector.beats
     ///
     /// การแมปที่ต่างจาก guide (จดไว้ใน noteTH ของ beat ด้วย):
-    ///   - crisis_radiation_disease: trigger "ZoneA_workers>threshold" → "day_reached_20" (ไม่มีระบบ Zone A)
+    ///   - crisis_radiation_disease: trigger "ZoneA_workers>threshold" → "exposure_above_60|day_reached_23" (RadiationManager exposure สะสม)
     ///   - decree_emergency: "coolingWorkerShortage" = จบวันระหว่างพายุที่ HEAT ≥ 70 (นิยามใน StoryDirector)
     ///     · effects coolingWorkers +1 ของ guide map เป็นแต้มหล่อเย็น +6/+12 (สเกลเดียวกับ decree ปุ่ม ①②)
     ///   - deferredCrisis water/food: guide ระบุแค่คีย์ — เนื้อหาวิกฤตซ้อนแต่งเพิ่มตามโทน guide
@@ -385,18 +385,20 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
                 b.noteTH = "~Day 17 · ควิซ Q2,Q3 ผูกที่ crisis.linkedQuizIds (ยิงหลัง Outcome ทุกทางเลือก)";
             }));
 
-            beats.Add(Beat("crisis_radiation_disease", StoryTriggerType.OnStatThreshold, "day_reached_20", b =>
+            beats.Add(Beat("crisis_radiation_disease", StoryTriggerType.OnStatThreshold, "exposure_above_60|day_reached_23", b =>
             {
                 b.infoCard = infos["medicine"];
                 b.crisis = outbreakCrisis;
-                b.noteTH = "guide: ZoneA_workers>threshold — ไม่มีระบบ Zone A จึงใช้ day_reached_20 แทน · ควิซ Q4,Q5";
+                b.noteTH = "guide: ZoneA_workers>threshold — จำลองด้วย RadiationManager exposure สะสม (Mine/เตา ลดด้วย Shelter/Medic ตาม ALARA) " +
+                           "· exposure_above_60 = คนงานรับรังสีเกิน · fallback day_reached_23 กันพลาดเนื้อหา · ควิซ Q4,Q5";
             }));
 
-            beats.Add(Beat("crisis_food_spoilage", StoryTriggerType.OnStatThreshold, "food_above_500", b =>
+            beats.Add(Beat("crisis_food_spoilage", StoryTriggerType.OnStatThreshold, "food_above_500|day_reached_24", b =>
             {
                 b.infoCard = infos["food"];
                 b.crisis = foodCrisis;
-                b.noteTH = "~Day 24 · ควิซรายทางเลือก: A→Q6 (mutation) · B→Q7 (irradiation) · C→ไม่มี";
+                b.noteTH = "~Day 24 · guide: foodStored>500||noAgriDome — ไม่มีอาคาร AgriDome จึงใช้ day_reached_24 " +
+                           "เป็น fallback (ผู้เล่นที่คุมอาหาร ≤500 จะไม่พลาดวิกฤต+ควิซ) · ควิซรายทางเลือก: A→Q6 (mutation) · B→Q7 (irradiation) · C→ไม่มี";
             }));
 
             // ── วิกฤตซ้อน (เฟส 5 — deferredCrisis §4): ยิง 2 วันหลังเลือกทาง C ของวิกฤตแม่ ──

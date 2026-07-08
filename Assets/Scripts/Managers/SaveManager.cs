@@ -103,6 +103,9 @@ namespace NuclearReMind
                 save.deferredCrisisDays = new List<int>(StoryDirector.Instance.DeferredCrisisFireDays);
             }
 
+            // ค่าเสี่ยงรังสีสะสม (§4) — read-only query แบบเดียวกับ Story/Codex · ไม่มี manager = 0
+            save.radiationExposure = RadiationManager.Instance != null ? RadiationManager.Instance.CurrentExposure : 0f;
+
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
             {
                 save.placedBuildings.Add(kvp.Key);

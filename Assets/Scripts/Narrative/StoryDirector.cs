@@ -51,6 +51,7 @@ namespace NuclearReMind
         // snapshot สำหรับ OnStatThreshold/OnStormActive (อ่านผ่าน event — ไม่ direct reference manager)
         private ResourceData _resources;
         private TowerData _tower;
+        private float _radiationExposure; // ค่าเสี่ยงรังสีสะสม (RadiationManager) — เงื่อนไข exposure_above_* §4
 
         /// <summary>beatId ที่เล่นแล้ว ตามลำดับ (read-only ให้ SaveManager — precedent: CodexManager.UnlockedIds)</summary>
         public IReadOnlyList<string> FiredBeatIds => _firedOrder;
@@ -93,6 +94,7 @@ namespace NuclearReMind
             EventManager.Instance.OnTowerProgressChanged += HandleTowerProgressChanged;
             EventManager.Instance.OnDilemmaResolved += HandleDilemmaResolved;
             EventManager.Instance.OnStoryCardDismissed += HandleCardDismissed;
+            EventManager.Instance.OnRadiationExposureChanged += HandleRadiationExposureChanged;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
         }
 
@@ -106,6 +108,7 @@ namespace NuclearReMind
             EventManager.Instance.OnTowerProgressChanged -= HandleTowerProgressChanged;
             EventManager.Instance.OnDilemmaResolved -= HandleDilemmaResolved;
             EventManager.Instance.OnStoryCardDismissed -= HandleCardDismissed;
+            EventManager.Instance.OnRadiationExposureChanged -= HandleRadiationExposureChanged;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
         }
 
@@ -160,7 +163,7 @@ namespace NuclearReMind
                 switch (beat.triggerType)
                 {
                     case StoryTriggerType.OnStatThreshold:
-                        if (StatCondition.Matches(beat.triggerParam, day, _resources, _tower))
+                        if (StatCondition.Matches(beat.triggerParam, day, _resources, _tower, _radiationExposure))
                             FireBeat(beat);
                         break;
                     case StoryTriggerType.OnStormActive:
@@ -205,6 +208,9 @@ namespace NuclearReMind
                     FireBeat(beat);
         }
 
+        // ค่าเสี่ยงรังสีสะสม (RadiationManager) — ประเมิน exposure_above_* ตอน OnDayEnded (§4 วิกฤตโรครังสี)
+        private void HandleRadiationExposureChanged(float exposure) => _radiationExposure = exposure;
+
         private bool Eligible(StoryBeatSO beat)
             => beat != null && !string.IsNullOrEmpty(beat.beatId) && !_fired.Contains(beat.beatId);
 
@@ -213,7 +219,7 @@ namespace NuclearReMind
         {
             if (string.IsNullOrEmpty(param)) return true;
             string condition = param == CoolingShortageKeyword ? CoolingShortageCondition : param;
-            return StatCondition.Matches(condition, day, _resources, _tower);
+            return StatCondition.Matches(condition, day, _resources, _tower, _radiationExposure);
         }
 
         // ═════════════════ Beat playback (state machine) ═════════════════
@@ -418,6 +424,7 @@ namespace NuclearReMind
             _reactorStartFired = save.tower.isUnlocked;
             _resources = save.resources;
             _tower = save.tower;
+            _radiationExposure = save.radiationExposure;
         }
 
         private RecordCardSO FindRecordById(string recordId)

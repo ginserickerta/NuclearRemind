@@ -101,6 +101,26 @@ namespace NuclearReMind.Tests
         }
 
         [Test]
+        public void StoryDrivenCrises_HaveEmptyTriggerCondition_ToAvoidDoubleFire()
+        {
+            // วิกฤต story-driven ยิงผ่าน StoryBeat (OnDilemmaTriggerRequested) เท่านั้น
+            // triggerCondition ต้องว่าง — ถ้าเผลอเข้า DilemmaManager.dilemmaPool ทั้งที่ยังมี condition
+            // จะยิงซ้ำสองทาง (double-fire) · ตัวจริงอยู่ที่ StoryBeatSO.triggerParam
+            string[] storyDrivenIds = { "Crisis_PlasmaInstability", "Crisis_MalignantOutbreak", "Crisis_FoodShortage" };
+
+            foreach (var id in storyDrivenIds)
+            {
+                var crisis = AssetDatabase.LoadAssetAtPath<DilemmaData>(
+                    $"Assets/ScriptableObjects/Dilemmas/{id}.asset");
+                if (crisis == null)
+                    Assert.Ignore("ยังไม่ได้รัน Setup Crisis Dilemmas — ข้ามการตรวจ");
+
+                Assert.IsTrue(string.IsNullOrEmpty(crisis.triggerCondition),
+                    $"{id} เป็น story-driven ต้องไม่มี triggerCondition (ยิงผ่าน StoryBeat เท่านั้น — กันหลุดเข้า pool แล้วยิงซ้ำ)");
+            }
+        }
+
+        [Test]
         public void FoodCrisis_PerChoiceQuizzes_NoFallbackForChoiceC()
         {
             var food = AssetDatabase.LoadAssetAtPath<DilemmaData>(

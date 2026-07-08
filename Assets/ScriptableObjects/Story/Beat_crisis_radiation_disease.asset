@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: NuclearReMind::NuclearReMind.StoryBeatSO
   beatId: crisis_radiation_disease
   triggerType: 4
-  triggerParam: day_reached_20
+  triggerParam: exposure_above_60|day_reached_23
   record: {fileID: 0}
   infoCard: {fileID: 11400000, guid: f5a6226f8f23c9048a45e2abc3224106, type: 2}
   crisis: {fileID: 11400000, guid: c4b833a92cec68f4689ba4ba9800f3d3, type: 2}
@@ -23,6 +23,8 @@ MonoBehaviour:
   innerVoiceAfter: 
   logLines: []
   logLinesDaily: 0
-  noteTH: "guide: ZoneA_workers>threshold \u2014 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E30\u0E1A\u0E1A
-    Zone A \u0E08\u0E36\u0E07\u0E43\u0E0A\u0E49 day_reached_20 \u0E41\u0E17\u0E19
+  noteTH: "guide: ZoneA_workers>threshold \u2014 \u0E08\u0E33\u0E25\u0E2D\u0E07\u0E14\u0E49\u0E27\u0E22
+    RadiationManager exposure \u0E2A\u0E30\u0E2A\u0E21 (Mine/\u0E40\u0E15\u0E32 \u0E25\u0E14\u0E14\u0E49\u0E27\u0E22
+    Shelter/Medic \u0E15\u0E32\u0E21 ALARA) \xB7 exposure_above_60 = \u0E04\u0E19\u0E07\u0E32\u0E19\u0E23\u0E31\u0E1A\u0E23\u0E31\u0E07\u0E2A\u0E35\u0E40\u0E01\u0E34\u0E19
+    \xB7 fallback day_reached_23 \u0E01\u0E31\u0E19\u0E1E\u0E25\u0E32\u0E14\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32
     \xB7 \u0E04\u0E27\u0E34\u0E0B Q4,Q5"

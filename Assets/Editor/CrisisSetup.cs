@@ -12,7 +12,7 @@ namespace NuclearReMind.EditorTools
     /// ★ วิกฤตทั้ง 3 เป็น "story-driven" แล้ว: StoryBeat (OnStatThreshold) เป็นคนยิงผ่าน
     ///   OnDilemmaTriggerRequested เพื่อให้ InfoCard เด้งก่อนวิกฤต (ความรู้มาก่อนควิซ)
     ///   → WirePool จึง "ไม่ใส่" วิกฤตเหล่านี้เข้า DilemmaManager.dilemmaPool (กันยิงซ้ำสองทาง)
-    ///   triggerCondition บน asset คงไว้เป็นเอกสาร — ตัวจริงอยู่ที่ StoryBeatSO.triggerParam (StorySetup)
+    ///   triggerCondition บน asset ถูกเคลียร์ให้ว่าง (กัน double-fire ถ้าเผลอเข้า pool) — ตัวจริงอยู่ที่ StoryBeatSO.triggerParam (StorySetup)
     /// </summary>
     public static class CrisisSetup
     {
@@ -62,7 +62,11 @@ namespace NuclearReMind.EditorTools
             asset.choiceAText      = def.aText;
             asset.choiceBText      = def.bText;
             asset.choiceCText      = def.cText;
-            asset.triggerCondition = def.trigger;
+            // ★ story-driven: triggerCondition ต้องว่างเสมอ — DilemmaManager.HandleDayEnded ยิงทุก dilemma
+            //   ใน pool ที่ condition ตรงตอนสิ้นวัน ถ้าเผลอใส่วิกฤตนี้เข้า pool ทั้งที่ยังมี condition
+            //   = ยิงซ้ำกับ StoryBeat (double-fire) · ตัวจริงอยู่ที่ StoryBeatSO.triggerParam
+            //   def.trigger เก็บไว้อ้างอิง guide ในโค้ดเท่านั้น ไม่เขียนลง live field
+            asset.triggerCondition = "";
 
             asset.choiceA_FoodChange   = def.aFood;
             asset.choiceA_EnergyChange = def.aEnergy;
@@ -180,7 +184,7 @@ Kova: ซ่อมได้ แต่คนของเราไม่ใช่�
             new CrisisDef
             {
                 id = "Crisis_MalignantOutbreak",
-                trigger = "day_reached_20", // เอกสาร — guide: ZoneA_workers>threshold (ยังไม่มีระบบ Zone A → ใช้วันแทน)
+                trigger = "day_reached_20", // เอกสารเฉยๆ (triggerCondition ถูกเคลียร์) — beat crisis_radiation_disease ยิงด้วย exposure_above_60 (RadiationManager)
                 scenario =
 @"⚠️ วิกฤต: โรคจากรังสี
 
