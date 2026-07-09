@@ -48,6 +48,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Update Building Hover Panel",    // ย้ายบาร์ก่อสร้างเข้าแผง hover (GDD §6 — หลัง HUD Canvas)
 
             "NuclearReMind/Setup Zone Barrier (Fence + Gate)", // รั้ว/ประตูเส้นแบ่งโซน (ต้องหลัง Ore Deposits — sync zoneAColumns)
+            "NuclearReMind/Setup Ground Tiles (Team Grass)",   // Tile หญ้าจาก Map.PNG (ต้องก่อน Fill Grids)
             "NuclearReMind/Fill Grids (Ground + Fog)",         // ระบาย Ground/Fog ตามขนาดกริดจริง (ต้องหลัง Setup Grid)
             "NuclearReMind/Fix 2D Lighting (Light All Sorting Layers)", // กัน sprite รันไทม์เรนเดอร์ดำ (Sprite-Lit-Default)
             "NuclearReMind/Apply Kanit Font (Scene + Prefabs)",
