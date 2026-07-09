@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: NuclearReMind::NuclearReMind.StoryBeatSO
   beatId: crisis_food_spoilage
   triggerType: 4
-  triggerParam: food_above_500|day_reached_24
+  triggerParam: day_reached_24
   record: {fileID: 0}
   infoCard: {fileID: 11400000, guid: 67de29f23afb9734dbe2d32c0975cf77, type: 2}
   crisis: {fileID: 11400000, guid: be43b5fc5cf02b040a361f8da4c312bb, type: 2}

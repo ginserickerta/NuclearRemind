@@ -118,6 +118,13 @@ namespace NuclearReMind
                 return;
             }
 
+            // แหล่งแร่เป็นภูมิประเทศ (มากับแมพ สร้างคืนไม่ได้) — ห้ามทุบ เอาคนออกได้อย่างเดียว
+            if (data.isOreNode)
+            {
+                EventManager.Instance.RaiseNotice("แหล่งแร่เป็นภูมิประเทศธรรมชาติ — ทุบไม่ได้");
+                return;
+            }
+
             Debug.Log($"[DemolitionController] ทุบ {data.buildingName} ที่ ({_hoveredCell.x},{_hoveredCell.y})");
 
             // cascade: GridManager.HandleBuildingRemoved → free cells

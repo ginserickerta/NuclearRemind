@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: NuclearReMind::NuclearReMind.StoryBeatSO
   beatId: crisis_radiation_disease
   triggerType: 4
-  triggerParam: exposure_above_60|day_reached_23
+  triggerParam: exposure_above_60|day_reached_20
   record: {fileID: 0}
   infoCard: {fileID: 11400000, guid: f5a6226f8f23c9048a45e2abc3224106, type: 2}
   crisis: {fileID: 11400000, guid: c4b833a92cec68f4689ba4ba9800f3d3, type: 2}

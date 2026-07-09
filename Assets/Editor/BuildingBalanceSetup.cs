@@ -7,9 +7,9 @@ namespace NuclearReMind.Editor
 {
     /// <summary>
     /// เติมค่าฐานตามตารางอาคาร V4 §6 ลง BuildingData assets (ค่า L1 — L2/L3 มาจากตัวคูณระดับ ×3/×7.5)
-    /// + สร้าง Mine.asset ถ้ายังไม่มี (แหล่งผลิต Iron เพียงแหล่งเดียวของเกม)
+    /// + สร้าง Mine.asset ถ้ายังไม่มี (คงใน registry ให้เซฟเก่า restore ได้)
     /// + ตั้ง Habitat ให้เป็นตึก Shelter (§5): shelterCapacity 10 → เพดานประชากร 20/40/80 ตามระดับ
-    /// + ต่อ Mine เข้า PlacementController.buildingHotbar และ BuildingRegistry.allBuildingData ในซีน
+    /// + ถอด Mine จาก hotbar (ระบบแหล่งแร่แทน — OreDepositSetup) แต่คงใน BuildingRegistry.allBuildingData
     ///
     /// รันได้ 2 ทาง:
     ///   • เมนู Unity: NuclearReMind/Apply Building Balance (V4 §6)
@@ -29,7 +29,8 @@ namespace NuclearReMind.Editor
                 "  • Power Plant : +60⚡ / 1 คน / ไม่มี upkeep / สร้าง ⛏40\n" +
                 "  • Water Plant : +50💧 / 1 คน / upkeep 10⚡ / สร้าง ⛏30\n" +
                 "  • Food Plant  : +40🌿 / 1 คน / upkeep 8⚡+15💧 / สร้าง ⛏30\n" +
-                "  • Mine        : +30⛏ / 2 คน / upkeep 12⚡ / สร้าง ⛏20 (ใหม่ — ช่อง 8)\n" +
+                "  • Mine        : +30⛏ / 2 คน (ถอดจาก hotbar แล้ว — เหล็กมาจากแหล่งแร่ A/B)\n" +
+                "  • Research Lab: ⛏80+⚡120 / 2 วิศวกร / upkeep 20⚡ / Knowledge 2/วัน\n" +
                 "  • Shelter (Habitat) : เพดานประชากร +10/+30/+70 / สร้าง ⛏60+⚡100\n\n" +
                 "ค่าอัประดับ: Iron ×ระดับ + Energy ×ระดับ (ตึกผลิต ⛏40+⚡150, Mine ⚡120, Shelter ⛏120+⚡200)\n\n" +
                 "อย่าลืม Save Scene + Save Project (Ctrl+S)", "OK");
@@ -71,17 +72,45 @@ namespace NuclearReMind.Editor
                 b.upgradeEnergyCost = 150;
             });
 
-            // Food Plant (Farm) L1: +40🌿 / 1 คน / upkeep 8⚡ + 15💧 / สร้าง Iron 30
+            // Food Plant (Farm) L1: +40🌿 / 1 คน (เกษตรกร §5) / upkeep 8⚡ + 15💧 / สร้าง Iron 30
             n += SetBuilding("Farm", b =>
             {
                 b.foodProduction = 40f;
                 b.workerRequired = 1;
+                b.requiredClass = WorkerClass.Farmer; // ฟาร์มใช้เกษตรกร (เริ่มเกมมี 2 คน — bootstrap)
                 b.energyConsumption = 8f;
                 b.waterConsumption = 15f;
                 b.ironCost = 30;
                 b.upgradeIronCost = 40;
                 b.upgradeEnergyCost = 150;
             });
+
+            // ── Research Lab (§6 อาคารวิจัย): Iron 80 + E 120 / 2 วิศวกร / upkeep 20⚡ · ปลดเฟส 2 ──
+            // ศูนย์ฝึกทุกคลาส (ธง unlocks* ตั้งใน Phase3PopulationSetup) + ผลิต Knowledge 2/วัน (×ระดับ)
+            n += SetBuilding("Laboratory", b =>
+            {
+                b.ironCost = 80;
+                b.energyCost = 120;
+                b.workerRequired = 2;
+                b.requiredClass = WorkerClass.Engineer;
+                b.energyConsumption = 20f;
+                b.waterConsumption = 0f;
+                b.knowledgeProduction = 2f;
+                b.unlockPhase = 2; // GDD §6 "ปลดล็อก Phase 2"
+                b.upgradeIronCost = 40;
+                b.upgradeEnergyCost = 150;
+                b.description = "หัวใจงานวิจัย — ฝึกวิศวกร/แพทย์/เกษตรกร ผลิต Knowledge และปลดใบความรู้นิวเคลียร์ " +
+                                "ต้องมีวิศวกรประจำ 2 คนจึงเดินเครื่อง";
+            });
+
+            // ── RadiationShelter: ปลดเฟส 2 (ก่อนยุครังสีหนัก) — ค่าอื่นคง asset เดิม ──
+            n += SetBuilding("RadiationShelter", b => { b.unlockPhase = 2; });
+
+            // ── ตึกผลิตพื้นฐาน + Shelter: เฟส 1 (วางได้วันแรก) — เซ็ตชัดกัน asset ค้างค่าอื่น ──
+            SetBuilding("PowerPlant", b => { b.unlockPhase = 1; });
+            SetBuilding("WaterPlant", b => { b.unlockPhase = 1; });
+            SetBuilding("Farm", b => { b.unlockPhase = 1; });
+            SetBuilding("Habitat", b => { b.unlockPhase = 1; });
 
             // Mine L1: +30⛏ / 2 คน / upkeep 12⚡ / สร้าง Iron 20 — สร้าง asset ถ้ายังไม่มี
             var mine = EnsureMineAsset();
@@ -161,13 +190,15 @@ namespace NuclearReMind.Editor
             var placement = Object.FindFirstObjectByType<PlacementController>();
             if (placement != null)
             {
-                bool changed = AppendIfMissing(ref placement.buildingHotbar, mine);
+                // Mine ถอดจาก hotbar — เหล็กมาจากการขุดแหล่งแร่ (OreDepositSetup) เท่านั้น
+                // (เดิม AppendIfMissing — เปลี่ยนเป็นถอด กันรันซ้ำแล้ว Mine คืนชีพเข้า hotbar)
+                bool changed = RemoveIfPresent(ref placement.buildingHotbar, mine);
                 changed |= RemoveIfPresent(ref placement.buildingHotbar, conduit);
                 changed |= RemoveIfPresent(ref placement.buildingHotbar, coreTower);
                 if (changed)
                 {
                     EditorUtility.SetDirty(placement);
-                    Debug.Log($"[BuildingBalanceSetup] hotbar = {placement.buildingHotbar.Length} ช่อง (Mine เพิ่ม / Conduit+CoreTower ถอด)");
+                    Debug.Log($"[BuildingBalanceSetup] hotbar = {placement.buildingHotbar.Length} ช่อง (Mine+Conduit+CoreTower ถอด)");
                 }
 
                 // BuildingSelectionUI.buildings เป็น array แยก (serialize คนละก้อน) — sync ให้ตรง hotbar เสมอ
@@ -197,7 +228,7 @@ namespace NuclearReMind.Editor
 
         /// <summary>
         /// สร้าง GameObject "PrePlacedCoreTower" (PrePlacedBuilding) — วาง CORE TOWER กลางกริดตอนเริ่มเกม
-        /// ตำแหน่งคำนวณจากขนาดกริดจริงในซีน (43×43, ตึก 3×3 → origin (20,20) กินช่อง 20–22)
+        /// ตำแหน่งคำนวณจากขนาดกริดจริงในซีน (43×28, ตึก 3×3 → origin (20,12) กินช่อง col 20–22 / row 12–14)
         /// </summary>
         private static void EnsurePrePlacedCoreTower(BuildingData coreTower)
         {
@@ -209,7 +240,7 @@ namespace NuclearReMind.Editor
 
             var grid = Object.FindFirstObjectByType<GridManager>();
             int columns = grid != null ? grid.columns : 43;
-            int rows = grid != null ? grid.rows : 43;
+            int rows = grid != null ? grid.rows : 28;
             var origin = new Vector2Int((columns - coreTower.size.x) / 2, (rows - coreTower.size.y) / 2);
 
             var go = GameObject.Find("PrePlacedCoreTower");

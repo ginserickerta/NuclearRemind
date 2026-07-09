@@ -67,7 +67,7 @@ namespace NuclearReMind
             if (icon != null && data.sprite != null) icon.sprite = data.sprite;
 
             // wire progress text
-            UpdateProgressText(go, 0);
+            UpdateProgressText(go, 0, TotalTicksOf(pos));
 
             // wire Cancel button — raise event ผ่าน EventManager ตามสถาปัตยกรรม
             var cancelBtn = go.transform.Find("CancelBtn")?.GetComponent<Button>();
@@ -105,18 +105,23 @@ namespace NuclearReMind
         private void HandleProgressChanged(Vector2Int pos, int progress)
         {
             if (!_entries.TryGetValue(pos, out var go)) return;
-            UpdateProgressText(go, progress);
+            UpdateProgressText(go, progress, TotalTicksOf(pos));
         }
 
         // ─────────────────────────────────────────
         //  Helpers
         // ─────────────────────────────────────────
 
-        private static void UpdateProgressText(GameObject go, int progress)
+        private static void UpdateProgressText(GameObject go, int progress, int total)
         {
             var txt = go.transform.Find("ProgressText")?.GetComponent<Text>();
             if (txt != null)
-                txt.text = $"{progress}/{ConstructionController.TotalConstructionTicks}";
+                txt.text = $"{progress}/{total}";
         }
+
+        private static int TotalTicksOf(Vector2Int pos) =>
+            ConstructionController.Instance != null
+                ? ConstructionController.Instance.GetTotalTicks(pos)
+                : ConstructionController.DefaultConstructionTicks;
     }
 }

@@ -21,12 +21,14 @@ MonoBehaviour:
     \u0E40\u0E0A\u0E48\u0E19 \u0E22\u0E39\u0E40\u0E23\u0E40\u0E19\u0E35\u0E22\u0E21-235
     \u0E1B\u0E25\u0E14\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E2D\u0E2D\u0E01\u0E21\u0E32\u0E43\u0E19\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A
     chain reaction \u0E17\u0E35\u0E48\u0E04\u0E27\u0E1A\u0E04\u0E38\u0E21\u0E44\u0E14\u0E49"
-  sprite: {fileID: 21300000, guid: 460c56b188f82e94c9ec17cf0a63e6be, type: 3}
+  sprite: {fileID: 21300000, guid: d7e62c247b48fb848b4b19fb95e87315, type: 3}
   size: {x: 2, y: 2}
   buildingType: 4
   ironCost: 40
   energyCost: 0
   workerRequired: 1
+  unlockPhase: 1
+  buildTicks: 6
   foodProduction: 0
   waterProduction: 0
   energyProduction: 60
@@ -37,6 +39,9 @@ MonoBehaviour:
   towerPhaseRequired: 0
   unlocksEngineerTraining: 0
   unlocksMedicTraining: 0
+  unlocksFarmerTraining: 0
+  requiredClass: 0
+  knowledgeProduction: 0
   shelterCapacity: 0
   upgradeIronCost: 40
   upgradeEnergyCost: 150
@@ -44,3 +49,10 @@ MonoBehaviour:
   tritiumProduction: 0
   powerRange: 0
   isPowerRelay: 0
+  isOreNode: 0
+  oreQuotaMin: 0
+  oreQuotaMax: 0
+  oreTritiumMin: 0
+  oreTritiumMax: 0
+  oreExposurePerWorkerDay: 0
+  oreSickChancePerWorkerDay: 0

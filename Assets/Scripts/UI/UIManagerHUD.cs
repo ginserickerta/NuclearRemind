@@ -21,15 +21,27 @@ namespace NuclearReMind
             public Image fillImage;
         }
 
-        [Header("Resource Bars")]
-        public ResourceBarUI foodBar;
+        [Header("Resource Bars — หลอดทุกแถว: ตันที่ display* แล้วตัวเลขวิ่งต่อได้ถึง cap 9999")]
+        public ResourceBarUI foodBar;      // "x / 500" (cap จริง — เกินเสี่ยงวิกฤตเน่า)
         public ResourceBarUI waterBar;
         public ResourceBarUI ironBar;
         public ResourceBarUI energyBar;
+        public ResourceBarUI deuteriumBar; // เชื้อเพลิงฟิวชัน (สกัดจากน้ำ — พาร์ทหน้า)
+        public ResourceBarUI tritiumBar;   // เชื้อเพลิงฟิวชัน (ขุดจากแหล่งแร่โซน B)
 
         [Header("Day Cycle")]
         public Text dayText;    // "DAY 12 / 30"
-        public Text timerText;  // นับถอยหลัง "1:30" (Day 1 = "—")
+        public Text timerText;  // นับถอยหลังแยกเฟส "วางแผน 0:28" / "เดินเครื่อง 0:54" (Day 1 = "—")
+
+        [Header("Day Phase (V4 §3) — แถบเวลาแบ่ง Planning|Live + แบนเนอร์เข้า Live")]
+        public Slider planningSegBar;   // ช่วงซ้าย (30s) — เต็มระหว่าง Planning
+        public Slider liveSegBar;       // ช่วงขวา (60s) — เต็มระหว่าง Live
+        public GameObject livePhaseBanner; // ป้ายกลางจอ "เริ่มเดินเครื่อง!" ตอนเข้า Live
+        public float bannerSeconds = 1.6f;
+        public Color planningColor = new Color(0.28f, 0.55f, 0.92f); // ฟ้า = วางแผน
+        public Color liveColor = new Color(0.93f, 0.52f, 0.18f);     // ส้ม = เดินเครื่อง
+
+        private float _bannerTimer;
 
         [Header("Speed Controls")]
         public Button pauseButton;   // ⏸ → 0×
@@ -50,6 +62,7 @@ namespace NuclearReMind
         public Text populationText;
         public Button trainEngineerButton; // ฝึก Worker → Engineer (V4 §5)
         public Button trainMedicButton;    // ฝึก Worker → Medic
+        public Button trainFarmerButton;   // ฝึก Worker → Farmer
         public Button decree1Button;       // ประกาศฉุกเฉิน 1 (V4 §11)
         public Button decree2Button;       // ประกาศฉุกเฉิน 2
 
@@ -67,7 +80,18 @@ namespace NuclearReMind
         public Color criticalColor = Color.yellow;
         public Color depletedColor = Color.red;
 
-        private float _maxFood, _maxWater, _maxIron, _maxEnergy, _criticalRatio;
+        // cap จริง 9999 (V4 §4 "แทบไม่จำกัด") ใช้เป็นฐานหลอดไม่ได้ (หลอดจะแบนทั้งเกม)
+        // → หลอดตันที่ค่าเหล่านี้: เกินแล้ว Slider clamp เต็มค้าง แต่ตัวเลขวิ่งต่อปกติ
+        [Header("Display Reference (ฐานความยาวหลอด — เกินแล้วหลอดเต็มค้าง ตัวเลขวิ่งต่อ)")]
+        public float displayFood = 500f;       // = cap จริง
+        public float displayWater = 2000f;
+        public float displayIron = 2000f;
+        public float displayEnergy = 2000f;
+        public float displayDeuterium = 500f;  // สเกลเชื้อเพลิง (คลังใช้จริงหลักร้อย)
+        public float displayTritium = 500f;
+
+        private float _maxFood;
+        private float _critFood, _critWater, _critIron, _critEnergy; // สีเตือนใช้ค่าสัมบูรณ์เดียวกับ alert
 
         private static readonly string[] PhaseNames = { "Locked", "Cold Assembly", "Plasma Ramp", "Ignition" };
 
@@ -91,6 +115,7 @@ namespace NuclearReMind
             EventManager.Instance.OnDayPhaseChanged += HandleDayPhaseChanged;
             EventManager.Instance.OnSpeedChanged += HandleSpeedChanged;
             EventManager.Instance.OnKnowledgeChanged += HandleKnowledgeChanged;
+            EventManager.Instance.OnWorkerPoolChanged += HandleWorkerPoolChanged;
         }
 
         private void OnDisable()
@@ -104,6 +129,7 @@ namespace NuclearReMind
             EventManager.Instance.OnDayPhaseChanged -= HandleDayPhaseChanged;
             EventManager.Instance.OnSpeedChanged -= HandleSpeedChanged;
             EventManager.Instance.OnKnowledgeChanged -= HandleKnowledgeChanged;
+            EventManager.Instance.OnWorkerPoolChanged -= HandleWorkerPoolChanged;
         }
 
         private void Start()
@@ -112,12 +138,13 @@ namespace NuclearReMind
             // เป็นการอ่านค่า config ที่ตั้งไว้ใน Inspector ของ manager นั้น ๆ ไม่ใช่การเรียก method ข้าม manager
             var rm = ResourceManager.Instance;
             _maxFood = rm.maxFood;
-            _maxWater = rm.maxWater;
-            _maxIron = rm.maxIron;
-            _maxEnergy = rm.maxEnergy;
-            _criticalRatio = rm.criticalRatio;
+            _critFood = rm.criticalFood;     // สีเตือนตรงกับ alert "ใกล้หมด" เป๊ะ (ค่าสัมบูรณ์)
+            _critWater = rm.criticalWater;
+            _critIron = rm.criticalIron;
+            _critEnergy = rm.criticalEnergy;
 
             if (gameOverPanel != null) gameOverPanel.SetActive(false);
+            if (livePhaseBanner != null) livePhaseBanner.SetActive(false);
 
             // ปุ่มความเร็ว → raise request ให้ GameManager จัดการ (ไม่เรียก GameManager ตรง)
             if (pauseButton != null)  pauseButton.onClick.AddListener(() => EventManager.Instance.RaiseSpeedChangeRequested(0f));
@@ -127,6 +154,7 @@ namespace NuclearReMind
             // ปุ่มฝึกคลาส → raise request ให้ PopulationManager (V4 §5)
             if (trainEngineerButton != null) trainEngineerButton.onClick.AddListener(() => EventManager.Instance.RaiseTrainEngineerRequested());
             if (trainMedicButton != null)    trainMedicButton.onClick.AddListener(() => EventManager.Instance.RaiseTrainMedicRequested());
+            if (trainFarmerButton != null)   trainFarmerButton.onClick.AddListener(() => EventManager.Instance.RaiseTrainFarmerRequested());
 
             // ปุ่ม Coils → raise request ให้ CoreTowerManager (V4 §6)
             if (toroidalButton != null) toroidalButton.onClick.AddListener(() => EventManager.Instance.RaiseUpgradeToroidalRequested());
@@ -165,69 +193,110 @@ namespace NuclearReMind
             if (dayText != null)
                 dayText.text = $"DAY {day} / {GameManager.MaxDay}";
 
-            // Day ที่ไม่จับเวลา (Day 1 tutorial) — ตั้งข้อความครั้งเดียว, Update จะไม่เขียนทับ
-            if (timerText != null && !timed)
-                timerText.text = "—";
+            if (!timed) // Day 1 tutorial — ไม่จับเวลา
+            {
+                if (timerText != null) { timerText.text = "—"; timerText.color = planningColor; }
+                SetSeg(planningSegBar, 0f);
+                SetSeg(liveSegBar, 0f);
+            }
+            // วันที่จับเวลา: OnDayPhaseChanged(Planning) จะตามมา แล้ว Update เขียน timer/แถบเฟสเอง
         }
 
-        // แสดงเฟสภายในวัน (V4 §3): Planning วางแผน → Live เดินเครื่อง
+        // เข้าเฟสใหม่ (V4 §3): Planning วางแผน → Live เดินเครื่อง · เข้า Live → เด้งแบนเนอร์กลางจอ
         private void HandleDayPhaseChanged(GameManager.DayPhase phase)
         {
-            if (dayText == null) return;
-            string label = phase == GameManager.DayPhase.Planning ? "วางแผน" : "เดินเครื่อง";
-            dayText.text = $"DAY {_day} / {GameManager.MaxDay} · {label}";
+            if (phase == GameManager.DayPhase.Live && livePhaseBanner != null)
+            {
+                livePhaseBanner.SetActive(true);
+                _bannerTimer = bannerSeconds;
+            }
         }
 
-        // อ่าน DayTimeRemaining แบบ read-only query ต่อเฟรม (เทียบเท่าการอ่าน config/registry ของ manager อื่น)
-        // ไม่ใช่การเรียก method เปลี่ยนสถานะข้าม manager
+        // อ่านสถานะเวลา/เฟสแบบ read-only query ต่อเฟรม (เทียบเท่าการอ่าน config ของ manager อื่น)
         private void Update()
         {
-            if (timerText == null || GameManager.Instance == null) return;
-            if (!GameManager.Instance.DayTimerActive) return; // คงข้อความล่าสุด (เช่น "—" ของ Day 1)
+            UpdateLiveBanner(); // เฟดแบนเนอร์เข้า Live (unscaled — ไม่โดน pause)
 
-            float t = GameManager.Instance.DayTimeRemaining;
-            int m = Mathf.FloorToInt(t / 60f);
-            int s = Mathf.FloorToInt(t % 60f);
+            if (timerText == null || GameManager.Instance == null) return;
+            var gm = GameManager.Instance;
+            if (!gm.DayTimerActive) return; // คงข้อความล่าสุด (เช่น "—" ของ Day 1)
+
+            bool planning = gm.CurrentDayPhase == GameManager.DayPhase.Planning;
+            string label = planning ? "วางแผน" : "เดินเครื่อง";
+            Color col = planning ? planningColor : liveColor;
+
+            // นับถอยหลัง "แยกเฟส" (Planning 0:30→0:00 / Live 1:00→0:00) — ceil กันโชว์ 0:00 คร่อมรอยต่อ
+            float t = gm.PhaseTimeRemaining;
+            int total = Mathf.CeilToInt(t);
+            int m = total / 60, s = total % 60;
 
             // §15: มีเหตุหยุดนาฬิกา (วางอาคาร/ทุบ/ควิซ/วิกฤต) → บอกผู้เล่นชัด ๆ ว่าเวลาหยุด ไม่ใช่บั๊ก
             bool clockPaused = TimeManager.Instance != null && !TimeManager.Instance.IsRunning;
-            timerText.text = clockPaused ? $"หยุด · {m}:{s:00}" : $"{m}:{s:00}";
+            timerText.text = clockPaused ? $"หยุด · {label} {m}:{s:00}" : $"{label} {m}:{s:00}";
+            timerText.color = clockPaused ? Color.gray : col;
+
+            // แถบเวลาแบ่งเฟส: ช่วงที่ผ่านไปของเฟสปัจจุบันเติมขึ้น, อีกช่วงว่าง/เต็มตามลำดับ
+            float frac = gm.PhaseDuration > 0f ? 1f - t / gm.PhaseDuration : 0f;
+            if (planning) { SetSeg(planningSegBar, frac); SetSeg(liveSegBar, 0f); }
+            else          { SetSeg(planningSegBar, 1f);   SetSeg(liveSegBar, frac); }
+        }
+
+        private void UpdateLiveBanner()
+        {
+            if (livePhaseBanner == null || _bannerTimer <= 0f) return;
+            _bannerTimer -= Time.unscaledDeltaTime;
+            if (_bannerTimer <= 0f) livePhaseBanner.SetActive(false);
+        }
+
+        private static void SetSeg(Slider bar, float value)
+        {
+            if (bar != null) bar.value = Mathf.Clamp01(value);
         }
 
         private void HandleResourceChanged(ResourceData data)
         {
-            SetBar(foodBar, data.food, _maxFood);
-            SetBar(waterBar, data.water, _maxWater);
-            SetBar(ironBar, data.iron, _maxIron);
-            SetBar(energyBar, data.energy, _maxEnergy);
+            SetBar(foodBar, data.food, displayFood, _maxFood, _critFood); // อาหารโชว์ "x / 500" (cap จริง)
+            SetBar(waterBar, data.water, displayWater, 0f, _critWater);
+            SetBar(ironBar, data.iron, displayIron, 0f, _critIron);
+            SetBar(energyBar, data.energy, displayEnergy, 0f, _critEnergy);
+            SetBar(deuteriumBar, data.deuterium, displayDeuterium, 0f, 0f); // เชื้อเพลิงไม่มีเกณฑ์เตือน
+            SetBar(tritiumBar, data.tritium, displayTritium, 0f, 0f);
         }
 
-        private void SetBar(ResourceBarUI ui, float amount, float max)
+        // หลอดตันที่ displayRef (Slider clamp เอง) · capText > 0 → โชว์ "x / cap" ไม่งั้นตัวเลขล้วน
+        private void SetBar(ResourceBarUI ui, float amount, float displayRef, float capText, float critical)
         {
             if (ui == null) return;
 
             if (ui.bar != null)
             {
-                ui.bar.maxValue = max;
-                ui.bar.value = amount;
+                ui.bar.gameObject.SetActive(true); // เผื่อโดนซ่อนไว้จากดีไซน์ตัวเลขล้วนรอบก่อน
+                ui.bar.maxValue = displayRef;
+                ui.bar.value = amount;             // เกิน displayRef → หลอดเต็มค้าง ตัวเลขวิ่งต่อ
             }
 
             if (ui.valueText != null)
-                ui.valueText.text = $"{Mathf.RoundToInt(amount)} / {Mathf.RoundToInt(max)}";
+                ui.valueText.text = capText > 0f
+                    ? $"{Mathf.RoundToInt(amount)} / {Mathf.RoundToInt(capText)}"
+                    : $"{Mathf.RoundToInt(amount)}";
 
             if (ui.fillImage != null)
             {
                 if (amount <= 0f)
                     ui.fillImage.color = depletedColor;
-                else if (amount < max * _criticalRatio)
+                else if (critical > 0f && amount < critical)
                     ui.fillImage.color = criticalColor;
                 else
                     ui.fillImage.color = normalColor;
             }
         }
 
+        private PopulationData _lastPop;
+        private int _idleWorkers = -1; // -1 = ยังไม่รู้ (ไม่มี WorkerAssignmentManager) → ไม่โชว์
+
         private void HandlePopulationChanged(PopulationData data)
         {
+            _lastPop = data;
             if (hopeBar != null)
             {
                 hopeBar.maxValue = 100f;
@@ -236,8 +305,21 @@ namespace NuclearReMind
             if (hopeText != null)
                 hopeText.text = $"Hope: {Mathf.RoundToInt(data.hope)}";
 
-            if (populationText != null)
-                populationText.text = $"ประชากร {data.total}/{data.shelterCap}  ·  W{data.workers} E{data.engineers} M{data.medics}";
+            RefreshPopulationText();
+        }
+
+        // idle pool (V4 §5) — คนงานว่างที่ยังไม่ถูก assign อาคาร
+        private void HandleWorkerPoolChanged(int idle, int total)
+        {
+            _idleWorkers = idle;
+            RefreshPopulationText();
+        }
+
+        private void RefreshPopulationText()
+        {
+            if (populationText == null) return;
+            string idlePart = _idleWorkers >= 0 ? $"  ·  ว่าง {_idleWorkers}" : "";
+            populationText.text = $"ประชากร {_lastPop.total}/{_lastPop.shelterCap}  ·  W{_lastPop.workers} E{_lastPop.engineers} M{_lastPop.medics} F{_lastPop.farmers}{idlePart}";
         }
 
         // Knowledge 0–100 + ป้าย tier (Novice/Aware/Skilled/Expert) — อ่าน tier จาก ResourceManager (config-style query)

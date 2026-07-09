@@ -6,7 +6,7 @@ using UnityEngine;
 namespace NuclearReMind.Tests
 {
     /// <summary>
-    /// V4 §5/§9 — ประชากร 3 คลาส + Hope เดี่ยว:
+    /// V4 §5/§9 — ประชากร 4 คลาส + Hope เดี่ยว:
     /// ฝึก Worker→Engineer/Medic (1 วัน, ต้องมีอาคาร+ทรัพยากร), เติมประชากร +1/วัน,
     /// AssignedCoolingEngineers, Hope recalc, Hope=0 → Game Over (HopeZero)
     /// </summary>
@@ -33,14 +33,16 @@ namespace NuclearReMind.Tests
                 Object.DestroyImmediate(obj);
         }
 
-        // ── ค่าเริ่มต้น ──────────────────────────────────────────
+        // ── ค่าเริ่มต้น (bootstrap 4 คลาส §5 — กัน "วันแรกผลิตอะไรไม่ได้") ──
         [Test]
-        public void StartsAt_Hope100_Workers10()
+        public void StartsAt_Hope100_TenWithClassMix()
         {
             Assert.AreEqual(100f, population.Current.hope, 1e-4f);
-            Assert.AreEqual(10, population.Current.workers);
-            Assert.AreEqual(10, population.Current.total);
-            Assert.AreEqual(0, population.Current.engineers);
+            Assert.AreEqual(6, population.Current.workers, "เริ่ม 6 Worker");
+            Assert.AreEqual(2, population.Current.farmers, "เริ่ม 2 Farmer (ทำฟาร์มได้วันแรก)");
+            Assert.AreEqual(2, population.Current.engineers, "เริ่ม 2 Engineer (คุม Lab ได้)");
+            Assert.AreEqual(0, population.Current.medics);
+            Assert.AreEqual(10, population.Current.total, "รวม 10 คน");
         }
 
         // ── ขวัญกำลังใจ (V4 §9/§18 Hope deltas) ──────────────────────────
@@ -73,19 +75,21 @@ namespace NuclearReMind.Tests
         public void Deaths_ReduceWorkers_AndHope()
         {
             eventManager.RaisePopulationDeaths(3);
-            Assert.AreEqual(7, population.Current.workers, "ตาย 3 → Worker เหลือ 7");
+            Assert.AreEqual(3, population.Current.workers, "ตาย 3 → Worker เหลือ 3 (เริ่ม 6)");
             Assert.AreEqual(85f, population.Current.hope, 1e-4f, "Hope −5/คน × 3 = −15");
         }
 
         [Test]
-        public void Deaths_TakeWorkersFirst_ThenMedics()
+        public void Deaths_TakeWorkersFirst_ThenFarmers_ThenMedics()
         {
-            InjectPop(workers: 1, hope: 100f, shelterCap: 20, engineers: 2, medics: 1);
-            eventManager.RaisePopulationDeaths(2);
+            // ลำดับตาย: Worker → Farmer → Medic → Engineer (Engineer รักษาไว้ท้ายสุด — แรงหล่อเย็น CORE)
+            InjectPop(workers: 1, hope: 100f, shelterCap: 20, engineers: 2, medics: 1, farmers: 1);
+            eventManager.RaisePopulationDeaths(3);
 
             Assert.AreEqual(0, population.Current.workers, "Worker ตายก่อน");
-            Assert.AreEqual(0, population.Current.medics, "หมด Worker → Medic ตายต่อ");
-            Assert.AreEqual(2, population.Current.engineers, "Engineer รักษาไว้ท้ายสุด (แรงหล่อเย็น)");
+            Assert.AreEqual(0, population.Current.farmers, "หมด Worker → Farmer ตายต่อ");
+            Assert.AreEqual(0, population.Current.medics, "หมด Farmer → Medic ตายต่อ");
+            Assert.AreEqual(2, population.Current.engineers, "Engineer รักษาไว้ท้ายสุด");
         }
 
         [Test]
@@ -126,19 +130,19 @@ namespace NuclearReMind.Tests
             UnlockTraining(engineer: true, medic: false);
 
             population.TrainEngineer();
-            Assert.AreEqual(9, population.Current.workers, "ดึง Worker เข้าฝึกทันที");
-            Assert.AreEqual(0, population.Current.engineers, "ยังไม่เสร็จ (ใช้เวลา 1 วัน)");
+            Assert.AreEqual(5, population.Current.workers, "ดึง Worker เข้าฝึกทันที (เริ่ม 6)");
+            Assert.AreEqual(2, population.Current.engineers, "ยังไม่เสร็จ — คง Engineer เริ่มต้น 2 (ใช้เวลา 1 วัน)");
 
             eventManager.RaiseDayEnded(2);
-            Assert.AreEqual(1, population.Current.engineers, "สิ้นวัน → ได้ Engineer");
-            Assert.AreEqual(9, population.Current.workers);
+            Assert.AreEqual(3, population.Current.engineers, "สิ้นวัน → ได้ Engineer เพิ่ม (2+1)");
+            Assert.AreEqual(5, population.Current.workers);
         }
 
         [Test]
         public void TrainEngineer_WithoutResearchLab_Blocked()
         {
             population.TrainEngineer(); // ยังไม่ปลดล็อก
-            Assert.AreEqual(10, population.Current.workers, "ไม่มี Research Lab → ฝึกไม่ได้");
+            Assert.AreEqual(6, population.Current.workers, "ไม่มี Research Lab → ฝึกไม่ได้ (คง Worker เริ่มต้น 6)");
         }
 
         [Test]
@@ -165,7 +169,7 @@ namespace NuclearReMind.Tests
             eventManager.OnNotice += m => notice = m;
             population.TrainEngineer();
 
-            Assert.AreEqual(10, population.Current.workers, "ทรัพยากรไม่พอ → ไม่ดึง Worker");
+            Assert.AreEqual(6, population.Current.workers, "ทรัพยากรไม่พอ → ไม่ดึง Worker (คงเริ่มต้น 6)");
             StringAssert.Contains("ทรัพยากรไม่พอ", notice);
         }
 
@@ -178,7 +182,7 @@ namespace NuclearReMind.Tests
             eventManager.OnNotice += m => notice = m;
             population.TrainEngineer();
 
-            Assert.AreEqual(9, population.Current.workers);
+            Assert.AreEqual(5, population.Current.workers, "เริ่ม 6 − 1 เข้าฝึก = 5");
             StringAssert.Contains("เริ่มฝึก", notice);
         }
 
@@ -191,7 +195,29 @@ namespace NuclearReMind.Tests
             eventManager.RaiseDayEnded(2);
 
             Assert.AreEqual(1, population.Current.medics);
-            Assert.AreEqual(9, population.Current.workers);
+            Assert.AreEqual(5, population.Current.workers, "เริ่ม 6 − 1 เข้าฝึก = 5");
+        }
+
+        [Test]
+        public void TrainFarmer_ConvertsWorkerToFarmer_After1Day()
+        {
+            UnlockTraining(engineer: false, medic: false, farmer: true);
+
+            population.TrainFarmer();
+            Assert.AreEqual(5, population.Current.workers, "ดึง Worker เข้าฝึกทันที");
+            Assert.AreEqual(2, population.Current.farmers, "ยังไม่เสร็จ — คง Farmer เริ่มต้น 2");
+
+            eventManager.RaiseDayEnded(2);
+            Assert.AreEqual(3, population.Current.farmers, "สิ้นวัน → ได้ Farmer เพิ่ม (2+1)");
+        }
+
+        [Test]
+        public void TrainFarmer_WithoutLab_Blocked()
+        {
+            population.TrainFarmer(); // ยังไม่ปลดล็อก
+            Assert.AreEqual(6, population.Current.workers, "ไม่มีห้องวิจัย → ฝึกเกษตรกรไม่ได้");
+            eventManager.RaiseDayEnded(2);
+            Assert.AreEqual(2, population.Current.farmers, "ไม่มีการฝึกค้าง — Farmer คงเริ่มต้น 2");
         }
 
         // ── เติมประชากร (V4 §5) ──────────────────────────────────
@@ -237,7 +263,7 @@ namespace NuclearReMind.Tests
         }
 
         // ── helpers ─────────────────────────────────────────────
-        private void InjectPop(int workers, float hope, int shelterCap, int engineers = 0, int medics = 0)
+        private void InjectPop(int workers, float hope, int shelterCap, int engineers = 0, int medics = 0, int farmers = 0)
         {
             var save = new SaveData
             {
@@ -245,14 +271,14 @@ namespace NuclearReMind.Tests
                 resources = new ResourceData { energy = 100f, water = 100f, food = 100f, iron = 100f },
                 population = new PopulationData
                 {
-                    workers = workers, engineers = engineers, medics = medics,
+                    workers = workers, engineers = engineers, medics = medics, farmers = farmers,
                     hope = hope, shelterCap = shelterCap,
                 },
             };
             eventManager.RaiseSaveLoaded(save);
         }
 
-        private void UnlockTraining(bool engineer, bool medic)
+        private void UnlockTraining(bool engineer, bool medic, bool farmer = false)
         {
             var b = ScriptableObject.CreateInstance<BuildingData>();
             b.buildingName = "TrainingFacility";
@@ -261,6 +287,7 @@ namespace NuclearReMind.Tests
             b.ironCost = 0;
             b.unlocksEngineerTraining = engineer;
             b.unlocksMedicTraining = medic;
+            b.unlocksFarmerTraining = farmer;
             _spawned.Add(b);
             eventManager.RaiseBuildingPlaced(new Cell(1, 1), b);
         }

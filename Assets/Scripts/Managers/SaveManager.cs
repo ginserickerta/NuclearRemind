@@ -126,6 +126,18 @@ namespace NuclearReMind
                 save.buildingTypes.Add(kvp.Value.buildingName);
             }
 
+            // การจัดสรร Worker ประจำอาคาร (§5) — read-only query · ไม่มี manager = list ว่าง (ทุกคน idle)
+            save.workerAssignmentCells = new List<Vector2Int>();
+            save.workerAssignmentCounts = new List<int>();
+            if (WorkerAssignmentManager.Instance != null)
+            {
+                foreach (var kvp in WorkerAssignmentManager.Instance.Assignments)
+                {
+                    save.workerAssignmentCells.Add(kvp.Key);
+                    save.workerAssignmentCounts.Add(kvp.Value);
+                }
+            }
+
             File.WriteAllText(SavePath, JsonUtility.ToJson(save, true));
             Debug.Log($"[SaveManager] Saved to {SavePath}");
         }

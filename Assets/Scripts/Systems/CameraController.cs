@@ -32,6 +32,10 @@ namespace NuclearReMind
         public bool clampToGrid = true;
         public float boundsPadding = 2f;      // ยอมให้เลยขอบแมพได้กี่หน่วย world
 
+        [Header("Start Focus")]
+        [Tooltip("เริ่มเกมให้กล้องอยู่กลางกริด (= ตรง CORE TOWER ที่ pre-place กลางเมืองเสมอ)")]
+        public bool centerOnCoreTowerAtStart = true;
+
         private Camera cam;
         private Vector2 _panVelocity;   // ความเร็วปัจจุบัน (มีแรงเฉื่อย)
         private Vector2 _panDampVel;    // state ภายในของ SmoothDamp
@@ -45,6 +49,21 @@ namespace NuclearReMind
             cam = GetComponent<Camera>();
             cam.orthographic = true;
             _targetZoom = Mathf.Clamp(cam.orthographicSize, minZoom, maxZoom);
+        }
+
+        private void Start()
+        {
+            if (centerOnCoreTowerAtStart) CenterOnGridCenter();
+        }
+
+        // CORE TOWER ถูก pre-place กลางกริดเสมอ (origin = (cols−size)/2 → ศูนย์กลาง footprint = ศูนย์กลางกริด)
+        // จึงเล็งกล้องที่ศูนย์กลางกริด = ตรงเตาพอดี ไม่ต้อง query ตัวเตา (robust ทุกขนาดกริด)
+        private void CenterOnGridCenter()
+        {
+            var grid = GridManager.Instance;
+            if (grid == null) return;
+            Vector3 center = grid.IsoToWorldF((grid.columns - 1) * 0.5f, (grid.rows - 1) * 0.5f);
+            transform.position = new Vector3(center.x, center.y, transform.position.z);
         }
 
         private void Update()

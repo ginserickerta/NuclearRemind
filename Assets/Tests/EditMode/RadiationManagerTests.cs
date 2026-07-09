@@ -73,6 +73,15 @@ namespace NuclearReMind.Tests
             Assert.AreEqual(0f, rm.ComputeDailyExposure(1, 2, 3, 0f), 0.01f);
         }
 
+        [Test]
+        public void DailyExposure_Hospital_MitigatesLikeShelter()
+        {
+            var rm = NewComponent<RadiationManager>("RadiationManager");
+            // 3 Mine (9) + เตา (2) = 11 · − Hospital ประจำครบ 1 แห่ง (6) = 5 (GDD §6)
+            Assert.AreEqual(11f, rm.ComputeDailyExposure(3, 0, 0, 0f, hospitals: 0), 0.01f);
+            Assert.AreEqual(5f, rm.ComputeDailyExposure(3, 0, 0, 0f, hospitals: 1), 0.01f);
+        }
+
         // ── StatCondition "exposure_above_" (เงื่อนไข trigger ของ beat crisis_radiation_disease) ──
 
         [Test]
@@ -85,10 +94,12 @@ namespace NuclearReMind.Tests
         [Test]
         public void StatCondition_ExposureOrDayFallback_FiresOnEither()
         {
-            const string cond = "exposure_above_60|day_reached_23";
-            Assert.IsFalse(StatCondition.Matches(cond, 10, default, default, 30f), "exposure 30<60 + day 10<23 → false");
+            // เงื่อนไขจริงของ beat crisis_radiation_disease (GDD §10 + เพดานวัน §14 = Day 20)
+            string cond = CrisisSchedule.OutbreakTrigger;
+            Assert.IsFalse(StatCondition.Matches(cond, 10, default, default, 30f), "exposure 30<60 + day 10<20 → false");
             Assert.IsTrue(StatCondition.Matches(cond, 10, default, default, 80f), "exposure 80≥60 → true (มาเร็วถ้าประมาท)");
-            Assert.IsTrue(StatCondition.Matches(cond, 23, default, default, 30f), "day 23 → true (fallback กันพลาด)");
+            Assert.IsTrue(StatCondition.Matches(cond, CrisisSchedule.OutbreakDay, default, default, 30f),
+                "day 20 → true (เพดานวันกันพลาดเนื้อหา)");
         }
 
         [Test]

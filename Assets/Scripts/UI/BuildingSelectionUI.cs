@@ -19,12 +19,20 @@ namespace NuclearReMind
         [Header("Runtime — wire โดย setup script")]
         public Transform buttonContainer;
 
+        [Header("พับ/กางแถบอาคาร (ปุ่มหูจับ + แป้น B)")]
+        public GameObject panelRoot;   // BuildingSelectionPanel (ตัวที่ซ่อน/โชว์)
+        public Button toggleButton;    // ปุ่มหูจับ (สังกัด HUD ไม่ใช่ panel จึงเห็นตอนพับ)
+        public Text toggleLabel;
+        private bool _collapsed;
+
         // state
         private Button[] _buttons;
         private Image[]  _buttonImages;
+        private Text[]   _lockLabels; // "🔒 เฟส N" ต่อช่อง — โชว์เมื่อยังไม่ถึงเฟสปลดล็อก (GDD §6)
         private BuildingData _selected;
         private ResourceData _resources;
         private bool _isDemolishing;
+        private int _currentPhase = 1; // cache จาก OnDayStarted (GamePhase.FromDay)
 
         // demolish button refs (สร้างแยกจาก building slots)
         private Image _demolishImage;
@@ -33,6 +41,7 @@ namespace NuclearReMind
         private static readonly Color ColNormal      = new Color(0.15f, 0.15f, 0.22f, 1f);
         private static readonly Color ColSelected    = new Color(0.25f, 0.55f, 0.85f, 1f);
         private static readonly Color ColCantAfford  = new Color(0.35f, 0.15f, 0.15f, 1f);
+        private static readonly Color ColLocked      = new Color(0.10f, 0.10f, 0.13f, 1f); // ล็อกเฟส — เข้มกว่าปกติ
         private static readonly Color ColDemolish    = new Color(0.35f, 0.10f, 0.10f, 1f);
         private static readonly Color ColDemolishOn  = new Color(0.85f, 0.20f, 0.20f, 1f);
 
@@ -47,6 +56,7 @@ namespace NuclearReMind
             EventManager.Instance.OnBuildingSelected    += HandleBuildingSelected;
             EventManager.Instance.OnResourceChanged     += HandleResourceChanged;
             EventManager.Instance.OnDemolishModeToggled += HandleDemolishModeToggled;
+            EventManager.Instance.OnDayStarted          += HandleDayStarted;
         }
 
         private void OnDisable()
@@ -55,11 +65,33 @@ namespace NuclearReMind
             EventManager.Instance.OnBuildingSelected    -= HandleBuildingSelected;
             EventManager.Instance.OnResourceChanged     -= HandleResourceChanged;
             EventManager.Instance.OnDemolishModeToggled -= HandleDemolishModeToggled;
+            EventManager.Instance.OnDayStarted          -= HandleDayStarted;
         }
 
         private void Start()
         {
             BuildButtons();
+
+            if (toggleButton != null) toggleButton.onClick.AddListener(ToggleCollapsed);
+            ApplyCollapse(); // ตั้งสถานะเริ่ม (กางอยู่)
+        }
+
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.B)) ToggleCollapsed();
+        }
+
+        // ───────────── พับ/กางแถบอาคาร ─────────────
+        private void ToggleCollapsed()
+        {
+            _collapsed = !_collapsed;
+            ApplyCollapse();
+        }
+
+        private void ApplyCollapse()
+        {
+            if (panelRoot != null) panelRoot.SetActive(!_collapsed);
+            if (toggleLabel != null) toggleLabel.text = _collapsed ? "▲ อาคาร" : "▼ อาคาร";
         }
 
         // ─────────────────────────────────────────
@@ -70,11 +102,16 @@ namespace NuclearReMind
         {
             if (buttonContainer == null || buildings == null) return;
 
+            // เฟสปัจจุบันตอนสร้างปุ่ม (read-only query — ครอบกรณี UI สร้างหลัง Day เริ่ม/หลังโหลดเซฟ)
+            if (GameManager.Instance != null)
+                _currentPhase = GameManager.Instance.CurrentPhase;
+
             // ล้างปุ่มเก่า (ถ้า setup รันซ้ำ)
             foreach (Transform child in buttonContainer) Destroy(child.gameObject);
 
             _buttons      = new Button[buildings.Length];
             _buttonImages = new Image[buildings.Length];
+            _lockLabels   = new Text[buildings.Length];
 
             for (int i = 0; i < buildings.Length; i++)
             {
@@ -87,6 +124,7 @@ namespace NuclearReMind
             }
 
             BuildDemolishButton();
+            RefreshButtonColors(); // สถานะล็อกเฟสเริ่มต้น (Day 1 = เฟส 1)
         }
 
         private static Font LoadKanitFont()
@@ -184,6 +222,17 @@ namespace NuclearReMind
             costLbl.GetComponent<RectTransform>().anchorMax = new Vector2(1, 0);
             costLbl.color = new Color(1f, 0.85f, 0.3f);
 
+            // ป้ายล็อกเฟส (GDD §6) — ทับกลางช่อง โชว์เมื่อยังไม่ถึงเฟส (RefreshButtonColors คุม)
+            var lockLbl = MakeText("LockLabel", slot.transform, font, $"🔒 เฟส {data.unlockPhase}", 13,
+                new Vector2(0, 0), new Vector2(0, 24), TextAnchor.MiddleCenter);
+            var lockRect = lockLbl.GetComponent<RectTransform>();
+            lockRect.anchorMin = new Vector2(0, 0.35f);
+            lockRect.anchorMax = new Vector2(1, 0.65f);
+            lockLbl.color = new Color(1f, 0.85f, 0.3f);
+            lockLbl.fontStyle = FontStyle.Bold;
+            lockLbl.gameObject.SetActive(false);
+            _lockLabels[index] = lockLbl;
+
             // Click listener
             var captured = data;
             btn.onClick.AddListener(() => EventManager.Instance.RaiseBuildingSelectRequested(captured));
@@ -217,6 +266,13 @@ namespace NuclearReMind
                 _demolishImage.color = active ? ColDemolishOn : ColDemolish;
         }
 
+        // เฟสเกมเปลี่ยนได้เฉพาะตอนขึ้นวันใหม่ (GamePhase.FromDay) → re-render สถานะล็อก
+        private void HandleDayStarted(int day, bool timed)
+        {
+            _currentPhase = GamePhase.FromDay(day);
+            RefreshButtonColors();
+        }
+
         private void ToggleDemolish()
         {
             // PlacementController.HandleDemolishModeToggled ดูแล cancel placement แล้ว
@@ -231,10 +287,16 @@ namespace NuclearReMind
             {
                 if (_buttons[i] == null || buildings[i] == null) continue;
 
+                bool locked     = buildings[i].unlockPhase > _currentPhase; // ยังไม่ถึงเฟส (GDD §6)
                 bool isSelected = buildings[i] == _selected && !_isDemolishing;
                 bool canAfford  = CanAfford(buildings[i]);
 
-                _buttonImages[i].color = isSelected  ? ColSelected
+                // ล็อกเฟสชนะทุกสถานะ: ปุ่มหรี่ + กดไม่ได้ + ป้าย 🔒
+                _buttons[i].interactable = !locked;
+                if (_lockLabels[i] != null) _lockLabels[i].gameObject.SetActive(locked);
+
+                _buttonImages[i].color = locked      ? ColLocked
+                                       : isSelected  ? ColSelected
                                        : !canAfford  ? ColCantAfford
                                                      : ColNormal;
             }

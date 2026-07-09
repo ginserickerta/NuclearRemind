@@ -29,6 +29,20 @@ namespace NuclearReMind
         public bool DayTimerActive { get; private set; }
         public DayPhase CurrentDayPhase { get; private set; } = DayPhase.Planning;
 
+        /// <summary>เฟสของเกมตามช่วงวัน (GDD §6 "ปลดล็อก") — 1–5→1 · 6–10→2 · 11–20→3 · 21+→4</summary>
+        public int CurrentPhase => GamePhase.FromDay(CurrentDay);
+
+        /// <summary>ความยาวเต็มของเฟส Planning (วินาที) = dayLength − liveSeconds</summary>
+        public float PlanningSeconds => Mathf.Max(0f, dayLength - liveSeconds);
+
+        /// <summary>เวลาที่เหลือใน "เฟสปัจจุบัน" — สำหรับ UI นับถอยหลังแยกเฟส (Planning/Live)</summary>
+        public float PhaseTimeRemaining => CurrentDayPhase == DayPhase.Planning
+            ? Mathf.Max(0f, DayTimeRemaining - liveSeconds)
+            : DayTimeRemaining;
+
+        /// <summary>ความยาวเต็มของเฟสปัจจุบัน (Planning = 30, Live = 60) — ใช้หา % ของแถบเวลา</summary>
+        public float PhaseDuration => CurrentDayPhase == DayPhase.Planning ? PlanningSeconds : liveSeconds;
+
         // ===== Speed Control (A4) =====
         // ความเร็วเล่นปัจจุบันเมื่อไม่ pause (1× ปกติ / 2× เร่ง) — pause = timeScale 0 ชั่วคราว
         public float GameSpeed { get; private set; } = 1f;

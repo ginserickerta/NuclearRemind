@@ -53,7 +53,7 @@ namespace NuclearReMind.Editor
         {
             TileBase tile = AssetDatabase.LoadAssetAtPath<TileBase>(GroundTilePath);
 
-            // ขนาดจริงตาม logic grid ในซีน (เฟส 8 = 43×43)
+            // ขนาดจริงตาม logic grid ในซีน (เฟส 8 = 43×28)
             var grid = Object.FindFirstObjectByType<GridManager>();
             int columns = grid != null ? grid.columns : FallbackColumns;
             int rows = grid != null ? grid.rows : FallbackRows;

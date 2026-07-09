@@ -8,7 +8,7 @@ namespace NuclearReMind.EditorTools
     /// <summary>
     /// Setup ครบชุดสำหรับ Day 11 — รันผ่าน NuclearReMind / Setup Day 11 Systems
     /// สิ่งที่ทำ:
-    ///   1. เพิ่ม ConstructionController + สร้าง ConstructionProgressUI prefab
+    ///   1. เพิ่ม ConstructionController (บาร์ก่อสร้างย้ายเข้าแผง hover แล้ว — ดูเมนู "Update Building Hover Panel")
     ///   2. สร้าง BuildingQueueUI + entry prefab ใน HUDCanvas
     ///   3. สร้าง TutorialManager + popup panel ใน HUDCanvas
     ///   4. สร้าง BuildingSelectionUI hotbar ด้านล่างจอ
@@ -40,7 +40,7 @@ namespace NuclearReMind.EditorTools
 
             SetupConstructionController();
             SetupBuildingQueueUI(hudCanvas, font);
-            SetupTutorialManager(hudCanvas, font);
+            // Tutorial (Day 1 checklist) ย้ายไปตั้งค่าใน HUDCanvasSetup แล้ว — ดูเมนู "Setup HUD Canvas"
             SetupBuildingSelectionUI(hudCanvas, font);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -49,7 +49,7 @@ namespace NuclearReMind.EditorTools
         }
 
         // ─────────────────────────────────────────────
-        //  1. ConstructionController + ProgressUI prefab
+        //  1. ConstructionController
         // ─────────────────────────────────────────────
 
         private static void SetupConstructionController()
@@ -58,19 +58,6 @@ namespace NuclearReMind.EditorTools
             if (go == null) go = new GameObject("ConstructionController");
 
             var cc = go.GetComponent<ConstructionController>() ?? go.AddComponent<ConstructionController>();
-
-            // สร้าง ConstructionProgressUI prefab (world-space progress bar เหนืออาคาร)
-            // ConstructionProgressUI สร้าง bar (background + fill) เองตอน runtime — prefab เป็นแค่ GameObject เปล่า + script
-            // regenerate ทุกครั้งเพื่อ overwrite prefab เวอร์ชันตัวเลข "x/10" เดิม
-            var prefabPath = $"{PrefabPath}/ConstructionProgressUI.prefab";
-
-            var temp = new GameObject("ConstructionProgressUI");
-            temp.AddComponent<ConstructionProgressUI>();
-            var prefab = PrefabUtility.SaveAsPrefabAsset(temp, prefabPath);
-            Object.DestroyImmediate(temp);
-            Debug.Log($"[Day11Setup] สร้าง/อัปเดต prefab: {prefabPath} (progress bar)");
-
-            cc.constructionProgressUIPrefab = prefab;
             EditorUtility.SetDirty(cc);
         }
 
@@ -209,100 +196,6 @@ namespace NuclearReMind.EditorTools
         }
 
         // ─────────────────────────────────────────────
-        //  3. TutorialManager + popup panel
-        // ─────────────────────────────────────────────
-
-        private static void SetupTutorialManager(GameObject hudCanvas, Font font)
-        {
-            // Tutorial overlay panel (full screen, สีดำโปร่งแสง)
-            var panelGO = GetOrCreate("TutorialPanel", hudCanvas.transform);
-            {
-                var rect = panelGO.GetComponent<RectTransform>();
-                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
-                rect.offsetMin = Vector2.zero; rect.offsetMax = Vector2.zero;
-                var bg = panelGO.GetComponent<Image>() ?? panelGO.AddComponent<Image>();
-                bg.color = new Color(0f, 0f, 0f, 0.8f);
-            }
-
-            // Box กลางจอ
-            var boxGO = GetOrCreate("TutorialBox", panelGO.transform);
-            {
-                var rect = boxGO.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0.5f, 0.5f);
-                rect.anchorMax = new Vector2(0.5f, 0.5f);
-                rect.pivot     = new Vector2(0.5f, 0.5f);
-                rect.anchoredPosition = Vector2.zero;
-                rect.sizeDelta = new Vector2(700f, 480f);
-                var bg = boxGO.GetComponent<Image>() ?? boxGO.AddComponent<Image>();
-                bg.color = new Color(0.06f, 0.06f, 0.12f, 1f);
-            }
-
-            // Title
-            var titleGO = GetOrCreate("TutorialTitle", boxGO.transform);
-            {
-                var rect = titleGO.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1);
-                rect.pivot = new Vector2(0.5f, 1); rect.anchoredPosition = new Vector2(0, -20);
-                rect.sizeDelta = new Vector2(-40, 40);
-                var txt = titleGO.GetComponent<Text>() ?? titleGO.AddComponent<Text>();
-                txt.font = font; txt.fontSize = 26; txt.fontStyle = FontStyle.Bold;
-                txt.alignment = TextAnchor.UpperCenter;
-                txt.color = new Color(0.4f, 0.9f, 1f);
-                txt.text = "ยินดีต้อนรับสู่ Veltara";
-            }
-
-            // Content
-            var contentGO = GetOrCreate("TutorialContent", boxGO.transform);
-            {
-                var rect = contentGO.GetComponent<RectTransform>();
-                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
-                rect.offsetMin = new Vector2(30, 70); rect.offsetMax = new Vector2(-30, -80);
-                var txt = contentGO.GetComponent<Text>() ?? contentGO.AddComponent<Text>();
-                txt.font = font; txt.fontSize = 17;
-                txt.alignment = TextAnchor.UpperLeft;
-                txt.color = new Color(0.9f, 0.9f, 0.85f);
-                txt.horizontalOverflow = HorizontalWrapMode.Wrap;
-                txt.lineSpacing = 1.4f;
-                txt.text =
-                    "เมือง Veltara ถูกทิ้งร้างไว้นานหลายปี — ภารกิจของคุณคือฟื้นฟูเมืองนี้\n" +
-                    "และสร้าง CORE TOWER เครื่องปฏิกรณ์ฟิวชันให้สำเร็จก่อนที่ทรัพยากรจะหมด\n\n" +
-                    "🏗  วางอาคาร — คลิกบนตารางเพื่อเลือกตำแหน่ง อาคารใช้เวลา 10 tick จึงจะสร้างเสร็จ\n\n" +
-                    "📊  ดูแลทรัพยากร — อาหาร, น้ำ, พลังงาน, แร่เหล็กต้องอยู่ในระดับปลอดภัย\n\n" +
-                    "🤝  รักษาขวัญกำลังใจ — ถ้าประชาชนขาดแคลนทรัพยากร Hope จะลดลง (Hope = 0 → เมืองล่มสลาย)\n\n" +
-                    "📖  Learning Codex — กด Codex เพื่ออ่านความรู้นิวเคลียร์ (สะสม Knowledge)\n\n" +
-                    "🏆  เป้าหมาย — สร้าง CORE TOWER ให้ครบ 3 Phase เพื่อชนะ";
-            }
-
-            // Dismiss button
-            var btnGO = GetOrCreate("TutorialDismissBtn", boxGO.transform);
-            {
-                var rect = btnGO.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0.5f, 0); rect.anchorMax = new Vector2(0.5f, 0);
-                rect.pivot = new Vector2(0.5f, 0); rect.anchoredPosition = new Vector2(0, 16);
-                rect.sizeDelta = new Vector2(200, 44);
-                var bg = btnGO.GetComponent<Image>() ?? btnGO.AddComponent<Image>();
-                bg.color = new Color(0.15f, 0.45f, 0.15f, 1f);
-                var btn = btnGO.GetComponent<Button>() ?? btnGO.AddComponent<Button>();
-                btn.targetGraphic = bg;
-                var lblGO = GetOrCreate("Label", btnGO.transform);
-                var lblRect = lblGO.GetComponent<RectTransform>();
-                lblRect.anchorMin = Vector2.zero; lblRect.anchorMax = Vector2.one;
-                lblRect.offsetMin = Vector2.zero; lblRect.offsetMax = Vector2.zero;
-                var lblTxt = lblGO.GetComponent<Text>() ?? lblGO.AddComponent<Text>();
-                lblTxt.font = font; lblTxt.fontSize = 18; lblTxt.fontStyle = FontStyle.Bold;
-                lblTxt.alignment = TextAnchor.MiddleCenter; lblTxt.color = Color.white;
-                lblTxt.text = "เริ่มเกม";
-            }
-
-            // TutorialManager component
-            var tmGO = GetOrCreate("TutorialManager", hudCanvas.transform);
-            var tm = tmGO.GetComponent<TutorialManager>() ?? tmGO.AddComponent<TutorialManager>();
-            tm.tutorialPanel  = panelGO;
-            tm.dismissButton  = boxGO.transform.Find("TutorialDismissBtn")?.GetComponent<Button>();
-            EditorUtility.SetDirty(tm);
-        }
-
-        // ─────────────────────────────────────────────
         //  4. BuildingSelectionUI hotbar (bottom-center)
         // ─────────────────────────────────────────────
 
@@ -353,14 +246,41 @@ namespace NuclearReMind.EditorTools
                 hlg.childControlHeight = false; hlg.childForceExpandHeight = false;
             }
 
+            // ปุ่มหูจับพับ/กางแถบ — สังกัด hudCanvas (ไม่ใช่ panel) จึงยังเห็นตอนพับ · กลางบนของแถบ
+            // ยึด top ที่ y=130 (= ขอบล่าง CoreTowerPanel) หูจับห้อยลงมา 18px → ไม่ทับ core panel
+            var toggleGO = GetOrCreate("HotbarToggle", hudCanvas.transform);
+            var toggleRect = toggleGO.GetComponent<RectTransform>();
+            toggleRect.anchorMin = new Vector2(0.5f, 0f);
+            toggleRect.anchorMax = new Vector2(0.5f, 0f);
+            toggleRect.pivot     = new Vector2(0.5f, 1f);
+            toggleRect.anchoredPosition = new Vector2(0f, 130f);
+            toggleRect.sizeDelta = new Vector2(140f, 18f);
+
+            var toggleImg = toggleGO.GetComponent<Image>() ?? toggleGO.AddComponent<Image>();
+            toggleImg.color = new Color(0f, 0f, 0f, 0.75f);
+            var toggleBtn = toggleGO.GetComponent<Button>() ?? toggleGO.AddComponent<Button>();
+            toggleBtn.targetGraphic = toggleImg;
+
+            var toggleLabelGO = GetOrCreate("Label", toggleGO.transform);
+            var tlRect = toggleLabelGO.GetComponent<RectTransform>();
+            tlRect.anchorMin = Vector2.zero; tlRect.anchorMax = Vector2.one;
+            tlRect.offsetMin = Vector2.zero; tlRect.offsetMax = Vector2.zero;
+            var toggleTxt = toggleLabelGO.GetComponent<Text>() ?? toggleLabelGO.AddComponent<Text>();
+            toggleTxt.font = font; toggleTxt.fontSize = 13; toggleTxt.fontStyle = FontStyle.Bold;
+            toggleTxt.alignment = TextAnchor.MiddleCenter; toggleTxt.color = Color.white;
+            toggleTxt.text = "▼ อาคาร";
+
             // BuildingSelectionUI component
             var uiGO = GetOrCreate("BuildingSelectionUI", hudCanvas.transform);
             var selUI = uiGO.GetComponent<BuildingSelectionUI>() ?? uiGO.AddComponent<BuildingSelectionUI>();
             selUI.buildings        = placement.buildingHotbar;
             selUI.buttonContainer  = rowGO.transform;
+            selUI.panelRoot        = panelGO;
+            selUI.toggleButton     = toggleBtn;
+            selUI.toggleLabel      = toggleTxt;
             EditorUtility.SetDirty(selUI);
 
-            Debug.Log($"[Day11Setup] สร้าง BuildingSelectionUI {placement.buildingHotbar.Length} ปุ่ม");
+            Debug.Log($"[Day11Setup] สร้าง BuildingSelectionUI {placement.buildingHotbar.Length} ปุ่ม + ปุ่มพับแถบ");
         }
 
         // ─────────────────────────────────────────────

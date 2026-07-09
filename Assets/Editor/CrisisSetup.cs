@@ -153,11 +153,11 @@ namespace NuclearReMind.EditorTools
         // ผ่าน choiceX_Effects → CrisisEffectManager (Story Guide §4) · deferredCrisis น้ำ/อาหาร = เฟส 5
         private static CrisisDef[] BuildDefs() => new[]
         {
-            // ── วิกฤต 1: เสถียรภาพพลาสมา (~Day 17 — beat crisis_plasma_stability) ──
+            // ── วิกฤต 1: เสถียรภาพพลาสมา (Day 17 §14 — beat crisis_plasma_stability) ──
             new CrisisDef
             {
                 id = "Crisis_PlasmaInstability",
-                trigger = "heat_above_80|q_above_0.3", // เอกสาร — ตัวจริงอยู่ที่ StoryBeat.triggerParam
+                trigger = "CrisisSchedule.PlasmaTrigger", // ตัวจริงอยู่ที่ StoryBeat.triggerParam (อ่านจาก CrisisSchedule)
                 scenario =
 @"⚠️ วิกฤต: เสถียรภาพพลาสมา
 
@@ -190,11 +190,11 @@ Kova: ซ่อมได้ แต่คนของเราไม่ใช่�
                 cEffects = new CrisisChoiceEffects { coreReduction = 20f, coreHeatReduction = 60f, waterReductionPct = -0.5f },
             },
 
-            // ── วิกฤต 2: โรคจากรังสี (~Day 20 — beat crisis_radiation_disease) ──
+            // ── วิกฤต 2: โรคจากรังสี (Day 20 §14 — beat crisis_radiation_disease) ──
             new CrisisDef
             {
                 id = "Crisis_MalignantOutbreak",
-                trigger = "day_reached_20", // เอกสารเฉยๆ (triggerCondition ถูกเคลียร์) — beat crisis_radiation_disease ยิงด้วย exposure_above_60 (RadiationManager)
+                trigger = "CrisisSchedule.OutbreakTrigger", // ตัวจริงอยู่ที่ StoryBeat.triggerParam (exposure สะสม + เพดาน Day 20)
                 scenario =
 @"⚠️ วิกฤต: โรคจากรังสี
 
@@ -225,11 +225,11 @@ Mira: รังสีที่คนกลัวกันนี่ วันน�
                 cEffects = new CrisisChoiceEffects { busyWorkers = 4, busyDays = 4 },
             },
 
-            // ── วิกฤต 3: วิกฤตอาหาร (~Day 24 — beat crisis_food_spoilage) ──
+            // ── วิกฤต 3: วิกฤตอาหาร (Day 24 §14 — beat crisis_food_spoilage) ──
             new CrisisDef
             {
                 id = "Crisis_FoodShortage",
-                trigger = "food_above_500", // เอกสาร — guide: foodStored>500||noAgriDome
+                trigger = "CrisisSchedule.FoodTrigger", // ตัวจริงอยู่ที่ StoryBeat.triggerParam (Day 24 — ยังไม่มี Agri Dome)
                 scenario =
 @"⚠️ วิกฤต: วิกฤตอาหาร
 

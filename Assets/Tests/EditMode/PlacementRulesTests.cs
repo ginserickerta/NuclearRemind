@@ -16,7 +16,7 @@ namespace NuclearReMind.Tests
         private readonly List<Object> _spawned = new List<Object>();
 
         private EventManager eventManager;
-        private ResourceManager resources;   // เริ่มต้น energy 200 / iron 100
+        private ResourceManager resources;   // เริ่มต้น energy 200 / iron 240
         private BuildingRegistry registry;
         private PlacementController placement;
         private TimeManager time;
@@ -62,7 +62,7 @@ namespace NuclearReMind.Tests
             placement.ConfirmPlace(); // currentCell default (0,0) — ว่าง
 
             Assert.AreEqual(1, registry.PlacedBuildings.Count, "ทรัพยากรพอ → วางได้");
-            Assert.AreEqual(70f, resources.Current.iron, 1e-3f, "หักแร่เหล็ก 30");
+            Assert.AreEqual(210f, resources.Current.iron, 1e-3f, "หักแร่เหล็ก 30 จาก iron เริ่ม 240");
             Assert.AreEqual(190f, resources.Current.energy, 1e-3f, "หักพลังงาน 10");
         }
 
@@ -75,7 +75,7 @@ namespace NuclearReMind.Tests
             placement.ConfirmPlace();
 
             Assert.AreEqual(0, registry.PlacedBuildings.Count, "แร่เหล็กไม่พอ → วางไม่ได้");
-            Assert.AreEqual(100f, resources.Current.iron, 1e-3f, "คลังไม่ถูกหัก");
+            Assert.AreEqual(240f, resources.Current.iron, 1e-3f, "คลังไม่ถูกหัก");
         }
 
         [Test]

@@ -12,15 +12,15 @@ namespace NuclearReMind
     {
         public static ConstructionController Instance { get; private set; }
 
-        public const int TotalConstructionTicks = 10;
+        // ค่าตั้งต้นเวลาสร้าง (tick) เมื่อ BuildingData.buildTicks ไม่ได้ตั้ง — ต่ออาคารเก็บใน _totalTicks
+        public const int DefaultConstructionTicks = 10;
 
-        [Header("Progress UI — prefab ที่มี ConstructionProgressUI (สร้าง progress bar เองตอน runtime)")]
-        public GameObject constructionProgressUIPrefab;
-
+        // ความคืบหน้าแสดงในแผง hover (BuildingUpgradeUI) + BuildingQueueUI ผ่าน OnConstructionProgressChanged
+        // (บาร์ลอย world-space ถูกถอดแล้ว — GDD §6 UI polish)
         // List รักษาลำดับสำหรับ Prioritize, Dict ให้ O(1) lookup
         private readonly List<Vector2Int> _queue = new List<Vector2Int>();
         private readonly Dictionary<Vector2Int, int> _progress = new Dictionary<Vector2Int, int>();
-        private readonly Dictionary<Vector2Int, GameObject> _progressUI = new Dictionary<Vector2Int, GameObject>();
+        private readonly Dictionary<Vector2Int, int> _totalTicks = new Dictionary<Vector2Int, int>(); // เวลาสร้างเต็มต่ออาคาร (จาก buildTicks)
 
         private void Awake()
         {
@@ -62,7 +62,29 @@ namespace NuclearReMind
         public bool IsUnderConstruction(Vector2Int cell) => _progress.ContainsKey(cell);
 
         public int GetProgress(Vector2Int cell) =>
-            _progress.TryGetValue(cell, out int p) ? p : TotalConstructionTicks;
+            _progress.TryGetValue(cell, out int p) ? p : GetTotalTicks(cell);
+
+        /// <summary>เวลาสร้างเต็ม (tick) ของอาคารที่ cell นี้ — จาก BuildingData.buildTicks (fallback ค่าตั้งต้น)</summary>
+        public int GetTotalTicks(Vector2Int cell) =>
+            _totalTicks.TryGetValue(cell, out int t) ? t : DefaultConstructionTicks;
+
+        // ─────────────────────────────────────────
+        //  Construction speed — แปรผกผันกับจำนวนคนงาน (V4 §5)
+        // ─────────────────────────────────────────
+
+        /// <summary>
+        /// ก้าวหน้าการสร้างต่อ tick = จำนวน Worker ที่ประจำ cell นั้น (อย่างน้อย 1 กันงานค้างถ้ายังไม่จัดคน)
+        /// → เวลาสร้าง (ticks) = TotalConstructionTicks / คนงาน → 1 คน = 10, 2 คน = 5, 5 คน = 2
+        /// อ่าน GetAssigned() แบบ read-only query (รูปแบบเดียวกับ ResourceManager.ApplyDailyProduction —
+        /// อนุญาตให้ query ข้าม manager ได้ ห้ามเฉพาะการเรียก method ที่เปลี่ยนสถานะ)
+        /// </summary>
+        private static int ConstructionSpeed(Vector2Int pos)
+        {
+            int workers = WorkerAssignmentManager.Instance != null
+                ? WorkerAssignmentManager.Instance.GetAssigned(pos)
+                : 0;
+            return Mathf.Max(1, workers);
+        }
 
         // ─────────────────────────────────────────
         //  Event handlers
@@ -75,7 +97,7 @@ namespace NuclearReMind
 
             _queue.Add(pos);
             _progress[pos] = 0;
-            SpawnProgressUI(pos, 0);
+            _totalTicks[pos] = data != null ? Mathf.Max(1, data.buildTicks) : DefaultConstructionTicks;
             EventManager.Instance.RaiseConstructionProgressChanged(pos, 0);
         }
 
@@ -83,7 +105,7 @@ namespace NuclearReMind
         {
             _queue.Remove(pos);
             _progress.Remove(pos);
-            DestroyProgressUI(pos);
+            _totalTicks.Remove(pos);
         }
 
         private void HandleGameTick()
@@ -95,13 +117,13 @@ namespace NuclearReMind
             {
                 if (!_progress.TryGetValue(pos, out int current)) continue;
 
-                int next = current + 1;
+                int next = current + ConstructionSpeed(pos);
 
-                if (next >= TotalConstructionTicks)
+                if (next >= GetTotalTicks(pos))
                 {
                     _progress.Remove(pos);
+                    _totalTicks.Remove(pos);
                     _queue.Remove(pos);
-                    DestroyProgressUI(pos);
 
                     if (BuildingRegistry.Instance.PlacedBuildings.TryGetValue(pos, out var data))
                         EventManager.Instance.RaiseConstructionComplete(pos, data);
@@ -137,8 +159,8 @@ namespace NuclearReMind
             if (!_progress.ContainsKey(pos)) return;
 
             _progress.Remove(pos);
+            _totalTicks.Remove(pos);
             _queue.Remove(pos);
-            DestroyProgressUI(pos);
 
             if (BuildingRegistry.Instance != null &&
                 BuildingRegistry.Instance.PlacedBuildings.TryGetValue(pos, out var data))
@@ -149,23 +171,26 @@ namespace NuclearReMind
         {
             if (!_progress.ContainsKey(pos)) return;
 
-            // ตั้ง progress เป็น TotalTicks-1 → จะเสร็จบน tick ถัดไป
-            _progress[pos] = TotalConstructionTicks - 1;
+            // ตั้ง progress เป็น total-1 → จะเสร็จบน tick ถัดไป
+            int nearDone = Mathf.Max(0, GetTotalTicks(pos) - 1);
+            _progress[pos] = nearDone;
 
             // เลื่อนขึ้นหน้าสุดของ queue เพื่อให้ tick ก่อนตัวอื่น
             _queue.Remove(pos);
             _queue.Insert(0, pos);
 
-            EventManager.Instance.RaiseConstructionProgressChanged(pos, TotalConstructionTicks - 1);
+            EventManager.Instance.RaiseConstructionProgressChanged(pos, nearDone);
         }
 
         private void HandleSaveLoaded(SaveData save)
         {
             _queue.Clear();
             _progress.Clear();
+            _totalTicks.Clear();
 
             if (save.underConstructionCells == null) return;
 
+            var registry = BuildingRegistry.Instance;
             for (int i = 0; i < save.underConstructionCells.Count; i++)
             {
                 var pos = save.underConstructionCells[i];
@@ -174,32 +199,10 @@ namespace NuclearReMind
 
                 _queue.Add(pos);
                 _progress[pos] = prog;
+                // buildTicks ไม่ได้เซฟ — ดึงจากอาคารใน registry (fallback ค่าตั้งต้นถ้ายังไม่พร้อม)
+                if (registry != null && registry.PlacedBuildings.TryGetValue(pos, out var data) && data != null)
+                    _totalTicks[pos] = Mathf.Max(1, data.buildTicks);
             }
-        }
-
-        // ─────────────────────────────────────────
-        //  Progress UI helpers
-        // ─────────────────────────────────────────
-
-        private void SpawnProgressUI(Vector2Int pos, int initialProgress)
-        {
-            if (constructionProgressUIPrefab == null || GridManager.Instance == null) return;
-
-            var worldPos = GridManager.Instance.IsoToWorld(pos.x, pos.y);
-            worldPos.y += 0.6f; // ลอยขึ้นเหนือ sprite
-
-            var go = Instantiate(constructionProgressUIPrefab, worldPos, Quaternion.identity);
-            var ui = go.GetComponent<ConstructionProgressUI>();
-            if (ui != null) ui.Init(pos, initialProgress);
-
-            _progressUI[pos] = go;
-        }
-
-        private void DestroyProgressUI(Vector2Int pos)
-        {
-            if (!_progressUI.TryGetValue(pos, out var go)) return;
-            _progressUI.Remove(pos);
-            if (go != null) Destroy(go);
         }
 
         // เรียกโดย SaveManager ตอน Save()

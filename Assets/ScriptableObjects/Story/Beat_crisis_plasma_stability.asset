@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: NuclearReMind::NuclearReMind.StoryBeatSO
   beatId: crisis_plasma_stability
   triggerType: 4
-  triggerParam: heat_above_80|q_above_0.3
+  triggerParam: heat_above_80|core_above_50|day_reached_17
   record: {fileID: 0}
   infoCard: {fileID: 11400000, guid: b7c035bc5141f8d4f90f24fc7d88ff2c, type: 2}
   crisis: {fileID: 11400000, guid: fe67e1602ef3e6e4ab2bf407f1e65998, type: 2}

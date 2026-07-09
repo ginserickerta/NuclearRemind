@@ -41,6 +41,8 @@ namespace NuclearReMind
         {
             EventManager.Instance.OnTowerPhaseComplete += HandleTowerPhaseComplete;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
+            EventManager.Instance.OnBuildingPlaced += HandleBuildingPlaced;
+            EventManager.Instance.OnBuildingUpgraded += HandleBuildingUpgraded;
         }
 
         private void OnDisable()
@@ -48,6 +50,8 @@ namespace NuclearReMind
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnTowerPhaseComplete -= HandleTowerPhaseComplete;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+            EventManager.Instance.OnBuildingPlaced -= HandleBuildingPlaced;
+            EventManager.Instance.OnBuildingUpgraded -= HandleBuildingUpgraded;
         }
 
         /// <summary>
@@ -90,6 +94,23 @@ namespace NuclearReMind
         private void HandleTowerPhaseComplete(int phase)
         {
             AutoUnlockByEvent($"phase_{phase}_complete");
+        }
+
+        // ── ใบความรู้จากห้องวิจัย (V4 §6): สร้าง Lab → ปลดชุดแรก · อัป L2/L3 → ปลดชุดลึกขึ้น ──
+        private void HandleBuildingPlaced(Cell cell, BuildingData data)
+        {
+            if (data != null && data.buildingType == BuildingType.Laboratory)
+                AutoUnlockByEvent("lab_built");
+        }
+
+        private void HandleBuildingUpgraded(Vector2Int cellPos, int newLevel)
+        {
+            var registry = BuildingRegistry.Instance;
+            if (registry == null || !registry.PlacedBuildings.TryGetValue(cellPos, out var data) || data == null)
+                return;
+            if (data.buildingType != BuildingType.Laboratory) return;
+
+            AutoUnlockByEvent($"lab_l{newLevel}");
         }
 
         private void AutoUnlockByEvent(string eventId)

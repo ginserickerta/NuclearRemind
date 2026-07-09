@@ -22,16 +22,24 @@ namespace NuclearReMind
         [Header("Training Cost (V4 §5)")]
         public int trainEngineerFood = 30, trainEngineerEnergy = 50;
         public int trainMedicFood = 40, trainMedicEnergy = 60;
+        public int trainFarmerFood = 30, trainFarmerEnergy = 40;
 
         [Header("Population Growth (V4 §5)")]
         public float growthHopeThreshold = 50f; // Hope ≥ ค่านี้จึงเติมประชากร
+
+        [Header("Hospital (GDD §6)")]
+        public int hospitalHealPerDay = 2; // รักษาเพิ่ม/วัน ต่อโรงพยาบาลที่ Medic ประจำครบ
 
         [Header("Shelter (V4 §5)")]
         public int baseShelterCap = 10; // Shelter L1 เริ่มเกม (ไม่ต้องสร้าง) — ตึก Shelter ที่วางเพิ่มต่อยอดจากฐานนี้
 
         public PopulationData Current { get; private set; } = new PopulationData
         {
-            workers = 10,     // V4 §5 เริ่ม 10 Worker
+            // V4 §5 เริ่ม 10 คน — มีคลาสติดตัว (bootstrap) กัน "วันแรกผลิตอะไรไม่ได้"
+            // เพราะ Farm ต้องใช้ Farmer และ Lab ต้องใช้ Engineer ตั้งแต่วางหลังแรก
+            workers = 6,
+            farmers = 2,
+            engineers = 2,
             hope = 100f,      // V4 §9 เริ่ม 100
             shelterCap = 10,  // = baseShelterCap (Shelter L1 §5) — ขยายด้วยตึก Shelter ผ่าน RecalcShelterCap
         };
@@ -41,11 +49,12 @@ namespace NuclearReMind
 
         public bool EngineerTrainingUnlocked => _engineerUnlocked;
         public bool MedicTrainingUnlocked => _medicUnlocked;
+        public bool FarmerTrainingUnlocked => _farmerUnlocked;
 
         private readonly HashSet<ResourceType> _depletedResources = new HashSet<ResourceType>();
         private bool _gameOverRaised;
-        private int _pendingEngineers, _pendingMedics; // ฝึกค้าง (เสร็จสิ้นวัน — ใช้เวลา 1 วัน)
-        private bool _engineerUnlocked, _medicUnlocked; // ปลดจากอาคาร (Research Lab / Hospital)
+        private int _pendingEngineers, _pendingMedics, _pendingFarmers; // ฝึกค้าง (เสร็จสิ้นวัน — ใช้เวลา 1 วัน)
+        private bool _engineerUnlocked, _medicUnlocked, _farmerUnlocked; // ปลดจากอาคาร (Research Lab — ศูนย์ฝึกทุกคลาส)
 
         private void Awake()
         {
@@ -69,6 +78,7 @@ namespace NuclearReMind
             EventManager.Instance.OnBuildingUpgraded += HandleBuildingUpgraded;
             EventManager.Instance.OnTrainEngineerRequested += TrainEngineer;
             EventManager.Instance.OnTrainMedicRequested += TrainMedic;
+            EventManager.Instance.OnTrainFarmerRequested += TrainFarmer;
             EventManager.Instance.OnPopulationDeaths += HandlePopulationDeaths;
             EventManager.Instance.OnPopulationSickInjected += HandlePopulationSickInjected;
             EventManager.Instance.OnPopulationSickSet += HandlePopulationSickSet;
@@ -87,6 +97,7 @@ namespace NuclearReMind
             EventManager.Instance.OnBuildingUpgraded -= HandleBuildingUpgraded;
             EventManager.Instance.OnTrainEngineerRequested -= TrainEngineer;
             EventManager.Instance.OnTrainMedicRequested -= TrainMedic;
+            EventManager.Instance.OnTrainFarmerRequested -= TrainFarmer;
             EventManager.Instance.OnPopulationDeaths -= HandlePopulationDeaths;
             EventManager.Instance.OnPopulationSickInjected -= HandlePopulationSickInjected;
             EventManager.Instance.OnPopulationSickSet -= HandlePopulationSickSet;
@@ -113,6 +124,7 @@ namespace NuclearReMind
             if (data == null) return;
             if (data.unlocksEngineerTraining) _engineerUnlocked = true;
             if (data.unlocksMedicTraining) _medicUnlocked = true;
+            if (data.unlocksFarmerTraining) _farmerUnlocked = true;
 
             if (data.shelterCapacity > 0)
                 RecalcShelterCap(placedCell: new Vector2Int(cell.col, cell.row), placedData: data);
@@ -163,17 +175,24 @@ namespace NuclearReMind
         public void TrainEngineer()
         {
             if (!_engineerUnlocked) { Notice("ต้องสร้างห้องปฏิบัติการก่อนจึงจะฝึกวิศวกรได้"); return; }
-            TryTrain(trainEngineerFood, trainEngineerEnergy, isEngineer: true, className: "วิศวกร");
+            TryTrain(trainEngineerFood, trainEngineerEnergy, WorkerClass.Engineer, className: "วิศวกร");
         }
 
-        /// <summary>ฝึกแพทย์ — ต้องมีห้องปฏิบัติการ (ชั่วคราวจน Hospital มา), มี Worker ว่าง, จ่าย Food/Energy · เสร็จวันถัดไป</summary>
+        /// <summary>ฝึกแพทย์ — ต้องมีห้องปฏิบัติการ, มี Worker ว่าง, จ่าย Food/Energy · เสร็จวันถัดไป</summary>
         public void TrainMedic()
         {
             if (!_medicUnlocked) { Notice("ต้องสร้างห้องปฏิบัติการก่อนจึงจะฝึกแพทย์ได้"); return; }
-            TryTrain(trainMedicFood, trainMedicEnergy, isEngineer: false, className: "แพทย์");
+            TryTrain(trainMedicFood, trainMedicEnergy, WorkerClass.Medic, className: "แพทย์");
         }
 
-        private void TryTrain(int foodCost, int energyCost, bool isEngineer, string className)
+        /// <summary>ฝึกเกษตรกร — ต้องมีห้องปฏิบัติการ, มี Worker ว่าง, จ่าย Food/Energy · เสร็จวันถัดไป</summary>
+        public void TrainFarmer()
+        {
+            if (!_farmerUnlocked) { Notice("ต้องสร้างห้องปฏิบัติการก่อนจึงจะฝึกเกษตรกรได้"); return; }
+            TryTrain(trainFarmerFood, trainFarmerEnergy, WorkerClass.Farmer, className: "เกษตรกร");
+        }
+
+        private void TryTrain(int foodCost, int energyCost, WorkerClass target, string className)
         {
             var pop = Current;
             if (pop.workers <= 0) { Notice("ไม่มีคนงานว่างให้ฝึก (ต้องมี Worker อย่างน้อย 1 คน)"); return; }
@@ -193,9 +212,17 @@ namespace NuclearReMind
             }
             pop.workers -= 1;
             Current = pop;
-            if (isEngineer) _pendingEngineers++; else _pendingMedics++;
+            switch (target)
+            {
+                case WorkerClass.Engineer: _pendingEngineers++; break;
+                case WorkerClass.Medic:    _pendingMedics++;    break;
+                case WorkerClass.Farmer:   _pendingFarmers++;   break;
+            }
 
             EventManager.Instance.RaisePopulationChanged(Current);
+            // OnClassTrained(bool isEngineer) — สัญญาณ feedback ฝึกสำเร็จ (tutorial Day 1 ไม่ใช้แล้ว —
+            // เปลี่ยนเป็นภารกิจจัดคน เพราะ Lab ปลดเฟส 2 · คง event ไว้ให้ UI/ระบบอื่น subscribe ได้)
+            EventManager.Instance.RaiseClassTrained(target == WorkerClass.Engineer);
             Notice($"เริ่มฝึก{className} — จะพร้อมใช้งานเมื่อจบวัน");
         }
 
@@ -218,6 +245,8 @@ namespace NuclearReMind
             int dead = remaining;
             int fromWorkers = Mathf.Min(pop.workers, remaining);
             pop.workers -= fromWorkers; remaining -= fromWorkers;
+            int fromFarmers = Mathf.Min(pop.farmers, remaining);
+            pop.farmers -= fromFarmers; remaining -= fromFarmers;
             int fromMedics = Mathf.Min(pop.medics, remaining);
             pop.medics -= fromMedics; remaining -= fromMedics;
             pop.engineers -= Mathf.Min(pop.engineers, remaining);
@@ -247,6 +276,23 @@ namespace NuclearReMind
             EventManager.Instance.RaisePopulationChanged(pop);
         }
 
+        // จำนวนโรงพยาบาลที่ Medic ประจำครบ (GDD §6) — read-only query ของ registry + WAM
+        // (idiom เดียวกับ RecalcShelterCap — อนุญาต query ข้าม manager ห้ามเฉพาะเรียก method เปลี่ยนสถานะ)
+        private static int StaffedHospitals()
+        {
+            var registry = BuildingRegistry.Instance;
+            var wam = WorkerAssignmentManager.Instance;
+            if (registry == null || wam == null) return 0;
+
+            int count = 0;
+            foreach (var kvp in registry.PlacedBuildings)
+            {
+                if (kvp.Value == null || kvp.Value.buildingType != BuildingType.Hospital) continue;
+                if (wam.GetAssigned(kvp.Key) >= kvp.Value.workerRequired) count++;
+            }
+            return count;
+        }
+
         // ── สิ้นวัน: ขวัญ + ฝึกเสร็จ + เติมประชากร (V4 §5/§9) ──────
         private void HandleDayEnded(int day)
         {
@@ -260,13 +306,16 @@ namespace NuclearReMind
             else if (_depletedResources.Count == 0 && pop.medics > 0)
                 pop.hope += hopeRecoveryWithMedic;
 
-            // 1.5) ฟื้นจากรังสี (Story Guide §4): Medic รักษาได้ min(sick, medics)/วัน เมื่ออาหารไม่ขาด (สมมาตรกับ +Hope)
-            if (pop.sick > 0 && pop.medics > 0 && !_depletedResources.Contains(ResourceType.Food))
-                pop.sick = Mathf.Max(0, pop.sick - pop.medics);
+            // 1.5) ฟื้นจากรังสี (Story Guide §4 + GDD §6): กำลังรักษา/วัน = Medic + โรงพยาบาลที่ประจำครบ × heal
+            // เมื่ออาหารไม่ขาด (สมมาตรกับ +Hope)
+            int healCapacity = pop.medics + StaffedHospitals() * hospitalHealPerDay;
+            if (pop.sick > 0 && healCapacity > 0 && !_depletedResources.Contains(ResourceType.Food))
+                pop.sick = Mathf.Max(0, pop.sick - healCapacity);
 
             // 2) ฝึกคลาสเสร็จ (1 วัน) — Worker ถูกดึงไปแล้วตอนสั่งฝึก
             pop.engineers += _pendingEngineers; _pendingEngineers = 0;
             pop.medics += _pendingMedics; _pendingMedics = 0;
+            pop.farmers += _pendingFarmers; _pendingFarmers = 0;
 
             // 3) เติมประชากร +1 Worker: อาหารไม่ขาด & Hope ≥ 50 & ยังไม่เต็มเพดาน
             if (!_depletedResources.Contains(ResourceType.Food)

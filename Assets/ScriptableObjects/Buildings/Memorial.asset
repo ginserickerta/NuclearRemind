@@ -24,6 +24,8 @@ MonoBehaviour:
   ironCost: 0
   energyCost: 0
   workerRequired: 0
+  unlockPhase: 1
+  buildTicks: 6
   foodProduction: 0
   waterProduction: 0
   energyProduction: 0
@@ -34,6 +36,9 @@ MonoBehaviour:
   towerPhaseRequired: 0
   unlocksEngineerTraining: 0
   unlocksMedicTraining: 0
+  unlocksFarmerTraining: 0
+  requiredClass: 0
+  knowledgeProduction: 0
   shelterCapacity: 0
   upgradeIronCost: 40
   upgradeEnergyCost: 0
@@ -41,3 +46,10 @@ MonoBehaviour:
   tritiumProduction: 0
   powerRange: 0
   isPowerRelay: 0
+  isOreNode: 0
+  oreQuotaMin: 0
+  oreQuotaMax: 0
+  oreTritiumMin: 0
+  oreTritiumMax: 0
+  oreExposurePerWorkerDay: 0
+  oreSickChancePerWorkerDay: 0

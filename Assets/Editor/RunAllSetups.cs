@@ -19,9 +19,13 @@ namespace NuclearReMind.EditorTools
 
         private static readonly string[] MenuOrder =
         {
+            // ★ ต้องมาก่อนทุกขั้นที่คำนวณตำแหน่งจากขนาดกริด (pre-placed CORE TOWER §16, อนุสรณ์, แหล่งแร่ A/B)
+            "NuclearReMind/Setup Grid 43x28",
+
             "NuclearReMind/Setup HUD Canvas",
             "NuclearReMind/Setup Tooltip and Dilemma UI",
             "NuclearReMind/Apply Building Balance (V4 §6)",
+            "NuclearReMind/Apply Core Tower Sprite (Pixel Art)", // art จริงแทน placeholder (หลัง Building Balance)
             "NuclearReMind/Setup Phase 3 Population",
             "NuclearReMind/Setup Phase 6 Buildings",
             "NuclearReMind/Setup Codex System",
@@ -37,9 +41,15 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Pause Menu", // PauseCanvas แยกจาก HUDCanvas — กด ESC ตอนเล่น
             "NuclearReMind/Setup Story UI",   // StoryCanvas แยกเช่นกัน — การ์ดเนื้อเรื่อง + Records + อนุสรณ์
             "NuclearReMind/Setup Story Content", // beats/records/info cards/อนุสรณ์ (ต้องหลัง Story UI + Crisis + Quiz)
+            "NuclearReMind/Setup Hospital (GDD §6)",       // โรงพยาบาล — asset + hotbar (ต้องหลัง Building Balance + Day 11)
+            "NuclearReMind/Apply Building Art (Team Pixel Art)", // art จริงแทน placeholder (ต้องหลัง Hospital — asset เพิ่งถูกสร้าง)
+            "NuclearReMind/Setup Ore Deposits (Zone A-B)", // แหล่งแร่ A/B + ถอด Mine จาก hotbar (ต้องหลัง Building Balance + Day 11)
+            "NuclearReMind/Apply Resource Caps (V4 §4)",   // เพดานคลัง 9999 + ปลดสะพาน Tritium ของ Lab (หลัง Phase 6)
+            "NuclearReMind/Update Building Hover Panel",    // ย้ายบาร์ก่อสร้างเข้าแผง hover (GDD §6 — หลัง HUD Canvas)
 
-            "NuclearReMind/Setup Grid 43x43",
-            "NuclearReMind/Fill Grids (Ground + Fog)",
+            "NuclearReMind/Setup Zone Barrier (Fence + Gate)", // รั้ว/ประตูเส้นแบ่งโซน (ต้องหลัง Ore Deposits — sync zoneAColumns)
+            "NuclearReMind/Fill Grids (Ground + Fog)",         // ระบาย Ground/Fog ตามขนาดกริดจริง (ต้องหลัง Setup Grid)
+            "NuclearReMind/Fix 2D Lighting (Light All Sorting Layers)", // กัน sprite รันไทม์เรนเดอร์ดำ (Sprite-Lit-Default)
             "NuclearReMind/Apply Kanit Font (Scene + Prefabs)",
         };
 

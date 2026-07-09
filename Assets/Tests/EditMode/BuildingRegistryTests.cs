@@ -21,7 +21,7 @@ namespace NuclearReMind.Tests
         public void SetUp()
         {
             eventManager = NewComponent<EventManager>("EventManager");
-            resources = NewComponent<ResourceManager>("ResourceManager"); // คลังแร่เหล็ก (default iron=100)
+            resources = NewComponent<ResourceManager>("ResourceManager"); // คลังแร่เหล็ก (default iron=240)
             registry = NewComponent<BuildingRegistry>("BuildingRegistry");
             registry.allBuildingData = new BuildingData[0];
         }
@@ -59,7 +59,7 @@ namespace NuclearReMind.Tests
             eventManager.RaiseUpgradeBuildingRequested(cell);
 
             Assert.AreEqual(2, registry.GetLevel(cell));
-            Assert.AreEqual(60f, resources.Current.iron, 1e-3f, "อัป L1→L2 หัก 40 (×ระดับ 1)");
+            Assert.AreEqual(200f, resources.Current.iron, 1e-3f, "อัป L1→L2 หัก 40 (×ระดับ 1) จาก iron เริ่ม 240");
         }
 
         [Test]
@@ -83,7 +83,7 @@ namespace NuclearReMind.Tests
             eventManager.RaiseUpgradeBuildingRequested(cell);
 
             Assert.AreEqual(2, registry.GetLevel(cell));
-            Assert.AreEqual(60f, resources.Current.iron, 1e-3f, "หักแร่เหล็ก 40");
+            Assert.AreEqual(200f, resources.Current.iron, 1e-3f, "หักแร่เหล็ก 40 จาก iron เริ่ม 240");
             Assert.AreEqual(150f, resources.Current.energy, 1e-3f, "หักพลังงาน 50 (×ระดับ 1)");
         }
 
@@ -94,25 +94,25 @@ namespace NuclearReMind.Tests
             eventManager.RaiseUpgradeBuildingRequested(cell);
 
             Assert.AreEqual(1, registry.GetLevel(cell), "พลังงานไม่พอ → ไม่อัป");
-            Assert.AreEqual(100f, resources.Current.iron, 1e-3f, "ไม่หักแร่เหล็ก");
+            Assert.AreEqual(240f, resources.Current.iron, 1e-3f, "ไม่หักแร่เหล็ก");
             Assert.AreEqual(200f, resources.Current.energy, 1e-3f, "ไม่หักพลังงาน");
         }
 
         [Test]
         public void Upgrade_InsufficientIron_Blocked()
         {
-            var cell = Place(1, 1, upgradeCost: 200); // iron 100 < 200
+            var cell = Place(1, 1, upgradeCost: 999); // iron 240 < 999
             eventManager.RaiseUpgradeBuildingRequested(cell);
 
             Assert.AreEqual(1, registry.GetLevel(cell), "แร่เหล็กไม่พอ → ไม่อัป");
-            Assert.AreEqual(100f, resources.Current.iron, 1e-3f, "ไม่หักแร่เหล็ก");
+            Assert.AreEqual(240f, resources.Current.iron, 1e-3f, "ไม่หักแร่เหล็ก");
         }
 
         [Test]
         public void Upgrade_NonexistentCell_NoOp()
         {
             eventManager.RaiseUpgradeBuildingRequested(new Vector2Int(5, 5)); // ไม่มีอาคาร
-            Assert.AreEqual(100f, resources.Current.iron, 1e-3f, "ไม่มีอาคาร → ไม่หักอะไร");
+            Assert.AreEqual(240f, resources.Current.iron, 1e-3f, "ไม่มีอาคาร → ไม่หักอะไร");
         }
 
         private T NewComponent<T>(string name) where T : Component

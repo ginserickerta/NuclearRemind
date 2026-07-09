@@ -1,0 +1,754 @@
+fileFormatVersion: 2
+guid: e96f96b3d0021bf478c8aff1c943b1cc
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 4194624046354837036
+    second: basic furnace all animations_0
+  - first:
+      213: 1850829908272576391
+    second: basic furnace all animations_1
+  - first:
+      213: 473646639682254262
+    second: basic furnace all animations_2
+  - first:
+      213: 2435573113182373131
+    second: basic furnace all animations_3
+  - first:
+      213: 6423509779876190684
+    second: basic furnace all animations_4
+  - first:
+      213: -5042890609418299756
+    second: basic furnace all animations_5
+  - first:
+      213: 7027408020565366029
+    second: basic furnace all animations_6
+  - first:
+      213: 5680220751925205194
+    second: basic furnace all animations_7
+  - first:
+      213: 6911507769387709215
+    second: basic furnace all animations_8
+  - first:
+      213: 1219833244958535075
+    second: basic furnace all animations_9
+  - first:
+      213: 5924565069135951007
+    second: basic furnace all animations_10
+  - first:
+      213: 5271021390569033972
+    second: basic furnace all animations_11
+  - first:
+      213: -3941407388374246476
+    second: basic furnace all animations_12
+  - first:
+      213: 847251957833336905
+    second: basic furnace all animations_13
+  - first:
+      213: 5999785999510201096
+    second: basic furnace all animations_14
+  - first:
+      213: 3141468744865144092
+    second: basic furnace all animations_15
+  - first:
+      213: -3271713229376121708
+    second: basic furnace all animations_16
+  - first:
+      213: 572375954244372201
+    second: basic furnace all animations_17
+  - first:
+      213: 2135285109272108917
+    second: basic furnace all animations_18
+  - first:
+      213: -4989860747449582552
+    second: basic furnace all animations_19
+  - first:
+      213: -3214138848733888149
+    second: basic furnace all animations_20
+  - first:
+      213: -6531049005897277677
+    second: basic furnace all animations_21
+  - first:
+      213: -2414413907097145938
+    second: basic furnace all animations_22
+  - first:
+      213: 6604707644001584140
+    second: basic furnace all animations_23
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: basic furnace all animations_0
+      rect:
+        serializedVersion: 2
+        x: 18
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c2eaa49985c463a30800000000000000
+      internalID: 4194624046354837036
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_1
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7877146def77fa910800000000000000
+      internalID: 1850829908272576391
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_2
+      rect:
+        serializedVersion: 2
+        x: 146
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6b5715bfb1bb29600800000000000000
+      internalID: 473646639682254262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_3
+      rect:
+        serializedVersion: 2
+        x: 210
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b054abb97d4ecc120800000000000000
+      internalID: 2435573113182373131
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_4
+      rect:
+        serializedVersion: 2
+        x: 274
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cd994c09c14e42950800000000000000
+      internalID: 6423509779876190684
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_5
+      rect:
+        serializedVersion: 2
+        x: 338
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 496187885bd040ab0800000000000000
+      internalID: -5042890609418299756
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_6
+      rect:
+        serializedVersion: 2
+        x: 402
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d059785ac5e568160800000000000000
+      internalID: 7027408020565366029
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_7
+      rect:
+        serializedVersion: 2
+        x: 466
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ac8dd44cda234de40800000000000000
+      internalID: 5680220751925205194
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_8
+      rect:
+        serializedVersion: 2
+        x: 530
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f13f4b092bb9aef50800000000000000
+      internalID: 6911507769387709215
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_9
+      rect:
+        serializedVersion: 2
+        x: 594
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3ad27f29fd7bde010800000000000000
+      internalID: 1219833244958535075
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_10
+      rect:
+        serializedVersion: 2
+        x: 658
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f94398a6a88483250800000000000000
+      internalID: 5924565069135951007
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_11
+      rect:
+        serializedVersion: 2
+        x: 722
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4f05a54170e662940800000000000000
+      internalID: 5271021390569033972
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_12
+      rect:
+        serializedVersion: 2
+        x: 786
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4bb5adcdcde4d49c0800000000000000
+      internalID: -3941407388374246476
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_13
+      rect:
+        serializedVersion: 2
+        x: 850
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 94809edaa2b02cb00800000000000000
+      internalID: 847251957833336905
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_14
+      rect:
+        serializedVersion: 2
+        x: 914
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 803ea2d0495834350800000000000000
+      internalID: 5999785999510201096
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_15
+      rect:
+        serializedVersion: 2
+        x: 978
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c1ddda2ed2db89b20800000000000000
+      internalID: 3141468744865144092
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_16
+      rect:
+        serializedVersion: 2
+        x: 1042
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4941714f62a8892d0800000000000000
+      internalID: -3271713229376121708
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_17
+      rect:
+        serializedVersion: 2
+        x: 1106
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9e606b6d5ec71f700800000000000000
+      internalID: 572375954244372201
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_18
+      rect:
+        serializedVersion: 2
+        x: 1170
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 57f58506e7e02ad10800000000000000
+      internalID: 2135285109272108917
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_19
+      rect:
+        serializedVersion: 2
+        x: 1234
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 82c3a9d661470cab0800000000000000
+      internalID: -4989860747449582552
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_20
+      rect:
+        serializedVersion: 2
+        x: 1298
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b610f6e0fb51563d0800000000000000
+      internalID: -3214138848733888149
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_21
+      rect:
+        serializedVersion: 2
+        x: 1362
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 31f13d8388d0d55a0800000000000000
+      internalID: -6531049005897277677
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_22
+      rect:
+        serializedVersion: 2
+        x: 1426
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ead26b6f7574e7ed0800000000000000
+      internalID: -2414413907097145938
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: basic furnace all animations_23
+      rect:
+        serializedVersion: 2
+        x: 1490
+        y: 18
+        width: 28
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c048506eb92a8ab50800000000000000
+      internalID: 6604707644001584140
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      basic furnace all animations_0: 4194624046354837036
+      basic furnace all animations_1: 1850829908272576391
+      basic furnace all animations_10: 5924565069135951007
+      basic furnace all animations_11: 5271021390569033972
+      basic furnace all animations_12: -3941407388374246476
+      basic furnace all animations_13: 847251957833336905
+      basic furnace all animations_14: 5999785999510201096
+      basic furnace all animations_15: 3141468744865144092
+      basic furnace all animations_16: -3271713229376121708
+      basic furnace all animations_17: 572375954244372201
+      basic furnace all animations_18: 2135285109272108917
+      basic furnace all animations_19: -4989860747449582552
+      basic furnace all animations_2: 473646639682254262
+      basic furnace all animations_20: -3214138848733888149
+      basic furnace all animations_21: -6531049005897277677
+      basic furnace all animations_22: -2414413907097145938
+      basic furnace all animations_23: 6604707644001584140
+      basic furnace all animations_3: 2435573113182373131
+      basic furnace all animations_4: 6423509779876190684
+      basic furnace all animations_5: -5042890609418299756
+      basic furnace all animations_6: 7027408020565366029
+      basic furnace all animations_7: 5680220751925205194
+      basic furnace all animations_8: 6911507769387709215
+      basic furnace all animations_9: 1219833244958535075
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

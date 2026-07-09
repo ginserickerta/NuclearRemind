@@ -42,6 +42,7 @@ namespace NuclearReMind.EditorTools
             "Laboratory",
             "CoreTower",
             "Mine",
+            "Hospital",
         };
 
         /// <summary>
@@ -115,6 +116,82 @@ namespace NuclearReMind.EditorTools
             return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
+        // ===== Worker character (V4 §5 — sprite คนงานบนแมพ) =====
+        private const string CharactersFolder = "Assets/Sprites/Characters";
+        private const int WorkerPixelsPerUnit = 90; // คนเล็กกว่าอาคาร ~0.35 tile (canvas 32px / 90 ≈ 0.35 unit)
+
+        /// <summary>
+        /// สร้าง sprite คนงานถ้ายังไม่มีบนดิสก์ แล้วคืน Sprite (ให้ Phase3PopulationSetup เรียกตอน wire WorkerVisualSpawner)
+        /// ไม่ผ่าน silhouette — วาดสีจริง (เสื้อกั๊กส้ม/หมวกเหลือง) ให้เด่นจากอาคาร silhouette เทา
+        /// </summary>
+        public static Sprite EnsureWorkerSprite(string name)
+        {
+            string path = Path.Combine(CharactersFolder, name + ".png");
+            if (AssetDatabase.LoadAssetAtPath<Sprite>(path) == null)
+            {
+                Directory.CreateDirectory(CharactersFolder);
+                WritePng(path, DrawWorker());
+                AssetDatabase.Refresh();
+                ConfigureCharacterSprite(path);
+            }
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        // คนงานหันหน้า — หมวกเซฟตี้เหลือง + เสื้อกั๊กส้ม + ขากางเกงเข้ม (pivot bottom-center)
+        private static Texture2D DrawWorker()
+        {
+            var tex = NewCanvas(24, 32);
+            Color skin    = new Color(0.95f, 0.78f, 0.60f);
+            Color vest    = new Color(0.95f, 0.60f, 0.12f); // เสื้อกั๊กเซฟตี้ส้ม
+            Color helmet  = new Color(0.98f, 0.85f, 0.18f); // หมวกเซฟตี้เหลือง
+            Color legs    = new Color(0.24f, 0.28f, 0.40f);
+            Color outline = new Color(0.10f, 0.09f, 0.09f);
+
+            // ขา 2 ข้าง
+            FillRect(tex, 8, 1, 11, 11, legs);
+            FillRect(tex, 13, 1, 16, 11, legs);
+            // แขน (ผิว)
+            FillRect(tex, 4, 13, 7, 21, skin);
+            FillRect(tex, 17, 13, 20, 21, skin);
+            // ลำตัว/เสื้อกั๊ก
+            FillRect(tex, 7, 11, 17, 23, vest);
+            // แถบสะท้อนแสงบนเสื้อ
+            FillRect(tex, 9, 15, 15, 16, new Color(0.98f, 0.95f, 0.75f));
+            // หัว
+            FillCircle(tex, 12, 25, 4, skin);
+            // หมวกเซฟตี้ (โดม + ปีก)
+            FillEllipse(tex, 12, 28, 5, 3, helmet);
+            FillRect(tex, 6, 27, 18, 28, helmet);
+            // ตา
+            SetPixelSafe(tex, 10, 25, outline);
+            SetPixelSafe(tex, 14, 25, outline);
+
+            tex.Apply();
+            return tex;
+        }
+
+        // pivot bottom-center + PPU สูง (คนขนาดเล็ก) — mirror ConfigureBuildingSprite แต่คนละ PPU
+        private static void ConfigureCharacterSprite(string path)
+        {
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) return;
+
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = WorkerPixelsPerUnit;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.alphaIsTransparency = true;
+
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteAlignment = (int)SpriteAlignment.BottomCenter;
+            settings.spritePivot = new Vector2(0.5f, 0f);
+            importer.SetTextureSettings(settings);
+
+            importer.SaveAndReimport();
+        }
+
         [MenuItem("NuclearReMind/Generate Placeholder Sprites")]
         public static void GenerateAll()
         {
@@ -161,6 +238,7 @@ namespace NuclearReMind.EditorTools
                 case "Laboratory": return DrawLaboratory();
                 case "CoreTower": return DrawCoreTower();
                 case "Mine": return DrawMine();
+                case "Hospital": return DrawHospital();
                 default: return NewCanvas(64, 64);
             }
         }
@@ -238,6 +316,31 @@ namespace NuclearReMind.EditorTools
             FillRect(tex, 80, 100, 104, 130, chimney);
             FillCircle(tex, 92, 134, 12, smoke);
             FillCircle(tex, 104, 140, 9, smoke);
+
+            tex.Apply();
+            return tex;
+        }
+
+        // โรงพยาบาล (GDD §6) — ตึกขาว + กากบาทแดง + ประตู/หน้าต่าง
+        private static Texture2D DrawHospital()
+        {
+            var tex = NewCanvas(72, 72);
+            Color wall = new Color(0.92f, 0.93f, 0.95f);
+            Color roof = new Color(0.60f, 0.65f, 0.72f);
+            Color cross = new Color(0.85f, 0.15f, 0.15f);
+            Color door = new Color(0.35f, 0.40f, 0.48f);
+            Color window = new Color(0.55f, 0.75f, 0.92f);
+
+            FillRect(tex, 6, 4, 65, 52, wall);
+            FillRect(tex, 4, 52, 67, 60, roof);
+
+            // กากบาทแดงกลางตึก
+            FillRect(tex, 31, 30, 40, 49, cross);
+            FillRect(tex, 26, 35, 45, 44, cross);
+
+            FillRect(tex, 30, 4, 41, 20, door);
+            FillRect(tex, 11, 12, 20, 21, window);
+            FillRect(tex, 51, 12, 60, 21, window);
 
             tex.Apply();
             return tex;
@@ -538,6 +641,11 @@ namespace NuclearReMind.EditorTools
                 var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(Path.Combine(BuildingsFolder, name + ".png"));
 
                 if (data == null || sprite == null)
+                    continue;
+
+                // ห้ามทับ art จริง (BuildingArtSetup/CoreTowerSpriteSetup ใส่ไว้) — placeholder เติมเฉพาะช่องว่าง
+                // ถ้าอยากกลับไปใช้ placeholder ให้เคลียร์ฟิลด์ sprite ใน asset ก่อนแล้วรันเมนูนี้ใหม่
+                if (data.sprite != null)
                     continue;
 
                 data.sprite = sprite;

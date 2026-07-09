@@ -18,7 +18,9 @@ namespace NuclearReMind
         CoreTower,
         PowerConduit,
         Mine,
-        Memorial   // อนุสรณ์ทีมสร้างหอคอย (Story Guide §4) — pre-placed, คลิกเปิดแผงรายชื่อ
+        Memorial,  // อนุสรณ์ทีมสร้างหอคอย (Story Guide §4) — pre-placed, คลิกเปิดแผงรายชื่อ
+        OreDeposit, // แหล่งแร่เหล็ก โซน A/B (V4 §5) — scatter โดย OreDepositManager, ทุบไม่ได้
+        Hospital   // โรงพยาบาล (GDD §6) — รักษาคนป่วย + ลดรังสี เมื่อมี Medic ประจำครบ (ต่อท้ายเสมอ — กันเลื่อนค่า serialize)
     }
 
     /// <summary>
@@ -170,6 +172,17 @@ namespace NuclearReMind
         /// แปลงพิกัด grid (col, row) เป็นตำแหน่งใน world space แบบ isometric
         /// </summary>
         public Vector3 IsoToWorld(int col, int row)
+        {
+            float x = (col - row) * (tileWidth / 2f);
+            float y = (col + row) * (tileHeight / 2f);
+            return originOffset + new Vector3(x, y, 0f);
+        }
+
+        /// <summary>
+        /// เวอร์ชัน float ของ IsoToWorld — สำหรับตำแหน่งลื่นระหว่าง cell (เช่น worker เดิน/jitter)
+        /// สูตรเดียวกับ IsoToWorld ทุกประการ (ไม่แตะของเดิมที่ถูกเทสต์)
+        /// </summary>
+        public Vector3 IsoToWorldF(float col, float row)
         {
             float x = (col - row) * (tileWidth / 2f);
             float y = (col + row) * (tileHeight / 2f);

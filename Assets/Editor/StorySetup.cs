@@ -17,7 +17,8 @@ namespace NuclearReMind.EditorTools
     ///   5. StoryBeatSO 14 beat เรียงตามไทม์ไลน์ → wire เข้า StoryDirector.beats
     ///
     /// การแมปที่ต่างจาก guide (จดไว้ใน noteTH ของ beat ด้วย):
-    ///   - crisis_radiation_disease: trigger "ZoneA_workers>threshold" → "exposure_above_60|day_reached_23" (RadiationManager exposure สะสม)
+    ///   - วิกฤต 3 ใบ: เงื่อนไข/วันอ่านจาก CrisisSchedule (runtime) — GDD §10 + Victory Loop §14 (Day 17/20/24)
+    ///   - crisis_radiation_disease: trigger "ZoneA_workers>threshold" → exposure สะสม (RadiationManager) + เพดาน Day 20
     ///   - decree_emergency: "coolingWorkerShortage" = จบวันระหว่างพายุที่ HEAT ≥ 70 (นิยามใน StoryDirector)
     ///     · effects coolingWorkers +1 ของ guide map เป็นแต้มหล่อเย็น +6/+12 (สเกลเดียวกับ decree ปุ่ม ①②)
     ///   - deferredCrisis water/food: guide ระบุแค่คีย์ — เนื้อหาวิกฤตซ้อนแต่งเพิ่มตามโทน guide
@@ -380,27 +381,31 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
             }));
 
             // ── PHASE 3 · วิกฤต 3 ใบ (InfoCard → Crisis → Outcome → Quiz ผ่าน DilemmaManager) ──
-            beats.Add(Beat("crisis_plasma_stability", StoryTriggerType.OnStatThreshold, "heat_above_80|q_above_0.3", b =>
+            // ★ เงื่อนไข/วันทั้งหมดมาจาก CrisisSchedule (runtime) — GDD §10 + Victory Loop §14 · EditMode test คุมวันเด้ง
+            beats.Add(Beat("crisis_plasma_stability", StoryTriggerType.OnStatThreshold, CrisisSchedule.PlasmaTrigger, b =>
             {
                 b.infoCard = infos["plasma"];
                 b.crisis = plasmaCrisis;
-                b.noteTH = "~Day 17 · ควิซ Q2,Q3 ผูกที่ crisis.linkedQuizIds (ยิงหลัง Outcome ทุกทางเลือก)";
+                b.noteTH = "Day 17 (§14) · §10 ระบุ \"HEAT>80 หรือ Q>0.3 (จบเฟส 1)\" — จบเฟส 1 = CORE% 50 (§8) " +
+                           "จึงใช้ core_above_50 ไม่ใช่ q_above_0.3 (Q=CORE%/100 → 0.3 = CORE% 30 = ค่าเริ่มต้นตอนปลดล็อก Day 11 " +
+                           "เงื่อนไขเดิมทำให้วิกฤตเด้ง Day 11) · ควิซ Q2,Q3 ผูกที่ crisis.linkedQuizIds";
             }));
 
-            beats.Add(Beat("crisis_radiation_disease", StoryTriggerType.OnStatThreshold, "exposure_above_60|day_reached_23", b =>
+            beats.Add(Beat("crisis_radiation_disease", StoryTriggerType.OnStatThreshold, CrisisSchedule.OutbreakTrigger, b =>
             {
                 b.infoCard = infos["medicine"];
                 b.crisis = outbreakCrisis;
-                b.noteTH = "guide: ZoneA_workers>threshold — จำลองด้วย RadiationManager exposure สะสม (Mine/เตา ลดด้วย Shelter/Medic ตาม ALARA) " +
-                           "· exposure_above_60 = คนงานรับรังสีเกิน · fallback day_reached_23 กันพลาดเนื้อหา · ควิซ Q4,Q5";
+                b.noteTH = "Day 20 (§14) · §10: ส่งคนขุดโซนเสี่ยงมากเกินไป — จำลองด้วย RadiationManager exposure สะสม " +
+                           "(ลดด้วย Shelter/Medic ตาม ALARA) · เพดานวัน day_reached_20 (เดิม 23 ไม่ตรง §14) · ควิซ Q4,Q5";
             }));
 
-            beats.Add(Beat("crisis_food_spoilage", StoryTriggerType.OnStatThreshold, "food_above_500|day_reached_24", b =>
+            beats.Add(Beat("crisis_food_spoilage", StoryTriggerType.OnStatThreshold, CrisisSchedule.FoodTrigger, b =>
             {
                 b.infoCard = infos["food"];
                 b.crisis = foodCrisis;
-                b.noteTH = "~Day 24 · guide: foodStored>500||noAgriDome — ไม่มีอาคาร AgriDome จึงใช้ day_reached_24 " +
-                           "เป็น fallback (ผู้เล่นที่คุมอาหาร ≤500 จะไม่พลาดวิกฤต+ควิซ) · ควิซรายทางเลือก: A→Q6 (mutation) · B→Q7 (irradiation) · C→ไม่มี";
+                b.noteTH = "Day 24 (§14) · §10: \"อาหาร>500 หรือไม่มี Agri Dome\" — ยังไม่มี Agri Dome วงเล็บหลังจึงจริงเสมอ " +
+                           "และ food_above_500 ใช้ไม่ได้ (เพดานคลังอาหาร = 500 → ชนเพดาน ~Day 12 วิกฤตเด้งก่อนกำหนด 12 วัน) " +
+                           "· ควิซรายทางเลือก: A→Q6 (mutation) · B→Q7 (irradiation) · C→ไม่มี";
             }));
 
             // ── วิกฤตซ้อน (เฟส 5 — deferredCrisis §4): ยิง 2 วันหลังเลือกทาง C ของวิกฤตแม่ ──
@@ -526,7 +531,7 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
             // ตึกอนุสรณ์ pre-placed ข้างขวา CORE TOWER (ทาวเวอร์ 3×3 กลางกริด — เว้น 1 ช่อง)
             var grid = Object.FindFirstObjectByType<GridManager>();
             int columns = grid != null ? grid.columns : 43;
-            int rows    = grid != null ? grid.rows    : 43;
+            int rows    = grid != null ? grid.rows    : 28;
             var origin = new Vector2Int(columns / 2 + 4, rows / 2 - 1);
 
             var go = GameObject.Find("PrePlacedMemorial") ?? new GameObject("PrePlacedMemorial");

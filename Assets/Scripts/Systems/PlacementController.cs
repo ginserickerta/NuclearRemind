@@ -116,6 +116,14 @@ namespace NuclearReMind
         {
             if (buildingData == null) return;
 
+            // ล็อกเฟส (GDD §6): ยังไม่ถึงเฟสปลดล็อก → ไม่เข้าโหมดวาง (กันทั้ง hotkey 1-9 และคลิกปุ่ม)
+            if (GameManager.Instance != null && buildingData.unlockPhase > GameManager.Instance.CurrentPhase)
+            {
+                EventManager.Instance.RaiseNotice($"{buildingData.buildingName} ปลดล็อกในเฟส {buildingData.unlockPhase} " +
+                                                  $"(ตอนนี้เฟส {GameManager.Instance.CurrentPhase})");
+                return;
+            }
+
             if (!CanAfford(buildingData))
             {
                 Debug.Log($"[PlacementController] ทรัพยากรไม่พอสร้าง {buildingData.buildingName} " +

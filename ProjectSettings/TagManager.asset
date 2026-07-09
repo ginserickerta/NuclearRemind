@@ -47,6 +47,12 @@ TagManager:
   - name: Buildings
     uniqueID: 1737001002
     locked: 0
+  - name: Units
+    uniqueID: 1737001004
+    locked: 0
   - name: FogOfWar
     uniqueID: 1737001003
+    locked: 0
+  - name: WorldUI
+    uniqueID: 1737001005
     locked: 0

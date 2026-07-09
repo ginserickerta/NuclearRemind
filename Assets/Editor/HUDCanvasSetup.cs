@@ -56,32 +56,59 @@ namespace NuclearReMind.EditorTools
                 esGO.AddComponent<StandaloneInputModule>();
             }
 
-            // ===== Resource panel (top-left) =====
-            var resourcePanel = CreatePanel("ResourcePanel", canvasGO.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20, -20), new Vector2(260, 180));
+            // ===== Resource panel (top-left) — 6 แถว: อาหารมีแถบ (cap 500) ที่เหลือตัวเลขล้วน (cap 9999 V4 §4) =====
+            var resourcePanel = CreatePanel("ResourcePanel", canvasGO.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20, -20), new Vector2(260, 200));
             var resourceLayout = resourcePanel.AddComponent<VerticalLayoutGroup>();
             resourceLayout.spacing = 6f;
             resourceLayout.childControlHeight = false;
             resourceLayout.childForceExpandHeight = false;
 
             // Food/Water ใช้ sprite icon — 🌿💧 เป็น emoji นอก BMP (surrogate pair) legacy Text วาดไม่ได้
-            // ⛏⚡ อยู่ใน BMP เรนเดอร์ผ่าน OS font fallback ได้ จึงคงเป็น text
+            // ⛏⚡⚛ อยู่ใน BMP เรนเดอร์ผ่าน OS font fallback ได้ จึงคงเป็น text
+            // หลอดตันที่ display* ของ UIManagerHUD (2000/500) — ตัวเลขวิ่งต่อได้ถึง cap 9999
             hud.foodBar = CreateResourceBar("FoodBar", resourcePanel.transform, font, new Color(0.4f, 0.8f, 0.2f), "F",
                 PlaceholderSpriteGenerator.EnsureIconSprite("IconFood"));
             hud.waterBar = CreateResourceBar("WaterBar", resourcePanel.transform, font, new Color(0.2f, 0.6f, 1f), "W",
                 PlaceholderSpriteGenerator.EnsureIconSprite("IconWater"));
             hud.ironBar = CreateResourceBar("IronBar", resourcePanel.transform, font, new Color(0.6f, 0.55f, 0.5f), "⛏");
             hud.energyBar = CreateResourceBar("EnergyBar", resourcePanel.transform, font, new Color(1f, 0.8f, 0.2f), "⚡");
+            // เชื้อเพลิงฟิวชัน (V4 §4) — Deuterium สกัดจากน้ำ · Tritium ขุดจากแหล่งแร่โซน B
+            hud.deuteriumBar = CreateResourceBar("DeuteriumBar", resourcePanel.transform, font, new Color(0.35f, 0.7f, 0.95f), "D");
+            hud.tritiumBar = CreateResourceBar("TritiumBar", resourcePanel.transform, font, new Color(0.85f, 0.45f, 0.2f), "⚛");
 
-            // ===== Day panel (top-center, above tower) =====
-            // กว้าง 320/สูง 64 เผื่อ line height ของ Kanit (สูงกว่า Arial ~1.5×) — ข้อความไม่โดน truncate
+            // ===== Day panel (top-center, above tower) — วัน + timer แยกเฟส + แถบเวลา Planning|Live (V4 §3) =====
+            var planningCol = new Color(0.28f, 0.55f, 0.92f); // ฟ้า = วางแผน
+            var liveCol = new Color(0.93f, 0.52f, 0.18f);     // ส้ม = เดินเครื่อง
             var dayPanel = CreatePanel("DayPanel", canvasGO.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -20), new Vector2(320, 64));
             // พื้น panel ทึบ + ข้อความเข้ม — กัน text ขาวจมหายบน light theme (Palette.CameraBackground = #E9EDF3)
             var dayBg = dayPanel.AddComponent<Image>();
             dayBg.color = Palette.PanelBg;
-            hud.dayText = CreateText("DayText", dayPanel.transform, font, "DAY 1 / 30", 22, new Vector2(0, -4), new Vector2(320, 30), TextAnchor.UpperCenter);
+            hud.dayText = CreateText("DayText", dayPanel.transform, font, "DAY 1 / 30", 20, new Vector2(0, 16), new Vector2(320, 26), TextAnchor.MiddleCenter);
             hud.dayText.color = Palette.TextPrimary;
-            hud.timerText = CreateText("TimerText", dayPanel.transform, font, "—", 20, new Vector2(0, -32), new Vector2(320, 26), TextAnchor.UpperCenter);
+            hud.timerText = CreateText("TimerText", dayPanel.transform, font, "—", 17, new Vector2(0, -6), new Vector2(320, 22), TextAnchor.MiddleCenter);
             hud.timerText.color = Palette.TextMuted;
+            // แถบเวลาแบ่งเฟส 30|60 — ช่วงซ้าย (ฟ้า) = Planning 30s, ช่วงขวา (ส้ม) = Live 60s
+            hud.planningSegBar = CreateSlider("PlanningSeg", dayPanel.transform, planningCol, new Vector2(-94, -26), new Vector2(92, 9));
+            hud.planningSegBar.value = 0f;
+            hud.liveSegBar = CreateSlider("LiveSeg", dayPanel.transform, liveCol, new Vector2(48, -26), new Vector2(184, 9));
+            hud.liveSegBar.value = 0f;
+
+            // ===== Live-phase banner (กลางจอ, เด้ง ~1.6s ตอนเข้า Live) =====
+            var liveBanner = new GameObject("LivePhaseBanner", typeof(RectTransform));
+            liveBanner.transform.SetParent(canvasGO.transform, false);
+            var lbRect = liveBanner.GetComponent<RectTransform>();
+            lbRect.anchorMin = new Vector2(0.5f, 0.5f);
+            lbRect.anchorMax = new Vector2(0.5f, 0.5f);
+            lbRect.pivot = new Vector2(0.5f, 0.5f);
+            lbRect.anchoredPosition = new Vector2(0, 130);
+            lbRect.sizeDelta = new Vector2(380, 60);
+            var lbBg = liveBanner.AddComponent<Image>();
+            lbBg.color = new Color(liveCol.r, liveCol.g, liveCol.b, 0.92f);
+            var lbText = CreateText("BannerText", liveBanner.transform, font, "⚡ เริ่มเดินเครื่อง! (Live 60s)", 22, Vector2.zero, new Vector2(370, 56), TextAnchor.MiddleCenter);
+            lbText.color = Color.white;
+            lbText.fontStyle = FontStyle.Bold;
+            hud.livePhaseBanner = liveBanner;
+            liveBanner.SetActive(false);
 
             // ===== Tower panel (top-center, below day panel) =====
             var towerPanel = CreatePanel("TowerPanel", canvasGO.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -80), new Vector2(320, 60));
@@ -95,7 +122,7 @@ namespace NuclearReMind.EditorTools
             popLayout.childControlHeight = false;
             popLayout.childForceExpandHeight = false;
 
-            hud.populationText = CreateTextRow("PopulationText", popPanel.transform, font, "ประชากร 10/10  ·  W10 E0 M0");
+            hud.populationText = CreateTextRow("PopulationText", popPanel.transform, font, "ประชากร 10/10  ·  W6 E2 M0 F2");
             hud.hopeText = CreateTextRow("HopeText", popPanel.transform, font, "Hope: 100");
             hud.hopeBar = CreateSliderRow("HopeBar", popPanel.transform, new Color(0.3f, 0.85f, 1f));
 
@@ -103,10 +130,15 @@ namespace NuclearReMind.EditorTools
             hud.knowledgeText = CreateTextRow("KnowledgeText", popPanel.transform, font, "Knowledge: 0 / 100 · Novice");
             hud.knowledgeBar = CreateSliderRow("KnowledgeBar", popPanel.transform, new Color(0.62f, 0.5f, 1f));
 
-            // ===== Train class buttons (ใต้ Population panel — V4 §5) =====
+            // ===== Train class buttons (ใต้ Population panel — V4 §5: 3 คลาสจากห้องวิจัย) =====
             var trainPanel = CreatePanel("TrainPanel", canvasGO.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -258), new Vector2(260, 44));
-            hud.trainEngineerButton = CreateButton("TrainEngineerBtn", trainPanel.transform, font, "ฝึกวิศวกร", new Vector2(-64, 0), new Vector2(122, 36));
-            hud.trainMedicButton    = CreateButton("TrainMedicBtn",    trainPanel.transform, font, "ฝึกแพทย์",  new Vector2(64, 0),  new Vector2(122, 36));
+            hud.trainEngineerButton = CreateButton("TrainEngineerBtn", trainPanel.transform, font, "ฝึกวิศวกร",   new Vector2(-86, 0), new Vector2(80, 36));
+            hud.trainMedicButton    = CreateButton("TrainMedicBtn",    trainPanel.transform, font, "ฝึกแพทย์",    new Vector2(0, 0),   new Vector2(80, 36));
+            hud.trainFarmerButton   = CreateButton("TrainFarmerBtn",   trainPanel.transform, font, "ฝึกเกษตรกร", new Vector2(86, 0),  new Vector2(80, 36));
+            // ปุ่มแคบลง (3 ปุ่มใน 260px) — ลด font กันข้อความล้น
+            ShrinkButtonLabel(hud.trainEngineerButton, 14);
+            ShrinkButtonLabel(hud.trainMedicButton, 14);
+            ShrinkButtonLabel(hud.trainFarmerButton, 14);
 
             // ===== Decree buttons (ประกาศฉุกเฉิน — V4 §11) =====
             var decreePanel = CreatePanel("DecreePanel", canvasGO.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -306), new Vector2(260, 44));
@@ -180,6 +212,70 @@ namespace NuclearReMind.EditorTools
             hud.toroidalButton = CreateButton("ToroidalBtn", corePanel.transform, font, "+Toroidal", new Vector2(-95, -56), new Vector2(160, 30));
             hud.poloidalButton = CreateButton("PoloidalBtn", corePanel.transform, font, "+Poloidal", new Vector2(95, -56), new Vector2(160, 30));
 
+            // ===== Building upgrade hover panel (ลอยเหนืออาคารที่ชี้) =====
+            var upPanel = new GameObject("BuildingUpgradePanel", typeof(RectTransform));
+            upPanel.transform.SetParent(canvasGO.transform, false);
+            var upRect = upPanel.GetComponent<RectTransform>();
+            upRect.anchorMin = Vector2.zero;
+            upRect.anchorMax = Vector2.zero;
+            upRect.pivot = new Vector2(0.5f, 0f); // ยึดขอบล่างกลาง → .position = จุดเหนือหัวอาคาร
+            upRect.sizeDelta = new Vector2(264, 200);
+            var upBg = upPanel.AddComponent<Image>();
+            upBg.color = Palette.PanelBg;
+
+            var upName = CreateText("BU_Name", upPanel.transform, font, "อาคาร", 16, new Vector2(0, 80), new Vector2(252, 24), TextAnchor.MiddleCenter);
+            upName.color = Palette.TextPrimary; upName.fontStyle = FontStyle.Bold;
+            var upLevel = CreateText("BU_Level", upPanel.transform, font, "Lv.1  ●○○", 15, new Vector2(0, 58), new Vector2(252, 22), TextAnchor.MiddleCenter);
+            upLevel.color = Palette.TextPrimary;
+            var upProd = CreateText("BU_Prod", upPanel.transform, font, "⚡0", 13, new Vector2(0, 38), new Vector2(252, 20), TextAnchor.MiddleCenter);
+            upProd.color = Palette.TextMuted;
+            var upHint = CreateText("BU_Hint", upPanel.transform, font, "", 11, new Vector2(0, 20), new Vector2(252, 18), TextAnchor.MiddleCenter);
+            upHint.color = Palette.Accent;
+            var upCost = CreateText("BU_Cost", upPanel.transform, font, "อัปเกรด: ⛏40", 14, new Vector2(0, 0), new Vector2(252, 20), TextAnchor.MiddleCenter);
+            upCost.color = Palette.TextPrimary;
+
+            var upBtn = CreateButton("BU_UpgradeButton", upPanel.transform, font, "⬆ อัปเกรด", new Vector2(0, -26), new Vector2(190, 32));
+            upBtn.image.color = Palette.Accent;
+            upBtn.transition = Selectable.Transition.ColorTint; // ให้ disabled หรี่เอง (ตอนแร่ไม่พอ)
+            var upCb = upBtn.colors;
+            upCb.normalColor = Color.white;
+            upCb.highlightedColor = new Color(0.9f, 0.95f, 1f);
+            upCb.pressedColor = new Color(0.8f, 0.85f, 0.9f);
+            upCb.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.7f);
+            upBtn.colors = upCb;
+            var upBtnLabel = upBtn.GetComponentInChildren<Text>();
+            if (upBtnLabel != null) { upBtnLabel.color = Color.white; upBtnLabel.fontSize = 16; }
+
+            // ── แถวจัดสรรคนงาน (V4 §5): [−] คนงาน x/y ว่าง z [+] ──
+            var upWorker = CreateText("BU_Worker", upPanel.transform, font, "👷 คนงาน 0/0   ว่าง 0", 13, new Vector2(0, -70), new Vector2(180, 22), TextAnchor.MiddleCenter);
+            upWorker.color = Palette.TextPrimary;
+            var upMinus = CreateButton("BU_WorkerMinus", upPanel.transform, font, "−", new Vector2(-106, -70), new Vector2(34, 30));
+            StyleWorkerButton(upMinus, new Color(0.75f, 0.30f, 0.28f));
+            var upPlus = CreateButton("BU_WorkerPlus", upPanel.transform, font, "+", new Vector2(106, -70), new Vector2(34, 30));
+            StyleWorkerButton(upPlus, new Color(0.24f, 0.55f, 0.34f));
+
+            // ── แถบความคืบหน้าก่อสร้าง (GDD §6): โชว์แทนปุ่มอัปเกรดตอนอาคารกำลังสร้าง ──
+            var upConstruct = CreateSlider("BU_ConstructBar", upPanel.transform, new Color(0.3f, 0.75f, 0.35f), new Vector2(0, -26), new Vector2(190, 18));
+
+            var buUIgo = GameObject.Find("BuildingUpgradeUI") ?? new GameObject("BuildingUpgradeUI");
+            var buUI = buUIgo.GetComponent<BuildingUpgradeUI>() ?? buUIgo.AddComponent<BuildingUpgradeUI>();
+            buUI.panel = upPanel;
+            buUI.panelRect = upRect;
+            buUI.nameText = upName;
+            buUI.levelText = upLevel;
+            buUI.productionText = upProd;
+            buUI.costText = upCost;
+            buUI.hintText = upHint;
+            buUI.upgradeButton = upBtn;
+            buUI.upgradeButtonLabel = upBtnLabel;
+            buUI.workerText = upWorker;
+            buUI.minusButton = upMinus;
+            buUI.plusButton = upPlus;
+            buUI.constructionBar = upConstruct;
+            EditorUtility.SetDirty(buUI);
+            upConstruct.gameObject.SetActive(false);
+            upPanel.SetActive(false);
+
             // ===== Game Over panel (full screen) =====
             var goPanel = CreatePanel("GameOverPanel", canvasGO.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var goRect = goPanel.GetComponent<RectTransform>();
@@ -204,6 +300,38 @@ namespace NuclearReMind.EditorTools
 
             // ===== Quiz popup (V4 §16) — full-screen overlay + dialog, wire QuizPopupController =====
             SetupQuizPopup(canvasGO.transform, font);
+
+            // ===== Day 1 Tutorial checklist (GDD §3) — พาเนลมุมซ้าย ไม่บล็อกการเล่น =====
+            var tutPanel = CreatePanel("TutorialChecklistPanel", canvasGO.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20, 0), new Vector2(340, 190));
+            var tutBg = tutPanel.AddComponent<Image>();
+            tutBg.color = Palette.PanelBg;
+            var tutTitle = CreateText("TutTitle", tutPanel.transform, font, "ภารกิจ Day 1 — สอนเล่น", 16, new Vector2(0, 78), new Vector2(320, 24), TextAnchor.MiddleCenter);
+            tutTitle.color = Palette.Accent; tutTitle.fontStyle = FontStyle.Bold;
+            var tTask1 = CreateText("TutTask1", tutPanel.transform, font, "⬜ เดินโรงงานพื้นฐาน 3 โรง  0/3", 13, new Vector2(8, 46), new Vector2(320, 22), TextAnchor.MiddleLeft);
+            var tTask2 = CreateText("TutTask2", tutPanel.transform, font, "⬜ ขยาย Shelter เพิ่มเพดานประชากร", 13, new Vector2(8, 20), new Vector2(320, 22), TextAnchor.MiddleLeft);
+            var tTask3 = CreateText("TutTask3", tutPanel.transform, font, "⬜ จัดคนงานเข้าประจำอาคาร", 13, new Vector2(8, -6), new Vector2(320, 22), TextAnchor.MiddleLeft);
+
+            var tStartBtn = CreateButton("TutStartButton", tutPanel.transform, font, "ทำภารกิจให้ครบ (0/3)", new Vector2(0, -58), new Vector2(300, 40));
+            tStartBtn.image.color = Palette.Accent;
+            tStartBtn.transition = Selectable.Transition.ColorTint; // ล็อกอยู่ → หรี่จนทำครบ
+            var tCb = tStartBtn.colors;
+            tCb.normalColor = Color.white;
+            tCb.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.7f);
+            tStartBtn.colors = tCb;
+            var tStartLabel = tStartBtn.GetComponentInChildren<Text>();
+            if (tStartLabel != null) { tStartLabel.color = Color.white; tStartLabel.fontSize = 15; }
+
+            var tutGo = GameObject.Find("TutorialManager") ?? new GameObject("TutorialManager");
+            var tut = tutGo.GetComponent<TutorialManager>() ?? tutGo.AddComponent<TutorialManager>();
+            if (tut.tutorialPanel != null && tut.tutorialPanel != tutPanel)
+                Undo.DestroyObjectImmediate(tut.tutorialPanel); // ลบ popup tutorial เดิม (ถ้ายังลอยอยู่)
+            tut.tutorialPanel = tutPanel;
+            tut.task1Text = tTask1;
+            tut.task2Text = tTask2;
+            tut.task3Text = tTask3;
+            tut.startButton = tStartBtn;
+            tut.startLabel = tStartLabel;
+            EditorUtility.SetDirty(tut);
 
             EditorUtility.SetDirty(hud);
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
@@ -364,7 +492,9 @@ namespace NuclearReMind.EditorTools
             "   1–7 — เลือกอาคารจากแถบล่าง\n" +
             "   คลิกซ้าย — วางอาคาร / ยืนยัน\n" +
             "   คลิกขวา — ยกเลิกการวาง / ออกโหมดทุบ\n" +
-            "   U — อัประดับอาคารใต้เมาส์ (จ่ายแร่+พลังงาน)\n\n" +
+            "   U — อัประดับอาคารใต้เมาส์ (จ่ายแร่+พลังงาน)\n" +
+            "   Q / E — ลด / เพิ่มคนงานประจำอาคารใต้เมาส์\n" +
+            "   B — พับ / กางแถบเลือกอาคาร\n\n" +
             "กล้อง\n" +
             "   WASD / ลูกศร — เลื่อนกล้อง\n" +
             "   คลิกกลางค้างลาก — จับแมพเลื่อน\n" +
@@ -435,17 +565,18 @@ namespace NuclearReMind.EditorTools
                 img.sprite = iconSprite;
                 img.preserveAspect = true;
                 iconRect = iconGO.GetComponent<RectTransform>();
-                iconRect.sizeDelta = new Vector2(22, 22);
             }
             else
             {
                 var iconText = CreateText(name + "Icon", row.transform, font, icon, 18, new Vector2(2, 0), new Vector2(24, 24), TextAnchor.MiddleCenter);
                 iconRect = iconText.GetComponent<RectTransform>();
             }
+            // กล่อง icon เท่ากันทุกแถว (sprite/text) → จุดกึ่งกลางตรงกันทั้งคอลัมน์
             iconRect.anchorMin = new Vector2(0f, 0.5f);
             iconRect.anchorMax = new Vector2(0f, 0.5f);
             iconRect.pivot = new Vector2(0f, 0.5f);
             iconRect.anchoredPosition = new Vector2(2, 0);
+            iconRect.sizeDelta = new Vector2(24, 24);
 
             var slider = CreateSlider(name + "Slider", row.transform, fillColor, new Vector2(28, 0), new Vector2(150, 20));
             var sliderRect = slider.GetComponent<RectTransform>();
@@ -453,15 +584,14 @@ namespace NuclearReMind.EditorTools
             sliderRect.anchorMax = new Vector2(0f, 0.5f);
             sliderRect.pivot = new Vector2(0f, 0.5f);
             sliderRect.anchoredPosition = new Vector2(28, 0);
+            var fillImage = slider.transform.Find("Fill Area/Fill").GetComponent<Image>();
 
-            var valueText = CreateText(name + "ValueText", row.transform, font, "0 / 0", 16, new Vector2(0, 0), new Vector2(80, 24), TextAnchor.MiddleRight);
+            var valueText = CreateText(name + "ValueText", row.transform, font, "0", 16, new Vector2(0, 0), new Vector2(80, 24), TextAnchor.MiddleRight);
             var valueRect = valueText.GetComponent<RectTransform>();
             valueRect.anchorMin = new Vector2(1f, 0.5f);
             valueRect.anchorMax = new Vector2(1f, 0.5f);
             valueRect.pivot = new Vector2(1f, 0.5f);
             valueRect.anchoredPosition = new Vector2(0, 0);
-
-            var fillImage = slider.transform.Find("Fill Area/Fill").GetComponent<Image>();
 
             return new UIManagerHUD.ResourceBarUI
             {
@@ -576,6 +706,28 @@ namespace NuclearReMind.EditorTools
             t.text = label;
 
             return btn;
+        }
+
+        // ลดขนาด font ของ label ปุ่ม (ปุ่มแคบ — ข้อความไทยยาวจะล้น/โดน truncate)
+        private static void ShrinkButtonLabel(Button btn, int fontSize)
+        {
+            var label = btn != null ? btn.GetComponentInChildren<Text>() : null;
+            if (label != null) label.fontSize = fontSize;
+        }
+
+        // ปุ่ม −/+ จัดสรรคนงาน: สีพื้น + label ขาวตัวใหญ่ + หรี่เองตอน disabled (assigned เต็ม/ไม่มี idle)
+        private static void StyleWorkerButton(Button btn, Color bg)
+        {
+            btn.image.color = bg;
+            btn.transition = Selectable.Transition.ColorTint;
+            var cb = btn.colors;
+            cb.normalColor = Color.white;
+            cb.highlightedColor = new Color(0.92f, 0.96f, 1f);
+            cb.pressedColor = new Color(0.8f, 0.85f, 0.9f);
+            cb.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.6f);
+            btn.colors = cb;
+            var label = btn.GetComponentInChildren<Text>();
+            if (label != null) { label.color = Color.white; label.fontSize = 22; }
         }
 
         private static Slider CreateSlider(string name, Transform parent, Color fillColor, Vector2 anchoredPos, Vector2 size)

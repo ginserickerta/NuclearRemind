@@ -40,5 +40,9 @@ namespace NuclearReMind
         public List<int> busyWorkerDays = new List<int>();
         public List<float> hopeDrainPerDay = new List<float>(); // คู่ index กับ hopeDrainDays
         public List<int> hopeDrainDays = new List<int>();
+
+        // ===== Worker Assignment (V4 §5 — จัดสรร Worker ประจำอาคาร) — default ว่าง: เซฟเก่าโหลดได้ (ทุกคน idle) =====
+        public List<Vector2Int> workerAssignmentCells = new List<Vector2Int>();  // คู่ index กับ workerAssignmentCounts
+        public List<int> workerAssignmentCounts = new List<int>();               // จำนวน Worker ประจำอาคารที่ cell นั้น
     }
 }

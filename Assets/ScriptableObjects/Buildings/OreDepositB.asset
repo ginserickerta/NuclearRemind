@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3a9c1e4d2b4f6a8e0c3b5d7f9a1c3e, type: 3}
+  m_Name: OreDepositB
+  m_EditorClassIdentifier: NuclearReMind::NuclearReMind.BuildingData
+  buildingName: "\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E41\u0E23\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01
+    (\u0E42\u0E0B\u0E19 B)"
+  description: "\u0E2A\u0E32\u0E22\u0E41\u0E23\u0E48\u0E25\u0E36\u0E01\u0E0A\u0E32\u0E19\u0E40\u0E21\u0E37\u0E2D\u0E07
+    \u2014 \u0E40\u0E2B\u0E25\u0E47\u0E01\u0E40\u0E22\u0E2D\u0E30 + \u0E41\u0E23\u0E48\u0E25\u0E34\u0E40\u0E18\u0E35\u0E22\u0E21\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E2A\u0E01\u0E31\u0E14
+    Tritium (\u0E40\u0E0A\u0E37\u0E49\u0E2D\u0E40\u0E1E\u0E25\u0E34\u0E07\u0E40\u0E15\u0E32\u0E40\u0E1F\u0E2A
+    3) \u0E41\u0E15\u0E48\u0E1D\u0E38\u0E48\u0E19\u0E41\u0E23\u0E48\u0E1B\u0E19\u0E40\u0E1B\u0E37\u0E49\u0E2D\u0E19\u0E23\u0E31\u0E07\u0E2A\u0E35:
+    \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E2A\u0E30\u0E2A\u0E21\u0E02\u0E2D\u0E07\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E38\u0E01\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E02\u0E38\u0E14
+    \u0E41\u0E25\u0E30\u0E04\u0E19\u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E48\u0E22\u0E07\u0E25\u0E49\u0E21\u0E1B\u0E48\u0E27\u0E22
+    (\u0E2B\u0E25\u0E31\u0E01 ALARA: \u0E2D\u0E22\u0E48\u0E32\u0E2A\u0E48\u0E07\u0E04\u0E19\u0E40\u0E01\u0E34\u0E19\u0E08\u0E33\u0E40\u0E1B\u0E47\u0E19)"
+  nuclearKnowledge: "Tritium (\xB3H) \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E02\u0E38\u0E14\u0E44\u0E14\u0E49\u0E15\u0E23\u0E07
+    \u0E46 \u2014 \u0E2A\u0E01\u0E31\u0E14\u0E08\u0E32\u0E01\u0E25\u0E34\u0E40\u0E18\u0E35\u0E22\u0E21\u0E43\u0E19\u0E2B\u0E34\u0E19:
+    Li-6 \u0E08\u0E31\u0E1A\u0E19\u0E34\u0E27\u0E15\u0E23\u0E2D\u0E19\u0E41\u0E25\u0E49\u0E27\u0E41\u0E15\u0E01\u0E15\u0E31\u0E27
+    \u0E40\u0E1B\u0E47\u0E19 Tritium + \u0E2E\u0E35\u0E40\u0E25\u0E35\u0E22\u0E21
+    (Li-6 + n \u2192 T + He-4) \xB7 \u0E2B\u0E25\u0E31\u0E01 ALARA: \u0E23\u0E31\u0E1A\u0E23\u0E31\u0E07\u0E2A\u0E35\u0E19\u0E49\u0E2D\u0E22\u0E17\u0E35\u0E48\u0E2A\u0E38\u0E14\u0E14\u0E49\u0E27\u0E22
+    \u0E25\u0E14\u0E40\u0E27\u0E25\u0E32 (Time) \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E30\u0E22\u0E30\u0E2B\u0E48\u0E32\u0E07
+    (Distance) \u0E43\u0E0A\u0E49\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E01\u0E33\u0E1A\u0E31\u0E07
+    (Shielding) \u2014 \u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E07\u0E25\u0E36\u0E01\u0E08\u0E23\u0E34\u0E07\u0E22\u0E31\u0E07\u0E40\u0E2A\u0E35\u0E48\u0E22\u0E07\u0E01\u0E4A\u0E32\u0E0B\u0E40\u0E23\u0E14\u0E2D\u0E19
+    (Rn-222) \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E2D\u0E19\u0E38\u0E20\u0E32\u0E04\u0E41\u0E2D\u0E25\u0E1F\u0E32\u0E17\u0E33\u0E25\u0E32\u0E22\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E22\u0E37\u0E48\u0E2D\u0E1B\u0E2D\u0E14"
+  sprite: {fileID: 21300000, guid: 7da7399893e6f6c49a7d39dd71c81f4f, type: 3}
+  size: {x: 1, y: 1}
+  buildingType: 11
+  ironCost: 0
+  energyCost: 0
+  workerRequired: 3
+  unlockPhase: 1
+  buildTicks: 1
+  foodProduction: 0
+  waterProduction: 0
+  energyProduction: 0
+  ironProduction: 0
+  energyConsumption: 0
+  waterConsumption: 0
+  isCoreTowerPart: 0
+  towerPhaseRequired: 0
+  unlocksEngineerTraining: 0
+  unlocksMedicTraining: 0
+  unlocksFarmerTraining: 0
+  requiredClass: 0
+  knowledgeProduction: 0
+  shelterCapacity: 0
+  upgradeIronCost: 40
+  upgradeEnergyCost: 0
+  deuteriumProduction: 0
+  tritiumProduction: 0
+  powerRange: 0
+  isPowerRelay: 0
+  isOreNode: 1
+  oreQuotaMin: 50
+  oreQuotaMax: 100
+  oreTritiumMin: 3
+  oreTritiumMax: 8
+  oreExposurePerWorkerDay: 1
+  oreSickChancePerWorkerDay: 0.05

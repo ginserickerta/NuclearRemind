@@ -1,0 +1,806 @@
+fileFormatVersion: 2
+guid: 5937a97a3cd14cc448149e2fa2a48943
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -1272108714658080535
+    second: advanced furnace_0
+  - first:
+      213: 7202638549517337597
+    second: advanced furnace_1
+  - first:
+      213: -8159230371961035392
+    second: advanced furnace_2
+  - first:
+      213: 8694400918652563168
+    second: advanced furnace_3
+  - first:
+      213: -698754569933928328
+    second: advanced furnace_4
+  - first:
+      213: -7013469805366371783
+    second: advanced furnace_5
+  - first:
+      213: 9207723980095607064
+    second: advanced furnace_6
+  - first:
+      213: 1396822938774122239
+    second: advanced furnace_7
+  - first:
+      213: -715379445287369150
+    second: advanced furnace_8
+  - first:
+      213: 2965000857202807601
+    second: advanced furnace_9
+  - first:
+      213: -1215923196142111814
+    second: advanced furnace_10
+  - first:
+      213: 4222141141894862389
+    second: advanced furnace_11
+  - first:
+      213: -8061558519819872202
+    second: advanced furnace_12
+  - first:
+      213: -1031707017047322034
+    second: advanced furnace_13
+  - first:
+      213: 1565420783306312129
+    second: advanced furnace_14
+  - first:
+      213: 6315084059560152063
+    second: advanced furnace_15
+  - first:
+      213: 3611115973956053859
+    second: advanced furnace_16
+  - first:
+      213: -7247079421887889523
+    second: advanced furnace_17
+  - first:
+      213: 6812990351571182919
+    second: advanced furnace_18
+  - first:
+      213: -7879305819410804199
+    second: advanced furnace_19
+  - first:
+      213: 2832620279007347954
+    second: advanced furnace_20
+  - first:
+      213: -1520069641970966170
+    second: advanced furnace_21
+  - first:
+      213: -5681679864918983231
+    second: advanced furnace_22
+  - first:
+      213: -9193131285771151624
+    second: advanced furnace_23
+  - first:
+      213: -4454103848374726512
+    second: advanced furnace_24
+  - first:
+      213: 7581788200508483738
+    second: advanced furnace_25
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: advanced furnace_0
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9e8502b2ddf885ee0800000000000000
+      internalID: -1272108714658080535
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_1
+      rect:
+        serializedVersion: 2
+        x: 76
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: df3048d7999e4f360800000000000000
+      internalID: 7202638549517337597
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_2
+      rect:
+        serializedVersion: 2
+        x: 140
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0852fa6c43794ce80800000000000000
+      internalID: -8159230371961035392
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_3
+      rect:
+        serializedVersion: 2
+        x: 204
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0eead131297b8a870800000000000000
+      internalID: 8694400918652563168
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_4
+      rect:
+        serializedVersion: 2
+        x: 268
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 87848e9bb668d46f0800000000000000
+      internalID: -698754569933928328
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_5
+      rect:
+        serializedVersion: 2
+        x: 332
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 93a9538fe562bae90800000000000000
+      internalID: -7013469805366371783
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_6
+      rect:
+        serializedVersion: 2
+        x: 396
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 811d17fdc2868cf70800000000000000
+      internalID: 9207723980095607064
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_7
+      rect:
+        serializedVersion: 2
+        x: 460
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ffeafb7ef03826310800000000000000
+      internalID: 1396822938774122239
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_8
+      rect:
+        serializedVersion: 2
+        x: 524
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 246c70c4f267216f0800000000000000
+      internalID: -715379445287369150
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_9
+      rect:
+        serializedVersion: 2
+        x: 588
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1335d44029cc52920800000000000000
+      internalID: 2965000857202807601
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_10
+      rect:
+        serializedVersion: 2
+        x: 652
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ab3bacb9b4c202fe0800000000000000
+      internalID: -1215923196142111814
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_11
+      rect:
+        serializedVersion: 2
+        x: 716
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 536943aaffe089a30800000000000000
+      internalID: 4222141141894862389
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_12
+      rect:
+        serializedVersion: 2
+        x: 780
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 638dc1afc379f1090800000000000000
+      internalID: -8061558519819872202
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_13
+      rect:
+        serializedVersion: 2
+        x: 844
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e42dd982fe3aea1f0800000000000000
+      internalID: -1031707017047322034
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_14
+      rect:
+        serializedVersion: 2
+        x: 908
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1c98cf098ed79b510800000000000000
+      internalID: 1565420783306312129
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_15
+      rect:
+        serializedVersion: 2
+        x: 972
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ffb80d05e7fa3a750800000000000000
+      internalID: 6315084059560152063
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_16
+      rect:
+        serializedVersion: 2
+        x: 1036
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 36ba36688d24d1230800000000000000
+      internalID: 3611115973956053859
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_17
+      rect:
+        serializedVersion: 2
+        x: 1100
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d8f345799a33d6b90800000000000000
+      internalID: -7247079421887889523
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_18
+      rect:
+        serializedVersion: 2
+        x: 1164
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7456093c0aa9c8e50800000000000000
+      internalID: 6812990351571182919
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_19
+      rect:
+        serializedVersion: 2
+        x: 1228
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 912d9558a1517a290800000000000000
+      internalID: -7879305819410804199
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_20
+      rect:
+        serializedVersion: 2
+        x: 1292
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2f40dc9c22d7f4720800000000000000
+      internalID: 2832620279007347954
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_21
+      rect:
+        serializedVersion: 2
+        x: 1356
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 661277cd6b0a7eae0800000000000000
+      internalID: -1520069641970966170
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_22
+      rect:
+        serializedVersion: 2
+        x: 1420
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1cdb304044e9621b0800000000000000
+      internalID: -5681679864918983231
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_23
+      rect:
+        serializedVersion: 2
+        x: 1484
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8f6941a8dcf6b6080800000000000000
+      internalID: -9193131285771151624
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_24
+      rect:
+        serializedVersion: 2
+        x: 1548
+        y: 11
+        width: 40
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0909ce41628df22c0800000000000000
+      internalID: -4454103848374726512
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: advanced furnace_25
+      rect:
+        serializedVersion: 2
+        x: 1612
+        y: 11
+        width: 40
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a986e85c23ce73960800000000000000
+      internalID: 7581788200508483738
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      advanced furnace_0: -1272108714658080535
+      advanced furnace_1: 7202638549517337597
+      advanced furnace_10: -1215923196142111814
+      advanced furnace_11: 4222141141894862389
+      advanced furnace_12: -8061558519819872202
+      advanced furnace_13: -1031707017047322034
+      advanced furnace_14: 1565420783306312129
+      advanced furnace_15: 6315084059560152063
+      advanced furnace_16: 3611115973956053859
+      advanced furnace_17: -7247079421887889523
+      advanced furnace_18: 6812990351571182919
+      advanced furnace_19: -7879305819410804199
+      advanced furnace_2: -8159230371961035392
+      advanced furnace_20: 2832620279007347954
+      advanced furnace_21: -1520069641970966170
+      advanced furnace_22: -5681679864918983231
+      advanced furnace_23: -9193131285771151624
+      advanced furnace_24: -4454103848374726512
+      advanced furnace_25: 7581788200508483738
+      advanced furnace_3: 8694400918652563168
+      advanced furnace_4: -698754569933928328
+      advanced furnace_5: -7013469805366371783
+      advanced furnace_6: 9207723980095607064
+      advanced furnace_7: 1396822938774122239
+      advanced furnace_8: -715379445287369150
+      advanced furnace_9: 2965000857202807601
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

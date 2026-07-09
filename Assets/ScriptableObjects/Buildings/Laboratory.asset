@@ -13,33 +13,46 @@ MonoBehaviour:
   m_Name: Laboratory
   m_EditorClassIdentifier: 
   buildingName: "\u0E2B\u0E49\u0E2D\u0E07\u0E1B\u0E0F\u0E34\u0E1A\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23"
-  description: "\u0E2B\u0E49\u0E2D\u0E07\u0E1B\u0E0F\u0E34\u0E1A\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E27\u0E34\u0E08\u0E31\u0E22
-    \u0E1B\u0E25\u0E14\u0E25\u0E47\u0E2D\u0E01 Research Points \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A
-    Learning Codex \u0E2A\u0E32\u0E02\u0E32 Agriculture, Medical \u0E41\u0E25\u0E30
-    Environment"
+  description: "\u0E2B\u0E31\u0E27\u0E43\u0E08\u0E07\u0E32\u0E19\u0E27\u0E34\u0E08\u0E31\u0E22
+    \u2014 \u0E1D\u0E36\u0E01\u0E27\u0E34\u0E28\u0E27\u0E01\u0E23/\u0E41\u0E1E\u0E17\u0E22\u0E4C/\u0E40\u0E01\u0E29\u0E15\u0E23\u0E01\u0E23
+    \u0E1C\u0E25\u0E34\u0E15 Knowledge \u0E41\u0E25\u0E30\u0E1B\u0E25\u0E14\u0E43\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E23\u0E39\u0E49\u0E19\u0E34\u0E27\u0E40\u0E04\u0E25\u0E35\u0E22\u0E23\u0E4C
+    \u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35\u0E27\u0E34\u0E28\u0E27\u0E01\u0E23\u0E1B\u0E23\u0E30\u0E08\u0E33
+    2 \u0E04\u0E19\u0E08\u0E36\u0E07\u0E40\u0E14\u0E34\u0E19\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07"
   nuclearKnowledge: "\u0E40\u0E17\u0E04\u0E19\u0E34\u0E04\u0E17\u0E32\u0E07\u0E01\u0E32\u0E23\u0E41\u0E1E\u0E17\u0E22\u0E4C\u0E19\u0E34\u0E27\u0E40\u0E04\u0E25\u0E35\u0E22\u0E23\u0E4C
     \u0E40\u0E0A\u0E48\u0E19 PET Scan \u0E43\u0E0A\u0E49\u0E44\u0E2D\u0E42\u0E0B\u0E42\u0E17\u0E1B\u0E23\u0E31\u0E07\u0E2A\u0E35\u0E2D\u0E32\u0E22\u0E38\u0E2A\u0E31\u0E49\u0E19\u0E09\u0E35\u0E14\u0E40\u0E02\u0E49\u0E32\u0E23\u0E48\u0E32\u0E07\u0E01\u0E32\u0E22\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E20\u0E32\u0E1E\u0E01\u0E32\u0E23\u0E17\u0E33\u0E07\u0E32\u0E19\u0E02\u0E2D\u0E07\u0E2D\u0E27\u0E31\u0E22\u0E27\u0E30
     \u0E0A\u0E48\u0E27\u0E22\u0E27\u0E34\u0E19\u0E34\u0E08\u0E09\u0E31\u0E22\u0E42\u0E23\u0E04\u0E44\u0E14\u0E49\u0E41\u0E21\u0E48\u0E19\u0E22\u0E33"
-  sprite: {fileID: 21300000, guid: 7a172904a4adeb440bb77f3654c97394, type: 3}
+  sprite: {fileID: 21300000, guid: 4cfac13a30f5d4e42910de0f7095fe1b, type: 3}
   size: {x: 1, y: 1}
   buildingType: 6
-  ironCost: 35
-  energyCost: 8
-  workerRequired: 3
+  ironCost: 80
+  energyCost: 120
+  workerRequired: 2
+  unlockPhase: 2
+  buildTicks: 6
   foodProduction: 0
   waterProduction: 0
   energyProduction: 0
   ironProduction: 0
-  energyConsumption: 0
+  energyConsumption: 20
   waterConsumption: 0
   isCoreTowerPart: 0
   towerPhaseRequired: 0
   unlocksEngineerTraining: 1
   unlocksMedicTraining: 1
+  unlocksFarmerTraining: 1
+  requiredClass: 1
+  knowledgeProduction: 2
   shelterCapacity: 0
   upgradeIronCost: 40
-  upgradeEnergyCost: 0
+  upgradeEnergyCost: 150
   deuteriumProduction: 0
-  tritiumProduction: 4
+  tritiumProduction: 0
   powerRange: 0
   isPowerRelay: 0
+  isOreNode: 0
+  oreQuotaMin: 0
+  oreQuotaMax: 0
+  oreTritiumMin: 0
+  oreTritiumMax: 0
+  oreExposurePerWorkerDay: 0
+  oreSickChancePerWorkerDay: 0

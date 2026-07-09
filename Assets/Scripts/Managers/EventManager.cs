@@ -38,10 +38,18 @@ namespace NuclearReMind
         public event Action<float> OnMoraleDelta;               // (hopeDelta) — จาก dilemma/decree
         public event Action OnTrainEngineerRequested;           // UI → PopulationManager (ฝึกวิศวกร)
         public event Action OnTrainMedicRequested;              // UI → PopulationManager (ฝึกแพทย์)
+        public event Action OnTrainFarmerRequested;             // UI → PopulationManager (ฝึกเกษตรกร)
+        public event Action<bool> OnClassTrained;               // (isEngineer) ฝึกสำเร็จ (จ่ายแล้ว รอจบวัน) → tutorial/feedback
         public event Action<int> OnEnactDecreeRequested;        // UI → DecreeManager (ประกาศฉุกเฉิน index)
+
+        // ===== Worker Assignment (V4 §5 — จัดสรร Worker ประจำอาคาร) =====
+        public event Action<Vector2Int, int> OnWorkerAssignRequested;   // UI → WorkerAssignmentManager (cell, ±1)
+        public event Action<Vector2Int, int> OnWorkerAssignmentChanged; // manager → UI/visual (cell, จำนวนที่ประจำใหม่)
+        public event Action<int, int> OnWorkerPoolChanged;              // manager → HUD/visual (idle, totalWorkers)
 
         // ===== Radiation (Story Guide §4 — วิกฤตโรครังสี "Zone A") =====
         public event Action<float> OnRadiationExposureChanged;  // RadiationManager → StoryDirector/HUD (exposure สะสม)
+        public event Action<float> OnRadiationExposureDelta;    // OreDepositManager (ขุดโซน B) → RadiationManager (+exposure · ไม่ gate เตา)
 
         // ===== CORE TOWER =====
         public event Action<TowerData> OnTowerProgressChanged;
@@ -164,10 +172,18 @@ namespace NuclearReMind
         public void RaiseMoraleDelta(float hopeDelta) => OnMoraleDelta?.Invoke(hopeDelta);
         public void RaiseTrainEngineerRequested() => OnTrainEngineerRequested?.Invoke();
         public void RaiseTrainMedicRequested() => OnTrainMedicRequested?.Invoke();
+        public void RaiseTrainFarmerRequested() => OnTrainFarmerRequested?.Invoke();
+        public void RaiseClassTrained(bool isEngineer) => OnClassTrained?.Invoke(isEngineer);
         public void RaiseEnactDecreeRequested(int index) => OnEnactDecreeRequested?.Invoke(index);
+
+        // ===== Worker Assignment =====
+        public void RaiseWorkerAssignRequested(Vector2Int cell, int delta) => OnWorkerAssignRequested?.Invoke(cell, delta);
+        public void RaiseWorkerAssignmentChanged(Vector2Int cell, int newCount) => OnWorkerAssignmentChanged?.Invoke(cell, newCount);
+        public void RaiseWorkerPoolChanged(int idle, int total) => OnWorkerPoolChanged?.Invoke(idle, total);
 
         // ===== Radiation =====
         public void RaiseRadiationExposureChanged(float exposure) => OnRadiationExposureChanged?.Invoke(exposure);
+        public void RaiseRadiationExposureDelta(float amount) => OnRadiationExposureDelta?.Invoke(amount);
 
         // ===== CORE TOWER =====
         public void RaiseTowerProgressChanged(TowerData data) => OnTowerProgressChanged?.Invoke(data);
