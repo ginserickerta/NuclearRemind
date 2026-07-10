@@ -23,6 +23,13 @@ namespace NuclearReMind
         [Header("Visual")]
         public Sprite sprite;
 
+        [Tooltip("เลื่อนตำแหน่งภาพ sprite เทียบกับกึ่งกลางช่องที่วาง (world units) — " +
+                 "X = ซ้าย/ขวา, Y = ขึ้น/ลง · (0,0) = นั่งกลาง footprint พอดี · ปรับทีละหลังได้ที่นี่")]
+        public Vector2 spriteOffset = Vector2.zero;
+
+        [Tooltip("ปรับขนาดภาพ sprite ต่อหลัง (1 = ปกติ, 0.8 = เล็กลง 20%) — ไม่กระทบ footprint/การวาง")]
+        public float spriteScale = 1f;
+
         [Header("Grid")]
         public Vector2Int size = Vector2Int.one;
 

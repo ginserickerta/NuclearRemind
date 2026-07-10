@@ -83,7 +83,7 @@ namespace NuclearReMind
             if (_sr == null) _sr = GetComponent<SpriteRenderer>();
             if (_sr == null || GridManager.Instance == null) return;
             var iso = GridManager.Instance.WorldToIso(transform.position);
-            _sr.sortingOrder = iso.x + iso.y;
+            _sr.sortingOrder = GridManager.SortOrder(iso.x, iso.y);
         }
     }
 }

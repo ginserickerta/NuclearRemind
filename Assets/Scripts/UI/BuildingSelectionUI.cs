@@ -16,6 +16,10 @@ namespace NuclearReMind
         [Header("Building list (ลำดับตรงกับ hotbar 1-8)")]
         public BuildingData[] buildings;
 
+        [Header("ไอคอนกรอบ Build Menu (ลำดับตรงกับ buildings) — ถ้า null ใช้ data.sprite")]
+        public Sprite[] menuIcons;      // wire โดย AtlasUISetup (map ตามชื่อ asset)
+        public Sprite hammerIcon;       // ไอคอนค้อนของปุ่มทุบอาคาร (ถ้า null ใช้ emoji 🔨)
+
         [Header("Runtime — wire โดย setup script")]
         public Transform buttonContainer;
 
@@ -151,10 +155,26 @@ namespace NuclearReMind
             colors.pressedColor     = new Color(0.9f, 0.1f, 0.1f, 1f);
             btn.colors = colors;
 
-            // ไอคอนค้อน
-            MakeText("Icon",    slot.transform, font, "🔨", 30,
-                new Vector2(0, 20), new Vector2(0, 48), TextAnchor.MiddleCenter)
-                .GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.3f);
+            // ไอคอนค้อน — sprite จริงถ้ามี ไม่งั้น emoji 🔨
+            if (hammerIcon != null)
+            {
+                var iconGO = new GameObject("Icon", typeof(RectTransform));
+                iconGO.transform.SetParent(slot.transform, false);
+                var ir = iconGO.GetComponent<RectTransform>();
+                ir.anchorMin = new Vector2(0.25f, 0.32f);
+                ir.anchorMax = new Vector2(0.75f, 0.88f);
+                ir.offsetMin = Vector2.zero; ir.offsetMax = Vector2.zero;
+                var img = iconGO.AddComponent<Image>();
+                img.sprite = hammerIcon;
+                img.preserveAspect = true;
+                img.raycastTarget = false;
+            }
+            else
+            {
+                MakeText("Icon", slot.transform, font, "🔨", 30,
+                    new Vector2(0, 20), new Vector2(0, 48), TextAnchor.MiddleCenter)
+                    .GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.3f);
+            }
             MakeText("Label",   slot.transform, font, "ทุบอาคาร", 11,
                 new Vector2(0, 24), new Vector2(0, 20), TextAnchor.LowerCenter)
                 .GetComponent<RectTransform>().anchorMin = new Vector2(0, 0);
@@ -191,8 +211,10 @@ namespace NuclearReMind
                 new Vector2(4, -4), new Vector2(20, 18), TextAnchor.UpperLeft);
             keyLbl.color = new Color(0.7f, 0.7f, 0.7f);
 
-            // Building icon
-            if (data.sprite != null)
+            // Building icon — ใช้ไอคอนกรอบ Build Menu ถ้ามี ไม่งั้น fallback เป็น sprite อาคารบนแมพ
+            var slotIcon = (menuIcons != null && index < menuIcons.Length && menuIcons[index] != null)
+                ? menuIcons[index] : data.sprite;
+            if (slotIcon != null)
             {
                 var iconGO = new GameObject("Icon", typeof(RectTransform));
                 iconGO.transform.SetParent(slot.transform, false);
@@ -202,7 +224,7 @@ namespace NuclearReMind
                 iconRect.offsetMin = Vector2.zero;
                 iconRect.offsetMax = Vector2.zero;
                 var iconImg = iconGO.AddComponent<Image>();
-                iconImg.sprite = data.sprite;
+                iconImg.sprite = slotIcon;
                 iconImg.preserveAspect = true;
             }
 

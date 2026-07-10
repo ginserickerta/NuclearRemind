@@ -66,15 +66,20 @@ namespace NuclearReMind.EditorTools
             // Food/Water ใช้ sprite icon — 🌿💧 เป็น emoji นอก BMP (surrogate pair) legacy Text วาดไม่ได้
             // ⛏⚡⚛ อยู่ใน BMP เรนเดอร์ผ่าน OS font fallback ได้ จึงคงเป็น text
             // หลอดตันที่ display* ของ UIManagerHUD (2000/500) — ตัวเลขวิ่งต่อได้ถึง cap 9999
+            // icon อาร์ตจริงจาก Assets/Sprites/Icons — ถ้าไม่พบ fallback เป็น placeholder/emoji text เดิม
             hud.foodBar = CreateResourceBar("FoodBar", resourcePanel.transform, font, new Color(0.4f, 0.8f, 0.2f), "F",
-                PlaceholderSpriteGenerator.EnsureIconSprite("IconFood"));
+                LoadIcon("Food", "IconFood"));
             hud.waterBar = CreateResourceBar("WaterBar", resourcePanel.transform, font, new Color(0.2f, 0.6f, 1f), "W",
-                PlaceholderSpriteGenerator.EnsureIconSprite("IconWater"));
-            hud.ironBar = CreateResourceBar("IronBar", resourcePanel.transform, font, new Color(0.6f, 0.55f, 0.5f), "⛏");
-            hud.energyBar = CreateResourceBar("EnergyBar", resourcePanel.transform, font, new Color(1f, 0.8f, 0.2f), "⚡");
+                LoadIcon("Water", "IconWater"));
+            hud.ironBar = CreateResourceBar("IronBar", resourcePanel.transform, font, new Color(0.6f, 0.55f, 0.5f), "⛏",
+                LoadIcon("Iron"));
+            hud.energyBar = CreateResourceBar("EnergyBar", resourcePanel.transform, font, new Color(1f, 0.8f, 0.2f), "⚡",
+                LoadIcon("Energy"));
             // เชื้อเพลิงฟิวชัน (V4 §4) — Deuterium สกัดจากน้ำ · Tritium ขุดจากแหล่งแร่โซน B
-            hud.deuteriumBar = CreateResourceBar("DeuteriumBar", resourcePanel.transform, font, new Color(0.35f, 0.7f, 0.95f), "D");
-            hud.tritiumBar = CreateResourceBar("TritiumBar", resourcePanel.transform, font, new Color(0.85f, 0.45f, 0.2f), "⚛");
+            hud.deuteriumBar = CreateResourceBar("DeuteriumBar", resourcePanel.transform, font, new Color(0.35f, 0.7f, 0.95f), "D",
+                LoadIcon("Deuterium"));
+            hud.tritiumBar = CreateResourceBar("TritiumBar", resourcePanel.transform, font, new Color(0.85f, 0.45f, 0.2f), "⚛",
+                LoadIcon("Tritium"));
 
             // ===== Day panel (top-center, above tower) — วัน + timer แยกเฟส + แถบเวลา Planning|Live (V4 §3) =====
             var planningCol = new Color(0.28f, 0.55f, 0.92f); // ฟ้า = วางแผน
@@ -127,7 +132,7 @@ namespace NuclearReMind.EditorTools
             hud.hopeBar = CreateSliderRow("HopeBar", popPanel.transform, new Color(0.3f, 0.85f, 1f));
 
             // Knowledge (V4 §16) — ป้าย tier เริ่มที่ "Novice" (Gap G8: ไม่มี initial broadcast จึง bake ค่าเริ่มต้นไว้)
-            hud.knowledgeText = CreateTextRow("KnowledgeText", popPanel.transform, font, "Knowledge: 0 / 100 · Novice");
+            hud.knowledgeText = CreateTextRow("KnowledgeText", popPanel.transform, font, "Knowledge: 0 / 100 · Novice", LoadIcon("Knowledge"));
             hud.knowledgeBar = CreateSliderRow("KnowledgeBar", popPanel.transform, new Color(0.62f, 0.5f, 1f));
 
             // ===== Train class buttons (ใต้ Population panel — V4 §5: 3 คลาสจากห้องวิจัย) =====
@@ -151,6 +156,10 @@ namespace NuclearReMind.EditorTools
             hud.pauseButton  = CreateButton("PauseButton",  speedPanel.transform, font, "II", new Vector2(-70, 0), new Vector2(60, 40));
             hud.normalButton = CreateButton("NormalButton", speedPanel.transform, font, "1x", new Vector2(0, 0),   new Vector2(60, 40));
             hud.fastButton   = CreateButton("FastButton",   speedPanel.transform, font, "2x", new Vector2(70, 0),  new Vector2(60, 40));
+            // ไอคอนกรอบ pause/play/ff จาก atlas (ถ้าไม่พบ คงตัวอักษร II/1x/2x เดิม)
+            SetSpeedIcon(hud.pauseButton,  LoadIcon("SpeedPause"));
+            SetSpeedIcon(hud.normalButton, LoadIcon("SpeedNormal"));
+            SetSpeedIcon(hud.fastButton,   LoadIcon("SpeedFast"));
 
             // ===== Alert container (bottom-right, ซ้อนขึ้นบน) + AlertController =====
             var alertGO = new GameObject("AlertContainer", typeof(RectTransform));
@@ -601,7 +610,7 @@ namespace NuclearReMind.EditorTools
             };
         }
 
-        private static Text CreateTextRow(string name, Transform parent, Font font, string content)
+        private static Text CreateTextRow(string name, Transform parent, Font font, string content, Sprite icon = null)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -611,10 +620,45 @@ namespace NuclearReMind.EditorTools
             text.font = font;
             text.fontSize = 18;
             text.color = Color.white;
-            text.alignment = TextAnchor.MiddleRight;
+            text.alignment = TextAnchor.MiddleRight;  // ข้อความชิดขวา — icon ซ้ายสุดไม่ทับ
             text.text = content;
             text.verticalOverflow = VerticalWrapMode.Overflow; // กัน Kanit โดน truncate ทั้งบรรทัด
+
+            // icon อาร์ตจริง (optional) — วางชิดซ้ายของแถว
+            if (icon != null)
+            {
+                var iconGO = new GameObject(name + "Icon", typeof(RectTransform));
+                iconGO.transform.SetParent(go.transform, false);
+                var img = iconGO.AddComponent<Image>();
+                img.sprite = icon;
+                img.preserveAspect = true;
+                var ir = iconGO.GetComponent<RectTransform>();
+                ir.anchorMin = new Vector2(0f, 0.5f);
+                ir.anchorMax = new Vector2(0f, 0.5f);
+                ir.pivot = new Vector2(0f, 0.5f);
+                ir.anchoredPosition = new Vector2(2, 0);
+                ir.sizeDelta = new Vector2(22, 22);
+            }
             return text;
+        }
+
+        // ตั้งไอคอนกรอบให้ปุ่ม speed (sprite รวมกรอบมาแล้ว) แล้วซ่อนตัวอักษร II/1x/2x
+        private static void SetSpeedIcon(Button btn, Sprite icon)
+        {
+            if (btn == null || icon == null) return;
+            var img = btn.GetComponent<Image>();
+            if (img != null) { img.sprite = icon; img.color = Color.white; }
+            var label = btn.GetComponentInChildren<Text>();
+            if (label != null) label.text = "";
+        }
+
+        // โหลด icon อาร์ตจริงจาก Assets/Sprites/Icons/<fileName>.png
+        // ไม่พบ → placeholder (ถ้าระบุ) → null (CreateResourceBar จะ fallback เป็น emoji/text)
+        private static Sprite LoadIcon(string fileName, string placeholderName = null)
+        {
+            var s = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Icons/" + fileName + ".png");
+            if (s != null) return s;
+            return placeholderName != null ? PlaceholderSpriteGenerator.EnsureIconSprite(placeholderName) : null;
         }
 
         private static Slider CreateSliderRow(string name, Transform parent, Color fillColor)

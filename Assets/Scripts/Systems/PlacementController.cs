@@ -166,7 +166,12 @@ namespace NuclearReMind
             if (ghostRenderer == null)
                 return;
 
-            ghostRenderer.transform.position = GridManager.Instance.IsoToWorld(currentCell.x, currentCell.y);
+            // anchor ghost ที่กึ่งกลาง footprint + spriteOffset เหมือน BuildingVisualSpawner → preview ตรงกับตอนวางจริง
+            var size = selectedBuilding != null ? selectedBuilding.size : Vector2Int.one;
+            var offset = selectedBuilding != null ? (Vector3)selectedBuilding.spriteOffset : Vector3.zero;
+            ghostRenderer.transform.position = GridManager.Instance.FootprintCenterWorld(currentCell, size) + offset;
+            float visScale = selectedBuilding != null && selectedBuilding.spriteScale > 0f ? selectedBuilding.spriteScale : 1f;
+            ghostRenderer.transform.localScale = new Vector3(visScale, visScale, 1f);
             ghostRenderer.color = IsPlacementValid(currentCell) ? validColor : invalidColor;
         }
 

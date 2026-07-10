@@ -17,9 +17,9 @@ namespace NuclearReMind
         private readonly Dictionary<Vector2Int, GameObject> _spawnedVisuals = new Dictionary<Vector2Int, GameObject>();
 
         // ===== Drop shadow (เพิ่มมิติบน light theme — ไม่ใช้ URP/Light2D) =====
-        private const float ShadowWidth   = 0.85f;  // กว้างเงาเทียบ 1 tile
-        private const float ShadowAlpha   = 0.22f;  // ความเข้มเงา (คูณกับ gradient ใน sprite)
-        private const float ShadowYOffset = -0.12f; // เลื่อนลงไปที่ฐานอาคาร
+        private const float ShadowWidth   = 1.0f;   // กว้างเงาเทียบ 1 tile
+        private const float ShadowAlpha   = 0.38f;  // ความเข้มเงา (คูณกับ gradient ใน sprite) — เข้มพอให้เห็นบนพื้นสว่าง
+        private const float ShadowYOffset = -0.18f; // เลื่อนลงไปที่ฐานอาคาร ให้เงาโผล่พ้นตัวอาคาร
         private static Sprite _shadowSprite;
 
         private void OnEnable()
@@ -88,20 +88,32 @@ namespace NuclearReMind
         {
             var go = new GameObject($"Building_{data.buildingName}_{position.x}_{position.y}");
             go.transform.SetParent(buildingsParent, false);
-            go.transform.position = GridManager.Instance.IsoToWorld(position.x, position.y);
+            // anchor ที่กึ่งกลาง footprint → sprite ฐานล่างกลางนั่งตรงช่อง (อาคาร multi-tile ไม่เยื้อง)
+            // + spriteOffset ต่อหลัง (ปรับใน BuildingData Inspector) เลื่อนภาพเทียบกึ่งกลางช่อง
+            go.transform.position = GridManager.Instance.FootprintCenterWorld(position, data.size)
+                                  + (Vector3)data.spriteOffset;
+            // ปรับขนาดภาพต่อหลัง (ไม่กระทบ footprint/การวาง) — เงาย่อ/ขยายตามด้วย (เป็นลูก)
+            float visScale = data.spriteScale > 0f ? data.spriteScale : 1f;
+            go.transform.localScale = new Vector3(visScale, visScale, 1f);
+
+            // sort ตามฐานอาคาร = กึ่งกลาง footprint (ให้ตรงกับ anchor ที่ย้ายมากึ่งกลางแล้ว)
+            // ไม่งั้นอาคาร multi-tile จะ sort ที่มุมหลัง → วาดทับกันผิด
+            int sx = Mathf.Max(1, data.size.x);
+            int sy = Mathf.Max(1, data.size.y);
+            int baseSort = GridManager.SortOrder(position.x + (sx - 1) * 0.5f, position.y + (sy - 1) * 0.5f);
 
             var spriteRenderer = go.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = data.sprite;
             spriteRenderer.sortingLayerName = BuildingsSortingLayer;
-            spriteRenderer.sortingOrder = position.x + position.y;
+            spriteRenderer.sortingOrder = baseSort;
 
-            AddShadow(go, position, data);
+            AddShadow(go, position, data, baseSort);
 
             _spawnedVisuals[position] = go;
         }
 
         // เงา ellipse นุ่ม ๆ ใต้อาคาร — child แยกจาก SpriteRenderer ตัวแม่
-        private void AddShadow(GameObject parent, Vector2Int position, BuildingData data)
+        private void AddShadow(GameObject parent, Vector2Int position, BuildingData data, int baseSort)
         {
             var shadow = new GameObject("Shadow");
             shadow.transform.SetParent(parent.transform, false);
@@ -116,7 +128,7 @@ namespace NuclearReMind
             sr.sprite = GetShadowSprite();
             sr.color = new Color(0f, 0f, 0f, ShadowAlpha);
             sr.sortingLayerName = BuildingsSortingLayer;
-            sr.sortingOrder = position.x + position.y - 1; // ใต้ตัวอาคาร เหนือพื้น
+            sr.sortingOrder = baseSort - 1; // ใต้ตัวอาคาร เหนือพื้น
         }
 
         // sprite เงา: ellipse 2:1 ที่ alpha ไล่จากกลาง (1) ออกขอบ (0) — สร้างครั้งเดียว cache ไว้

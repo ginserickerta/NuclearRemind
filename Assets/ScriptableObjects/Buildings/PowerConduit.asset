@@ -22,17 +22,38 @@ MonoBehaviour:
     \u0E01\u0E48\u0E2D\u0E19\u0E41\u0E1B\u0E25\u0E07\u0E41\u0E23\u0E07\u0E14\u0E31\u0E19\u0E25\u0E07\u0E17\u0E35\u0E48
     substation\n\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E08\u0E48\u0E32\u0E22\u0E43\u0E2B\u0E49\u0E01\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E41\u0E25\u0E30\u0E42\u0E23\u0E07\u0E07\u0E32\u0E19"
   sprite: {fileID: 0}
+  spriteOffset: {x: 0, y: -1}
   size: {x: 1, y: 1}
   buildingType: 8
-  materialCost: 30
+  ironCost: 30
   energyCost: 15
   workerRequired: 2
+  unlockPhase: 1
+  buildTicks: 6
   foodProduction: 0
   waterProduction: 0
-  radiationProtectionBonus: 0
   energyProduction: -2
-  researchPointsPerTick: 0
+  ironProduction: 0
+  energyConsumption: 0
+  waterConsumption: 0
   isCoreTowerPart: 0
   towerPhaseRequired: 0
+  unlocksEngineerTraining: 0
+  unlocksMedicTraining: 0
+  unlocksFarmerTraining: 0
+  requiredClass: 0
+  knowledgeProduction: 0
+  shelterCapacity: 0
+  upgradeIronCost: 40
+  upgradeEnergyCost: 0
+  deuteriumProduction: 0
+  tritiumProduction: 0
   powerRange: 3
   isPowerRelay: 1
+  isOreNode: 0
+  oreQuotaMin: 0
+  oreQuotaMax: 0
+  oreTritiumMin: 0
+  oreTritiumMax: 0
+  oreExposurePerWorkerDay: 0
+  oreSickChancePerWorkerDay: 0

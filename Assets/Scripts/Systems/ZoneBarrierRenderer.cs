@@ -110,8 +110,8 @@ namespace NuclearReMind
         private static Vector3 EdgePoint(GridManager grid, int col, int r)
             => grid.IsoToWorldF(col - 0.5f, r - 0.5f);
 
-        // ลึกเข้าจอ = col+row น้อย → วาดก่อน (ล้อ BuildingVisualSpawner.sortingOrder = col+row)
-        private static int SortingOrderAt(int col, int r) => col + r - 1;
+        // ลึกเข้าจอ = col+row น้อย → วาดก่อน (สเกลเดียวกับ BuildingVisualSpawner ผ่าน GridManager.SortOrder)
+        private static int SortingOrderAt(int col, int r) => GridManager.SortOrder(col, r) - 1;
 
         // ─────────────────────────────────────────
         //  Spawn

@@ -190,6 +190,24 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// จุดกึ่งกลางเชิงภาพของ footprint (size = a×b tiles) ที่มุมเริ่มที่ origin
+        /// อาคาร multi-tile ต้อง anchor ที่นี่ (ไม่ใช่ origin corner) sprite ฐานล่างกลางจึงนั่งตรงช่อง
+        /// 1×1 → คืนค่าเท่ากับ IsoToWorld(origin) เดิม (ไม่กระทบอาคารช่องเดียว)
+        /// </summary>
+        public Vector3 FootprintCenterWorld(Vector2Int origin, Vector2Int size)
+        {
+            int sx = Mathf.Max(1, size.x);
+            int sy = Mathf.Max(1, size.y);
+            return IsoToWorldF(origin.x + (sx - 1) * 0.5f, origin.y + (sy - 1) * 0.5f);
+        }
+
+        // ── sorting order ร่วม (iso depth) ─────────────────────────
+        // sprite ที่ base อยู่ "หน้ากว่า" (col+row มาก) ต้องวาดทับ → sortingOrder สูงกว่า
+        // ×SortScale ให้ละเอียดระดับเศษ tile (อาคาร multi-tile ฐานกึ่งกลาง / worker ที่เดินต่อเนื่อง)
+        public const float SortScale = 16f;
+        public static int SortOrder(float col, float row) => Mathf.RoundToInt((col + row) * SortScale);
+
+        /// <summary>
         /// แปลงตำแหน่ง world space เป็นพิกัด grid (col, row) ที่ใกล้ที่สุด
         /// </summary>
         public Vector2Int WorldToIso(Vector3 worldPos)

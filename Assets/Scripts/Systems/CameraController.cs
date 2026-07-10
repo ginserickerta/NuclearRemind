@@ -25,8 +25,13 @@ namespace NuclearReMind
         public float zoomStepPerNotch = 1.6f; // ขนาดซูมต่อ 1 คลิกล้อเมาส์
         public float zoomSmoothTime = 0.12f;  // ease ของซูม
         public float minZoom = 3f;
-        public float maxZoom = 15f;
+        public float maxZoom = 15f;           // เพดานซูมออกสูงสุด (ใช้เมื่อ limitZoomToMap = false)
         public bool zoomToCursor = true;      // ซูมเข้าหาจุดใต้เมาส์ (มาตรฐาน city builder)
+
+        [Tooltip("จำกัดซูมออกไม่ให้เกินขอบแมพ — คำนวณเพดานจากขนาดกริด×อัตราส่วนจอ (ซูมออกสุด = พอดีขอบแมพ)")]
+        public bool limitZoomToMap = true;
+        [Tooltip("เผื่อพื้นที่เลยขอบแมพตอนซูมออกสุด (world units) — มากขึ้น = เห็นขอบโล่งรอบแมพมากขึ้น")]
+        public float mapFitPadding = 1f;
 
         [Header("Map Bounds")]
         public bool clampToGrid = true;
@@ -48,7 +53,7 @@ namespace NuclearReMind
         {
             cam = GetComponent<Camera>();
             cam.orthographic = true;
-            _targetZoom = Mathf.Clamp(cam.orthographicSize, minZoom, maxZoom);
+            _targetZoom = Mathf.Clamp(cam.orthographicSize, minZoom, EffectiveMaxZoom());
         }
 
         private void Start()
@@ -122,8 +127,12 @@ namespace NuclearReMind
         private void HandleZoom(float dt)
         {
             float scroll = Input.GetAxis("Mouse ScrollWheel"); // ±0.1 ต่อ notch
+            float maxZ = EffectiveMaxZoom();
             if (!Mathf.Approximately(scroll, 0f))
-                _targetZoom = Mathf.Clamp(_targetZoom - scroll * 10f * zoomStepPerNotch, minZoom, maxZoom);
+                _targetZoom = Mathf.Clamp(_targetZoom - scroll * 10f * zoomStepPerNotch, minZoom, maxZ);
+            // จอเปลี่ยนอัตราส่วน/เพดานหด → ดึง target ที่ค้างเกินเพดานกลับเข้ากรอบ
+            else if (_targetZoom > maxZ)
+                _targetZoom = maxZ;
 
             if (Mathf.Approximately(cam.orthographicSize, _targetZoom)) return;
 
@@ -140,6 +149,30 @@ namespace NuclearReMind
                 offset.z = 0f;
                 transform.position += offset;
             }
+        }
+
+        // เพดานซูมออกที่ใช้จริง: จำกัดให้วิวไม่ใหญ่เกินขอบแมพ (เล็กสุดของ fit แนวตั้ง/แนวนอน)
+        // orthographicSize = ครึ่งความสูงวิว · ความกว้างวิว = 2·size·aspect
+        //   • fit สูง:  size ≤ mapH/2
+        //   • fit กว้าง: size ≤ mapW/(2·aspect)
+        // เลือกค่าเล็กสุดเพื่อไม่ให้เห็นเลยขอบด้านใดด้านหนึ่ง แล้ว clamp ไม่ให้ต่ำกว่า minZoom
+        private float EffectiveMaxZoom()
+        {
+            if (!limitZoomToMap) return maxZoom;
+            var grid = GridManager.Instance;
+            if (grid == null || cam == null) return maxZoom;
+
+            Vector3 c00 = grid.IsoToWorld(0, 0);
+            Vector3 c10 = grid.IsoToWorld(grid.columns - 1, 0);
+            Vector3 c01 = grid.IsoToWorld(0, grid.rows - 1);
+            Vector3 c11 = grid.IsoToWorld(grid.columns - 1, grid.rows - 1);
+
+            float mapW = Mathf.Max(c00.x, c10.x, c01.x, c11.x) - Mathf.Min(c00.x, c10.x, c01.x, c11.x);
+            float mapH = Mathf.Max(c00.y, c10.y, c01.y, c11.y) - Mathf.Min(c00.y, c10.y, c01.y, c11.y);
+
+            float aspect = cam.aspect > 0.01f ? cam.aspect : 1.7778f;
+            float fit = Mathf.Min(mapH * 0.5f, mapW / (2f * aspect)) + mapFitPadding;
+            return Mathf.Max(minZoom, fit);
         }
 
         // ── กันกล้องหลุดขอบแมพ — ใช้มุมทั้ง 4 ของกริด isometric (รูปขนมเปียกปูน) เป็นกรอบ ──

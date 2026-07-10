@@ -155,7 +155,11 @@ namespace NuclearReMind
             if (_cam == null) _cam = Camera.main;
             if (_cam == null || panelRect == null) return;
 
-            Vector3 world = GridManager.Instance.IsoToWorld(_currentCell.x, _currentCell.y)
+            // จัดตำแหน่งเหนือกึ่งกลาง footprint (อาคาร multi-tile) ให้ตรงกับ visual ที่ centered แล้ว
+            var size = (BuildingRegistry.Instance != null &&
+                        BuildingRegistry.Instance.PlacedBuildings.TryGetValue(_currentCell, out var bd) && bd != null)
+                       ? bd.size : Vector2Int.one;
+            Vector3 world = GridManager.Instance.FootprintCenterWorld(_currentCell, size)
                           + new Vector3(0f, worldYOffset, 0f);
             Vector3 screen = _cam.WorldToScreenPoint(world);
             if (screen.z < 0f) return; // อยู่หลังกล้อง — อย่าเด้งไปอีกฝั่งจอ
