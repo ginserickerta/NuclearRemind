@@ -38,7 +38,7 @@ namespace NuclearReMind
         public float boundsPadding = 2f;      // ยอมให้เลยขอบแมพได้กี่หน่วย world
 
         [Header("Start Focus")]
-        [Tooltip("เริ่มเกมให้กล้องอยู่กลางกริด (= ตรง CORE TOWER ที่ pre-place กลางเมืองเสมอ)")]
+        [Tooltip("เริ่มเกมให้กล้องอยู่กลาง 'เมือง' (โซน A ที่สร้างได้ cols 0..zoneA-1) ไม่ใช่กลางกริดเต็ม — โซน B ดิน/รังสีขวาสุดล็อกไว้")]
         public bool centerOnCoreTowerAtStart = true;
 
         private Camera cam;
@@ -58,16 +58,22 @@ namespace NuclearReMind
 
         private void Start()
         {
-            if (centerOnCoreTowerAtStart) CenterOnGridCenter();
+            if (centerOnCoreTowerAtStart) CenterOnCityCenter();
         }
 
-        // CORE TOWER ถูก pre-place กลางกริดเสมอ (origin = (cols−size)/2 → ศูนย์กลาง footprint = ศูนย์กลางกริด)
-        // จึงเล็งกล้องที่ศูนย์กลางกริด = ตรงเตาพอดี ไม่ต้อง query ตัวเตา (robust ทุกขนาดกริด)
-        private void CenterOnGridCenter()
+        // เล็งกล้องที่ "ศูนย์กลางเมือง" = กลางโซน A (คอลัมน์ 0..zoneA-1 ที่สร้างได้) ไม่ใช่กลางกริดเต็ม 43 คอลัมน์
+        // โซน B (ดิน/รังสี ขวาสุด cols zoneA..42) ล็อกไว้ ผู้เล่นไม่ได้ใช้ → กลางกริดเต็มจะดันวิวไปชิดประตูโซน ดูเบี้ยว
+        // อ่าน zoneAColumns จาก OreDepositManager (แหล่งความจริงเดียว) — ไม่พบ → fallback กลางกริดเต็ม (พฤติกรรมเดิม)
+        private void CenterOnCityCenter()
         {
             var grid = GridManager.Instance;
             if (grid == null) return;
-            Vector3 center = grid.IsoToWorldF((grid.columns - 1) * 0.5f, (grid.rows - 1) * 0.5f);
+
+            var ore = OreDepositManager.Instance;
+            int focusCols = (ore != null && ore.zoneAColumns > 0 && ore.zoneAColumns <= grid.columns)
+                ? ore.zoneAColumns : grid.columns;
+
+            Vector3 center = grid.IsoToWorldF((focusCols - 1) * 0.5f, (grid.rows - 1) * 0.5f);
             transform.position = new Vector3(center.x, center.y, transform.position.z);
         }
 

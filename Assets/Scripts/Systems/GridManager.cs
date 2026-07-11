@@ -221,6 +221,20 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// เวอร์ชัน float ของ WorldToIso — ไม่ปัดเป็น cell (worker เดินลื่นระหว่างช่อง ต้องรู้เศษ)
+        /// สูตรเดียวกับ WorldToIso ทุกประการ (ไม่แตะของเดิมที่ถูกเทสต์)
+        /// </summary>
+        public Vector2 WorldToIsoF(Vector3 worldPos)
+        {
+            Vector3 local = worldPos - originOffset;
+
+            float col = (local.x / tileWidth) + (local.y / tileHeight);
+            float row = (local.y / tileHeight) - (local.x / tileWidth);
+
+            return new Vector2(col, row);
+        }
+
+        /// <summary>
         /// ตรวจสอบว่าพิกัด (col, row) อยู่ในขอบเขตของ grid หรือไม่
         /// </summary>
         public bool IsInBounds(int col, int row)

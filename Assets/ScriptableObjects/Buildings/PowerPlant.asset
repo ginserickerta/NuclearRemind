@@ -24,6 +24,8 @@ MonoBehaviour:
   sprite: {fileID: 21300000, guid: d7e62c247b48fb848b4b19fb95e87315, type: 3}
   spriteOffset: {x: 0, y: -0.98}
   spriteScale: 0.8
+  animationFrames: []
+  animationFps: 6
   size: {x: 2, y: 2}
   buildingType: 4
   ironCost: 40

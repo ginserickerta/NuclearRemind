@@ -9,7 +9,8 @@ namespace NuclearReMind.EditorTools
     /// แทน placeholder ที่วาดด้วยโค้ด · idempotent — รันซ้ำได้
     ///
     /// ต้นทางไฟล์อาร์ต (คัดลอกเข้ามาแล้วใน Assets/Sprites/Characters/):
-    ///   Worker_Art.png = คนงาน · Engineer.png = วิศวะ · Medic.png = หมอ
+    ///   Worker1.png = คนงาน (เดิมชื่อ Worker_Art.png — ถูกเรนเนมทับ ระวังอย่าฮาร์ดโค้ดชื่อไฟล์เดิมอีก)
+    ///   Engineer.png = วิศวะ · Medic.png = หมอ
     ///   (Scientist.png = นักวิทยาศาสตร์, Patient.png = คนป่วย — นำเข้าไว้ให้ใช้ต่อ ยังไม่ wire)
     ///
     /// ปรับขนาดตัวละครบนแมพได้ที่ CharacterPixelsPerUnit — ค่ามากขึ้น = ตัวเล็กลง
@@ -21,7 +22,7 @@ namespace NuclearReMind.EditorTools
         private const string ScenePath = "Assets/Scenes/Gamescene.unity";
         private const float CharacterPixelsPerUnit = 3200f;
 
-        private const string WorkerArt = Dir + "Worker_Art.png";
+        private const string WorkerArt = Dir + "Worker1.png";
         private const string EngineerArt = Dir + "Engineer.png";
         private const string MedicArt = Dir + "Medic.png";
         private const string ScientistArt = Dir + "Scientist.png";

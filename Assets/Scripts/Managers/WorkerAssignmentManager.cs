@@ -96,6 +96,7 @@ namespace NuclearReMind
             EventManager.Instance.OnWorkerAssignRequested += HandleAssignRequested;
             EventManager.Instance.OnBuildingRemoved += HandleBuildingRemoved;
             EventManager.Instance.OnPopulationChanged += HandlePopulationChanged;
+            EventManager.Instance.OnConstructionComplete += HandleConstructionComplete;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
         }
 
@@ -105,6 +106,7 @@ namespace NuclearReMind
             EventManager.Instance.OnWorkerAssignRequested -= HandleAssignRequested;
             EventManager.Instance.OnBuildingRemoved -= HandleBuildingRemoved;
             EventManager.Instance.OnPopulationChanged -= HandlePopulationChanged;
+            EventManager.Instance.OnConstructionComplete -= HandleConstructionComplete;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
         }
 
@@ -115,7 +117,7 @@ namespace NuclearReMind
             if (registry == null || !registry.PlacedBuildings.TryGetValue(cell, out var data) || data == null)
                 return;
 
-            int cap = Mathf.Max(0, data.workerRequired);
+            int cap = EffectiveCap(cell, data);
             int current = GetAssigned(cell);
             int desired = Mathf.Clamp(current + delta, 0, cap);
 
@@ -134,6 +136,32 @@ namespace NuclearReMind
             if (count <= 0) _assigned.Remove(cell);
             else _assigned[cell] = count;
             EventManager.Instance.RaiseWorkerAssignmentChanged(cell, count);
+        }
+
+        /// <summary>
+        /// เพดานคนงานของ cell นี้ = workerRequired ปกติ · แต่ระหว่างสร้างต้องรับผู้สร้างได้ ≥ 1
+        /// (อาคารที่เดินเครื่องไม่ต้องใช้คน เช่น Habitat workerRequired=0 ก็ยังต้องมีคนมาสร้าง — V4 §5)
+        /// public ให้ UI (BuildingUpgradeUI) ใช้เพดานชุดเดียวกับ HandleAssignRequested — แหล่งความจริงเดียว
+        /// </summary>
+        public int EffectiveCap(Vector2Int cell, BuildingData data)
+        {
+            if (data == null) return 0;
+            int cap = Mathf.Max(0, data.workerRequired);
+            var construction = ConstructionController.Instance;
+            if (construction != null && construction.IsUnderConstruction(cell))
+                cap = Mathf.Max(cap, 1);
+            return cap;
+        }
+
+        // สร้างเสร็จ → คืน "ผู้สร้างส่วนเกิน" ที่เกิน workerRequired กลับเป็น idle
+        // (เช่น Habitat: ระหว่างสร้างจัดคนได้ 1 · เสร็จแล้ว workerRequired=0 → ปล่อยคนกลับ)
+        private void HandleConstructionComplete(Vector2Int cell, BuildingData data)
+        {
+            int cap = data != null ? Mathf.Max(0, data.workerRequired) : 0;
+            if (GetAssigned(cell) <= cap) return; // ไม่เกินเพดานปกติ — คงคนประจำไว้เดินเครื่องต่อ
+
+            SetAssigned(cell, cap);
+            RaisePool();
         }
 
         private void HandleBuildingRemoved(Vector2Int position)

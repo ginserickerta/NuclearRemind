@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 904e406df8449e44e95c5cbe782d30a7, type: 3}
+  m_Name: Cobalt60Irradiator
+  m_EditorClassIdentifier: NuclearReMind::NuclearReMind.ItemSO
+  id: cobalt60_irradiator
+  displayName: "\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E09\u0E32\u0E22\u0E42\u0E04\u0E1A\u0E2D\u0E25\u0E15\u0E4C-60"
+  description: "\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E09\u0E32\u0E22\u0E23\u0E31\u0E07\u0E2A\u0E35\u0E41\u0E01\u0E21\u0E21\u0E32\u0E08\u0E32\u0E01
+    Co-60 \u0E06\u0E48\u0E32\u0E40\u0E0A\u0E37\u0E49\u0E2D/\u0E16\u0E19\u0E2D\u0E21\u0E2D\u0E32\u0E2B\u0E32\u0E23
+    (food irradiation \u0E08\u0E23\u0E34\u0E07) \u2014 \u0E2B\u0E22\u0E38\u0E14\u0E2D\u0E32\u0E2B\u0E32\u0E23\u0E40\u0E19\u0E48\u0E32\u0E40\u0E2A\u0E35\u0E22\u0E16\u0E32\u0E27\u0E23
+    (\u0E27\u0E34\u0E01\u0E24\u0E15 3\xB7B)"
+  icon: {fileID: 0}
+  category: 2
+  craftCost:
+  - type: 0
+    amount: 300
+  craftedAt: 6
+  craftTicks: 10
+  requiresResearch: 0
+  maxStack: 1
+  isPassive: 0
+  coreHeatReduction: 0
+  stopsFoodSpoilage: 1
+  foodYieldBonus: 0
+  curesAllSick: 0

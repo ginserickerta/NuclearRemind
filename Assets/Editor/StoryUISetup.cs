@@ -37,7 +37,7 @@ namespace NuclearReMind.EditorTools
             canvas.sortingOrder = 60;
             var scaler = canvasGO.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.referenceResolution = UIScaleSetup.ReferenceResolution;
             canvasGO.AddComponent<GraphicRaycaster>();
 
             SetupStoryDirector();

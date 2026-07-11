@@ -31,6 +31,10 @@ MonoBehaviour:
     (Shielding) \u2014 \u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E07\u0E25\u0E36\u0E01\u0E08\u0E23\u0E34\u0E07\u0E22\u0E31\u0E07\u0E40\u0E2A\u0E35\u0E48\u0E22\u0E07\u0E01\u0E4A\u0E32\u0E0B\u0E40\u0E23\u0E14\u0E2D\u0E19
     (Rn-222) \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E2D\u0E19\u0E38\u0E20\u0E32\u0E04\u0E41\u0E2D\u0E25\u0E1F\u0E32\u0E17\u0E33\u0E25\u0E32\u0E22\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E22\u0E37\u0E48\u0E2D\u0E1B\u0E2D\u0E14"
   sprite: {fileID: 21300000, guid: 7da7399893e6f6c49a7d39dd71c81f4f, type: 3}
+  spriteOffset: {x: 0, y: 0}
+  spriteScale: 1
+  animationFrames: []
+  animationFps: 6
   size: {x: 1, y: 1}
   buildingType: 11
   ironCost: 0

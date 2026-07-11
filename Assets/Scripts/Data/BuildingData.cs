@@ -30,6 +30,13 @@ namespace NuclearReMind
         [Tooltip("ปรับขนาดภาพ sprite ต่อหลัง (1 = ปกติ, 0.8 = เล็กลง 20%) — ไม่กระทบ footprint/การวาง")]
         public float spriteScale = 1f;
 
+        [Tooltip("เฟรมอนิเมชัน (idle loop) — ว่าง = ภาพนิ่ง (ใช้ sprite ด้านบน) · " +
+                 "มี ≥2 เฟรม → BuildingVisualSpawner ใส่ SpriteFrameAnimator วนเล่นให้อัตโนมัติ")]
+        public Sprite[] animationFrames;
+
+        [Tooltip("ความเร็วอนิเมชัน (เฟรม/วินาที) — ใช้เมื่อมี animationFrames เท่านั้น")]
+        public float animationFps = 6f;
+
         [Header("Grid")]
         public Vector2Int size = Vector2Int.one;
 

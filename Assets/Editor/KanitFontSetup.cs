@@ -68,6 +68,8 @@ namespace NuclearReMind.Editor
                 return bold ?? regular;
 
             var name = txt.gameObject.name.ToLower();
+            if (name.Contains("tuttask")) // เช็คลิสต์ Day 1 (TutorialChecklistPanel) — เด่นสุดในแผง
+                return bold ?? regular;
             if (name.Contains("title") || name.Contains("header") || name.Contains("key"))
                 return semiBold ?? regular;
 

@@ -138,7 +138,10 @@ namespace NuclearReMind.Editor
             var spawnerGo = GameObject.Find("WorkerVisualSpawner") ?? new GameObject("WorkerVisualSpawner");
             var spawner = spawnerGo.GetComponent<WorkerVisualSpawner>() ?? spawnerGo.AddComponent<WorkerVisualSpawner>();
             spawner.workersParent = parentGo.transform;
-            spawner.workerSprite = EditorTools.PlaceholderSpriteGenerator.EnsureWorkerSprite("Worker");
+            // ใส่ placeholder แค่ตอนยังไม่มี sprite เลย (ซีนใหม่เอี่ยม) — ห้ามทับอาร์ตจริงที่
+            // "Setup/Character Sprites" wire ไว้ (ปัญหาเดิม: รัน Run All Setups ทีไร worker กลับไปเป็น placeholder ทุกที)
+            if (spawner.workerSprite == null)
+                spawner.workerSprite = EditorTools.PlaceholderSpriteGenerator.EnsureWorkerSprite("Worker");
             EditorUtility.SetDirty(spawner);
 
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());

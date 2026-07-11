@@ -107,6 +107,10 @@ namespace NuclearReMind
             spriteRenderer.sortingLayerName = BuildingsSortingLayer;
             spriteRenderer.sortingOrder = baseSort;
 
+            // อนิเมชัน idle (ถ้า asset มีเฟรม ≥ 2) — สลับ sprite วนลูป ไม่ใช้ Animator (ดูเหตุผลใน SpriteFrameAnimator)
+            if (data.animationFrames != null && data.animationFrames.Length >= 2)
+                go.AddComponent<SpriteFrameAnimator>().Play(data.animationFrames, data.animationFps);
+
             AddShadow(go, position, data, baseSort);
 
             _spawnedVisuals[position] = go;

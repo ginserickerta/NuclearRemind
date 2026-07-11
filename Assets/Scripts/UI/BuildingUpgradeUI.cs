@@ -311,15 +311,18 @@ namespace NuclearReMind
         private void UpdateWorkerRow(BuildingData data)
         {
             var wam = WorkerAssignmentManager.Instance;
-            int required = Mathf.Max(0, data.workerRequired);
+            // เพดานคำนวณจาก manager (เดียวกับตอน assign) — ระหว่างสร้าง Habitat (workerRequired=0) ได้เพดาน 1
+            int required = wam != null ? wam.EffectiveCap(_currentCell, data) : Mathf.Max(0, data.workerRequired);
             int assigned = wam != null ? wam.GetAssigned(_currentCell) : 0;
             int idle = wam != null ? wam.IdleOfClass(data.requiredClass) : 0;
+            bool building = ConstructionController.Instance != null
+                            && ConstructionController.Instance.IsUnderConstruction(_currentCell);
             bool hasRow = required > 0;
             string label = ClassLabel(data.requiredClass);
 
             if (workerText != null)
                 workerText.text = hasRow
-                    ? $"{label} {assigned}/{required}   ว่าง {idle}"
+                    ? $"{label} {assigned}/{required}   ว่าง {idle}{(building ? "  · ต้องมีคนสร้าง" : "")}"
                     : "👷 ไม่ต้องใช้คนงาน";
 
             if (minusButton != null)

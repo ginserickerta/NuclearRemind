@@ -24,6 +24,9 @@ MonoBehaviour:
     Tc-99m \u0E2A\u0E41\u0E01\u0E19\u0E2D\u0E27\u0E31\u0E22\u0E27\u0E30 \u2014 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E23\u0E31\u0E01\u0E29\u0E32\u0E0A\u0E35\u0E27\u0E34\u0E15\u0E44\u0E14\u0E49\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E43\u0E0A\u0E49\u0E16\u0E39\u0E01\u0E27\u0E34\u0E18\u0E35"
   sprite: {fileID: 21300000, guid: 3d99684026b57864bb84559b1223819c, type: 3}
   spriteOffset: {x: 0, y: -0.2}
+  spriteScale: 1
+  animationFrames: []
+  animationFps: 6
   size: {x: 2, y: 2}
   buildingType: 12
   ironCost: 100

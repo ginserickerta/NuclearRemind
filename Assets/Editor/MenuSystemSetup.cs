@@ -58,7 +58,7 @@ namespace NuclearReMind.EditorTools
             canvas.sortingOrder = 100; // เหนือ HUDCanvas (0)
             var scaler = canvasGO.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.referenceResolution = UIScaleSetup.ReferenceResolution;
             canvasGO.AddComponent<GraphicRaycaster>();
             EnsureEventSystem();
 
@@ -138,7 +138,7 @@ namespace NuclearReMind.EditorTools
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = canvasGO.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.referenceResolution = UIScaleSetup.ReferenceResolution;
             canvasGO.AddComponent<GraphicRaycaster>();
 
             // ⚠ ห้ามใช้ EnsureEventSystem ที่นี่ — ตอน setup ซีนนี้ถูกสร้าง additive ขณะ Gamescene

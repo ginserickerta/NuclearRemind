@@ -73,7 +73,8 @@ namespace NuclearReMind
         // ─────────────────────────────────────────
 
         /// <summary>
-        /// ก้าวหน้าการสร้างต่อ tick = จำนวน Worker ที่ประจำ cell นั้น (อย่างน้อย 1 กันงานค้างถ้ายังไม่จัดคน)
+        /// ก้าวหน้าการสร้างต่อ tick = จำนวน Worker ที่ประจำ cell นั้น
+        /// ★ ไม่มีคนงาน = 0 = ไม่คืบหน้า (อาคารสร้างเองไม่ได้ ต้องจัดคนเข้าก่อน — V4 §5)
         /// → เวลาสร้าง (ticks) = TotalConstructionTicks / คนงาน → 1 คน = 10, 2 คน = 5, 5 คน = 2
         /// อ่าน GetAssigned() แบบ read-only query (รูปแบบเดียวกับ ResourceManager.ApplyDailyProduction —
         /// อนุญาตให้ query ข้าม manager ได้ ห้ามเฉพาะการเรียก method ที่เปลี่ยนสถานะ)
@@ -83,7 +84,7 @@ namespace NuclearReMind
             int workers = WorkerAssignmentManager.Instance != null
                 ? WorkerAssignmentManager.Instance.GetAssigned(pos)
                 : 0;
-            return Mathf.Max(1, workers);
+            return Mathf.Max(0, workers);
         }
 
         // ─────────────────────────────────────────
@@ -117,7 +118,10 @@ namespace NuclearReMind
             {
                 if (!_progress.TryGetValue(pos, out int current)) continue;
 
-                int next = current + ConstructionSpeed(pos);
+                int speed = ConstructionSpeed(pos);
+                if (speed <= 0) continue; // ไม่มีคนงาน → หยุดรอ ไม่คืบหน้า (ไม่ยิง event ซ้ำทุก tick)
+
+                int next = current + speed;
 
                 if (next >= GetTotalTicks(pos))
                 {

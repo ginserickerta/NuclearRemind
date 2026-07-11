@@ -46,7 +46,7 @@ namespace NuclearReMind.EditorTools
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = canvasGO.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.referenceResolution = UIScaleSetup.ReferenceResolution; // ขนาด UI ทั้งเกมคุมที่ UIScaleSetup.UiScale
             canvasGO.AddComponent<GraphicRaycaster>();
 
             if (Object.FindFirstObjectByType<EventSystem>() == null)
