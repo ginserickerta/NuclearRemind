@@ -54,6 +54,13 @@ namespace NuclearReMind
         public float criticalFood = 100f;
         public float criticalIron = 200f;
 
+        // §4: โรงน้ำ L3 สกัดดิวเทอเรียมโดย "กินน้ำ" เป็นวัตถุดิบ (แปรผันตรงกับน้ำที่ใช้)
+        [Header("Deuterium Extraction (Water Plant L3 §4)")]
+        [Tooltip("น้ำที่ใช้ต่อดิวเทอเรียม 1 หน่วย — 25:1 (สมดุล)")]
+        public float deuteriumWaterPerUnit = 25f;
+        [Tooltip("น้ำสำรองขั้นต่ำ — การสกัดจะไม่ดึงน้ำต่ำกว่านี้ (กันเมืองขาดน้ำ/เตาหล่อเย็นพัง)")]
+        public float deuteriumWaterReserve = 100f;
+
         // ค่าเริ่มต้น Day 1 ตาม V4 §4 / §18 — ปรับได้ใน Inspector (bump food/water กันขาดวัน 1-3)
         // iron = 240: Day 1 ต้องสร้าง 3 โรง (100) + Habitat (60) + Lab (35) · Day 1 ไม่มี consumption
         [Header("Starting Resources (V4 §4/§18)")]
@@ -264,24 +271,14 @@ namespace NuclearReMind
 
                 var data = kvp.Value;
 
-                int required = data.workerRequired;
+                int required = BuildingRegistry.Instance.WorkersRequired(kvp.Key); // เพดานคนตามเลเวล (§6)
                 int assigned = assign != null ? assign.GetAssigned(kvp.Key) : required;
                 if (required > 0 && assigned == 0) continue; // ไม่มีคนประจำ → idle: ไม่จ่าย upkeep ไม่ผลิต
                 float workerScale = required > 0 ? Mathf.Clamp01((float)assigned / required) : 1f;
 
-                // แหล่งแร่ (ore node): เหล็ก (+Tritium เฉพาะโซน B) = โควตาวันนี้ × กำลังคน
-                // ไม่มี upkeep/ระดับ/foodYield (ภูมิประเทศ ไม่ใช่อาคาร)
-                // ไม่แตะ runE/runW → gate ของอาคารถัดไปเหมือนเดิมทุกประการ
-                if (data.isOreNode)
-                {
-                    var ore = OreDepositManager.Instance;
-                    float quota = ore != null ? ore.GetDailyQuota(kvp.Key) : 0f;
-                    float tritQuota = ore != null ? ore.GetDailyTritiumQuota(kvp.Key) : 0f;
-                    float oreScale = workerScale * busyFactor * efficiency * dayFraction;
-                    delta.iron += quota * oreScale;
-                    delta.tritium += tritQuota * oreScale;
-                    continue;
-                }
+                // แหล่งแร่ (ore node): ไม่ผลิตต่อเนื่องแล้ว — เป็น "งานขุดมีเวลา" จัดการใน OreDepositManager
+                // (ขุดครบเวลา → เติมเหล็ก/ทริเทียมทั้งก้อนทีเดียว แล้วโหนดหาย) จึงข้ามที่นี่
+                if (data.isOreNode) continue;
 
                 // ค่าเดินระบบต่อ tick = ต่อวัน × dayFraction · ต้องมีในคลังก่อนจึงเดินเครื่อง (gate แบบลูปเดิม)
                 float upkeepE = data.energyConsumption * dayFraction;
@@ -308,8 +305,20 @@ namespace NuclearReMind
                 // เชื้อเพลิงฟิวชันเฉพาะระดับสูงสุด (Water L3 → Deuterium, Zone B/Lab L3 → Tritium)
                 if (level >= BuildingRegistry.Instance.maxBuildingLevel)
                 {
-                    delta.deuterium += data.deuteriumProduction * workerScale * busyFactor * dayFraction;
-                    delta.tritium   += data.tritiumProduction * workerScale * busyFactor * dayFraction;
+                    // โรงน้ำ L3 (§4): สกัดดิวเทอเรียมโดยกินน้ำเป็นวัตถุดิบที่อัตรา deuteriumWaterPerUnit : 1
+                    // จำกัดพร้อมกัน 2 เพดาน — อัตราของโรง (deuteriumProduction) และน้ำที่มีเหนือ reserve
+                    if (data.deuteriumProduction > 0f)
+                    {
+                        float wantD  = data.deuteriumProduction * workerScale * busyFactor * dayFraction;
+                        float availW = Mathf.Max(0f, runW - deuteriumWaterReserve);
+                        float maxD   = deuteriumWaterPerUnit > 0f ? availW / deuteriumWaterPerUnit : wantD;
+                        float gotD   = Mathf.Min(wantD, maxD);
+                        float usedW  = gotD * deuteriumWaterPerUnit;
+                        runW         -= usedW;
+                        delta.water     -= usedW;
+                        delta.deuterium += gotD;
+                    }
+                    delta.tritium += data.tritiumProduction * workerScale * busyFactor * dayFraction;
                 }
             }
 

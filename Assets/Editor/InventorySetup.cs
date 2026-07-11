@@ -195,7 +195,7 @@ namespace NuclearReMind.EditorTools
             canvas.sortingOrder = 50;
             var scaler = canvasGO.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = UIScaleSetup.ReferenceResolution;
+            scaler.referenceResolution = new Vector2(1920, 1080);
             canvasGO.AddComponent<GraphicRaycaster>();
 
             // ── แผงหลักกลางจอ (light theme — Palette) ──

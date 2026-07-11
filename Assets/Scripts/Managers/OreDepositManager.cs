@@ -8,14 +8,14 @@ namespace NuclearReMind
     /// แหล่งแร่เหล็กบนแมพ (V4 §5 — โซน A ปลอดภัย · โซน B เสี่ยงรังสี/โควตาสูง)
     /// แมพ 43×28 แบ่งเป็น 2 โซนตามคอลัมน์: โซน A = คอลัมน์ 0..28 (29×28, เมือง+CORE TOWER อยู่ฝั่งนี้)
     /// · โซน B = คอลัมน์ 29..42 (14×28, HIGH RADIATION AREA — คั่นด้วยแนว GATE ที่คอลัมน์ 29)
-    /// scatter ครั้งเดียวตอนเริ่มเกม (สุ่มตำแหน่งในพื้นที่โซนของตัวเอง) ผ่านท่อเดียวกับ PrePlacedBuilding
-    /// → ระบบจ่ายคน/คนเดินไปขุด/ผลิตเรียลไทม์/เซฟ ใช้ของเดิมทั้งหมด (โหนดอยู่ใน BuildingRegistry)
+    /// scatter สุ่มตำแหน่งในพื้นที่โซนของตัวเอง ผ่านท่อเดียวกับ PrePlacedBuilding (โหนดอยู่ใน BuildingRegistry)
     ///
-    /// โควตาขุด/วัน: สุ่มใหม่ทุกเช้า (OnDayStarted) คงที่ตลอดวัน → reconciler ของ ResourceManager ตรงเป๊ะ
-    /// ResourceManager อ่าน GetDailyQuota() แบบ read-only query (รูปแบบเดียวกับ GetAssigned)
+    /// งานขุดมีเวลา (ไม่ผลิตต่อเนื่องแบบอาคาร): แต่ละโหนดถือแร่ทั้งก้อน (payload สุ่มตอนโผล่)
+    ///   • ใส่คนงาน → สะสม work = Σ(คน × dt) ต่อวินาที · ครบ baseMineSeconds → ได้แร่เต็มก้อน โหนดหาย
+    ///   • เวลาจริง = baseMineSeconds ÷ จำนวนคน (คนแปรผกผันกับเวลา) · เริ่มอัตโนมัติเมื่อมีคน
+    ///   • ขุดอีกต้องรอวันใหม่ (OnDayStarted) — ถอนโหนดเก่าทั้งหมด แล้วสุ่มตำแหน่งใหม่ทั้งชุด
     ///
-    /// โซน B (oreExposurePerWorkerDay > 0) ทุกจบวัน (OnDayProduction — ยิงก่อน OnDayEnded เสมอ
-    /// → StoryDirector เห็น exposure วันเดียวกัน):
+    /// โซน B (oreExposurePerWorkerDay > 0): รับรังสี + สุ่มป่วย "ตอนขุดเสร็จ" (ตามคนที่จบงาน)
     ///   • รังสีสะสมเมือง +ค่า×คนงาน (OnRadiationExposureDelta) → ดันวิกฤต crisis_radiation_disease (≥60)
     ///   • สุ่มป่วยรายคน (OnPopulationSickInjected) — medic รักษาได้รายวัน
     /// Q5 (ALARA) เด้งครั้งแรกที่จ่ายคนเข้าโซน B (GDD §12 — สอนก่อนเสี่ยงจริง)
@@ -40,9 +40,21 @@ namespace NuclearReMind
         public int minSpacing = 3;          // ระยะห่างขั้นต่ำระหว่างโหนดในชุดเดียวกัน
         public int maxAttemptsPerNode = 200;
 
-        // โควตาขุดวันนี้ต่อโหนด (สุ่มใหม่ทุกเช้า/ตอนวาง/หลังโหลดเซฟ) — เหล็ก + Tritium (โซน B)
-        private readonly Dictionary<Vector2Int, float> _quota = new Dictionary<Vector2Int, float>();
-        private readonly Dictionary<Vector2Int, float> _tritiumQuota = new Dictionary<Vector2Int, float>();
+        [Header("Mining Job — งานขุดมีเวลา (คนงานแปรผกผันกับเวลา)")]
+        [Tooltip("เวลาฐาน (วินาที) ต่อการขุดจนหมดโหนดด้วยคนงาน 1 คน — เวลาจริง = base ÷ จำนวนคน")]
+        public float baseMineSeconds = 60f;
+        [Tooltip("ความเร็วเดินคนงาน (world units/วินาที) — ใช้คำนวณเวลาเดินไปถึงแหล่งแร่ก่อนเริ่มขุด (ให้ตรงกับ WorkerView.speed)")]
+        public float workerSpeed = 1.0f;
+
+        // สถานะงานขุดต่อโหนด — payload = แร่ทั้งก้อน (สุ่มตอนโหนดโผล่) · _work = worker-seconds สะสม
+        // ขุดครบ (_work ≥ baseMineSeconds) → ได้แร่เต็มก้อน แล้วโหนดหายไป (ขุดใหม่ต้องรอวันใหม่ scatter ใหม่)
+        private readonly Dictionary<Vector2Int, float> _ironPayload = new Dictionary<Vector2Int, float>();
+        private readonly Dictionary<Vector2Int, float> _tritiumPayload = new Dictionary<Vector2Int, float>();
+        private readonly Dictionary<Vector2Int, float> _work = new Dictionary<Vector2Int, float>();
+        // เวลาเดิน: _walkNeed = วินาทีที่คนต้องเดินไปถึงโหนด (ตามระยะจากจุดพัก) · _walkTime = เดินสะสม (รีเซ็ตเมื่อไม่มีคน)
+        // งานขุดจะเริ่มสะสมก็ต่อเมื่อ _walkTime ≥ _walkNeed (คนเดินถึงแร่แล้ว)
+        private readonly Dictionary<Vector2Int, float> _walkNeed = new Dictionary<Vector2Int, float>();
+        private readonly Dictionary<Vector2Int, float> _walkTime = new Dictionary<Vector2Int, float>();
         private System.Random _rng = new System.Random();
 
         // Q5 เด้งครั้งเดียว — หน่วง 1 เฟรม (_q5Pending) เพื่อให้ HandleSaveLoaded ยกเลิกได้
@@ -50,11 +62,36 @@ namespace NuclearReMind
         private bool _q5Fired;
         private bool _q5Pending;
 
-        /// <summary>โควตาขุดเหล็กวันนี้ของโหนดที่ cell นี้ (0 ถ้าไม่ใช่โหนด) — ResourceManager/UI อ่าน read-only</summary>
-        public float GetDailyQuota(Vector2Int cell) => _quota.TryGetValue(cell, out float q) ? q : 0f;
+        /// <summary>แร่เหล็กที่เหลือในโหนดนี้ (0 ถ้าไม่ใช่โหนด) — UI อ่าน read-only</summary>
+        public float GetIronPayload(Vector2Int cell) => _ironPayload.TryGetValue(cell, out float q) ? q : 0f;
 
-        /// <summary>โควตา Tritium วันนี้ (0 = โหนดปลอด Tritium เช่นโซน A) — ResourceManager/UI อ่าน read-only</summary>
-        public float GetDailyTritiumQuota(Vector2Int cell) => _tritiumQuota.TryGetValue(cell, out float q) ? q : 0f;
+        /// <summary>ทริเทียมที่เหลือในโหนดนี้ (0 = โซน A) — UI อ่าน read-only</summary>
+        public float GetTritiumPayload(Vector2Int cell) => _tritiumPayload.TryGetValue(cell, out float q) ? q : 0f;
+
+        /// <summary>ความคืบหน้าการขุด 0..1 (worker-seconds ÷ baseMineSeconds)</summary>
+        public float GetMineProgress01(Vector2Int cell)
+            => baseMineSeconds > 0f && _work.TryGetValue(cell, out float w) ? Mathf.Clamp01(w / baseMineSeconds) : 0f;
+
+        /// <summary>เวลาที่เหลือ (วินาที) ถ้าใช้คน workers คน — เวลา = งานที่เหลือ ÷ คน</summary>
+        public float GetMineSecondsRemaining(Vector2Int cell, int workers)
+        {
+            float w = _work.TryGetValue(cell, out float v) ? v : 0f;
+            float left = Mathf.Max(0f, baseMineSeconds - w);
+            return workers > 0 ? left / workers : left;
+        }
+
+        /// <summary>คนงานยังเดินไปไม่ถึงแหล่งแร่ (ยังไม่เริ่มขุด) — UI อ่าน read-only</summary>
+        public bool IsWalking(Vector2Int cell)
+            => (_walkTime.TryGetValue(cell, out float t) ? t : 0f)
+             < (_walkNeed.TryGetValue(cell, out float n) ? n : 0f);
+
+        /// <summary>เวลาที่เหลือก่อนคนเดินถึงแหล่งแร่ (วินาที)</summary>
+        public float GetWalkRemaining(Vector2Int cell)
+        {
+            float need = _walkNeed.TryGetValue(cell, out float n) ? n : 0f;
+            float walked = _walkTime.TryGetValue(cell, out float t) ? t : 0f;
+            return Mathf.Max(0f, need - walked);
+        }
 
         private void Awake()
         {
@@ -69,7 +106,6 @@ namespace NuclearReMind
         private void OnEnable()
         {
             EventManager.Instance.OnDayStarted += HandleDayStarted;
-            EventManager.Instance.OnDayProduction += HandleDayProduction;
             EventManager.Instance.OnBuildingPlaced += HandleBuildingPlaced;
             EventManager.Instance.OnBuildingRemoved += HandleBuildingRemoved;
             EventManager.Instance.OnWorkerAssignmentChanged += HandleWorkerAssignmentChanged;
@@ -80,7 +116,6 @@ namespace NuclearReMind
         {
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnDayStarted -= HandleDayStarted;
-            EventManager.Instance.OnDayProduction -= HandleDayProduction;
             EventManager.Instance.OnBuildingPlaced -= HandleBuildingPlaced;
             EventManager.Instance.OnBuildingRemoved -= HandleBuildingRemoved;
             EventManager.Instance.OnWorkerAssignmentChanged -= HandleWorkerAssignmentChanged;
@@ -100,6 +135,96 @@ namespace NuclearReMind
                 _q5Pending = false;
                 ShowAlaraQuiz();
             }
+
+            TickMining();
+        }
+
+        // ─────────────────────────────────────────
+        //  งานขุด: คนงานสะสม work ต่อวินาที · ครบ baseMineSeconds → ได้แร่ + โหนดหาย
+        // ─────────────────────────────────────────
+
+        private void TickMining()
+        {
+            // หยุดตามนาฬิกาเกม (โหมดวาง/ทุบ/พอส) — สอดคล้องกับ ResourceManager
+            if (TimeManager.Instance != null && !TimeManager.Instance.IsRunning) return;
+            AdvanceMining(Time.deltaTime);
+        }
+
+        /// <summary>เดินงานขุดไป dt วินาที — แยกจาก Time.deltaTime ให้เทสต์ควบคุมเวลาได้</summary>
+        public void AdvanceMining(float dt)
+        {
+            if (baseMineSeconds <= 0f || dt <= 0f) return;
+
+            var registry = BuildingRegistry.Instance;
+            var assign = WorkerAssignmentManager.Instance;
+            if (registry == null || assign == null) return;
+
+            List<(Vector2Int pos, BuildingData data, int workers)> completed = null;
+
+            foreach (var kvp in registry.PlacedBuildings)
+            {
+                var data = kvp.Value;
+                if (data == null || !data.isOreNode) continue;
+
+                int workers = assign.GetAssigned(kvp.Key);
+                if (workers <= 0) { _walkTime[kvp.Key] = 0f; continue; } // ไม่มีคน → รีเซ็ตการเดิน · งานไม่เดิน
+
+                // รอคนงานเดินไปถึงแหล่งแร่ก่อน แล้วค่อยเริ่มสะสมงานขุด (เดินแบบ real-time ไม่ขึ้นกับจำนวนคน)
+                float need = _walkNeed.TryGetValue(kvp.Key, out float wn) ? wn : 0f;
+                float walked = _walkTime.TryGetValue(kvp.Key, out float wt) ? wt : 0f;
+                if (walked < need)
+                {
+                    _walkTime[kvp.Key] = walked + dt;
+                    continue; // ยังเดินอยู่ — ยังไม่ขุด
+                }
+
+                float done = (_work.TryGetValue(kvp.Key, out float w) ? w : 0f) + workers * dt;
+                _work[kvp.Key] = done;
+
+                if (done >= baseMineSeconds)
+                    (completed ??= new List<(Vector2Int, BuildingData, int)>()).Add((kvp.Key, data, workers));
+            }
+
+            // ลบโหนดหลังวนจบ (RaiseBuildingRemoved แก้ dict registry — ห้ามลบระหว่าง foreach)
+            if (completed != null)
+                foreach (var c in completed)
+                    CompleteMining(c.pos, c.data, c.workers);
+        }
+
+        private void CompleteMining(Vector2Int pos, BuildingData data, int workers)
+        {
+            float iron = GetIronPayload(pos);
+            float trit = GetTritiumPayload(pos);
+
+            if (iron > 0f) EventManager.Instance.RaiseResourceDelta(ResourceType.Iron, iron);
+            if (trit > 0f) EventManager.Instance.RaiseResourceDelta(ResourceType.Tritium, trit);
+
+            // โซน B: รับรังสี + สุ่มป่วยตอนขุดเสร็จ (แทนโมเดลรายวันเดิม) — ตามคนที่ขุดจบงาน
+            if (data.oreExposurePerWorkerDay > 0f)
+            {
+                float exposure = workers * data.oreExposurePerWorkerDay;
+                if (exposure > 0f) EventManager.Instance.RaiseRadiationExposureDelta(exposure);
+
+                int sick = OreMath.SickCount(workers, data.oreSickChancePerWorkerDay, _rng);
+                if (sick > 0)
+                {
+                    EventManager.Instance.RaisePopulationSickInjected(sick);
+                    EventManager.Instance.RaiseNotice($"☢ คนงานเหมืองโซน B ล้มป่วยจากรังสี {sick} คน — แพทย์จะรักษาให้รายวัน");
+                }
+            }
+
+            string got = trit > 0f
+                ? $"+{Mathf.RoundToInt(iron)} เหล็ก +{Mathf.RoundToInt(trit)} ทริเทียม"
+                : $"+{Mathf.RoundToInt(iron)} เหล็ก";
+            EventManager.Instance.RaiseNotice($"⛏ ขุดแร่เสร็จ {got} — แหล่งแร่หมดแล้ว (รอวันใหม่)");
+
+            // เคลียร์สถานะ + ลบโหนด (cascade: grid ปลดล็อก cell · visual ลบสไปรต์ · registry ถอน · WAM คืนคน)
+            _ironPayload.Remove(pos);
+            _tritiumPayload.Remove(pos);
+            _work.Remove(pos);
+            _walkNeed.Remove(pos);
+            _walkTime.Remove(pos);
+            EventManager.Instance.RaiseBuildingRemoved(pos);
         }
 
         // ─────────────────────────────────────────
@@ -112,14 +237,23 @@ namespace NuclearReMind
         /// </summary>
         private void ScatterIfNeeded()
         {
-            var grid = GridManager.Instance;
             var registry = BuildingRegistry.Instance;
-            if (grid == null || registry == null || EventManager.Instance == null) return;
-            if (zoneANode == null || zoneBNode == null) return;
+            if (registry == null) return;
 
             foreach (var kvp in registry.PlacedBuildings)
                 if (kvp.Value != null && kvp.Value.isOreNode)
                     return; // มีโหนดอยู่แล้ว
+
+            ScatterFresh();
+        }
+
+        /// <summary>สุ่มวางโหนดแร่ชุดใหม่ (ตำแหน่งสุ่มใหม่) — ผู้เรียกต้องเคลียร์โหนดเก่าก่อนถ้าไม่อยากได้ซ้ำ</summary>
+        private void ScatterFresh()
+        {
+            var grid = GridManager.Instance;
+            var registry = BuildingRegistry.Instance;
+            if (grid == null || registry == null || EventManager.Instance == null) return;
+            if (zoneANode == null || zoneBNode == null) return;
 
             Func<Vector2Int, bool> isFree = pos =>
             {
@@ -139,6 +273,27 @@ namespace NuclearReMind
                 PlaceNode(pos, zoneBNode);
         }
 
+        /// <summary>ถอนโหนดแร่ทั้งหมดออกจากแมพ (ปลดล็อก cell + คืนคน) — ใช้ก่อน scatter รอบใหม่</summary>
+        private void RemoveAllNodes()
+        {
+            var registry = BuildingRegistry.Instance;
+            if (registry == null) return;
+
+            var cells = new List<Vector2Int>();
+            foreach (var kvp in registry.PlacedBuildings)
+                if (kvp.Value != null && kvp.Value.isOreNode) cells.Add(kvp.Key);
+
+            foreach (var pos in cells)
+            {
+                _ironPayload.Remove(pos);
+                _tritiumPayload.Remove(pos);
+                _work.Remove(pos);
+                _walkNeed.Remove(pos);
+                _walkTime.Remove(pos);
+                EventManager.Instance.RaiseBuildingRemoved(pos); // cascade ถอน registry/visual/cell/WAM
+            }
+        }
+
         // จอง cell แล้วส่งเข้า pipeline ปกติ (registry/visual/จ่ายคน) + ข้ามคิวก่อสร้าง — เหมือน PrePlacedBuilding
         private void PlaceNode(Vector2Int pos, BuildingData data)
         {
@@ -153,30 +308,37 @@ namespace NuclearReMind
         }
 
         // ─────────────────────────────────────────
-        //  โควตารายวัน
+        //  วันใหม่: ถอนโหนดเก่าทั้งหมด แล้วสุ่มตำแหน่งใหม่ (สเปก: ขุดเสร็จแร่หาย — ขุดอีกต้องรอวันใหม่)
         // ─────────────────────────────────────────
 
-        private void HandleDayStarted(int day, bool timed) => RollAllQuotas();
+        private void HandleDayStarted(int day, bool timed) => RescatterAll();
 
-        /// <summary>สุ่มโควตาวันนี้ใหม่ทุกโหนด — public ให้เทสต์เรียกตรงได้ (ล้อ ApplyDailyProduction)</summary>
-        public void RollAllQuotas()
+        /// <summary>ถอนโหนดเดิมทั้งหมด + สุ่มโหนดใหม่ทั้งชุด (ตำแหน่งใหม่) — public ให้เทสต์เรียกตรงได้</summary>
+        public void RescatterAll()
         {
-            var registry = BuildingRegistry.Instance;
-            if (registry == null) return;
-
-            foreach (var kvp in registry.PlacedBuildings)
-            {
-                var data = kvp.Value;
-                if (data == null || !data.isOreNode) continue;
-                RollNode(kvp.Key, data);
-            }
+            RemoveAllNodes();
+            ScatterFresh();
         }
 
-        // สุ่มโควตาวันนี้ของโหนดเดียว — เหล็กเสมอ · Tritium เฉพาะโหนดที่ตั้งช่วงไว้ (โซน B)
+        /// <summary>สุ่มแร่ทั้งก้อนของโหนดเดียว + รีเซ็ตความคืบหน้า/เวลาเดิน — เหล็กเสมอ · Tritium เฉพาะโซน B</summary>
         private void RollNode(Vector2Int pos, BuildingData data)
         {
-            _quota[pos] = OreMath.RollQuota(data.oreQuotaMin, data.oreQuotaMax, _rng);
-            _tritiumQuota[pos] = OreMath.RollQuota(data.oreTritiumMin, data.oreTritiumMax, _rng);
+            _ironPayload[pos] = OreMath.RollQuota(data.oreQuotaMin, data.oreQuotaMax, _rng);
+            _tritiumPayload[pos] = OreMath.RollQuota(data.oreTritiumMin, data.oreTritiumMax, _rng);
+            _work[pos] = 0f;
+            _walkNeed[pos] = ComputeWalkSeconds(pos);
+            _walkTime[pos] = 0f;
+        }
+
+        // เวลาเดินไปถึงโหนด = ระยะจากจุดพัก idle (กลางกริด ~CORE TOWER) ถึงโหนด ÷ ความเร็วเดิน
+        // grid ยังไม่พร้อม/ความเร็ว ≤ 0 → 0 (เริ่มขุดทันที) เพื่อไม่ให้ค้างในเทสต์/ระหว่าง init
+        private float ComputeWalkSeconds(Vector2Int pos)
+        {
+            var grid = GridManager.Instance;
+            if (grid == null || workerSpeed <= 0f) return 0f;
+            Vector3 from = grid.IsoToWorldF((grid.columns - 1) * 0.5f, (grid.rows - 1) * 0.5f);
+            Vector3 to = grid.IsoToWorld(pos.x, pos.y);
+            return Vector3.Distance(from, to) / workerSpeed;
         }
 
         private void HandleBuildingPlaced(Cell cell, BuildingData data)
@@ -185,45 +347,13 @@ namespace NuclearReMind
             RollNode(new Vector2Int(cell.col, cell.row), data);
         }
 
-        private void HandleBuildingRemoved(Vector2Int pos) // กันเหนียว — โหนดทุบไม่ได้อยู่แล้ว
+        private void HandleBuildingRemoved(Vector2Int pos)
         {
-            _quota.Remove(pos);
-            _tritiumQuota.Remove(pos);
-        }
-
-        // ─────────────────────────────────────────
-        //  โซน B: รังสีสะสม + สุ่มป่วย (จบวัน)
-        // ─────────────────────────────────────────
-
-        private void HandleDayProduction(int day)
-        {
-            var registry = BuildingRegistry.Instance;
-            var assign = WorkerAssignmentManager.Instance;
-            if (registry == null || assign == null) return;
-
-            float exposure = 0f;
-            int sick = 0;
-
-            foreach (var kvp in registry.PlacedBuildings)
-            {
-                var data = kvp.Value;
-                if (data == null || !data.isOreNode || data.oreExposurePerWorkerDay <= 0f) continue;
-
-                int workers = assign.GetAssigned(kvp.Key);
-                if (workers <= 0) continue;
-
-                exposure += workers * data.oreExposurePerWorkerDay;
-                sick += OreMath.SickCount(workers, data.oreSickChancePerWorkerDay, _rng);
-            }
-
-            if (exposure > 0f)
-                EventManager.Instance.RaiseRadiationExposureDelta(exposure);
-
-            if (sick > 0)
-            {
-                EventManager.Instance.RaisePopulationSickInjected(sick);
-                EventManager.Instance.RaiseNotice($"☢ คนงานเหมืองโซน B ล้มป่วยจากรังสี {sick} คน — แพทย์จะรักษาให้รายวัน");
-            }
+            _ironPayload.Remove(pos);
+            _tritiumPayload.Remove(pos);
+            _work.Remove(pos);
+            _walkNeed.Remove(pos);
+            _walkTime.Remove(pos);
         }
 
         // ─────────────────────────────────────────
@@ -260,10 +390,19 @@ namespace NuclearReMind
 
         private void HandleSaveLoaded(SaveData save)
         {
-            _quota.Clear();
-            _tritiumQuota.Clear();
+            _ironPayload.Clear();
+            _tritiumPayload.Clear();
+            _work.Clear();
+            _walkNeed.Clear();
+            _walkTime.Clear();
             ScatterIfNeeded();  // เซฟเก่าไม่มีโหนด → scatter ใหม่ (grid/registry restore แล้ว — เราวิ่งท้ายสุด)
-            RollAllQuotas();    // โควตาสุ่มใหม่หลังโหลดเสมอ (สเปก: สุ่มรายวัน)
+
+            // โหนดที่ restore จากเซฟไม่มี payload/ความคืบหน้า (ไม่ได้เซฟ) → สุ่มแร่ใหม่ + รีเซ็ตความคืบหน้าทุกโหนด
+            var reg0 = BuildingRegistry.Instance;
+            if (reg0 != null)
+                foreach (var kvp in reg0.PlacedBuildings)
+                    if (kvp.Value != null && kvp.Value.isOreNode && !_ironPayload.ContainsKey(kvp.Key))
+                        RollNode(kvp.Key, kvp.Value);
 
             // re-latch Q5: เซฟที่มีคนประจำโซน B อยู่แล้ว = เคยผ่านจังหวะสอนไปแล้ว → ไม่เด้งซ้ำ
             _q5Pending = false; // ยกเลิก pending ที่เกิดจาก event ระหว่าง WAM restore

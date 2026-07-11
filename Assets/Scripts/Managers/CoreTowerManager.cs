@@ -2,14 +2,18 @@ using UnityEngine;
 
 namespace NuclearReMind
 {
+    /// <summary>ชนิดทรัพยากรที่ผู้เล่นจัดสรรให้เตาต่อเทิร์น (UI −/+ · §2/§5)</summary>
+    public enum ReactorAllocation { Deuterium, Tritium, CoolingEngineer, CoolingWater }
+
     /// <summary>
     /// CORE TOWER (V4 §8) — วัดด้วย CORE% (0→100) + ระบบความร้อน HEAT · ก้าวหน้าต่อวัน (OnDayEnded)
     ///
-    /// สูตร §8 (เฟส 2):
-    ///   fuel = Deuterium (Phase 2) / Tritium (Phase 3) · Phase 1 ประกอบ (ไม่กินเชื้อเพลิงฟิวชัน)
-    ///   fuelEff = min(1, stock/FuelNeed[mode]) + KnowBonus (Expert +0.10) · cap 1.10
+    /// สูตร (CORE Spec §2/§7):
+    ///   Deuterium ดัน fuelEff เสมอ (Overclock ปลดล็อกตั้งแต่ Day 11/30%) · Tritium เป็น gate ที่ CORE ≥ 80
+    ///   (ดันแล้วไม่มี Tritium → ΔCORE=0 · Phase 4 เผา Deuterium + Tritium 10/วัน พร้อมกัน)
+    ///   fuelEff = min(1, deuterium/FuelNeed[mode]) + KnowBonus (Knowledge≥80 +0.10) · cap 1.10
     ///   cooling = 15 + waterUsed/10 + coolingEngineers×4 + min(toroidalLv,3)×10
-    ///   HEAT: warn 80 (micro-damage CORE%−2 ถ้าไม่มี Poloidal) · meltdown 100 · พายุ +12 (Day 25–30)
+    ///   HEAT: warn 80 (micro-damage CORE%−2 ถ้าไม่มี Poloidal) · meltdown 100 · พายุ +20 (Day 25–30, CORE Spec §4)
     /// เชื่อมครบทุกเฟสแล้ว: coolingEngineers จาก PopulationManager (เฟส 3) · Coils (เฟส 6) · Deuterium/Tritium จาก Water/Lab L3 (เฟส 6)
     /// </summary>
     public class CoreTowerManager : MonoBehaviour
@@ -32,17 +36,20 @@ namespace NuclearReMind
         private static readonly float[] FuelNeed = { 0f, 10f, 20f, 30f };
 
         // ===== Formula constants (§8 / §18) =====
-        [Header("Balance (V4 §18 — จูนจริงเฟส 8)")]
+        [Header("Balance (CORE Spec §2/§12)")]
         public float baseCoreGain = 3f;        // dCORE = 3 × mult × fuelEff
+        public float tritiumFuelNeed = 10f;    // §7/§12: Tritium/วัน ที่เผาเมื่อดันช่วง CORE ≥ 80
         public float baseCooling = 15f;
         public float coolingWaterCap = 100f;   // น้ำสูงสุดที่ใช้หล่อเย็นต่อเทิร์น
-        public float stormHeat = 12f;          // พายุ Day 25–30 (V4 §18)
+        public float stormHeat = 20f;          // พายุ Day 25–30 (CORE Spec §4/§12 — แก้จาก +12)
         public int   coolingTowerLevel = 0;    // Toroidal Coils (มีผล ×10, cap 3)
         public bool  hasPoloidalCoils = false; // Poloidal Coils (เปิด engineers×4 + กัน micro-damage)
 
-        [Header("Coils cost (V4 §6 — เฟส 6)")]
-        public int toroidalIronCost = 50;  // ต้นทุน Toroidal Coils ต่อระดับ
-        public int poloidalIronCost = 60;  // ต้นทุน Poloidal Coils (ครั้งเดียว)
+        [Header("Coils cost (CORE Spec §5)")]
+        public int toroidalIronCost = 50;    // Toroidal Coils: เหล็ก 50 + พลังงาน 80 /ระดับ
+        public int toroidalEnergyCost = 80;
+        public int poloidalIronCost = 60;    // Poloidal Coils: เหล็ก 60 + พลังงาน 100 (ครั้งเดียว)
+        public int poloidalEnergyCost = 100;
         public const int MaxToroidalLevel = 3;
 
         public const float HeatWarnZone = 80f;    // เข้าโซนเตือน (micro-damage ถ้าไม่มี Poloidal)
@@ -57,6 +64,22 @@ namespace NuclearReMind
         public float scramWaterCost = 50f;
         public int scramCooldownTurns = 2;
 
+        [Header("Allocation (§2/§5 — ผู้เล่นจัดสรรต่อเทิร์น)")]
+        public float maxCoolingWater = 300f; // เพดานน้ำที่ทุ่มหล่อเย็นได้ (ปุ่ม "หล่อเย็นเพิ่ม")
+
+        // การจัดสรรต่อเทิร์น (transient — reset ทุกเช้าเป็นค่า default ที่พอดี · ไม่เซฟ)
+        private float _planDeut, _planTrit, _planCoolWater;
+        private int _planCoolEng;
+
+        public float PlannedDeuterium => _planDeut;
+        public float PlannedTritium => _planTrit;
+        public int PlannedCoolingEngineers => _planCoolEng;
+        public float PlannedCoolingWater => _planCoolWater;
+        public float DeuteriumNeed => FuelNeed[Mathf.Clamp(Current.overclockMode, 0, 3)];
+        public float TritiumNeed => tritiumFuelNeed;
+        private int TotalEngineers => PopulationManager.Instance != null ? PopulationManager.Instance.Current.engineers : 0;
+        public int MaxCoolingEngineers => TotalEngineers;
+
         public TowerData Current { get; private set; } = new TowerData
         {
             corePercent = 0f,
@@ -70,6 +93,7 @@ namespace NuclearReMind
         private bool _ended; // meltdown หรือ ignition แล้ว — หยุดเดินเครื่อง
         private int _forcedIdleDays; // วิกฤต 2·B (GDD ล่าสุด): บังคับเตา Idle N วัน (ผลิตไอโซโทปการแพทย์)
         private bool _modeLocked;    // ล็อกโหมดตอนเข้าเฟส Live (V4 §3) — เปลี่ยนโหมดได้เฉพาะ Planning
+        private float _simmedFrac;   // สัดส่วนของวันที่เดินเตาแบบเรียลไทม์ไปแล้ว (0..1) — จบวัน reconcile เศษที่เหลือ
 
         /// <summary>Q Factor = CORE% / 100 (§8: CORE% 100 = Q 1.0 = Breakeven) — ใช้ตัดสิน ending (เฟส 7)</summary>
         public float Q => Current.corePercent / 100f;
@@ -91,9 +115,11 @@ namespace NuclearReMind
         {
             EventManager.Instance.OnDayStarted             += HandleDayStarted;
             EventManager.Instance.OnDayEnded               += HandleDayEnded;
+            EventManager.Instance.OnGameTick               += HandleGameTick;
             EventManager.Instance.OnSaveLoaded             += HandleSaveLoaded;
             EventManager.Instance.OnOverclockModeRequested += HandleOverclockModeRequested;
             EventManager.Instance.OnScramRequested         += HandleScramRequested;
+            EventManager.Instance.OnReactorAllocationAdjust += HandleAllocationAdjust;
             EventManager.Instance.OnUpgradeToroidalRequested += UpgradeToroidal;
             EventManager.Instance.OnInstallPoloidalRequested += InstallPoloidal;
             EventManager.Instance.OnItemUsed               += HandleItemUsed;
@@ -104,9 +130,11 @@ namespace NuclearReMind
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnDayStarted             -= HandleDayStarted;
             EventManager.Instance.OnDayEnded               -= HandleDayEnded;
+            EventManager.Instance.OnGameTick               -= HandleGameTick;
             EventManager.Instance.OnSaveLoaded             -= HandleSaveLoaded;
             EventManager.Instance.OnOverclockModeRequested -= HandleOverclockModeRequested;
             EventManager.Instance.OnScramRequested         -= HandleScramRequested;
+            EventManager.Instance.OnReactorAllocationAdjust -= HandleAllocationAdjust;
             EventManager.Instance.OnUpgradeToroidalRequested -= UpgradeToroidal;
             EventManager.Instance.OnInstallPoloidalRequested -= InstallPoloidal;
             EventManager.Instance.OnItemUsed               -= HandleItemUsed;
@@ -131,7 +159,15 @@ namespace NuclearReMind
 
         private void HandleDayStarted(int day, bool timed)
         {
-            if (Current.isUnlocked || day < UnlockDay) return;
+            _simmedFrac = 0f; // เริ่มวันใหม่ → รีเซ็ตความคืบเรียลไทม์ (เดินใหม่ทั้งวัน)
+
+            if (Current.isUnlocked)
+            {
+                RecomputeAllocationDefaults(); // รีเซ็ตการจัดสรรทุกเช้า (Planning) — ผู้เล่นปรับได้ระหว่างวัน
+                EventManager.Instance.RaiseTowerProgressChanged(Current);
+                return;
+            }
+            if (day < UnlockDay) return;
 
             var t = Current;
             t.isUnlocked = true;
@@ -141,68 +177,110 @@ namespace NuclearReMind
             t.coreHeat = 0f;
             t.overclockMode = ModeNormal;
             Current = t;
+            RecomputeAllocationDefaults();
 
-            Debug.Log($"[CoreTower] ปลดล็อก Day {day} — CORE {StartPercent}% (Phase 1 Cold Assembly)");
+            Debug.Log($"[CoreTower] ปลดล็อก Day {day} — CORE {StartPercent}%");
             EventManager.Instance.RaiseOverclockModeChanged(t.overclockMode);
             EventManager.Instance.RaiseTowerProgressChanged(Current);
         }
 
         // ───────────────────────── Turn (per day) ─────────────────────────
 
+        // จบวัน (V4 §3): reconcile — เดินเตาเฉพาะ "เศษวัน" ที่ยังไม่ได้เดินแบบเรียลไทม์
+        // (เทส/Day 1 ที่ไม่มี tick → _simmedFrac=0 → เดินเต็มวัน frac=1 = พฤติกรรมเดิมเป๊ะ)
         private void HandleDayEnded(int day)
         {
             if (_ended || !Current.isUnlocked) return;
             if (!HasActiveCoreTowerPart()) return; // ต้องสร้าง CORE TOWER ก่อนถึงจะเดินเครื่อง
 
-            AdvanceTurn(day);
+            float remaining = Mathf.Clamp01(1f - _simmedFrac);
+            StepReactor(day, remaining, dayBoundary: true);
+            _simmedFrac = 0f;
         }
 
-        private void AdvanceTurn(int day)
+        // เดินเตาแบบเรียลไทม์ระหว่างเฟส Live (V4 §3): เดินทีละเสี้ยว (frac = tick/liveSeconds)
+        // → หลอด CORE% ไต่ต่อเนื่องไม่ต้องรอข้ามวัน · เศษที่เหลือ reconcile ตอน HandleDayEnded
+        private void HandleGameTick()
+        {
+            if (_ended || !Current.isUnlocked) return;
+
+            var gm = GameManager.Instance;
+            if (gm == null || !gm.DayTimerActive) return;                 // Day 1 tutorial ไม่เดินเรียลไทม์
+            if (gm.CurrentState != GameManager.GameState.Playing) return; // pause/จบเกม → หยุด
+            if (gm.CurrentDayPhase != GameManager.DayPhase.Live) return;  // เดินเฉพาะเฟส Live (โหมดถูกล็อกแล้ว)
+            if (!HasActiveCoreTowerPart()) return;
+
+            float live = gm.liveSeconds;
+            float tick = ResourceManager.Instance != null ? ResourceManager.Instance.tickInterval : 5f;
+            if (live <= 0f || tick <= 0f) return;
+
+            float frac = Mathf.Min(tick / live, 1f - _simmedFrac); // ไม่ให้เกิน 1 ก่อนจบวัน
+            if (frac <= 0f) return;
+
+            StepReactor(gm.CurrentDay, frac, dayBoundary: false);
+            _simmedFrac += frac;
+        }
+
+        /// <summary>
+        /// เดินเตา "เสี้ยวหนึ่งของวัน" (frac) — สูตรเดิมทั้งหมดคูณ frac (CORE%/HEAT/เชื้อเพลิง/หล่อเย็น/พายุ/micro-damage)
+        /// frac=1 + dayBoundary=true = เทิร์นเต็มวันแบบเดิมเป๊ะ · งานรายวันครั้งเดียว (cooldown/forcedIdle) ทำที่ dayBoundary
+        /// </summary>
+        private void StepReactor(int day, float frac, bool dayBoundary)
         {
             var t = Current;
 
-            if (t.scramCooldown > 0) t.scramCooldown--; // ลด cooldown SCRAM ทุกเทิร์น
-
-            // โหมด: วิกฤต 2·B บังคับ Idle N วัน > Phase 1 ล็อก Normal > โหมดที่ผู้เล่นเลือก (Phase 2–3)
-            int mode;
-            if (_forcedIdleDays > 0) { mode = ModeIdle; _forcedIdleDays--; }
-            else if (t.currentPhase <= 1) mode = ModeNormal;
-            else mode = Mathf.Clamp(t.overclockMode, 0, 3);
-
-            // ----- เชื้อเพลิงตามเฟส (§8): P1 ประกอบ (ไม่กิน) · P2 Deuterium · P3 Tritium -----
-            float knowBonus = ResourceManager.Instance != null ? ResourceManager.Instance.KnowBonus : 0f;
-            float fuelEff;
-            if (t.currentPhase <= 1)
+            // ----- งานรายวันครั้งเดียว (ทำที่ขอบวันเสมอ แม้ frac=0) -----
+            bool forcedIdle = _forcedIdleDays > 0;
+            if (dayBoundary)
             {
-                fuelEff = 1f + knowBonus; // ประกอบด้วยเหล็ก+วิศวกร ไม่ติดเชื้อเพลิงฟิวชัน
+                if (t.scramCooldown > 0) t.scramCooldown--;   // ลด cooldown SCRAM ทุกเทิร์น
+                if (forcedIdle) _forcedIdleDays--;            // นับวัน Idle ที่ถูกบังคับ (วิกฤต 2·B)
+            }
+            if (frac <= 0f)
+            {
+                Current = t;
+                if (dayBoundary) EventManager.Instance.RaiseTowerProgressChanged(Current);
+                return;
+            }
+
+            // โหมด: วิกฤต 2·B บังคับ Idle > โหมดที่ผู้เล่นเลือก (Overclock ปลดล็อกตั้งแต่ Day 11/30% §9)
+            int mode = forcedIdle ? ModeIdle : Mathf.Clamp(t.overclockMode, 0, 3);
+
+            // ----- เชื้อเพลิง (CORE Spec §2/§7) — ป้อนตามที่ผู้เล่นจัดสรร (_planDeut/_planTrit) -----
+            // Deuterium ดัน fuelEff เสมอ (ตาม fuelNeed ของโหมด) · Tritium เป็น "ประตู" ที่ช่วง CORE ≥ 80:
+            //   ป้อนแล้วไม่มี Tritium → ΔCORE% = 0 (ติดกำแพง 80%) · Phase 4 เผาทั้ง Deuterium + Tritium
+            var rm = ResourceManager.Instance;
+            float knowBonus = rm != null ? rm.KnowBonus : 0f;
+            float need = FuelNeed[mode];
+            float deutFed = Mathf.Clamp(_planDeut, 0f, rm != null ? rm.Current.deuterium : 0f);
+            float tritFed = Mathf.Clamp(_planTrit, 0f, rm != null ? rm.Current.tritium : 0f);
+            float fuelEff = Mathf.Min((need > 0f ? Mathf.Min(1f, deutFed / need) : 1f) + knowBonus, 1.10f);
+
+            bool pushing = mode != ModeIdle;
+            bool tritiumGateBlocked = pushing && t.corePercent >= Phase3At && tritFed <= 0f;
+
+            float dCore;
+            if (!pushing || tritiumGateBlocked)
+            {
+                dCore = 0f; // Idle หรือ ติดกำแพง Tritium → ไม่ดัน + ไม่เผาเชื้อเพลิง
             }
             else
             {
-                ResourceType fuelType = (t.currentPhase >= 3) ? ResourceType.Tritium : ResourceType.Deuterium;
-                float stock = 0f;
-                if (ResourceManager.Instance != null)
-                    stock = (fuelType == ResourceType.Tritium)
-                        ? ResourceManager.Instance.Current.tritium
-                        : ResourceManager.Instance.Current.deuterium;
+                dCore = baseCoreGain * ModeMultiplier[mode] * fuelEff;
 
-                float need = FuelNeed[mode];
-                fuelEff = (need > 0f ? Mathf.Min(1f, stock / need) : 1f) + knowBonus;
-
-                float fuelUsed = Mathf.Min(stock, need);
-                if (fuelUsed > 0f)
-                    EventManager.Instance.RaiseResourceDelta(fuelType, -fuelUsed);
+                if (deutFed > 0f) EventManager.Instance.RaiseResourceDelta(ResourceType.Deuterium, -deutFed * frac);
+                if (t.corePercent >= Phase3At && tritFed > 0f) // §7: เผา Tritium ช่วง CORE ≥ 80
+                    EventManager.Instance.RaiseResourceDelta(ResourceType.Tritium, -tritFed * frac);
             }
-            fuelEff = Mathf.Min(fuelEff, 1.10f); // knowBonus ดันเกิน 1 ได้เล็กน้อย (§8)
 
-            // ----- หล่อเย็น (§8): 15 + water/10 + engineers×4 + min(toroidalLv,3)×10 -----
-            float water = ResourceManager.Instance != null ? ResourceManager.Instance.Current.water : 0f;
-            float waterUsed = Mathf.Min(water, coolingWaterCap);
+            // ----- หล่อเย็น (§5): 15 + น้ำที่จัดสรร/10 + วิศวกรที่จัดสรร×4 + min(toroidalLv,3)×10 -----
+            float water = rm != null ? rm.Current.water : 0f;
+            float waterUsed = Mathf.Clamp(_planCoolWater, 0f, water);
             if (waterUsed > 0f)
-                EventManager.Instance.RaiseResourceDelta(ResourceType.Water, -waterUsed);
+                EventManager.Instance.RaiseResourceDelta(ResourceType.Water, -waterUsed * frac);
 
-            // coolingEngineers นับเฉพาะเมื่อมี Poloidal Coils (§8) — ดึงจาก PopulationManager จริง (เฟส 3 ปิด stub แล้ว)
-            int coolEng = (hasPoloidalCoils && PopulationManager.Instance != null)
-                ? PopulationManager.Instance.AssignedCoolingEngineers : 0;
+            // วิศวกรหล่อเย็น: นับเฉพาะเมื่อมี Poloidal Coils (§5) · ตามที่ผู้เล่นจัดสรร (clamp กับที่มีจริง)
+            int coolEng = hasPoloidalCoils ? Mathf.Clamp(_planCoolEng, 0, TotalEngineers) : 0;
             int decreeCooling = DecreeManager.Instance != null ? DecreeManager.Instance.CoolingLaborBonus : 0;
             float cooling = baseCooling
                           + waterUsed / 10f
@@ -210,22 +288,21 @@ namespace NuclearReMind
                           + Mathf.Min(coolingTowerLevel, 3) * 10f
                           + decreeCooling; // แรงงานหล่อเย็นจากประกาศฉุกเฉิน (§11)
 
-            // ----- CORE% -----
-            float dCore = baseCoreGain * ModeMultiplier[mode] * fuelEff;
-            t.corePercent = Mathf.Min(WinPercent, t.corePercent + dCore);
+            // ----- CORE% (× frac) -----
+            t.corePercent = Mathf.Min(WinPercent, t.corePercent + dCore * frac);
 
-            // ----- HEAT (พายุ +12 เฉพาะ Day 25–30) -----
+            // ----- HEAT (พายุ +20 เฉพาะ Day 25–30, §4) × frac -----
             float storm = (day >= StormStartDay) ? stormHeat : 0f;
             float dHeat = ModeHeat[mode] + storm - cooling;
-            t.coreHeat = Mathf.Max(0f, t.coreHeat + dHeat);
+            t.coreHeat = Mathf.Max(0f, t.coreHeat + dHeat * frac);
 
-            // ----- โซนเตือน 80–99: micro-damage CORE%−2 ถ้าไม่มี Poloidal (§8) -----
+            // ----- โซนเตือน 80–99: micro-damage CORE%−2/วัน ถ้าไม่มี Poloidal (§8) × frac -----
             if (t.coreHeat >= HeatWarnZone && t.coreHeat < HeatMeltdown && !hasPoloidalCoils)
-                t.corePercent = Mathf.Max(0f, t.corePercent - MicroDamageCore);
+                t.corePercent = Mathf.Max(0f, t.corePercent - MicroDamageCore * frac);
 
             Current = t;
 
-            // ----- meltdown -----
+            // ----- meltdown (เช็คทุกเสี้ยว → หลอมได้กลางวันแบบเรียลไทม์) -----
             if (t.coreHeat >= HeatMeltdown)
             {
                 _ended = true;
@@ -333,15 +410,17 @@ namespace NuclearReMind
         /// <summary>ปลดล็อกโหมด (เรียกตอนเริ่มวัน/Planning)</summary>
         public void UnlockMode() => _modeLocked = false;
 
-        /// <summary>ตั้งโหมดเร่งเครื่อง — ได้เฉพาะ Phase 2–3 ช่วง Planning (Phase 1 / Live ล็อก)</summary>
+        /// <summary>ตั้งโหมดเร่งเครื่อง — ได้ตั้งแต่ปลดล็อก (Day 11/30%) ช่วง Planning · Live ล็อก (§9)</summary>
         public void SetOverclockMode(int mode)
         {
             if (_modeLocked) return; // ล็อกช่วง Live — รอ Planning วันถัดไป (V4 §3)
-            if (!Current.isUnlocked || Current.currentPhase <= 1) return; // Phase 1 ล็อกเร่ง
+            if (!Current.isUnlocked) return; // ยังไม่ปลดล็อกเตา
 
             var t = Current;
             t.overclockMode = Mathf.Clamp(mode, 0, 3);
             Current = t;
+
+            _planDeut = FuelNeed[t.overclockMode]; // ตั้งเชื้อเพลิงเริ่มต้นตาม fuelNeed ของโหมดใหม่
 
             EventManager.Instance.RaiseOverclockModeChanged(t.overclockMode);
             EventManager.Instance.RaiseTowerProgressChanged(Current);
@@ -357,34 +436,85 @@ namespace NuclearReMind
             _forcedIdleDays = Mathf.Max(_forcedIdleDays, days);
         }
 
+        // ───────────────────────── Allocation (§2/§5 — ผู้เล่นจัดสรรต่อเทิร์น) ─────────────────────────
+
+        /// <summary>รีเซ็ตการจัดสรรเป็นค่า default ที่พอดี (ทุกเช้า/หลังโหลด) — คงพฤติกรรม auto เดิม</summary>
+        private void RecomputeAllocationDefaults()
+        {
+            _planDeut = FuelNeed[Mathf.Clamp(Current.overclockMode, 0, 3)];
+            _planTrit = tritiumFuelNeed;
+            _planCoolWater = coolingWaterCap;
+            _planCoolEng = TotalEngineers;
+        }
+
+        private void HandleAllocationAdjust(ReactorAllocation kind, int delta)
+        {
+            if (!Current.isUnlocked) return; // เตายังไม่ปลดล็อก (ก่อน Day 11) → จัดสรรไม่ได้
+            var rm = ResourceManager.Instance;
+            switch (kind)
+            {
+                case ReactorAllocation.Deuterium:
+                    _planDeut = Mathf.Clamp(_planDeut + delta, 0f, rm != null ? rm.Current.deuterium : 9999f);
+                    break;
+                case ReactorAllocation.Tritium:
+                    _planTrit = Mathf.Clamp(_planTrit + delta, 0f, rm != null ? rm.Current.tritium : 9999f);
+                    break;
+                case ReactorAllocation.CoolingEngineer:
+                    _planCoolEng = Mathf.Clamp(_planCoolEng + delta, 0, TotalEngineers);
+                    break;
+                case ReactorAllocation.CoolingWater:
+                    float wcap = Mathf.Min(maxCoolingWater, rm != null ? rm.Current.water : maxCoolingWater);
+                    _planCoolWater = Mathf.Clamp(_planCoolWater + delta, 0f, wcap);
+                    break;
+            }
+            EventManager.Instance.RaiseTowerProgressChanged(Current); // ให้ UI รีเฟรช
+        }
+
+        /// <summary>กำลังหล่อเย็นตามการจัดสรรปัจจุบัน (preview ให้ UI) — สูตรเดียวกับ AdvanceTurn</summary>
+        public float PreviewCooling()
+        {
+            int coolEng = hasPoloidalCoils ? Mathf.Clamp(_planCoolEng, 0, TotalEngineers) : 0;
+            int decree = DecreeManager.Instance != null ? DecreeManager.Instance.CoolingLaborBonus : 0;
+            return baseCooling + PreviewWaterUsed() / 10f + coolEng * 4f + Mathf.Min(coolingTowerLevel, 3) * 10f + decree;
+        }
+
+        /// <summary>น้ำที่จะถูกใช้หล่อเย็นจริงเทิร์นนี้ (clamp กับคลัง) — preview ให้ UI</summary>
+        public float PreviewWaterUsed()
+        {
+            float stock = ResourceManager.Instance != null ? ResourceManager.Instance.Current.water : 0f;
+            return Mathf.Clamp(_planCoolWater, 0f, stock);
+        }
+
         // ───────────────────────── Coils (V4 §6 — ส่วนต่อขยาย CORE TOWER) ─────────────────────────
 
-        /// <summary>ติดตั้ง/อัป Toroidal Coils (+1 ระดับหล่อเย็น ×10, cap 3) — จ่ายแร่เหล็ก</summary>
+        /// <summary>ติดตั้ง/อัป Toroidal Coils (+1 ระดับหล่อเย็น ×10, cap 3) — จ่ายเหล็ก 50 + พลังงาน 80 (§5)</summary>
         public void UpgradeToroidal()
         {
             if (coolingTowerLevel >= MaxToroidalLevel) return;
-            if (!SpendIron(toroidalIronCost)) return;
+            if (!SpendIronEnergy(toroidalIronCost, toroidalEnergyCost)) return;
             coolingTowerLevel++;
             Debug.Log($"[CoreTower] Toroidal Coils → level {coolingTowerLevel}");
             EventManager.Instance.RaiseTowerProgressChanged(Current);
         }
 
-        /// <summary>ติดตั้ง Poloidal Coils (เปิดเทอม engineers×4 + กัน micro-damage) — ครั้งเดียว</summary>
+        /// <summary>ติดตั้ง Poloidal Coils (เปิดเทอม engineers×4 + กัน micro-damage) — เหล็ก 60 + พลังงาน 100 ครั้งเดียว (§5)</summary>
         public void InstallPoloidal()
         {
             if (hasPoloidalCoils) return;
-            if (!SpendIron(poloidalIronCost)) return;
+            if (!SpendIronEnergy(poloidalIronCost, poloidalEnergyCost)) return;
             hasPoloidalCoils = true;
             Debug.Log("[CoreTower] Poloidal Coils installed");
             EventManager.Instance.RaiseTowerProgressChanged(Current);
         }
 
-        private bool SpendIron(int cost)
+        // จ่ายเหล็ก + พลังงานพร้อมกัน — เช็กพอทั้งคู่ก่อนค่อยหัก (ไม่หักครึ่งเดียว)
+        private bool SpendIronEnergy(int iron, int energy)
         {
             var rm = ResourceManager.Instance;
             if (rm == null) return true;          // ไม่มีคลัง (test harness) → อนุญาต
-            if (rm.Current.iron < cost) return false;
-            EventManager.Instance.RaiseResourceDelta(ResourceType.Iron, -cost);
+            if (rm.Current.iron < iron || rm.Current.energy < energy) return false;
+            if (iron > 0)   EventManager.Instance.RaiseResourceDelta(ResourceType.Iron, -iron);
+            if (energy > 0) EventManager.Instance.RaiseResourceDelta(ResourceType.Energy, -energy);
             return true;
         }
 
@@ -410,7 +540,56 @@ namespace NuclearReMind
         {
             Current = save.tower;
             _ended = Current.corePercent >= WinPercent || Current.coreHeat >= HeatMeltdown;
+            _simmedFrac = 0f;
+            RecomputeAllocationDefaults(); // การจัดสรรไม่เซฟ — ตั้ง default ตามสถานะที่โหลด
             EventManager.Instance.RaiseTowerProgressChanged(Current);
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // ───────────────────────── Debug / Cheat (เฉพาะทดสอบ — คอมไพล์ทิ้งใน release build) ─────────────────────────
+        // ใช้โดย DebugCheatPanel เท่านั้น · ตั้งสถานะตรง ๆ ไม่ยุ่งกับสูตรสมดุล
+
+        /// <summary>[DEBUG] ปลดล็อกเตาทันที (ข้ามเงื่อนไข Day 11) — ตั้ง CORE = 30%, HEAT = 0</summary>
+        public void DebugUnlockNow()
+        {
+            var t = Current;
+            if (!t.isUnlocked)
+            {
+                t.isUnlocked = true;
+                t.corePercent = StartPercent;
+                t.currentPhase = 1;
+                t.overclockMode = ModeNormal;
+            }
+            t.heatCap = HeatMeltdown;
+            Current = t;
+            _ended = false;
+            RecomputeAllocationDefaults();
+            EventManager.Instance.RaiseOverclockModeChanged(Current.overclockMode);
+            EventManager.Instance.RaiseTowerProgressChanged(Current);
+        }
+
+        /// <summary>[DEBUG] ตั้งค่า CORE% ตรง ๆ (ปลดล็อกอัตโนมัติถ้ายัง) — ไม่ trigger ชนะ/แพ้เอง</summary>
+        public void DebugSetCore(float percent)
+        {
+            if (!Current.isUnlocked) DebugUnlockNow();
+            var t = Current;
+            t.corePercent = Mathf.Clamp(percent, 0f, WinPercent);
+            t.currentPhase = Mathf.Max(t.currentPhase, PhaseFor(t.corePercent));
+            Current = t;
+            _ended = false;
+            EventManager.Instance.RaiseTowerProgressChanged(Current);
+        }
+
+        /// <summary>[DEBUG] ตั้งค่า HEAT ตรง ๆ — ไม่ trigger meltdown เอง (ตั้ง ≥100 แล้วข้ามวันเพื่อทดสอบ meltdown)</summary>
+        public void DebugSetHeat(float heat)
+        {
+            if (!Current.isUnlocked) DebugUnlockNow();
+            var t = Current;
+            t.coreHeat = Mathf.Max(0f, heat);
+            Current = t;
+            _ended = false;
+            EventManager.Instance.RaiseTowerProgressChanged(Current);
+        }
+#endif
     }
 }

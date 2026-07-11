@@ -355,5 +355,41 @@ namespace NuclearReMind
             EventManager.Instance.RaiseMoraleChanged(Current.hope);
             EventManager.Instance.RaisePopulationChanged(Current);
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // ───────────────────────── Debug / Cheat (เฉพาะทดสอบ — คอมไพล์ทิ้งใน release build) ─────────────────────────
+
+        /// <summary>[DEBUG] เพิ่ม/ลดประชากรตามคลาสตรง ๆ (เฉพาะทดสอบ)</summary>
+        public void DebugAddPopulation(WorkerClass cls, int count)
+        {
+            var pop = Current;
+            switch (cls)
+            {
+                case WorkerClass.Engineer: pop.engineers = Mathf.Max(0, pop.engineers + count); break;
+                case WorkerClass.Medic:    pop.medics    = Mathf.Max(0, pop.medics + count);    break;
+                case WorkerClass.Farmer:   pop.farmers   = Mathf.Max(0, pop.farmers + count);   break;
+                default:                   pop.workers   = Mathf.Max(0, pop.workers + count);    break;
+            }
+            Current = pop;
+            EventManager.Instance.RaisePopulationChanged(pop);
+        }
+
+        /// <summary>[DEBUG] ตั้งค่า Hope ตรง ๆ 0–100 (เฉพาะทดสอบ)</summary>
+        public void DebugSetHope(float hope)
+        {
+            _gameOverRaised = false;
+            var pop = Current;
+            pop.hope = Mathf.Clamp(hope, 0f, 100f);
+            Current = pop;
+            EventManager.Instance.RaiseMoraleChanged(pop.hope);
+            EventManager.Instance.RaisePopulationChanged(pop);
+        }
+
+        /// <summary>[DEBUG] ปลดล็อกการฝึกทุกคลาส (ข้ามเงื่อนไขต้องมีห้องปฏิบัติการ)</summary>
+        public void DebugUnlockAllTraining()
+        {
+            _engineerUnlocked = _medicUnlocked = _farmerUnlocked = true;
+        }
+#endif
     }
 }

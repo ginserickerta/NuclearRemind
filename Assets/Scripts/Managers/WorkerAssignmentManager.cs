@@ -235,7 +235,7 @@ namespace NuclearReMind
                     usedByClass.TryGetValue(cls, out int used);
                     int remaining = Mathf.Max(0, ClassCount(cls) - used);
 
-                    count = Mathf.Clamp(count, 0, Mathf.Max(0, data.workerRequired));
+                    count = Mathf.Clamp(count, 0, registry.WorkersRequired(cell)); // เพดานตามเลเวล (โหลด = L1)
                     count = Mathf.Min(count, remaining);
                     if (count <= 0) continue;
 

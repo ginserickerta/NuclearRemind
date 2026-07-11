@@ -54,6 +54,7 @@ namespace NuclearReMind
         {
             EventManager.Instance.OnCraftItemRequested += HandleCraftRequested;
             EventManager.Instance.OnUseItemRequested   += HandleUseRequested;
+            EventManager.Instance.OnDiscardItemRequested += HandleDiscardRequested;
             EventManager.Instance.OnGameTick           += HandleGameTick;
             EventManager.Instance.OnSaveLoaded         += HandleSaveLoaded;
         }
@@ -63,6 +64,7 @@ namespace NuclearReMind
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnCraftItemRequested -= HandleCraftRequested;
             EventManager.Instance.OnUseItemRequested   -= HandleUseRequested;
+            EventManager.Instance.OnDiscardItemRequested -= HandleDiscardRequested;
             EventManager.Instance.OnGameTick           -= HandleGameTick;
             EventManager.Instance.OnSaveLoaded         -= HandleSaveLoaded;
         }
@@ -261,6 +263,14 @@ namespace NuclearReMind
 
             // ผลที่เหลือ (ลด HEAT / หยุดเน่า / โบนัสอาหาร) — manager เจ้าของ state subscribe OnItemUsed เอง
             EventManager.Instance.RaiseItemUsed(item);
+        }
+
+        // ทิ้งไอเทมทั้งสแต็ก (แผงกริด §13) — ไม่มีผลใช้งาน (ต่างจาก Use) แค่เอาออกจากคลัง
+        private void HandleDiscardRequested(string itemId)
+        {
+            if (!_counts.ContainsKey(itemId)) return;
+            _counts.Remove(itemId);
+            EventManager.Instance.RaiseInventoryChanged();
         }
 
         // ─────────────────────────────────────────

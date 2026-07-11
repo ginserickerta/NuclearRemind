@@ -4,9 +4,11 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
-    /// จัดการ construction queue: ทุก building ที่วางใหม่ต้องรอ 10 tick จึงจะ active
-    /// ระหว่างสร้าง building ไม่ produce resource และไม่นับเป็น CoreTower part
-    /// Cancel = คืน energyCost (workers เป็น reserve pool ไม่ถูกหัก) | Prioritize = completes บน tick ถัดไป
+    /// จัดการ construction queue: ทุก building ที่วางใหม่ต้องมี "คนงานเดินมาสร้าง" ถึงจะคืบ
+    /// - ไม่มีคนประจำ → ไม่คืบเลย (Building สร้างเองไม่ได้)
+    /// - มีคนแล้วต้องรอ Worker เดินไปถึงไซต์ก่อน (เข้าชุดกับงานขุดเหมือง OreDepositManager) แล้วจึงเริ่มสะสม tick
+    /// - ก้าวหน้า/ tick = จำนวนคนที่ประจำ (คนแปรผกผันกับเวลา) · ระหว่างสร้างไม่ produce/ไม่เป็น CoreTower part
+    /// Cancel = คืน energyCost (workers เป็น reserve pool ไม่ถูกหัก) | Prioritize = ให้ถึงไซต์ทันที + จบ tick ถัดไป (ถ้ามีคน)
     /// </summary>
     public class ConstructionController : MonoBehaviour
     {
@@ -15,12 +17,20 @@ namespace NuclearReMind
         // ค่าตั้งต้นเวลาสร้าง (tick) เมื่อ BuildingData.buildTicks ไม่ได้ตั้ง — ต่ออาคารเก็บใน _totalTicks
         public const int DefaultConstructionTicks = 10;
 
+        [Header("Worker walk (คนงานต้องเดินไปถึงไซต์ก่อนเริ่มสร้าง — เข้าชุดกับ OreDepositManager)")]
+        [Tooltip("ความเร็วเดินคนงาน (world units/วินาที) — ให้ตรงกับ WorkerView.speed / OreDepositManager.workerSpeed")]
+        public float workerSpeed = 1.0f;
+
         // ความคืบหน้าแสดงในแผง hover (BuildingUpgradeUI) + BuildingQueueUI ผ่าน OnConstructionProgressChanged
         // (บาร์ลอย world-space ถูกถอดแล้ว — GDD §6 UI polish)
         // List รักษาลำดับสำหรับ Prioritize, Dict ให้ O(1) lookup
         private readonly List<Vector2Int> _queue = new List<Vector2Int>();
         private readonly Dictionary<Vector2Int, int> _progress = new Dictionary<Vector2Int, int>();
         private readonly Dictionary<Vector2Int, int> _totalTicks = new Dictionary<Vector2Int, int>(); // เวลาสร้างเต็มต่ออาคาร (จาก buildTicks)
+        // เวลาเดินของคนงานไปถึงไซต์ (real-time · ล้องานขุดเหมือง): _walkNeed = วินาทีที่ต้องเดิน · _walkTime = เดินสะสม
+        // (รีเซ็ตเป็น 0 เมื่อไม่มีคนประจำ) — tick ก่อสร้างเริ่มสะสมเมื่อ _walkTime ≥ _walkNeed เท่านั้น
+        private readonly Dictionary<Vector2Int, float> _walkNeed = new Dictionary<Vector2Int, float>();
+        private readonly Dictionary<Vector2Int, float> _walkTime = new Dictionary<Vector2Int, float>();
 
         private void Awake()
         {
@@ -68,23 +78,61 @@ namespace NuclearReMind
         public int GetTotalTicks(Vector2Int cell) =>
             _totalTicks.TryGetValue(cell, out int t) ? t : DefaultConstructionTicks;
 
+        /// <summary>มีคนประจำไซต์นี้ไหม (0 = ยังไม่มีคนมาสร้าง)</summary>
+        public int AssignedWorkers(Vector2Int cell) =>
+            WorkerAssignmentManager.Instance != null ? WorkerAssignmentManager.Instance.GetAssigned(cell) : 0;
+
+        /// <summary>คนงานยังเดินไปไม่ถึงไซต์ (ยังไม่เริ่มสร้าง) — UI อ่าน read-only</summary>
+        public bool IsWalking(Vector2Int cell)
+            => (_walkTime.TryGetValue(cell, out float t) ? t : 0f)
+             < (_walkNeed.TryGetValue(cell, out float n) ? n : 0f);
+
+        /// <summary>เวลาที่เหลือก่อนคนเดินถึงไซต์ (วินาที)</summary>
+        public float GetWalkRemaining(Vector2Int cell)
+        {
+            float need = _walkNeed.TryGetValue(cell, out float n) ? n : 0f;
+            float walked = _walkTime.TryGetValue(cell, out float t) ? t : 0f;
+            return Mathf.Max(0f, need - walked);
+        }
+
         // ─────────────────────────────────────────
-        //  Construction speed — แปรผกผันกับจำนวนคนงาน (V4 §5)
+        //  Worker walk — คนงานต้องเดินไปถึงไซต์ก่อนเริ่มสร้าง (real-time · ล้อ OreDepositManager)
         // ─────────────────────────────────────────
 
-        /// <summary>
-        /// ก้าวหน้าการสร้างต่อ tick = จำนวน Worker ที่ประจำ cell นั้น
-        /// ★ ไม่มีคนงาน = 0 = ไม่คืบหน้า (อาคารสร้างเองไม่ได้ ต้องจัดคนเข้าก่อน — V4 §5)
-        /// → เวลาสร้าง (ticks) = TotalConstructionTicks / คนงาน → 1 คน = 10, 2 คน = 5, 5 คน = 2
-        /// อ่าน GetAssigned() แบบ read-only query (รูปแบบเดียวกับ ResourceManager.ApplyDailyProduction —
-        /// อนุญาตให้ query ข้าม manager ได้ ห้ามเฉพาะการเรียก method ที่เปลี่ยนสถานะ)
-        /// </summary>
-        private static int ConstructionSpeed(Vector2Int pos)
+        private void Update()
         {
-            int workers = WorkerAssignmentManager.Instance != null
-                ? WorkerAssignmentManager.Instance.GetAssigned(pos)
-                : 0;
-            return Mathf.Max(0, workers);
+            // หยุดตามนาฬิกาเกม (โหมดวาง/ทุบ/พอส) — สอดคล้องกับ ResourceManager/OreDepositManager
+            if (TimeManager.Instance != null && !TimeManager.Instance.IsRunning) return;
+            AdvanceWalk(Time.deltaTime);
+        }
+
+        /// <summary>เดินคนงานเข้าไซต์ที่กำลังสร้าง dt วินาที — แยกจาก Time.deltaTime ให้เทสต์คุมเวลาได้</summary>
+        public void AdvanceWalk(float dt)
+        {
+            if (dt <= 0f) return;
+            var assign = WorkerAssignmentManager.Instance;
+
+            for (int i = 0; i < _queue.Count; i++)
+            {
+                var pos = _queue[i];
+                int workers = assign != null ? assign.GetAssigned(pos) : 0;
+                if (workers <= 0) { _walkTime[pos] = 0f; continue; } // ไม่มีคน → รีเซ็ตการเดิน
+
+                float walked = _walkTime.TryGetValue(pos, out float t) ? t : 0f;
+                float need = _walkNeed.TryGetValue(pos, out float n) ? n : 0f;
+                if (walked < need) _walkTime[pos] = walked + dt; // เดินแบบ real-time (ไม่ขึ้นกับจำนวนคน)
+            }
+        }
+
+        // เวลาเดินไปถึงไซต์ = ระยะจากจุดพัก idle (กลางกริด ~CORE TOWER) ถึงไซต์ ÷ ความเร็วเดิน
+        // grid ยังไม่พร้อม/ความเร็ว ≤ 0 → 0 (เริ่มสร้างทันที) เพื่อไม่ให้ค้างในเทสต์/ระหว่าง init
+        private float ComputeWalkSeconds(Vector2Int pos)
+        {
+            var grid = GridManager.Instance;
+            if (grid == null || workerSpeed <= 0f) return 0f;
+            Vector3 from = grid.IsoToWorldF((grid.columns - 1) * 0.5f, (grid.rows - 1) * 0.5f);
+            Vector3 to = grid.IsoToWorld(pos.x, pos.y);
+            return Vector3.Distance(from, to) / workerSpeed;
         }
 
         // ─────────────────────────────────────────
@@ -99,6 +147,8 @@ namespace NuclearReMind
             _queue.Add(pos);
             _progress[pos] = 0;
             _totalTicks[pos] = data != null ? Mathf.Max(1, data.buildTicks) : DefaultConstructionTicks;
+            _walkNeed[pos] = ComputeWalkSeconds(pos); // ระยะที่คนงานต้องเดินมาถึงไซต์ก่อนเริ่มสร้าง
+            _walkTime[pos] = 0f;
             EventManager.Instance.RaiseConstructionProgressChanged(pos, 0);
         }
 
@@ -107,6 +157,8 @@ namespace NuclearReMind
             _queue.Remove(pos);
             _progress.Remove(pos);
             _totalTicks.Remove(pos);
+            _walkNeed.Remove(pos);
+            _walkTime.Remove(pos);
         }
 
         private void HandleGameTick()
@@ -118,16 +170,20 @@ namespace NuclearReMind
             {
                 if (!_progress.TryGetValue(pos, out int current)) continue;
 
-                int speed = ConstructionSpeed(pos);
-                if (speed <= 0) continue; // ไม่มีคนงาน → หยุดรอ ไม่คืบหน้า (ไม่ยิง event ซ้ำทุก tick)
+                // ต้องมีคนงานประจำ + เดินมาถึงไซต์แล้ว ถึงจะคืบ (Building สร้างเองไม่ได้)
+                int workers = AssignedWorkers(pos);
+                if (workers <= 0) continue;   // ยังไม่มีคนมาสร้าง → ไม่คืบ
+                if (IsWalking(pos)) continue;  // คนยังเดินมาไม่ถึง → ยังไม่เริ่มสร้าง
 
-                int next = current + speed;
+                int next = current + workers;  // ก้าวหน้า/tick = จำนวนคน (คนมาก = เร็ว)
 
                 if (next >= GetTotalTicks(pos))
                 {
                     _progress.Remove(pos);
                     _totalTicks.Remove(pos);
                     _queue.Remove(pos);
+                    _walkNeed.Remove(pos);
+                    _walkTime.Remove(pos);
 
                     if (BuildingRegistry.Instance.PlacedBuildings.TryGetValue(pos, out var data))
                         EventManager.Instance.RaiseConstructionComplete(pos, data);
@@ -165,6 +221,8 @@ namespace NuclearReMind
             _progress.Remove(pos);
             _totalTicks.Remove(pos);
             _queue.Remove(pos);
+            _walkNeed.Remove(pos);
+            _walkTime.Remove(pos);
 
             if (BuildingRegistry.Instance != null &&
                 BuildingRegistry.Instance.PlacedBuildings.TryGetValue(pos, out var data))
@@ -175,9 +233,10 @@ namespace NuclearReMind
         {
             if (!_progress.ContainsKey(pos)) return;
 
-            // ตั้ง progress เป็น total-1 → จะเสร็จบน tick ถัดไป
+            // ตั้ง progress เป็น total-1 → จะเสร็จบน tick ถัดไป (ยังต้องมีคนประจำถึงจะจบ — สร้างเองไม่ได้)
             int nearDone = Mathf.Max(0, GetTotalTicks(pos) - 1);
             _progress[pos] = nearDone;
+            _walkTime[pos] = _walkNeed.TryGetValue(pos, out float n) ? n : 0f; // เร่ง = ถือว่าคนถึงไซต์แล้ว
 
             // เลื่อนขึ้นหน้าสุดของ queue เพื่อให้ tick ก่อนตัวอื่น
             _queue.Remove(pos);
@@ -191,6 +250,8 @@ namespace NuclearReMind
             _queue.Clear();
             _progress.Clear();
             _totalTicks.Clear();
+            _walkNeed.Clear();
+            _walkTime.Clear();
 
             if (save.underConstructionCells == null) return;
 
@@ -203,6 +264,8 @@ namespace NuclearReMind
 
                 _queue.Add(pos);
                 _progress[pos] = prog;
+                _walkNeed[pos] = ComputeWalkSeconds(pos); // การเดินไม่ได้เซฟ — คนต้องเดินมาใหม่หลังโหลด
+                _walkTime[pos] = 0f;
                 // buildTicks ไม่ได้เซฟ — ดึงจากอาคารใน registry (fallback ค่าตั้งต้นถ้ายังไม่พร้อม)
                 if (registry != null && registry.PlacedBuildings.TryGetValue(pos, out var data) && data != null)
                     _totalTicks[pos] = Mathf.Max(1, data.buildTicks);

@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -23,6 +23,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Grid 43x28",
 
             "NuclearReMind/Setup HUD Canvas",
+            "NuclearReMind/Setup/Resource Icons + Rebuild HUD", // ไอคอนจริง + rebuild HUD (ต้องหลัง HUD Canvas ก่อนขั้นอื่น wire ทับ)
             "NuclearReMind/Setup Tooltip and Dilemma UI",
             "NuclearReMind/Apply Building Balance (V4 §6)",
             "NuclearReMind/Apply Core Tower Sprite (Pixel Art)", // art จริงแทน placeholder (หลัง Building Balance)
@@ -47,6 +48,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Apply Building Art (Team Pixel Art)", // art จริงแทน placeholder (ต้องหลัง Hospital — asset เพิ่งถูกสร้าง)
             "NuclearReMind/Setup Ore Deposits (Zone A-B)", // แหล่งแร่ A/B + ถอด Mine จาก hotbar (ต้องหลัง Building Balance + Day 11)
             "NuclearReMind/Apply Resource Caps (V4 §4)",   // เพดานคลัง 9999 + ปลดสะพาน Tritium ของ Lab (หลัง Phase 6)
+            "NuclearReMind/Setup/Atlas UI (building icons + cursors + speed)", // map icon ตาม index buildingHotbar — ต้องหลังทุกขั้นที่แก้ hotbar (Hospital/Ore Deposits/Resource Caps)
             "NuclearReMind/Update Building Hover Panel",    // ย้ายบาร์ก่อสร้างเข้าแผง hover (GDD §6 — หลัง HUD Canvas)
             "NuclearReMind/Setup Inventory (Items GDD §13)", // ItemSO 6 ชนิด + InventoryManager + แผงไอเทม (หลัง Hospital — pet_scanner ใช้ BuildingType.Hospital)
 
@@ -57,6 +59,8 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Flatten Ground Tiles (Top Face)",   // ★ สร้างไทล์หน้าบนแบน (ข้างในเรียบ · ขอบบล็อกเต็ม)
             "NuclearReMind/Fill Grids (Ground + Fog)",         // ระบาย Ground/Fog แบ่งโซน สุ่มจากไทล์คัด
             "NuclearReMind/Fix 2D Lighting (Light All Sorting Layers)", // กัน sprite รันไทม์เรนเดอร์ดำ (Sprite-Lit-Default)
+            "NuclearReMind/Lighting Mood (Warm Key + Cool Fill)", // มู้ดแสงอุ่น+เย็น (ต้องหลัง Fix 2D Lighting)
+            "NuclearReMind/Fix Colors (สี sprite สดขึ้น)",        // post-processing color grade (ต้องหลัง Lighting Mood)
             "NuclearReMind/Apply UI Scale (Font Size)", // ขยาย UI/ตัวอักษรทั้งเกม (ต้องหลังทุกขั้นที่สร้าง Canvas)
             "NuclearReMind/Apply Kanit Font (Scene + Prefabs)",
         };
@@ -67,12 +71,19 @@ namespace NuclearReMind.EditorTools
             if (EditorSceneManager.GetActiveScene().path != ScenePath)
                 EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
+            // เมนูบางตัวอาจยังไม่มาถึงเครื่องนี้ (สคริปต์อยู่อีกเครื่อง รอ push/pull) —
+            // ข้ามแบบไม่ throw ทั้งเชนพัง แล้วสรุปให้ท้ายสุด รันซ้ำได้เองทันทีที่ pull สคริปต์มาครบ
+            var skipped = new List<string>();
+
             for (int i = 0; i < MenuOrder.Length; i++)
             {
                 string item = MenuOrder[i];
                 Debug.Log($"[RunAllSetups] ▶ ({i + 1}/{MenuOrder.Length}) {item}");
                 if (!EditorApplication.ExecuteMenuItem(item))
-                    throw new Exception($"[RunAllSetups] เมนูล้มเหลว/ไม่พบ: {item}");
+                {
+                    Debug.LogWarning($"[RunAllSetups] ⚠ ข้าม — ไม่พบเมนู (สคริปต์ยังไม่มีในเครื่องนี้?): {item}");
+                    skipped.Add(item);
+                }
             }
 
             // บางขั้นเซฟเองแล้ว แต่ขั้นที่แค่ MarkSceneDirty ต้องเซฟปิดท้าย (= ขั้น 13 Ctrl+S)
@@ -82,7 +93,12 @@ namespace NuclearReMind.EditorTools
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
 
-            Debug.Log($"[RunAllSetups] ✅ รันครบ {MenuOrder.Length} เมนู + เซฟซีนแล้ว");
+            if (skipped.Count == 0)
+                Debug.Log($"[RunAllSetups] ✅ รันครบ {MenuOrder.Length} เมนู + เซฟซีนแล้ว");
+            else
+                Debug.LogWarning($"[RunAllSetups] ⚠ รันเสร็จแต่ข้ามไป {skipped.Count} เมนู (ไม่พบสคริปต์): " +
+                                  string.Join(", ", skipped) +
+                                  " — pull โค้ดจากเครื่อง/branch ที่มีสคริปต์เหล่านี้แล้วรันเมนูนี้ซ้ำ");
         }
     }
 }

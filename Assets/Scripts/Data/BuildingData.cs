@@ -51,6 +51,10 @@ namespace NuclearReMind
         public int energyCost;
         public int workerRequired;
 
+        [Tooltip("คนงานสูงสุด (= เพดานผลิต) ต่อเลเวล L1/L2/L3 ตาม GDD §6 — เว้นว่างไว้จะใช้ workerRequired ทุกเลเวล\n" +
+                 "เช่น โรงไฟ/น้ำ/อาหาร = 1,2,3 · เหมือง = 2,2,3 · ผลิตแปรผันตรงกับคน cap ที่ค่านี้ (กันเฟ้อ)")]
+        public int[] workersPerLevel;
+
         // เฟสที่อาคารปลดล็อกให้กดวางได้ (GDD §6 คอลัมน์ "ปลดล็อก" · GamePhase.FromDay)
         // default 1 = วางได้ตั้งแต่วันแรก → asset เดิมทุกตัวไม่กระทบ
         public int unlockPhase = 1;
@@ -116,5 +120,19 @@ namespace NuclearReMind
         public float oreTritiumMax = 0f;             // โควตา Tritium/วัน สูงสุด
         public float oreExposurePerWorkerDay = 0f;   // >0 = โซนเสี่ยง (B): รังสีสะสม +ค่านี้ ×คนงาน ทุกจบวัน
         public float oreSickChancePerWorkerDay = 0f; // โอกาสป่วย/คน/วัน (โซน B)
+
+        /// <summary>
+        /// คนงานสูงสุด (= เพดานผลิต) ที่เลเวลนี้ — อ่านจาก workersPerLevel ถ้าตั้งไว้ ไม่งั้น fallback workerRequired
+        /// เพดานนี้คือกลไก "กันเฟ้อ": ผลิตแปรผันตรงกับคน assigned/เพดาน คนเกินเพดานไม่เพิ่มผลผลิต
+        /// </summary>
+        public int WorkersForLevel(int level)
+        {
+            if (workersPerLevel != null && workersPerLevel.Length > 0)
+            {
+                int idx = Mathf.Clamp(level - 1, 0, workersPerLevel.Length - 1);
+                return Mathf.Max(0, workersPerLevel[idx]);
+            }
+            return Mathf.Max(0, workerRequired);
+        }
     }
 }

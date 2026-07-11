@@ -96,28 +96,43 @@ namespace NuclearReMind.Tests
         // ───────────────────────── Turn progression ─────────────────────────
 
         [Test]
-        public void Phase1_DayEnd_AdvancesCoreByBaseGain()
+        public void EarlyGame_Normal_ConsumesDeuterium_AdvancesCore()
         {
+            // §9: ตั้งแต่ 30% กิน Deuterium ดัน fuelEff · Normal (mult 1) + Deuterium พอ → dCore = 3
             Inject(corePercent: 30f, phase: 1, mode: CoreTowerManager.ModeNormal,
-                unlocked: true, energy: 1000f, water: 0f);
+                unlocked: true, energy: 1000f, water: 0f, deuterium: 100f);
             PlaceCore(1, 1);
 
             eventManager.RaiseDayEnded(11);
 
-            // Phase 1 ล็อก Normal (mult 1), fuelEff 1 → dCore = 3
             Assert.AreEqual(33f, tower.Current.corePercent, 1e-3f);
+            Assert.AreEqual(90f, resources.Current.deuterium, 1e-3f, "เผา Deuterium 10 (fuelNeed Normal)");
         }
 
         [Test]
-        public void Phase1_OverclockLocked_ModeUnchanged()
+        public void EarlyGame_OverclockUnlocked_ModeChanges()
         {
+            // §9: Overclock ปลดล็อกตั้งแต่ 30% — เปลี่ยนเป็น Boost/Overdrive ได้
             Inject(corePercent: 30f, phase: 1, mode: CoreTowerManager.ModeNormal,
                 unlocked: true, energy: 1000f, water: 0f);
 
             tower.SetOverclockMode(CoreTowerManager.ModeOverdrive);
 
-            Assert.AreEqual(CoreTowerManager.ModeNormal, tower.Current.overclockMode,
-                "Phase 1 ต้องล็อกโหมด — เปลี่ยนไม่ได้");
+            Assert.AreEqual(CoreTowerManager.ModeOverdrive, tower.Current.overclockMode,
+                "ปลดล็อกตั้งแต่ 30% — เปลี่ยนโหมดได้");
+        }
+
+        [Test]
+        public void EarlyGame_NoDeuterium_NoCoreGain()
+        {
+            // ไม่มี Deuterium → fuelEff 0 → dCore 0 (ไม่มีเชื้อเพลิงฟรีแล้ว)
+            Inject(corePercent: 30f, phase: 1, mode: CoreTowerManager.ModeNormal,
+                unlocked: true, energy: 1000f, water: 0f, deuterium: 0f);
+            PlaceCore(1, 1);
+
+            eventManager.RaiseDayEnded(11);
+
+            Assert.AreEqual(30f, tower.Current.corePercent, 1e-3f, "ไม่มี Deuterium → ไม่ดัน");
         }
 
         [Test]
@@ -139,7 +154,7 @@ namespace NuclearReMind.Tests
             eventManager.OnTowerPhaseComplete += p => completed = p;
 
             Inject(corePercent: 49f, phase: 1, mode: CoreTowerManager.ModeNormal,
-                unlocked: true, energy: 1000f, water: 0f);
+                unlocked: true, energy: 1000f, water: 0f, deuterium: 100f);
             PlaceCore(1, 1);
 
             eventManager.RaiseDayEnded(17); // 49 + 3 = 52 → ข้าม 50%
@@ -156,9 +171,9 @@ namespace NuclearReMind.Tests
             bool won = false;
             eventManager.OnTowerComplete += () => won = true;
 
-            // Phase 3 ใช้ Tritium — ต้องมีเชื้อเพลิงถึงจะดัน CORE% ได้
+            // CORE ≥ 80: ต้องมีทั้ง Deuterium (ดัน fuelEff) + Tritium (gate เปิด) ถึงจะดันถึง 100
             Inject(corePercent: 98f, phase: 3, mode: CoreTowerManager.ModeNormal,
-                unlocked: true, energy: 1000f, water: 0f, tritium: 100f);
+                unlocked: true, energy: 1000f, water: 0f, deuterium: 100f, tritium: 100f);
             PlaceCore(1, 1);
 
             eventManager.RaiseDayEnded(30); // 98 + 3 → clamp 100
@@ -265,16 +280,63 @@ namespace NuclearReMind.Tests
         }
 
         [Test]
-        public void Phase3_UsesTritium_NotDeuterium()
+        public void HighCore_NoTritium_GateBlocksCore()
         {
-            // Phase 3 มี Deuterium เต็มแต่ไม่มี Tritium → ต้องไม่ดัน CORE% (พิสูจน์ว่าใช้ Tritium)
+            // §2 ★: CORE ≥ 80 มี Deuterium เต็มแต่ไม่มี Tritium → gate บล็อก ΔCORE = 0 (ติดกำแพง 80%)
             Inject(corePercent: 85f, phase: 3, mode: CoreTowerManager.ModeNormal,
                 unlocked: true, energy: 0f, water: 0f, deuterium: 100f, tritium: 0f);
             PlaceCore(1, 1);
 
             eventManager.RaiseDayEnded(20);
 
-            Assert.AreEqual(85f, tower.Current.corePercent, 1e-3f, "Phase 3 ใช้ Tritium เท่านั้น — Deuterium ไม่นับ");
+            Assert.AreEqual(85f, tower.Current.corePercent, 1e-3f, "ไม่มี Tritium ที่ ≥80% → ΔCORE=0");
+            Assert.AreEqual(100f, resources.Current.deuterium, 1e-3f, "gate บล็อก → ไม่เผา Deuterium ทิ้ง");
+        }
+
+        [Test]
+        public void HighCore_WithBothFuels_PushesAndBurnsBoth()
+        {
+            // §2/§7: CORE ≥ 80 มีทั้ง Deuterium + Tritium → ดัน + เผาทั้งคู่ (Deuterium fuelNeed · Tritium 10)
+            Inject(corePercent: 85f, phase: 3, mode: CoreTowerManager.ModeBoost,
+                unlocked: true, energy: 0f, water: 0f, deuterium: 100f, tritium: 100f);
+            PlaceCore(1, 1);
+
+            eventManager.RaiseDayEnded(20);
+
+            // Boost mult 2, fuelEff 1 → dCore = 3×2×1 = 6 → 91
+            Assert.AreEqual(91f, tower.Current.corePercent, 1e-3f);
+            Assert.AreEqual(80f, resources.Current.deuterium, 1e-3f, "เผา Deuterium 20 (fuelNeed Boost)");
+            Assert.AreEqual(90f, resources.Current.tritium, 1e-3f, "เผา Tritium 10 (§7)");
+        }
+
+        // ───────────────────────── การจัดสรรเชื้อเพลิง (§2 ผู้เล่นจัดสรร) ─────────────────────────
+
+        [Test]
+        public void Allocation_LowerDeuterium_ReducesCoreGain()
+        {
+            // default ป้อน 10 (fuelNeed Normal) → ลดลง 5 → ป้อน 5 → fuelEff 0.5 → dCore 1.5
+            Inject(corePercent: 60f, phase: 2, mode: CoreTowerManager.ModeNormal,
+                unlocked: true, energy: 0f, water: 0f, deuterium: 100f);
+            PlaceCore(1, 1);
+
+            eventManager.RaiseReactorAllocationAdjust(ReactorAllocation.Deuterium, -5);
+            eventManager.RaiseDayEnded(20);
+
+            Assert.AreEqual(61.5f, tower.Current.corePercent, 1e-3f, "ป้อน Deuterium น้อยลง → ดันช้าลง");
+        }
+
+        [Test]
+        public void Allocation_ZeroTritium_AtHighCore_Blocks()
+        {
+            // ผู้เล่นเลือกไม่ป้อน Tritium ที่ CORE ≥ 80 → gate บล็อก ΔCORE=0 (แม้มี Tritium ในคลัง)
+            Inject(corePercent: 85f, phase: 3, mode: CoreTowerManager.ModeNormal,
+                unlocked: true, energy: 0f, water: 0f, deuterium: 100f, tritium: 100f);
+            PlaceCore(1, 1);
+
+            eventManager.RaiseReactorAllocationAdjust(ReactorAllocation.Tritium, -100); // ตั้งป้อน Tritium = 0
+            eventManager.RaiseDayEnded(20);
+
+            Assert.AreEqual(85f, tower.Current.corePercent, 1e-3f, "ไม่ป้อน Tritium ที่ ≥80 → gate บล็อก");
         }
 
         [Test]
@@ -305,8 +367,8 @@ namespace NuclearReMind.Tests
             Inject(corePercent: 85f, phase: 3, mode: CoreTowerManager.ModeBoost,
                 unlocked: true, energy: 0f, water: 0f, coreHeat: 0f, tritium: 100f);
             PlaceCore(1, 1);
-            eventManager.RaiseDayEnded(25); // พายุ +12: dHeat = 20 + 12 − 15 = +17
-            Assert.AreEqual(17f, tower.Current.coreHeat, 1e-3f, "Day 25 พายุ +12");
+            eventManager.RaiseDayEnded(25); // พายุ +20 (§4): dHeat = 20 + 20 − 15 = +25
+            Assert.AreEqual(25f, tower.Current.coreHeat, 1e-3f, "Day 25 พายุ +20");
         }
 
         [Test]
@@ -382,8 +444,9 @@ namespace NuclearReMind.Tests
         [Test]
         public void UpgradeToroidal_IncrementsCoolingTowerLevel()
         {
+            // ค่าเริ่มต้น Awake: เหล็ก 240 + ไฟ 200 — พอจ่าย เหล็ก 50 + ไฟ 80 (§5)
             Assert.AreEqual(0, tower.coolingTowerLevel);
-            tower.UpgradeToroidal(); // iron default 100 ≥ cost 50
+            tower.UpgradeToroidal();
             Assert.AreEqual(1, tower.coolingTowerLevel);
         }
 
@@ -391,6 +454,7 @@ namespace NuclearReMind.Tests
         public void UpgradeToroidal_CapsAt3()
         {
             eventManager.RaiseResourceDelta(ResourceType.Iron, 500f);
+            eventManager.RaiseResourceDelta(ResourceType.Energy, 500f); // 3 ระดับ × ไฟ 80 = 240 > ค่าเริ่มต้น 200
             tower.UpgradeToroidal();
             tower.UpgradeToroidal();
             tower.UpgradeToroidal();
@@ -401,8 +465,9 @@ namespace NuclearReMind.Tests
         [Test]
         public void InstallPoloidal_SetsFlag()
         {
+            // ค่าเริ่มต้น Awake: เหล็ก 240 + ไฟ 200 — พอจ่าย เหล็ก 60 + ไฟ 100 (§5)
             Assert.IsFalse(tower.hasPoloidalCoils);
-            tower.InstallPoloidal(); // iron ≥ cost 60
+            tower.InstallPoloidal();
             Assert.IsTrue(tower.hasPoloidalCoils);
         }
 

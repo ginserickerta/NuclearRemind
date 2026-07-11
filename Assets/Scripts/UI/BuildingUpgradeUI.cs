@@ -1,530 +1,670 @@
 using System.Text;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace NuclearReMind
 {
     /// <summary>
-    /// พาเนลลอยเหนืออาคารที่เมาส์ชี้ (hover) — โชว์ชื่อ/ระดับ/ผลผลิต/ค่าอัปเกรด + ปุ่ม "อัปเกรด" ที่คลิกได้
-    /// การอัปเกรดยิงผ่าน EventManager.RaiseUpgradeBuildingRequested (BuildingRegistry เป็นคนทำจริง)
-    /// อ่านสถานะ (ระดับ/อาคารที่วาง/ทรัพยากร/ตัวคูณผลผลิต) แบบ read-only query จาก manager กลาง
-    ///
-    /// ซ่อนตัวเองระหว่างโหมดวาง/ทุบ เพื่อกันคลิกชนกัน · คงพาเนลไว้เมื่อเมาส์อยู่บนตัวพาเนล (จะได้กดปุ่มทัน)
+    /// แผง Status อาคารแบบเต็ม (ธีมมืด-เขียวอุตสาหกรรม) — เปิดด้วยคลิกอาคาร (ปักหมุดกลางจอ) ยกเว้น Core Tower/Memorial
+    ///   header: ไอคอน + ชื่อ + Lv + ปุ่ม ✕ · body: สไปรต์อาคาร + คำอธิบาย + กล่องผลิต/คนงาน + กล่องระดับปัจจุบัน
+    ///   อัปเกรด: การ์ด Lv1..Lv3 (ผลผลิตต่อระดับ + ปัจจุบัน/เสร็จ/ล็อก) · แถวต้นทุนอัปเกรด + ปุ่มอัปเกรด + เตือนไม่พอ
+    /// UI ทั้งหมดสร้างเองตอนรันไทม์ (ไม่ต้อง wire ใน editor) · ยิงคำสั่งผ่าน EventManager · อ่านสถานะ read-only
+    /// hover อาคาร = ป้ายชื่อเล็ก ๆ · คลิก = เปิดแผง · ปิดด้วย Esc / ✕ / คลิกพื้นว่าง / คลิกอาคารเดิมซ้ำ
     /// </summary>
     public class BuildingUpgradeUI : MonoBehaviour
     {
         public static BuildingUpgradeUI Instance { get; private set; }
 
-        [Header("Panel (wire โดย HUDCanvasSetup)")]
+        [Header("Legacy fields (คงไว้กัน wire เดิมใน scene พัง — ไม่ใช้แล้ว UI สร้าง runtime)")]
         public GameObject panel;
         public RectTransform panelRect;
-        public Text nameText;      // ชื่ออาคาร
-        public Text levelText;     // "Lv.1  ●○○"
-        public Text productionText;// "⚡12→36 /วัน"
-        public Text costText;      // "อัปเกรด: ⛏40  ⚡0"  (แดงถ้าไม่พอ / เขียวถ้าเต็ม)
-        public Text hintText;      // ปลดล็อกเชื้อเพลิงฟิวชันที่ L3 ฯลฯ
-        public Button upgradeButton;
-        public Text upgradeButtonLabel;
+        public Text nameText, levelText, productionText, costText, hintText, upgradeButtonLabel, workerText;
+        public Button upgradeButton, minusButton, plusButton;
+        public Slider constructionBar;
 
-        [Header("Worker assignment (V4 §5) — wire โดย HUDCanvasSetup")]
-        public Text workerText;      // "คนงาน 2/3   ว่าง 4"
-        public Button minusButton;   // −1 คืนคนสู่ pool
-        public Button plusButton;    // +1 ดึงคนจาก pool มาประจำ
+        [Header("HUD")]
+        [Tooltip("ตำแหน่งแผงเทียบกึ่งกลางจอ (px, อิง 1920×1080)")]
+        public Vector2 hudAnchoredPosition = Vector2.zero;
+        [Tooltip("ขนาดแผง (px, อิง 1920×1080)")]
+        public Vector2 panelSize = new Vector2(1180, 840);
 
-        [Header("Construction progress (V4 §5) — แถบก่อสร้างในแผง (บาร์ลอย world-space ถูกถอดแล้ว)")]
-        public Slider constructionBar; // โชว์เฉพาะตอนอาคารกำลังก่อสร้าง (ตำแหน่งเดียวกับปุ่มอัปเกรด)
+        // ── ธีมสี (มืด-เขียว) ──
+        static readonly Color CBackdrop = new Color(0f, 0f, 0f, 0.55f);
+        static readonly Color CPanel    = new Color(0.098f, 0.117f, 0.106f, 0.985f);
+        static readonly Color CInset    = new Color(0.137f, 0.160f, 0.145f, 1f);
+        static readonly Color CInset2   = new Color(0.078f, 0.094f, 0.086f, 1f);
+        static readonly Color CBorder   = new Color(0.28f, 0.36f, 0.29f, 1f);
+        static readonly Color CText     = new Color(0.85f, 0.88f, 0.82f, 1f);
+        static readonly Color CMuted    = new Color(0.55f, 0.62f, 0.52f, 1f);
+        static readonly Color CAccent   = new Color(0.56f, 0.85f, 0.45f, 1f); // เขียวเน้น (ค่า/ไอคอน)
+        static readonly Color CWarn     = new Color(0.86f, 0.36f, 0.30f, 1f); // แดง (เตือน/ไม่พอ)
+        static readonly Color CGold     = new Color(0.80f, 0.86f, 0.48f, 1f); // ระดับปัจจุบัน
+        static readonly Color CBtn      = new Color(0.20f, 0.42f, 0.24f, 1f);
+        static readonly Color CBtnDim   = new Color(0.24f, 0.26f, 0.24f, 1f);
+        static readonly Color CClose    = new Color(0.55f, 0.17f, 0.16f, 1f);
 
-        [Header("Behaviour")]
-        [Tooltip("ยกพาเนลขึ้นเหนือฐานอาคารกี่หน่วย world (สูงพอให้พ้นตัวตึก)")]
-        public float worldYOffset = 1.2f;
-        [Tooltip("หน่วงก่อนซ่อน เมื่อเมาส์ออกจากทั้งอาคารและพาเนล (กันกระพริบตอนเลื่อนเมาส์ขึ้นไปกดปุ่ม)")]
-        public float hideGrace = 0.18f;
-
-        [Header("Colors — อ่านออกบนพื้น panel สว่าง (light theme)")]
-        public Color affordColor = new Color(0.72f, 0.5f, 0.1f);    // ค่าอัปเกรด (อำพันเข้ม)
-        public Color cantAffordColor = new Color(0.8f, 0.22f, 0.22f);
-        public Color maxColor = new Color(0.2f, 0.55f, 0.33f);      // เต็มระดับ (เขียวเข้ม)
-
-        // runtime
-        private Camera _cam;
+        // runtime state
         private Vector2Int _currentCell;
-        private bool _shown;
-        private float _hideTimer;
-        private bool _placing;
-        private bool _demolishing;
+        private bool _shown, _placing, _demolishing;
+        private Font _font;
+
+        // built UI refs
+        private GameObject _root, _backdrop;
+        private RectTransform _rootRect;
+        private Image _iconImg, _spriteImg;
+        private Text _nameTxt, _headLvTxt, _descTxt, _hintTxt;
+        private Text _prodLabelTxt, _prodValTxt, _workerValTxt, _bigLvTxt, _maxLvTxt, _extractTxt;
+        private GameObject _extractRow;
+        private Button _workerMinus, _workerPlus;
+        private Text _upTitleTxt;
+        private LevelCard[] _cards;
+        private GameObject _reqRow, _lvBox;
+        private Text _reqTitleTxt, _reqEnergyTxt, _reqIronTxt, _reqWorkerTxt, _reqTimeTxt, _warnTxt;
+        private Button _upgradeBtn; private Text _upgradeBtnTxt;
+
+        // hover nameplate
+        private GameObject _nameplate; private RectTransform _nameplateRect; private Text _nameplateText;
 
         private static readonly StringBuilder _sb = new StringBuilder(64);
+
+        private struct LevelCard { public GameObject root; public Outline frame; public Text lv; public Image sprite; public Text output; public Text status; }
 
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
-            _cam = Camera.main;
+            _font = LoadFont();
         }
 
         private void OnEnable()
         {
-            EventManager.Instance.OnResourceChanged     += HandleResourceChanged;
-            EventManager.Instance.OnBuildingUpgraded     += HandleBuildingUpgraded;
-            EventManager.Instance.OnBuildingRemoved      += HandleBuildingRemoved;
-            EventManager.Instance.OnBuildingSelected     += HandleBuildingSelected;
-            EventManager.Instance.OnDemolishModeToggled  += HandleDemolishModeToggled;
-            EventManager.Instance.OnWorkerAssignmentChanged += HandleWorkerChanged;
-            EventManager.Instance.OnWorkerPoolChanged    += HandleWorkerPoolChanged;
-            EventManager.Instance.OnConstructionProgressChanged += HandleConstructionProgress;
-            EventManager.Instance.OnConstructionComplete += HandleConstructionCompleted;
+            var e = EventManager.Instance;
+            e.OnResourceChanged     += HandleResourceChanged;
+            e.OnBuildingUpgraded    += HandleBuildingUpgraded;
+            e.OnBuildingRemoved     += HandleBuildingRemoved;
+            e.OnBuildingSelected    += HandleBuildingSelected;
+            e.OnDemolishModeToggled += HandleDemolishModeToggled;
+            e.OnWorkerAssignmentChanged += HandleWorkerChanged;
+            e.OnWorkerPoolChanged   += HandleWorkerPoolChanged;
+            e.OnConstructionProgressChanged += HandleConstructionProgress;
+            e.OnConstructionComplete += HandleConstructionCompleted;
         }
 
         private void OnDisable()
         {
             if (EventManager.Instance == null) return;
-            EventManager.Instance.OnResourceChanged     -= HandleResourceChanged;
-            EventManager.Instance.OnBuildingUpgraded     -= HandleBuildingUpgraded;
-            EventManager.Instance.OnBuildingRemoved      -= HandleBuildingRemoved;
-            EventManager.Instance.OnBuildingSelected     -= HandleBuildingSelected;
-            EventManager.Instance.OnDemolishModeToggled  -= HandleDemolishModeToggled;
-            EventManager.Instance.OnWorkerAssignmentChanged -= HandleWorkerChanged;
-            EventManager.Instance.OnWorkerPoolChanged    -= HandleWorkerPoolChanged;
-            EventManager.Instance.OnConstructionProgressChanged -= HandleConstructionProgress;
-            EventManager.Instance.OnConstructionComplete -= HandleConstructionCompleted;
+            var e = EventManager.Instance;
+            e.OnResourceChanged     -= HandleResourceChanged;
+            e.OnBuildingUpgraded    -= HandleBuildingUpgraded;
+            e.OnBuildingRemoved     -= HandleBuildingRemoved;
+            e.OnBuildingSelected    -= HandleBuildingSelected;
+            e.OnDemolishModeToggled -= HandleDemolishModeToggled;
+            e.OnWorkerAssignmentChanged -= HandleWorkerChanged;
+            e.OnWorkerPoolChanged   -= HandleWorkerPoolChanged;
+            e.OnConstructionProgressChanged -= HandleConstructionProgress;
+            e.OnConstructionComplete -= HandleConstructionCompleted;
         }
 
         private void Start()
         {
-            if (upgradeButton != null)
-                upgradeButton.onClick.AddListener(OnUpgradeClicked);
-            if (plusButton != null)
-                plusButton.onClick.AddListener(OnAssignPlus);
-            if (minusButton != null)
-                minusButton.onClick.AddListener(OnAssignMinus);
+            if (panel != null) panel.SetActive(false); // ซ่อนแผงเก่าจาก HUDCanvasSetup ทิ้ง
+            BuildPanel();
             Hide();
         }
 
-        // ───────────────────────── hover loop ─────────────────────────
+        // ─────────────────── click-to-open + hover nameplate ───────────────────
         private void Update()
         {
-            if (panel == null || BuildingRegistry.Instance == null || InputManager.Instance == null)
-                return;
+            if (BuildingRegistry.Instance == null || InputManager.Instance == null) return;
 
-            // โหมดวาง/ทุบ → ซ่อน ไม่ให้คลิกชนกับ ghost/ค้อน
-            if (_placing || _demolishing)
-            {
-                if (_shown) Hide();
-                return;
-            }
+            if (_placing || _demolishing) { HideNameplate(); if (_shown) Hide(); return; }
 
-            // คีย์ลัด Q/E: ลด/เพิ่มคนงานให้อาคารที่กำลัง hover (เทียบเท่าปุ่ม −/+) — WAM clamp เองถ้าเกิน/ไม่มี idle
-            if (_shown)
-            {
-                if (Input.GetKeyDown(KeyCode.Q)) EventManager.Instance.RaiseWorkerAssignRequested(_currentCell, -1);
-                else if (Input.GetKeyDown(KeyCode.E)) EventManager.Instance.RaiseWorkerAssignRequested(_currentCell, +1);
-            }
+            bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 
-            // เมาส์อยู่บนตัวพาเนล → คงไว้ (ปล่อยให้ปุ่มรับคลิก) ไม่ต้องคำนวณ cell ใหม่
-            if (_shown && RectTransformUtility.RectangleContainsScreenPoint(panelRect, Input.mousePosition, null))
-            {
-                _hideTimer = hideGrace;
-                return;
-            }
+            Vector2Int hoverOrigin = default; BuildingData hoverData = null; bool hovering = false;
+            if (!overUI && BuildingRegistry.Instance.TryGetBuildingAt(
+                    InputManager.Instance.GetMouseGridPosition(), out hoverOrigin, out hoverData))
+                hovering = !IsExcluded(hoverData);
 
-            Vector2Int cell = InputManager.Instance.GetMouseGridPosition();
-            if (BuildingRegistry.Instance.PlacedBuildings.TryGetValue(cell, out var data) && data != null)
+            if (Input.GetMouseButtonDown(0) && !overUI)
             {
-                _hideTimer = hideGrace;
-                if (!_shown || cell != _currentCell)
+                if (hovering)
                 {
-                    _currentCell = cell;
-                    _shown = true;
-                    panel.SetActive(true);
-                    Populate();
+                    if (_shown && hoverOrigin == _currentCell) Hide();
+                    else OpenAt(hoverOrigin);
                 }
-                PositionOverBuilding();
-                return;
+                else if (_shown) Hide();
             }
 
-            // ไม่อยู่บนอาคารหรือพาเนล → นับถอยหลังแล้วซ่อน (เผื่อช่องว่างตอนเลื่อนขึ้นไปกดปุ่ม)
-            if (_shown)
-            {
-                _hideTimer -= Time.unscaledDeltaTime;
-                if (_hideTimer <= 0f) Hide();
-            }
+            if (_shown && Input.GetKeyDown(KeyCode.Escape)) Hide();
+            if (_shown && Input.GetKeyDown(KeyCode.Q)) EventManager.Instance.RaiseWorkerAssignRequested(_currentCell, -1);
+            else if (_shown && Input.GetKeyDown(KeyCode.E)) EventManager.Instance.RaiseWorkerAssignRequested(_currentCell, +1);
+
+            if (_shown && !BuildingRegistry.Instance.PlacedBuildings.ContainsKey(_currentCell)) Hide();
+
+            // โหนดแร่/ไซต์ก่อสร้าง: refresh ต่อเฟรมให้ % ขุด/เวลาเดินสด (Refresh ปกติยิงตาม event เท่านั้น)
+            if (_shown && BuildingRegistry.Instance.PlacedBuildings.TryGetValue(_currentCell, out var curData)
+                && curData != null
+                && (curData.isOreNode
+                    || (ConstructionController.Instance != null && ConstructionController.Instance.IsUnderConstruction(_currentCell))))
+                Refresh();
+
+            if (hovering && !(_shown && hoverOrigin == _currentCell)) ShowNameplate(hoverData.buildingName);
+            else HideNameplate();
         }
 
-        private void PositionOverBuilding()
+        private void OpenAt(Vector2Int origin)
         {
-            if (_cam == null) _cam = Camera.main;
-            if (_cam == null || panelRect == null) return;
-
-            // จัดตำแหน่งเหนือกึ่งกลาง footprint (อาคาร multi-tile) ให้ตรงกับ visual ที่ centered แล้ว
-            var size = (BuildingRegistry.Instance != null &&
-                        BuildingRegistry.Instance.PlacedBuildings.TryGetValue(_currentCell, out var bd) && bd != null)
-                       ? bd.size : Vector2Int.one;
-            Vector3 world = GridManager.Instance.FootprintCenterWorld(_currentCell, size)
-                          + new Vector3(0f, worldYOffset, 0f);
-            Vector3 screen = _cam.WorldToScreenPoint(world);
-            if (screen.z < 0f) return; // อยู่หลังกล้อง — อย่าเด้งไปอีกฝั่งจอ
-            panelRect.position = screen; // overlay canvas: position = พิกัดจอ (พิกัด pivot bottom-center)
-        }
-
-        // ───────────────────────── populate ─────────────────────────
-        private void Populate()
-        {
-            if (!BuildingRegistry.Instance.PlacedBuildings.TryGetValue(_currentCell, out var data) || data == null)
-            {
-                Hide();
-                return;
-            }
-
-            // กำลังก่อสร้าง → แผงความคืบหน้า (แถบก่อสร้างย้ายจาก world-space มาอยู่ที่นี่)
-            if (ConstructionController.Instance != null &&
-                ConstructionController.Instance.IsUnderConstruction(_currentCell))
-            {
-                PopulateConstruction(data);
-                return;
-            }
-
-            // แหล่งแร่ = ภูมิประเทศ ไม่มีระดับ/อัปเกรด — แผงแยกของตัวเอง
-            if (data.isOreNode)
-            {
-                PopulateOreNode(data);
-                return;
-            }
-
-            if (constructionBar != null) constructionBar.gameObject.SetActive(false);
-
-            int level = BuildingRegistry.Instance.GetLevel(_currentCell);
-            int maxLevel = BuildingRegistry.Instance.maxBuildingLevel;
-            bool isMax = level >= maxLevel;
-
-            if (nameText != null) nameText.text = data.buildingName;
-            if (levelText != null) levelText.text = $"Lv.{level}  {LevelDots(level, maxLevel)}";
-            if (productionText != null) productionText.text = BuildActualProductionString(data, level);
-            if (hintText != null) hintText.text = BuildHint(data, level, maxLevel, isMax);
-
-            if (isMax)
-            {
-                if (costText != null)
-                {
-                    costText.text = "ระดับสูงสุดแล้ว ✔";
-                    costText.color = maxColor;
-                }
-                if (upgradeButton != null) upgradeButton.gameObject.SetActive(false);
-            }
-            else
-            {
-                int ironCost = data.upgradeIronCost * level;
-                int energyCost = data.upgradeEnergyCost * level;
-                bool afford = CanAfford(ironCost, energyCost);
-
-                if (costText != null)
-                {
-                    _sb.Clear();
-                    _sb.Append("อัปเกรด: ⛏").Append(ironCost);
-                    if (energyCost > 0) _sb.Append("  ⚡").Append(energyCost);
-                    costText.text = _sb.ToString();
-                    costText.color = afford ? affordColor : cantAffordColor;
-                }
-                if (upgradeButton != null)
-                {
-                    upgradeButton.gameObject.SetActive(true);
-                    upgradeButton.interactable = afford;
-                }
-                if (upgradeButtonLabel != null)
-                    upgradeButtonLabel.text = afford ? "⬆ อัปเกรด" : "แร่/พลังงานไม่พอ";
-            }
-
-            UpdateWorkerRow(data);
-        }
-
-        // แผงตอนก่อสร้าง: แถบคืบหน้า + สเปกที่จะได้เมื่อเสร็จ — จ่ายคนเร่งได้ (แถวคนงานเดิม)
-        private void PopulateConstruction(BuildingData data)
-        {
-            var cc = ConstructionController.Instance;
-            int progress = cc.GetProgress(_currentCell);
-            int total = cc.GetTotalTicks(_currentCell);
-
-            if (nameText != null) nameText.text = data.buildingName;
-            if (levelText != null) levelText.text = $"🔨 กำลังก่อสร้าง {progress}/{total}";
-            if (productionText != null)
-                productionText.text = $"เมื่อเสร็จ: {BuildProductionString(data, 1, true)}"; // สเปก L1 (ไม่มีลูกศรอัป)
-            if (costText != null) costText.text = "";
-            if (hintText != null) hintText.text = "คนงานมากขึ้น = สร้างเร็วขึ้น (Q/E)";
-            if (upgradeButton != null) upgradeButton.gameObject.SetActive(false);
-
-            if (constructionBar != null)
-            {
-                constructionBar.gameObject.SetActive(true);
-                constructionBar.maxValue = Mathf.Max(1, total);
-                constructionBar.value = progress;
-            }
-
-            UpdateWorkerRow(data);
-        }
-
-        // แผงแหล่งแร่ (V4 §5): ผลขุดจริงตอนนี้ + โควตาวันนี้ + ป้ายความเสี่ยงโซน B — ไม่มีอัปเกรด/ระดับ
-        private void PopulateOreNode(BuildingData data)
-        {
-            bool risky = data.oreExposurePerWorkerDay > 0f;
-            var ore = OreDepositManager.Instance;
-            float quota = ore != null ? ore.GetDailyQuota(_currentCell) : 0f;
-            float tritQuota = ore != null ? ore.GetDailyTritiumQuota(_currentCell) : 0f;
-
-            if (constructionBar != null) constructionBar.gameObject.SetActive(false);
-
-            if (nameText != null) nameText.text = data.buildingName;
-            if (levelText != null) levelText.text = "แหล่งแร่ธรรมชาติ";
-            if (productionText != null)
-            {
-                var wam = WorkerAssignmentManager.Instance;
-                int assigned = wam != null ? wam.GetAssigned(_currentCell) : 0;
-                if (assigned == 0)
-                {
-                    productionText.text = tritQuota > 0f
-                        ? $"⏸ ไม่มีคนขุด — โควตาวันนี้ ⛏{quota:0} ⚛{tritQuota:0}"
-                        : $"⏸ ไม่มีคนขุด — โควตาวันนี้ ⛏{quota:0}";
-                }
-                else
-                {
-                    // ผลขุดจริง = โควตา × กำลังคน × ตัวคูณวิกฤต (สูตรเดียวกับ ResourceManager ore branch)
-                    float scale = CurrentOutputScale(data.workerRequired, assigned);
-                    productionText.text = tritQuota > 0f
-                        ? $"⛏ ตอนนี้ {quota * scale:0}/วัน (โควตา {quota:0}) · ⚛ {tritQuota * scale:0}/วัน"
-                        : $"⛏ ตอนนี้ {quota * scale:0}/วัน (โควตา {quota:0})";
-                }
-            }
-            if (costText != null)
-            {
-                costText.text = risky ? "☢ พื้นที่เสี่ยงรังสี" : "ปลอดภัย · ใกล้เมือง";
-                costText.color = risky ? cantAffordColor : maxColor;
-            }
-            if (hintText != null)
-                hintText.text = risky
-                    ? $"☢ รังสีสะสม +{data.oreExposurePerWorkerDay:0.#}/คน/วัน · เสี่ยงป่วย {data.oreSickChancePerWorkerDay:P0}/คน/วัน"
-                    : "";
-            if (upgradeButton != null) upgradeButton.gameObject.SetActive(false);
-
-            UpdateWorkerRow(data); // ปุ่ม −/+ และ Q/E ทำงานปกติ (โหนดอยู่ใน registry)
-        }
-
-        // แถวจัดสรรคนงาน (V4 §5): "<คลาส> assigned/required   ว่าง idle" + ปุ่ม +/−
-        // idle นับเฉพาะ pool ของคลาสที่อาคารต้องใช้ (Lab=Engineer, Hospital=Medic, Farm=Farmer ฯลฯ)
-        private void UpdateWorkerRow(BuildingData data)
-        {
-            var wam = WorkerAssignmentManager.Instance;
-            // เพดานคำนวณจาก manager (เดียวกับตอน assign) — ระหว่างสร้าง Habitat (workerRequired=0) ได้เพดาน 1
-            int required = wam != null ? wam.EffectiveCap(_currentCell, data) : Mathf.Max(0, data.workerRequired);
-            int assigned = wam != null ? wam.GetAssigned(_currentCell) : 0;
-            int idle = wam != null ? wam.IdleOfClass(data.requiredClass) : 0;
-            bool building = ConstructionController.Instance != null
-                            && ConstructionController.Instance.IsUnderConstruction(_currentCell);
-            bool hasRow = required > 0;
-            string label = ClassLabel(data.requiredClass);
-
-            if (workerText != null)
-                workerText.text = hasRow
-                    ? $"{label} {assigned}/{required}   ว่าง {idle}{(building ? "  · ต้องมีคนสร้าง" : "")}"
-                    : "👷 ไม่ต้องใช้คนงาน";
-
-            if (minusButton != null)
-            {
-                minusButton.gameObject.SetActive(hasRow);
-                minusButton.interactable = hasRow && assigned > 0;
-            }
-            if (plusButton != null)
-            {
-                plusButton.gameObject.SetActive(hasRow);
-                plusButton.interactable = hasRow && assigned < required && idle > 0;
-            }
-        }
-
-        // ป้ายคลาส + emoji (แถวจัดสรร) — Worker ใช้คำเดิม "คนงาน" กันสับสน asset ที่ไม่ได้ตั้งคลาส
-        private static string ClassLabel(WorkerClass c)
-        {
-            switch (c)
-            {
-                case WorkerClass.Engineer: return "🔧 วิศวกร";
-                case WorkerClass.Medic:    return "⚕ แพทย์";
-                case WorkerClass.Farmer:   return "🌾 เกษตรกร";
-                default:                   return "👷 คนงาน";
-            }
-        }
-
-        private static string LevelDots(int level, int maxLevel)
-        {
-            _sb.Clear();
-            for (int i = 1; i <= maxLevel; i++)
-                _sb.Append(i <= level ? '●' : '○');
-            return _sb.ToString();
-        }
-
-        // ผลผลิต/วันที่เต็มกำลังคน: base × ตัวคูณระดับ (ปัจจุบัน → ระดับถัดไป)
-        private static string BuildProductionString(BuildingData data, int level, bool isMax)
-        {
-            float cur = ResourceManager.LevelMultiplier(level);
-            float next = isMax ? cur : ResourceManager.LevelMultiplier(level + 1);
-
-            _sb.Clear();
-            AppendProd(data.foodProduction, "🌿", cur, next, isMax);
-            AppendProd(data.waterProduction, "💧", cur, next, isMax);
-            AppendProd(data.energyProduction, "⚡", cur, next, isMax);
-            AppendProd(data.ironProduction, "⛏", cur, next, isMax);
-            if (_sb.Length == 0) return "—";
-            _sb.Append("/วัน");
-            return _sb.ToString();
-        }
-
-        private static void AppendProd(float baseVal, string emoji, float curMul, float nextMul, bool isMax)
-        {
-            if (baseVal <= 0f) return;
-            if (_sb.Length > 0) _sb.Append("  ");
-            _sb.Append(emoji).Append(Mathf.RoundToInt(baseVal * curMul));
-            if (!isMax) _sb.Append('→').Append(Mathf.RoundToInt(baseVal * nextMul));
-        }
-
-        // ─── ผลผลิตจริงตอนนี้ (GDD §6 — โชว์ตามคนที่ใส่จริง ไม่ใช่สเปกตอนคนครบ) ───
-
-        /// <summary>
-        /// กำลังผลิตรวม = กำลังคน × busy × ประสิทธิภาพ (mirror ResourceManager.ComputeProductionDelta
-        /// แบบ read-only query · ไม่จำลอง upkeep gate — แสดงตามกำลังคนพอ)
-        /// </summary>
-        private float CurrentOutputScale(int required, int assigned)
-        {
-            float workerScale = required > 0 ? Mathf.Clamp01((float)assigned / required) : 1f;
-
-            var crisis = CrisisEffectManager.Instance;
-            var wam = WorkerAssignmentManager.Instance;
-            int totalAssigned = wam != null ? wam.TotalAssigned : 0;
-            int busy = crisis != null ? crisis.BusyWorkers : 0;
-            float busyFactor = totalAssigned > 0
-                ? (float)CrisisEffectMath.EffectiveWorkers(totalAssigned, busy) / totalAssigned
-                : 1f;
-            float efficiency = crisis != null ? crisis.WorkerEfficiencyMultiplier : 1f;
-
-            return workerScale * busyFactor * efficiency;
-        }
-
-        // "ตอนนี้: 🌿24 💧12 /วัน" — เฉพาะชนิดที่อาคารนี้ผลิตจริง · ไม่มีคน → หยุดผลิต
-        private string BuildActualProductionString(BuildingData data, int level)
-        {
-            var wam = WorkerAssignmentManager.Instance;
-            int required = data.workerRequired;
-            int assigned = wam != null ? wam.GetAssigned(_currentCell) : 0;
-            if (required > 0 && assigned == 0) return "⏸ หยุดผลิต — ไม่มีคนงานประจำ";
-
-            float scale = CurrentOutputScale(required, assigned) * ResourceManager.LevelMultiplier(level);
-            float foodYield = CrisisEffectManager.Instance != null
-                ? CrisisEffectManager.Instance.FoodYieldMultiplier : 1f;
-
-            _sb.Clear();
-            AppendActual(data.foodProduction * scale * foodYield, "🌿");
-            AppendActual(data.waterProduction * scale, "💧");
-            AppendActual(data.energyProduction * scale, "⚡");
-            AppendActual(data.ironProduction * scale, "⛏");
-
-            // เชื้อเพลิงฟิวชันผลิตเฉพาะระดับสูงสุด (ไม่คูณตัวคูณระดับ — ตาม ComputeProductionDelta)
-            if (BuildingRegistry.Instance != null && level >= BuildingRegistry.Instance.maxBuildingLevel)
-            {
-                float fuelScale = CurrentOutputScale(required, assigned);
-                AppendActual(data.deuteriumProduction * fuelScale, "D");
-                AppendActual(data.tritiumProduction * fuelScale, "⚛");
-            }
-
-            if (_sb.Length == 0) return "—";
-            _sb.Insert(0, "ตอนนี้: ").Append(" /วัน");
-            return _sb.ToString();
-        }
-
-        private static void AppendActual(float val, string emoji)
-        {
-            if (val <= 0f) return;
-            if (_sb.Length > 0) _sb.Append("  ");
-            _sb.Append(emoji).Append(Mathf.RoundToInt(val));
-        }
-
-        // เชื้อเพลิงฟิวชันผลิตเฉพาะเมื่อถึงระดับสูงสุด (จุดขายวิทยาศาสตร์ NSC)
-        private static string BuildHint(BuildingData data, int level, int maxLevel, bool isMax)
-        {
-            bool makesFuel = data.deuteriumProduction > 0f || data.tritiumProduction > 0f;
-            if (!makesFuel) return "";
-            if (isMax) return "⚛ ผลิตเชื้อเพลิงฟิวชันแล้ว";
-            if (level + 1 >= maxLevel) return $"⚛ อัปเป็น L{maxLevel} → ปลดล็อกเชื้อเพลิงฟิวชัน";
-            return "";
-        }
-
-        private static bool CanAfford(int ironCost, int energyCost)
-        {
-            var rm = ResourceManager.Instance;
-            if (rm == null) return true; // ไม่มี manager (เช่นในเทสต์) → ไม่บล็อก
-            return rm.Current.iron >= ironCost && rm.Current.energy >= energyCost;
-        }
-
-        // ───────────────────────── actions / events ─────────────────────────
-        private void OnUpgradeClicked()
-        {
-            if (!_shown) return;
-            EventManager.Instance.RaiseUpgradeBuildingRequested(_currentCell);
-            // ไม่ต้องซ่อน — BuildingRegistry จะ raise OnBuildingUpgraded กลับมาให้ refresh (ระดับ/ค่าใหม่)
-        }
-
-        private void OnAssignPlus()
-        {
-            if (_shown) EventManager.Instance.RaiseWorkerAssignRequested(_currentCell, +1);
-        }
-
-        private void OnAssignMinus()
-        {
-            if (_shown) EventManager.Instance.RaiseWorkerAssignRequested(_currentCell, -1);
-        }
-
-        private void HandleWorkerChanged(Vector2Int cell, int count)
-        {
-            if (_shown) Populate(); // คน/ปุ่ม +/− อัปเดตสด (assigned อาจเปลี่ยนหลายอาคารตอน reconcile)
-        }
-
-        private void HandleWorkerPoolChanged(int idle, int total)
-        {
-            if (_shown) Populate(); // idle เปลี่ยน → ปุ่ม + อาจเปิด/ปิด
-        }
-
-        private void HandleResourceChanged(ResourceData _)
-        {
-            if (_shown) Populate(); // อัปเดตปุ่ม afford/สีค่าอัปเกรดสด ๆ ตามคลัง
-        }
-
-        private void HandleBuildingUpgraded(Vector2Int cell, int newLevel)
-        {
-            if (_shown && cell == _currentCell) Populate();
-        }
-
-        private void HandleConstructionProgress(Vector2Int cell, int progress)
-        {
-            if (_shown && cell == _currentCell) Populate(); // แถบ/เลขคืบหน้าในแผงขยับสด
-        }
-
-        private void HandleConstructionCompleted(Vector2Int cell, BuildingData _)
-        {
-            if (_shown && cell == _currentCell) Populate(); // สลับจากแผงก่อสร้าง → แผงอาคารปกติทันที
-        }
-
-        private void HandleBuildingRemoved(Vector2Int cell)
-        {
-            if (_shown && cell == _currentCell) Hide();
-        }
-
-        private void HandleBuildingSelected(BuildingData data)
-        {
-            _placing = data != null; // เลือกอาคารเพื่อวาง = อยู่โหมดวาง
-        }
-
-        private void HandleDemolishModeToggled(bool active)
-        {
-            _demolishing = active;
+            _currentCell = origin;
+            _shown = true;
+            if (_backdrop != null) _backdrop.SetActive(true); // backdrop เป็นแม่ของ _root → เปิดทั้งชุด
+            Refresh();
         }
 
         private void Hide()
         {
             _shown = false;
-            if (panel != null) panel.SetActive(false);
+            if (_backdrop != null) _backdrop.SetActive(false); // ปิดทั้งชุด (ไม่งั้น backdrop บังคลิกทั้งจอ)
+        }
+
+        private static bool IsExcluded(BuildingData d)
+            => d == null || d.buildingType == BuildingType.CoreTower || d.isCoreTowerPart
+               || d.buildingType == BuildingType.Memorial;
+
+        // ═══════════════════════════ POPULATE ═══════════════════════════
+        private void Refresh()
+        {
+            if (_root == null) return;
+            if (!BuildingRegistry.Instance.PlacedBuildings.TryGetValue(_currentCell, out var data) || data == null)
+            { Hide(); return; }
+
+            int level = BuildingRegistry.Instance.GetLevel(_currentCell);
+            int maxLv = BuildingRegistry.Instance.maxBuildingLevel;
+            bool isMax = level >= maxLv;
+            bool building = ConstructionController.Instance != null &&
+                            ConstructionController.Instance.IsUnderConstruction(_currentCell);
+
+            // header
+            var (primEmoji, primLabel, primBase) = PrimaryOutput(data);
+            if (_iconImg != null) { _iconImg.sprite = data.sprite; _iconImg.enabled = data.sprite != null; }
+            if (_nameTxt != null) _nameTxt.text = data.buildingName;
+            if (_headLvTxt != null) _headLvTxt.text = $"Lv. {level}";
+            if (_descTxt != null) _descTxt.text = string.IsNullOrEmpty(data.description)
+                                                ? "อาคารในเมือง Veltara" : data.description;
+            if (_hintTxt != null) _hintTxt.text = data.isOreNode ? "แหล่งแร่ธรรมชาติ (ไม่มีระดับ)" : "";
+            if (_spriteImg != null) { _spriteImg.sprite = data.sprite; _spriteImg.enabled = data.sprite != null; }
+
+            // ผลิต + คนงาน (ค่าจริงตามคนที่ประจำ)
+            int required = BuildingRegistry.Instance.WorkersRequired(_currentCell);
+            int assigned = WorkerAssignmentManager.Instance != null ? WorkerAssignmentManager.Instance.GetAssigned(_currentCell) : 0;
+            int idle = WorkerAssignmentManager.Instance != null ? WorkerAssignmentManager.Instance.IdleOfClass(data.requiredClass) : 0;
+
+            // ═══ โหนดแร่: โหมด "งานขุดมีเวลา" — ซ่อนส่วนอัปเกรด/ระดับ · โชว์แร่ + สถานะขุด ═══
+            bool ore = data.isOreNode;
+            if (_upTitleTxt != null) _upTitleTxt.gameObject.SetActive(!ore);
+            if (_reqRow != null) _reqRow.SetActive(!ore);
+            if (_lvBox != null) _lvBox.SetActive(!ore);
+            if (ore)
+            {
+                if (_headLvTxt != null) _headLvTxt.text = ""; // โหนดแร่ไม่มีระดับ
+                foreach (var c in _cards) if (c.root != null) c.root.SetActive(false);
+
+                var om = OreDepositManager.Instance;
+                float oreIron = om != null ? om.GetIronPayload(_currentCell) : 0f;
+                float oreTrit = om != null ? om.GetTritiumPayload(_currentCell) : 0f;
+
+                if (_prodLabelTxt != null) _prodLabelTxt.text = "⛏ แร่ในแหล่ง";
+                if (_prodValTxt != null)
+                {
+                    _prodValTxt.text = oreTrit > 0f
+                        ? $"{Mathf.RoundToInt(oreIron)} เหล็ก · {Mathf.RoundToInt(oreTrit)} ทริเทียม"
+                        : $"{Mathf.RoundToInt(oreIron)} เหล็ก";
+                    _prodValTxt.color = CAccent;
+                }
+
+                if (_workerValTxt != null) _workerValTxt.text = $"{assigned} / {required} คนขุด";
+                if (_workerMinus != null) _workerMinus.interactable = assigned > 0;
+                if (_workerPlus  != null) _workerPlus.interactable  = assigned < required && idle > 0;
+
+                if (_extractRow != null)
+                {
+                    _extractRow.SetActive(true);
+                    if (_extractTxt != null)
+                    {
+                        if (assigned <= 0)
+                            _extractTxt.text = "⛏ ใส่คนงานเพื่อเริ่มขุด (ยิ่งหลายคน ยิ่งเร็ว)";
+                        else if (om != null && om.IsWalking(_currentCell))
+                            _extractTxt.text = $"🚶 คนงานกำลังเดินไปแหล่งแร่... (~{Mathf.CeilToInt(om.GetWalkRemaining(_currentCell))} วิ)";
+                        else
+                        {
+                            float prog = om != null ? om.GetMineProgress01(_currentCell) : 0f;
+                            float remain = om != null ? om.GetMineSecondsRemaining(_currentCell, assigned) : 0f;
+                            _extractTxt.text = $"⏳ กำลังขุด {Mathf.RoundToInt(prog * 100f)}% · เหลือ ~{Mathf.CeilToInt(remain)} วิ";
+                        }
+                    }
+                }
+                return; // โหนดแร่ — จบตรงนี้ (ไม่มีระดับ/การ์ด/ต้นทุนอัปเกรด)
+            }
+
+            float actual = building ? 0f : ActualPrimaryOutput(data, level, primBase, required, assigned);
+            // ระหว่างก่อสร้าง: โชว์ป้ายสถานะ 3 ระยะ (ใส่คนงาน → เดินมา → กำลังสร้าง%) แทนค่าผลิต
+            if (_prodLabelTxt != null) _prodLabelTxt.text = building ? "🏗 สถานะก่อสร้าง" : $"{primEmoji} {primLabel} ที่ผลิต";
+            if (_prodValTxt != null)
+            {
+                if (building)
+                {
+                    var cc = ConstructionController.Instance;
+                    if (assigned <= 0)
+                        _prodValTxt.text = "⛏ ใส่คนงานเพื่อเริ่มสร้าง";
+                    else if (cc != null && cc.IsWalking(_currentCell))
+                        _prodValTxt.text = $"🚶 คนงานกำลังเดินมาสร้าง... (~{Mathf.CeilToInt(cc.GetWalkRemaining(_currentCell))} วิ)";
+                    else if (cc != null)
+                    {
+                        int total = cc.GetTotalTicks(_currentCell);
+                        int prog = cc.GetProgress(_currentCell);
+                        int pct = total > 0 ? Mathf.Clamp(Mathf.RoundToInt(100f * prog / total), 0, 100) : 0;
+                        _prodValTxt.text = $"🏗 กำลังสร้าง {pct}%";
+                    }
+                    else _prodValTxt.text = "กำลังสร้าง";
+                    _prodValTxt.color = (assigned <= 0) ? CWarn : CAccent;
+                }
+                else
+                {
+                    _prodValTxt.text = $"{Mathf.RoundToInt(actual)} / วัน";
+                    _prodValTxt.color = (assigned == 0 && required > 0) ? CWarn : CAccent;
+                }
+            }
+            if (_workerValTxt != null)
+                _workerValTxt.text = required > 0 ? $"{assigned} / {required} คน" : "ไม่ต้องใช้";
+            if (_workerMinus != null) _workerMinus.interactable = required > 0 && assigned > 0;
+            if (_workerPlus  != null) _workerPlus.interactable  = required > 0 && assigned < required && idle > 0;
+
+            // โรงน้ำ §4: บรรทัดสกัดดิวเทอเรียม (กินน้ำ) — เฉพาะอาคารที่มี deuteriumProduction
+            if (_extractRow != null)
+            {
+                bool isExtractor = data.deuteriumProduction > 0f;
+                _extractRow.SetActive(isExtractor);
+                if (isExtractor && _extractTxt != null)
+                {
+                    if (level < BuildingRegistry.Instance.maxBuildingLevel)
+                        _extractTxt.text = "🧪 สกัดดิวเทอเรียม: ปลดล็อกที่ Lv.3";
+                    else if (required > 0 && assigned == 0)
+                        _extractTxt.text = "🧪 สกัดดิวเทอเรียม: ต้องมีคนงานประจำ";
+                    else
+                    {
+                        float wScale = required > 0 ? Mathf.Clamp01((float)assigned / required) : 1f;
+                        float ratio = ResourceManager.Instance != null ? ResourceManager.Instance.deuteriumWaterPerUnit : 25f;
+                        float d = data.deuteriumProduction * wScale;
+                        _extractTxt.text = $"🧪 สกัดดิวเทอเรียม +{Mathf.RoundToInt(d)}/วัน (ใช้น้ำ {Mathf.RoundToInt(d * ratio)}/วัน)";
+                    }
+                }
+            }
+
+            // ระดับปัจจุบัน
+            if (_bigLvTxt != null) _bigLvTxt.text = level.ToString();
+            if (_maxLvTxt != null) _maxLvTxt.text = $"สูงสุด Lv {maxLv}";
+
+            // การ์ดอัปเกรด
+            for (int i = 0; i < _cards.Length; i++)
+            {
+                int lv = i + 1;
+                var c = _cards[i];
+                if (c.root != null) c.root.SetActive(lv <= maxLv);
+                if (lv > maxLv) continue;
+                if (c.lv != null) c.lv.text = $"Lv.{lv}";
+                if (c.sprite != null) { c.sprite.sprite = data.sprite; c.sprite.enabled = data.sprite != null; }
+                if (c.output != null) c.output.text = primBase > 0f
+                    ? $"{primEmoji}+{Mathf.RoundToInt(primBase * ResourceManager.LevelMultiplier(lv))} /วัน" : "—";
+                bool current = lv == level, done = lv < level;
+                if (c.status != null)
+                {
+                    c.status.text = current ? "ปัจจุบัน" : done ? "✔" : "🔒";
+                    c.status.color = current ? CGold : done ? CAccent : CMuted;
+                }
+                if (c.frame != null) c.frame.effectColor = current ? CGold : (done ? CBorder : new Color(0.22f,0.24f,0.22f,1f));
+            }
+
+            // แถวต้นทุน + ปุ่มอัปเกรด
+            if (isMax)
+            {
+                if (_reqTitleTxt != null) _reqTitleTxt.text = "ระดับสูงสุดแล้ว ✔";
+                SetReq(_reqEnergyTxt, "—"); SetReq(_reqIronTxt, "—"); SetReq(_reqWorkerTxt, "—"); SetReq(_reqTimeTxt, "—");
+                if (_warnTxt != null) _warnTxt.gameObject.SetActive(false);
+                if (_upgradeBtn != null) { _upgradeBtn.interactable = false; _upgradeBtnTxt.text = "สูงสุดแล้ว"; }
+            }
+            else
+            {
+                int nextLv = level + 1;
+                int ironCost = data.upgradeIronCost * level;
+                int energyCost = data.upgradeEnergyCost * level;
+                int nextWorkers = data.WorkersForLevel(nextLv);
+                bool afford = CanAfford(ironCost, energyCost);
+
+                if (_reqTitleTxt != null) _reqTitleTxt.text = $"ความต้องการสำหรับ Lv {nextLv}";
+                SetReqCol(_reqEnergyTxt, energyCost > 0 ? energyCost.ToString() : "—",
+                          energyCost == 0 || (ResourceManager.Instance == null || ResourceManager.Instance.Current.energy >= energyCost));
+                SetReqCol(_reqIronTxt, ironCost.ToString(),
+                          ResourceManager.Instance == null || ResourceManager.Instance.Current.iron >= ironCost);
+                SetReq(_reqWorkerTxt, $"{assigned} / {nextWorkers}");
+                SetReq(_reqTimeTxt, "ทันที");
+                if (_warnTxt != null) _warnTxt.gameObject.SetActive(!afford);
+                if (_upgradeBtn != null)
+                {
+                    _upgradeBtn.interactable = afford;
+                    if (_upgradeBtn.image != null) _upgradeBtn.image.color = afford ? CBtn : CBtnDim;
+                    if (_upgradeBtnTxt != null) _upgradeBtnTxt.text = "⬆ อัปเกรด";
+                }
+            }
+        }
+
+        private void SetReq(Text t, string s) { if (t != null) { t.text = s; t.color = CText; } }
+        private void SetReqCol(Text t, string s, bool ok) { if (t != null) { t.text = s; t.color = ok ? CText : CWarn; } }
+
+        // resource หลักของอาคาร (emoji, label, ผลผลิตฐาน/วันที่ L1 เต็มคน)
+        private static (string, string, float) PrimaryOutput(BuildingData d)
+        {
+            if (d.energyProduction > 0f) return ("⚡", "ไฟฟ้า", d.energyProduction);
+            if (d.waterProduction  > 0f) return ("💧", "น้ำ", d.waterProduction);
+            if (d.foodProduction   > 0f) return ("🌿", "อาหาร", d.foodProduction);
+            if (d.knowledgeProduction > 0f) return ("📖", "ความรู้", d.knowledgeProduction);
+            if (d.ironProduction   > 0f || d.isOreNode) return ("⛏", "แร่เหล็ก", d.ironProduction);
+            return ("⚙", "ผลผลิต", 0f);
+        }
+
+        private float ActualPrimaryOutput(BuildingData d, int level, float primBase, int required, int assigned)
+        {
+            if (required > 0 && assigned == 0) return 0f;
+            float workerScale = required > 0 ? Mathf.Clamp01((float)assigned / required) : 1f;
+            var crisis = CrisisEffectManager.Instance;
+            var wam = WorkerAssignmentManager.Instance;
+            int total = wam != null ? wam.TotalAssigned : 0;
+            int busy = crisis != null ? crisis.BusyWorkers : 0;
+            float busyF = total > 0 ? (float)CrisisEffectMath.EffectiveWorkers(total, busy) / total : 1f;
+            float eff = crisis != null ? crisis.WorkerEfficiencyMultiplier : 1f;
+
+            float lvlMul = ResourceManager.LevelMultiplier(level);
+            float foodYield = (d.foodProduction > 0f && crisis != null) ? crisis.FoodYieldMultiplier : 1f;
+            return primBase * workerScale * busyF * lvlMul * eff * foodYield;
+        }
+
+        private static bool CanAfford(int iron, int energy)
+        {
+            var rm = ResourceManager.Instance;
+            if (rm == null) return true;
+            return rm.Current.iron >= iron && rm.Current.energy >= energy;
+        }
+
+        // ─────────────── actions ───────────────
+        private void OnUpgrade() { if (_shown) EventManager.Instance.RaiseUpgradeBuildingRequested(_currentCell); }
+        private void OnPlus()    { if (_shown) EventManager.Instance.RaiseWorkerAssignRequested(_currentCell, +1); }
+        private void OnMinus()   { if (_shown) EventManager.Instance.RaiseWorkerAssignRequested(_currentCell, -1); }
+
+        private void HandleWorkerChanged(Vector2Int c, int n)      { if (_shown) Refresh(); }
+        private void HandleWorkerPoolChanged(int idle, int total)  { if (_shown) Refresh(); }
+        private void HandleResourceChanged(ResourceData _)         { if (_shown) Refresh(); }
+        private void HandleBuildingUpgraded(Vector2Int c, int lv)  { if (_shown && c == _currentCell) Refresh(); }
+        private void HandleConstructionProgress(Vector2Int c, int p){ if (_shown && c == _currentCell) Refresh(); }
+        private void HandleConstructionCompleted(Vector2Int c, BuildingData _){ if (_shown && c == _currentCell) Refresh(); }
+        private void HandleBuildingRemoved(Vector2Int c)           { if (_shown && c == _currentCell) Hide(); }
+        private void HandleBuildingSelected(BuildingData d)        { _placing = d != null; }
+        private void HandleDemolishModeToggled(bool a)            { _demolishing = a; }
+
+        // ═══════════════════════════ BUILD UI (runtime) ═══════════════════════════
+        private void BuildPanel()
+        {
+            var canvas = panel != null ? panel.GetComponentInParent<Canvas>() : GetComponentInParent<Canvas>();
+            Transform parent = canvas != null ? canvas.transform : (panel != null ? panel.transform.parent : transform);
+
+            // backdrop มืดโปร่งเต็มจอ (กันคลิกทะลุ + โฟกัส)
+            _backdrop = Panel("BuildingStatusBackdrop", parent, CBackdrop);
+            Stretch(_backdrop.GetComponent<RectTransform>());
+            var bdBtn = _backdrop.AddComponent<Button>(); bdBtn.transition = Selectable.Transition.None;
+            bdBtn.onClick.AddListener(Hide);
+
+            // root panel
+            _root = Panel("BuildingStatusPanel", _backdrop.transform, CPanel);
+            _rootRect = _root.GetComponent<RectTransform>();
+            _rootRect.anchorMin = _rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+            _rootRect.pivot = new Vector2(0.5f, 0.5f);
+            _rootRect.sizeDelta = panelSize;
+            _rootRect.anchoredPosition = hudAnchoredPosition;
+            AddBorder(_root, CBorder, 3f);
+            // _root มี Image (พื้น) เป็น raycast target อยู่แล้ว → คลิกในแผงไม่ทะลุไปโดน backdrop (ไม่ปิด)
+
+            float W = panelSize.x, H = panelSize.y, pad = 22f;
+
+            // ===== HEADER =====
+            _iconImg = Img("HdrIcon", _root.transform, CAccent);
+            SetRect(_iconImg.rectTransform, new Vector2(0,1),new Vector2(0,1),new Vector2(0,1), new Vector2(pad+2, -pad-2), new Vector2(46,46));
+            _iconImg.preserveAspect = true;
+
+            _nameTxt = Txt("HdrName", _root.transform, "อาคาร", 34, CText, TextAnchor.UpperLeft, FontStyle.Bold);
+            SetRect(_nameTxt.rectTransform, new Vector2(0,1),new Vector2(0,1),new Vector2(0,1), new Vector2(pad+58, -pad), new Vector2(520,44));
+
+            _headLvTxt = Txt("HdrLv", _root.transform, "Lv. 1", 28, CGold, TextAnchor.UpperLeft, FontStyle.Bold);
+            SetRect(_headLvTxt.rectTransform, new Vector2(0,1),new Vector2(0,1),new Vector2(0,1), new Vector2(pad+340, -pad), new Vector2(160,40));
+
+            _descTxt = Txt("HdrDesc", _root.transform, "", 17, CMuted, TextAnchor.UpperLeft);
+            SetRect(_descTxt.rectTransform, new Vector2(0,1),new Vector2(0,1),new Vector2(0,1), new Vector2(pad+58, -pad-42), new Vector2(560,26));
+
+            _hintTxt = Txt("HdrHint", _root.transform, "", 15, CAccent, TextAnchor.UpperLeft);
+            SetRect(_hintTxt.rectTransform, new Vector2(0,1),new Vector2(0,1),new Vector2(0,1), new Vector2(pad+58, -pad-66), new Vector2(560,22));
+
+            var close = Btn("CloseBtn", _root.transform, "✕", 26, CClose);
+            SetRect(((RectTransform)close.transform), new Vector2(1,1),new Vector2(1,1),new Vector2(1,1), new Vector2(-pad, -pad), new Vector2(52,52));
+            close.onClick.AddListener(Hide);
+
+            // ===== BODY (สไปรต์ | ข้อมูล | ระดับปัจจุบัน) =====
+            float bodyTop = -110f, bodyH = 300f;
+            // left sprite box
+            var spriteBox = Panel("SpriteBox", _root.transform, CInset2);
+            SetRect(spriteBox.GetComponent<RectTransform>(), new Vector2(0,1),new Vector2(0,1),new Vector2(0,1), new Vector2(pad, bodyTop), new Vector2(360, bodyH));
+            AddBorder(spriteBox, CBorder, 2f);
+            _spriteImg = Img("BuildingSprite", spriteBox.transform, Color.white);
+            SetRect(_spriteImg.rectTransform, new Vector2(0.5f,0.5f),new Vector2(0.5f,0.5f),new Vector2(0.5f,0.5f), Vector2.zero, new Vector2(300,260));
+            _spriteImg.preserveAspect = true;
+
+            // middle info box
+            var infoBox = Panel("InfoBox", _root.transform, CInset);
+            SetRect(infoBox.GetComponent<RectTransform>(), new Vector2(0,1),new Vector2(0,1),new Vector2(0,1), new Vector2(pad+380, bodyTop), new Vector2(W-360-320-pad*2-24, bodyH));
+            AddBorder(infoBox, CBorder, 2f);
+            float infoW = W-360-320-pad*2-24;
+
+            // ผลิต row
+            var prodRow = Panel("ProdRow", infoBox.transform, CInset2);
+            SetRect(prodRow.GetComponent<RectTransform>(), new Vector2(0,1),new Vector2(1,1),new Vector2(0.5f,1), new Vector2(0,-16), new Vector2(-28,54));
+            _prodLabelTxt = Txt("ProdLabel", prodRow.transform, "⚡ ไฟฟ้า ที่ผลิต", 20, CText, TextAnchor.MiddleLeft);
+            SetRect(_prodLabelTxt.rectTransform, new Vector2(0,0),new Vector2(0.6f,1),new Vector2(0,0.5f), new Vector2(16,0), Vector2.zero);
+            _prodValTxt = Txt("ProdVal", prodRow.transform, "0 / วัน", 22, CAccent, TextAnchor.MiddleRight, FontStyle.Bold);
+            SetRect(_prodValTxt.rectTransform, new Vector2(0.55f,0),new Vector2(1,1),new Vector2(1,0.5f), new Vector2(-16,0), Vector2.zero);
+
+            // คนงาน row
+            var wRow = Panel("WorkerRow", infoBox.transform, CInset2);
+            SetRect(wRow.GetComponent<RectTransform>(), new Vector2(0,1),new Vector2(1,1),new Vector2(0.5f,1), new Vector2(0,-78), new Vector2(-28,54));
+            var wLabel = Txt("WLabel", wRow.transform, "👤 คนงานที่ใช้", 20, CText, TextAnchor.MiddleLeft);
+            SetRect(wLabel.rectTransform, new Vector2(0,0),new Vector2(0.5f,1),new Vector2(0,0.5f), new Vector2(16,0), Vector2.zero);
+            _workerMinus = Btn("WMinus", wRow.transform, "−", 24, new Color(0.55f,0.24f,0.22f));
+            SetRect((RectTransform)_workerMinus.transform, new Vector2(1,0.5f),new Vector2(1,0.5f),new Vector2(1,0.5f), new Vector2(-150,0), new Vector2(40,40));
+            _workerMinus.onClick.AddListener(OnMinus);
+            _workerValTxt = Txt("WVal", wRow.transform, "0 / 0 คน", 20, CAccent, TextAnchor.MiddleCenter, FontStyle.Bold);
+            SetRect(_workerValTxt.rectTransform, new Vector2(1,0.5f),new Vector2(1,0.5f),new Vector2(1,0.5f), new Vector2(-96,0), new Vector2(110,40));
+            _workerPlus = Btn("WPlus", wRow.transform, "+", 24, CBtn);
+            SetRect((RectTransform)_workerPlus.transform, new Vector2(1,0.5f),new Vector2(1,0.5f),new Vector2(1,0.5f), new Vector2(-24,0), new Vector2(40,40));
+            _workerPlus.onClick.AddListener(OnPlus);
+
+            // สกัดดิวเทอเรียม row (เฉพาะโรงน้ำ §4) — กินน้ำแปลงเป็นเชื้อเพลิงฟิวชัน
+            _extractRow = Panel("ExtractRow", infoBox.transform, CInset2);
+            SetRect(_extractRow.GetComponent<RectTransform>(), new Vector2(0,1),new Vector2(1,1),new Vector2(0.5f,1), new Vector2(0,-140), new Vector2(-28,54));
+            _extractTxt = Txt("ExtractVal", _extractRow.transform, "", 17, CGold, TextAnchor.MiddleLeft);
+            SetRect(_extractTxt.rectTransform, new Vector2(0,0),new Vector2(1,1),new Vector2(0.5f,0.5f), new Vector2(16,0), new Vector2(-28,0));
+
+            // right level box
+            _lvBox = Panel("LevelBox", _root.transform, CInset);
+            SetRect(_lvBox.GetComponent<RectTransform>(), new Vector2(1,1),new Vector2(1,1),new Vector2(1,1), new Vector2(-pad, bodyTop), new Vector2(300, bodyH));
+            AddBorder(_lvBox, CBorder, 2f);
+            var lvTitle = Txt("LvTitle", _lvBox.transform, "ระดับปัจจุบัน", 20, CText, TextAnchor.UpperCenter, FontStyle.Bold);
+            SetRect(lvTitle.rectTransform, new Vector2(0,1),new Vector2(1,1),new Vector2(0.5f,1), new Vector2(0,-16), new Vector2(-20,28));
+            _bigLvTxt = Txt("BigLv", _lvBox.transform, "1", 90, CGold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            SetRect(_bigLvTxt.rectTransform, new Vector2(0.5f,0.5f),new Vector2(0.5f,0.5f),new Vector2(0.5f,0.5f), new Vector2(0,10), new Vector2(180,140));
+            _maxLvTxt = Txt("MaxLv", _lvBox.transform, "สูงสุด Lv 3", 18, CMuted, TextAnchor.LowerCenter);
+            SetRect(_maxLvTxt.rectTransform, new Vector2(0,0),new Vector2(1,0),new Vector2(0.5f,0), new Vector2(0,18), new Vector2(-20,26));
+
+            // ===== UPGRADE CARDS =====
+            _upTitleTxt = Txt("UpTitle", _root.transform, "⬆ อัปเกรด", 22, CAccent, TextAnchor.UpperLeft, FontStyle.Bold);
+            SetRect(_upTitleTxt.rectTransform, new Vector2(0,1),new Vector2(0,1),new Vector2(0,1), new Vector2(pad, bodyTop-bodyH-18), new Vector2(300,30));
+
+            int maxCards = 3;
+            _cards = new LevelCard[maxCards];
+            float cardW = 190f, cardH = 210f, cardTop = bodyTop-bodyH-56, gap = 40f;
+            for (int i = 0; i < maxCards; i++)
+            {
+                var card = new LevelCard();
+                card.root = Panel($"Card{i+1}", _root.transform, CInset2);
+                SetRect(card.root.GetComponent<RectTransform>(), new Vector2(0,1),new Vector2(0,1),new Vector2(0,1),
+                        new Vector2(pad + i*(cardW+gap), cardTop), new Vector2(cardW, cardH));
+                card.frame = AddBorder(card.root, CBorder, 2f);
+                card.lv = Txt("Lv", card.root.transform, $"Lv.{i+1}", 22, CText, TextAnchor.UpperCenter, FontStyle.Bold);
+                SetRect(card.lv.rectTransform, new Vector2(0,1),new Vector2(1,1),new Vector2(0.5f,1), new Vector2(0,-10), new Vector2(-10,28));
+                card.sprite = Img("Sp", card.root.transform, Color.white);
+                SetRect(card.sprite.rectTransform, new Vector2(0.5f,1),new Vector2(0.5f,1),new Vector2(0.5f,1), new Vector2(0,-42), new Vector2(110,100));
+                card.sprite.preserveAspect = true;
+                card.output = Txt("Out", card.root.transform, "+0 /วัน", 18, CAccent, TextAnchor.MiddleCenter, FontStyle.Bold);
+                SetRect(card.output.rectTransform, new Vector2(0,0),new Vector2(1,0),new Vector2(0.5f,0), new Vector2(0,48), new Vector2(-10,26));
+                card.status = Txt("St", card.root.transform, "🔒", 18, CMuted, TextAnchor.LowerCenter);
+                SetRect(card.status.rectTransform, new Vector2(0,0),new Vector2(1,0),new Vector2(0.5f,0), new Vector2(0,14), new Vector2(-10,28));
+                _cards[i] = card;
+            }
+
+            // ===== REQUIREMENT ROW + UPGRADE BUTTON =====
+            _reqRow = Panel("ReqRow", _root.transform, CInset);
+            SetRect(_reqRow.GetComponent<RectTransform>(), new Vector2(0,0),new Vector2(1,0),new Vector2(0.5f,0), new Vector2(0,pad), new Vector2(-pad*2, 130));
+            AddBorder(_reqRow, CBorder, 2f);
+
+            _reqTitleTxt = Txt("ReqTitle", _reqRow.transform, "ความต้องการสำหรับ Lv 2", 18, CText, TextAnchor.UpperLeft, FontStyle.Bold);
+            SetRect(_reqTitleTxt.rectTransform, new Vector2(0,1),new Vector2(0.6f,1),new Vector2(0,1), new Vector2(18,-12), new Vector2(0,26));
+
+            // three cost items
+            _reqEnergyTxt = CostItem(_reqRow.transform, "⚡", "พลังงาน", 20);
+            _reqIronTxt   = CostItem(_reqRow.transform, "🧱", "วัสดุ", 250);
+            _reqWorkerTxt = CostItem(_reqRow.transform, "👷", "คนงาน", 480);
+            _reqTimeTxt   = Txt("ReqTime", _reqRow.transform, "ทันที", 18, CText, TextAnchor.MiddleLeft);
+            var timeLabel = Txt("TimeLabel", _reqRow.transform, "⏱ เวลาอัปเกรด", 16, CMuted, TextAnchor.MiddleLeft);
+            SetRect(timeLabel.rectTransform, new Vector2(0.55f,0),new Vector2(0.55f,0),new Vector2(0,0), new Vector2(20,60), new Vector2(180,24));
+            SetRect(_reqTimeTxt.rectTransform, new Vector2(0.55f,0),new Vector2(0.55f,0),new Vector2(0,0), new Vector2(20,30), new Vector2(180,26));
+
+            _warnTxt = Txt("Warn", _reqRow.transform, "⚠ ทรัพยากรไม่เพียงพอ", 15, CWarn, TextAnchor.MiddleLeft);
+            SetRect(_warnTxt.rectTransform, new Vector2(0.55f,0),new Vector2(0.55f,0),new Vector2(0,0), new Vector2(20,6), new Vector2(260,22));
+
+            var upBtnGo = Btn("UpgradeBtn", _reqRow.transform, "⬆ อัปเกรด", 24, CBtn);
+            _upgradeBtn = upBtnGo; _upgradeBtnTxt = upBtnGo.GetComponentInChildren<Text>();
+            SetRect((RectTransform)upBtnGo.transform, new Vector2(1,0.5f),new Vector2(1,0.5f),new Vector2(1,0.5f), new Vector2(-20,0), new Vector2(240,84));
+            upBtnGo.onClick.AddListener(OnUpgrade);
+        }
+
+        // cost item (ไอคอน+ป้าย ด้านบน · ค่า ด้านล่าง) คืน Text ของ "ค่า"
+        private Text CostItem(Transform parent, string emoji, string label, float x)
+        {
+            var lbl = Txt($"C_{label}", parent, $"{emoji} {label}", 16, CMuted, TextAnchor.MiddleLeft);
+            SetRect(lbl.rectTransform, new Vector2(0,0),new Vector2(0,0),new Vector2(0,0), new Vector2(x,60), new Vector2(150,24));
+            var val = Txt($"V_{label}", parent, "0", 22, CText, TextAnchor.MiddleLeft, FontStyle.Bold);
+            SetRect(val.rectTransform, new Vector2(0,0),new Vector2(0,0),new Vector2(0,0), new Vector2(x,26), new Vector2(150,28));
+            return val;
+        }
+
+        // ─────────── nameplate (hover) ───────────
+        private void ShowNameplate(string name)
+        {
+            EnsureNameplate();
+            if (_nameplateText.text != name) _nameplateText.text = name;
+            if (!_nameplate.activeSelf) _nameplate.SetActive(true);
+            _nameplateRect.position = (Vector2)Input.mousePosition + new Vector2(0f, 26f);
+        }
+        private void HideNameplate() { if (_nameplate != null && _nameplate.activeSelf) _nameplate.SetActive(false); }
+
+        private void EnsureNameplate()
+        {
+            if (_nameplate != null) return;
+            var canvas = GetComponentInParent<Canvas>() ?? (_root != null ? _root.GetComponentInParent<Canvas>() : null);
+            Transform parent = canvas != null ? canvas.transform : transform;
+            _nameplate = new GameObject("BuildingNameplate", typeof(RectTransform), typeof(Image));
+            _nameplate.transform.SetParent(parent, false);
+            _nameplateRect = _nameplate.GetComponent<RectTransform>();
+            _nameplateRect.pivot = new Vector2(0.5f, 0f);
+            var bg = _nameplate.GetComponent<Image>(); bg.color = new Color(0.08f,0.09f,0.12f,0.86f); bg.raycastTarget = false;
+            var fit = _nameplate.AddComponent<ContentSizeFitter>();
+            fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize; fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var pad = _nameplate.AddComponent<HorizontalLayoutGroup>(); pad.padding = new RectOffset(14,14,6,6); pad.childAlignment = TextAnchor.MiddleCenter;
+            var t = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            t.transform.SetParent(_nameplate.transform, false);
+            _nameplateText = t.GetComponent<Text>();
+            _nameplateText.font = _font; _nameplateText.fontSize = 22; _nameplateText.color = Color.white;
+            _nameplateText.alignment = TextAnchor.MiddleCenter; _nameplateText.raycastTarget = false;
+            _nameplateText.horizontalOverflow = HorizontalWrapMode.Overflow; _nameplateText.verticalOverflow = VerticalWrapMode.Overflow;
+            _nameplate.transform.SetAsLastSibling(); _nameplate.SetActive(false);
+        }
+
+        // ─────────── UI helpers ───────────
+        private GameObject Panel(string name, Transform parent, Color col)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            go.GetComponent<Image>().color = col;
+            return go;
+        }
+        private Image Img(string name, Transform parent, Color col)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>(); img.color = col;
+            return img;
+        }
+        private Text Txt(string name, Transform parent, string text, int size, Color col, TextAnchor anchor, FontStyle style = FontStyle.Normal)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Text));
+            go.transform.SetParent(parent, false);
+            var t = go.GetComponent<Text>();
+            t.font = _font; t.text = text; t.fontSize = size; t.color = col; t.alignment = anchor; t.fontStyle = style;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow; t.verticalOverflow = VerticalWrapMode.Overflow;
+            return t;
+        }
+        private Button Btn(string name, Transform parent, string label, int size, Color col)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            go.GetComponent<Image>().color = col;
+            var t = Txt("T", go.transform, label, size, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+            Stretch(t.rectTransform);
+            t.raycastTarget = false;
+            var b = go.GetComponent<Button>();
+            var cb = b.colors; cb.disabledColor = new Color(0.4f,0.4f,0.4f,0.6f); b.colors = cb;
+            return b;
+        }
+        // ขอบ = Outline บน Image พื้นทึบของตัว panel เอง (พื้นทึบบังกลาง เหลือขอบ w รอบๆ เป็นเส้นกรอบสะอาด)
+        private Outline AddBorder(GameObject target, Color col, float w)
+        {
+            var ol = target.AddComponent<Outline>();
+            ol.effectColor = col;
+            ol.effectDistance = new Vector2(w, w);
+            ol.useGraphicAlpha = false;
+            return ol;
+        }
+        private static void Stretch(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+        }
+        // anchor min/max/pivot + anchoredPos + sizeDelta
+        private static void SetRect(RectTransform rt, Vector2 aMin, Vector2 aMax, Vector2 pivot, Vector2 pos, Vector2 size)
+        {
+            rt.anchorMin = aMin; rt.anchorMax = aMax; rt.pivot = pivot;
+            rt.anchoredPosition = pos; rt.sizeDelta = size;
+        }
+
+        private static Font LoadFont()
+        {
+            var f = Resources.Load<Font>("Fonts/Kanit-Regular");
+            if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return f;
         }
     }
 }

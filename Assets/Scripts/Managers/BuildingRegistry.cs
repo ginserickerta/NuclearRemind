@@ -28,6 +28,35 @@ namespace NuclearReMind
         /// <summary>ระดับปัจจุบันของอาคารที่ cell นี้ (1 ถ้าไม่พบ)</summary>
         public int GetLevel(Vector2Int cell) => _levels.TryGetValue(cell, out int lvl) ? lvl : 1;
 
+        /// <summary>
+        /// คนงานสูงสุด (เพดานผลิต) ของอาคารที่ origin cell นี้ ตามเลเวลปัจจุบัน (0 ถ้าไม่พบอาคาร)
+        /// ใช้ร่วมกันโดย WorkerAssignmentManager (cap), ResourceManager (ตัวหาร workerScale) และ UI
+        /// </summary>
+        public int WorkersRequired(Vector2Int cell)
+            => _placedBuildings.TryGetValue(cell, out var data) && data != null
+               ? data.WorkersForLevel(GetLevel(cell)) : 0;
+
+        /// <summary>
+        /// หาอาคารที่ footprint ครอบ cell นี้ (ไม่ใช่แค่ช่อง origin) — คืน origin + data
+        /// ใช้กับคลิก/hover อาคารหลายช่องให้ตอบทุกช่องของตัวอาคาร (ล้อ MemorialPanelController)
+        /// </summary>
+        public bool TryGetBuildingAt(Vector2Int cell, out Vector2Int origin, out BuildingData data)
+        {
+            foreach (var kvp in _placedBuildings)
+            {
+                var o = kvp.Key;
+                var d = kvp.Value;
+                if (d == null) continue;
+                int sx = Mathf.Max(1, d.size.x);
+                int sy = Mathf.Max(1, d.size.y);
+                if (cell.x >= o.x && cell.x < o.x + sx && cell.y >= o.y && cell.y < o.y + sy)
+                {
+                    origin = o; data = d; return true;
+                }
+            }
+            origin = default; data = null; return false;
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)

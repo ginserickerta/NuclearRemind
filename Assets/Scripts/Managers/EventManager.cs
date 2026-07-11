@@ -58,6 +58,7 @@ namespace NuclearReMind
         public event Action<int> OnOverclockModeRequested; // UI → CoreTowerManager (0..3)
         public event Action<int> OnOverclockModeChanged;   // CoreTowerManager → UI (โหมดปัจจุบัน)
         public event Action OnScramRequested;              // UI → CoreTowerManager (กดปุ่ม SCRAM)
+        public event Action<ReactorAllocation, int> OnReactorAllocationAdjust; // UI → CoreTowerManager (จัดสรรเชื้อเพลิง/หล่อเย็น ±)
 
         // ===== Game State =====
         public event Action<GameManager.GameState> OnGameStateChanged;
@@ -133,6 +134,7 @@ namespace NuclearReMind
         // ===== Inventory (GDD §13 — ไอเทมคราฟต์ · InventoryManager) =====
         public event Action<string> OnCraftItemRequested;   // UI → InventoryManager (itemId)
         public event Action<string> OnUseItemRequested;     // UI → InventoryManager (itemId)
+        public event Action<string> OnDiscardItemRequested; // UI → InventoryManager (ทิ้งไอเทมทั้งสแต็ก)
         public event Action<ItemSO> OnItemCrafted;          // InventoryManager → UI/feedback (ได้ของแล้ว)
         public event Action<ItemSO> OnItemUsed;             // InventoryManager → CoreTower/CrisisEffect (ผลไอเทมตาม field ใน asset)
         public event Action OnInventoryChanged;             // จำนวนถือครองเปลี่ยน → UI refresh
@@ -200,6 +202,7 @@ namespace NuclearReMind
         public void RaiseOverclockModeRequested(int mode) => OnOverclockModeRequested?.Invoke(mode);
         public void RaiseOverclockModeChanged(int mode) => OnOverclockModeChanged?.Invoke(mode);
         public void RaiseScramRequested() => OnScramRequested?.Invoke();
+        public void RaiseReactorAllocationAdjust(ReactorAllocation kind, int delta) => OnReactorAllocationAdjust?.Invoke(kind, delta);
 
         // ===== Game State =====
         public void RaiseGameStateChanged(GameManager.GameState newState) => OnGameStateChanged?.Invoke(newState);
@@ -275,6 +278,7 @@ namespace NuclearReMind
         // ===== Inventory =====
         public void RaiseCraftItemRequested(string itemId) => OnCraftItemRequested?.Invoke(itemId);
         public void RaiseUseItemRequested(string itemId) => OnUseItemRequested?.Invoke(itemId);
+        public void RaiseDiscardItemRequested(string itemId) => OnDiscardItemRequested?.Invoke(itemId);
         public void RaiseItemCrafted(ItemSO item) => OnItemCrafted?.Invoke(item);
         public void RaiseItemUsed(ItemSO item) => OnItemUsed?.Invoke(item);
         public void RaiseInventoryChanged() => OnInventoryChanged?.Invoke();
