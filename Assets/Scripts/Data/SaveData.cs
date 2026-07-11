@@ -47,5 +47,11 @@ namespace NuclearReMind
 
         // ===== Inventory (GDD §13 — ไอเทมคราฟต์) — default ว่าง: เซฟเก่าโหลดได้ (คลังว่าง) =====
         public InventoryData inventory = new InventoryData();
+
+        // ===== Research (ResearchLab_Spec — โครงการวิจัย 3 อัน) — default false: เซฟเก่า = ยังไม่วิจัย =====
+        public bool researchSeedsDone = false;      // เมล็ดพันธุ์ฉายรังสี (ผลผลิตฟาร์ม +100% ถาวร)
+        public bool researchIsotopeDone = false;    // ยาไอโซโทปการแพทย์ (รักษาป่วย ≤15)
+        public bool researchCoreUnlockDone = false; // ปลดล็อก CORE TOWER (เงื่อนไขก่อนเดินเตา)
+        public bool researchIsotopePending = false; // จ่ายค่ายาไอโซโทปแล้ว — รอวันที่เตาโหมด Idle
     }
 }

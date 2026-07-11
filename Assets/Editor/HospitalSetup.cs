@@ -49,7 +49,7 @@ namespace NuclearReMind.EditorTools
 
             data.buildingName = "โรงพยาบาล"; // restore-by-name key — ห้ามซ้ำกับ asset อื่น
             data.description = "รักษาคนป่วยจากรังสีและลดรังสีสะสมของเมือง — ต้องมีแพทย์ประจำครบ 2 คนจึงทำงาน " +
-                               "(ฝึกแพทย์ได้ที่ห้องปฏิบัติการ)";
+                               "(สร้างเสร็จจึงปลดล็อกการฝึกแพทย์)";
             data.nuclearKnowledge = "หลัก ALARA (As Low As Reasonably Achievable): ลดการรับรังสีให้ต่ำที่สุดเท่าที่ทำได้ " +
                                     "ด้วยเวลา-ระยะห่าง-เกราะกำบัง · แพทย์เวชศาสตร์นิวเคลียร์ใช้ไอโอดีน-131 รักษาไทรอยด์ " +
                                     "และ Tc-99m สแกนอวัยวะ — รังสีรักษาชีวิตได้เมื่อใช้ถูกวิธี";
@@ -65,7 +65,8 @@ namespace NuclearReMind.EditorTools
             data.unlockPhase = 3; // GDD §6 "ปลดล็อก Phase 3" (วัน 11+)
             data.upgradeIronCost = 50;
             data.upgradeEnergyCost = 150;
-            // ไม่ตั้ง unlocks*Training ใดๆ — Lab เป็นศูนย์ฝึก (ยืนยันแล้ว)
+            // สเปกโรงวิจัย (ResearchLab_Spec §6): ฝึกแพทย์อยู่โรงพยาบาล — ต้องสร้างโรงพยาบาลก่อนจึงฝึก Medic
+            data.unlocksMedicTraining = true;
 
             if (data.sprite == null)
                 data.sprite = PlaceholderSpriteGenerator.EnsureBuildingSprite("Hospital");

@@ -6,7 +6,7 @@ namespace NuclearReMind.Editor
 {
     /// <summary>
     /// เฟส 3 (V4 §5) — ตั้งค่าระบบประชากร:
-    ///   • ธงปลดล็อกฝึกคลาสบน Laboratory (Engineer + Medic ชั่วคราวจน Hospital มา เฟส 6)
+    ///   • ธงปลดล็อกฝึกคลาสบน Laboratory (Engineer + Farmer — Medic อยู่โรงพยาบาล ตามสเปกโรงวิจัย)
     ///   • ระบบจัดสรรคนงานรายอาคาร (Worker sprites): WorkerAssignmentManager + WorkerVisualSpawner + sprite คนงาน
     /// รันผ่านเมนู NuclearReMind / Setup Phase 3 Population (ต้องเปิด Gamescene ก่อนเพื่อ wire object ในซีน)
     /// </summary>
@@ -17,12 +17,13 @@ namespace NuclearReMind.Editor
         [MenuItem("NuclearReMind/Setup Phase 3 Population")]
         public static void Apply()
         {
-            // 1) ธงปลดล็อกฝึกคลาสบน Laboratory — Lab เป็นศูนย์ฝึกทุกคลาส (Engineer/Medic/Farmer)
+            // 1) ธงปลดล็อกฝึกคลาส — สเปกโรงวิจัย (ResearchLab_Spec): Lab ฝึก Engineer/Farmer ·
+            //    Medic ย้ายไปโรงพยาบาล (Hospital → unlocksMedicTraining ตั้งใน HospitalSetup)
             var lab = AssetDatabase.LoadAssetAtPath<BuildingData>(Dir + "Laboratory.asset");
             if (lab != null)
             {
                 lab.unlocksEngineerTraining = true;
-                lab.unlocksMedicTraining = true;
+                lab.unlocksMedicTraining = false; // ★ สเปก §6: ฝึกแพทย์อยู่โรงพยาบาล ไม่ใช่ห้องวิจัย
                 lab.unlocksFarmerTraining = true;
                 EditorUtility.SetDirty(lab);
                 AssetDatabase.SaveAssets();

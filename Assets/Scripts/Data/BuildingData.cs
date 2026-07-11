@@ -23,6 +23,10 @@ namespace NuclearReMind
         [Header("Visual")]
         public Sprite sprite;
 
+        [Tooltip("สไปรต์ตามระดับอัปเกรด L1/L2/L3 (index 0 = L1) — ว่าง = ใช้ sprite เดี่ยวด้านบนทุกระดับ · " +
+                 "BuildingVisualSpawner สลับภาพให้เมื่ออัปเกรด")]
+        public Sprite[] levelSprites;
+
         [Tooltip("เลื่อนตำแหน่งภาพ sprite เทียบกับกึ่งกลางช่องที่วาง (world units) — " +
                  "X = ซ้าย/ขวา, Y = ขึ้น/ลง · (0,0) = นั่งกลาง footprint พอดี · ปรับทีละหลังได้ที่นี่")]
         public Vector2 spriteOffset = Vector2.zero;
@@ -133,6 +137,20 @@ namespace NuclearReMind
                 return Mathf.Max(0, workersPerLevel[idx]);
             }
             return Mathf.Max(0, workerRequired);
+        }
+
+        /// <summary>
+        /// สไปรต์สำหรับระดับอัปเกรด level (1-based) — ใช้ levelSprites[level-1] ถ้ามี
+        /// ไม่งั้น fallback เป็น sprite เดี่ยว (อาคารที่ยังไม่มี art แยกระดับ)
+        /// </summary>
+        public Sprite SpriteForLevel(int level)
+        {
+            if (levelSprites != null && levelSprites.Length > 0)
+            {
+                int idx = Mathf.Clamp(level - 1, 0, levelSprites.Length - 1);
+                if (levelSprites[idx] != null) return levelSprites[idx];
+            }
+            return sprite;
         }
     }
 }

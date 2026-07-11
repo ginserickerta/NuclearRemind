@@ -5,11 +5,17 @@ namespace NuclearReMind.Tests
 {
     /// <summary>
     /// พื้นแบ่งโซน "ฐานเนียนใบเดียว + โรย variety" (V4 §5) — IsoGroundPainter
-    /// ตรวจ: deterministic (คงที่ทุก fill) · แบ่งโซนถูก · index อยู่ในเซ็ตของโซนนั้น · variety ~12% · ฐานเนียนไม่มีหมากรุก
+    /// โมเดลกรอบ: Zone A = สี่เหลี่ยมกลาง · Zone B = กรอบรอบนอกหนา Border ช่อง
+    /// ตรวจ: deterministic · แบ่งโซนถูก (กลาง=หญ้า/รอบนอก=ดิน) · index อยู่ในเซ็ตของโซน · ฐานเนียนไม่มีหมากรุก
     /// </summary>
     public class IsoGroundPainterTests
     {
-        private const int ZoneA = 29; // กริด 43×28: Zone A cols 0..28 · Zone B 29..42
+        private const int Cols = 43;
+        private const int Rows = 43;
+        private const int Border = 7; // Zone B กรอบหนา 7 · Zone A = สี่เหลี่ยมกลาง cols/rows 7..35 (29×29)
+
+        private static int Idx(int x, int y) => IsoGroundPainter.TileIndexFor(x, y, Cols, Rows, Border);
+        private static bool ZoneA(int x, int y) => IsoGroundPainter.IsZoneA(x, y, Cols, Rows, Border);
 
         private static HashSet<int> Set(params int[][] arrs)
         {
@@ -22,42 +28,47 @@ namespace NuclearReMind.Tests
         public void Deterministic_SameCell_SameTile()
         {
             // เรียกซ้ำต้องได้ผลเท่าเดิมเสมอ — ไม่งั้นลายสลับทุก re-fill/โหลดเซฟ
-            for (int x = 0; x < 43; x++)
-                for (int y = 0; y < 28; y++)
-                    Assert.AreEqual(
-                        IsoGroundPainter.TileIndexFor(x, y, ZoneA),
-                        IsoGroundPainter.TileIndexFor(x, y, ZoneA),
-                        $"({x},{y}) ต้องคงที่");
+            for (int x = 0; x < Cols; x++)
+                for (int y = 0; y < Rows; y++)
+                    Assert.AreEqual(Idx(x, y), Idx(x, y), $"({x},{y}) ต้องคงที่");
         }
 
         [Test]
-        public void ZoneA_UsesOnlyGrassTiles()
+        public void ZoneA_CenterRect_UsesOnlyGrassTiles()
         {
             var grass = Set(IsoGroundPainter.GrassBase, IsoGroundPainter.GrassVariety);
-            for (int x = 0; x < ZoneA; x++)
-                for (int y = 0; y < 28; y++)
-                    Assert.IsTrue(grass.Contains(IsoGroundPainter.TileIndexFor(x, y, ZoneA)),
+            for (int x = Border; x < Cols - Border; x++)
+                for (int y = Border; y < Rows - Border; y++)
+                    Assert.IsTrue(grass.Contains(Idx(x, y)),
                         $"Zone A ({x},{y}) ต้องเป็นไทล์หญ้า");
         }
 
         [Test]
-        public void ZoneB_UsesOnlyDirtTiles()
+        public void ZoneB_OuterBorder_UsesOnlyDirtTiles()
         {
             var dirt = Set(IsoGroundPainter.DirtBase, IsoGroundPainter.DirtVariety);
-            for (int x = ZoneA; x < 43; x++)
-                for (int y = 0; y < 28; y++)
-                    Assert.IsTrue(dirt.Contains(IsoGroundPainter.TileIndexFor(x, y, ZoneA)),
-                        $"Zone B ({x},{y}) ต้องเป็นไทล์ดิน");
+            for (int x = 0; x < Cols; x++)
+                for (int y = 0; y < Rows; y++)
+                    if (!ZoneA(x, y)) // ทุกช่องนอกสี่เหลี่ยมกลาง = กรอบ Zone B
+                        Assert.IsTrue(dirt.Contains(Idx(x, y)),
+                            $"Zone B ({x},{y}) ต้องเป็นไทล์ดิน");
         }
 
         [Test]
-        public void ZoneBoundary_SplitsExactlyAtZoneAColumns()
+        public void ZoneBoundary_BorderRingExactlyThick()
         {
-            var grass = Set(IsoGroundPainter.GrassBase, IsoGroundPainter.GrassVariety);
-            var dirt = Set(IsoGroundPainter.DirtBase, IsoGroundPainter.DirtVariety);
-            // คอลัมน์สุดท้ายของ A = หญ้า · คอลัมน์แรกของ B = ดิน (ไม่เหลื่อม)
-            Assert.IsTrue(grass.Contains(IsoGroundPainter.TileIndexFor(ZoneA - 1, 5, ZoneA)), "col 28 = หญ้า");
-            Assert.IsTrue(dirt.Contains(IsoGroundPainter.TileIndexFor(ZoneA, 5, ZoneA)), "col 29 = ดิน");
+            // ขอบใน (border) = Zone A · หนึ่งช่องนอกนั้น = Zone B — ทั้ง 4 ด้านสมมาตร
+            Assert.IsTrue(ZoneA(Border, 20), $"col {Border} = Zone A (ขอบในซ้าย)");
+            Assert.IsFalse(ZoneA(Border - 1, 20), $"col {Border - 1} = Zone B (กรอบซ้าย)");
+            Assert.IsTrue(ZoneA(Cols - 1 - Border, 20), $"col {Cols - 1 - Border} = Zone A (ขอบในขวา)");
+            Assert.IsFalse(ZoneA(Cols - Border, 20), $"col {Cols - Border} = Zone B (กรอบขวา)");
+            Assert.IsTrue(ZoneA(20, Border), $"row {Border} = Zone A (ขอบในล่าง)");
+            Assert.IsFalse(ZoneA(20, Border - 1), $"row {Border - 1} = Zone B (กรอบล่าง)");
+            Assert.IsTrue(ZoneA(20, Rows - 1 - Border), $"row {Rows - 1 - Border} = Zone A (ขอบในบน)");
+            Assert.IsFalse(ZoneA(20, Rows - Border), $"row {Rows - Border} = Zone B (กรอบบน)");
+            // มุมทั้งสี่ต้องเป็น Zone B เสมอ
+            Assert.IsFalse(ZoneA(0, 0), "มุม (0,0) = Zone B");
+            Assert.IsFalse(ZoneA(Cols - 1, Rows - 1), "มุม (42,42) = Zone B");
         }
 
         [Test]
@@ -65,9 +76,9 @@ namespace NuclearReMind.Tests
         {
             var grassBase = new HashSet<int>(IsoGroundPainter.GrassBase);
             int variety = 0, total = 0;
-            for (int x = 0; x < ZoneA; x++)
-                for (int y = 0; y < 28; y++, total++)
-                    if (!grassBase.Contains(IsoGroundPainter.TileIndexFor(x, y, ZoneA))) variety++;
+            for (int x = Border; x < Cols - Border; x++)
+                for (int y = Border; y < Rows - Border; y++, total++)
+                    if (!grassBase.Contains(Idx(x, y))) variety++;
 
             double pct = 100.0 * variety / total;
             // ยึดตามค่าคงที่ (0 = พื้นเรียบสนิท) ยอมคลาดจาก hash distribution ±8%
@@ -82,10 +93,10 @@ namespace NuclearReMind.Tests
         {
             // เลิกลายหมากรุก — ช่องฐาน (ไม่ใช่ variety) ทุกช่องต้องเป็นไทล์ฐานใบเดียว ไม่ว่า parity ใด
             var grassBase = new HashSet<int>(IsoGroundPainter.GrassBase);
-            for (int x = 0; x < ZoneA; x++)
-                for (int y = 0; y < 28; y++)
+            for (int x = Border; x < Cols - Border; x++)
+                for (int y = Border; y < Rows - Border; y++)
                 {
-                    int t = IsoGroundPainter.TileIndexFor(x, y, ZoneA);
+                    int t = Idx(x, y);
                     if (grassBase.Contains(t))
                         Assert.AreEqual(IsoGroundPainter.GrassBase[0], t,
                             $"ฐาน ({x},{y}) ต้องเป็นไทล์เดียว (ไม่สลับ parity)");
@@ -95,12 +106,9 @@ namespace NuclearReMind.Tests
         [Test]
         public void AllIndices_AreValidTileRange()
         {
-            for (int x = 0; x < 43; x++)
-                for (int y = 0; y < 28; y++)
-                {
-                    int t = IsoGroundPainter.TileIndexFor(x, y, ZoneA);
-                    Assert.That(t, Is.InRange(0, 114), $"({x},{y}) index {t} ต้องอยู่ในช่วงไทล์ที่มีจริง");
-                }
+            for (int x = 0; x < Cols; x++)
+                for (int y = 0; y < Rows; y++)
+                    Assert.That(Idx(x, y), Is.InRange(0, 114), $"({x},{y}) index ต้องอยู่ในช่วงไทล์ที่มีจริง");
         }
 
         [Test]
@@ -108,7 +116,7 @@ namespace NuclearReMind.Tests
         {
             // % ต้องไม่ติดลบ — variety roll/pick พึ่งค่านี้
             for (int x = -5; x < 50; x++)
-                for (int y = -5; y < 40; y++)
+                for (int y = -5; y < 50; y++)
                     Assert.GreaterOrEqual(IsoGroundPainter.Hash(x, y), 0, $"hash({x},{y}) ต้อง ≥ 0");
         }
     }

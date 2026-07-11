@@ -123,6 +123,7 @@ namespace NuclearReMind
             EventManager.Instance.OnUpgradeToroidalRequested += UpgradeToroidal;
             EventManager.Instance.OnInstallPoloidalRequested += InstallPoloidal;
             EventManager.Instance.OnItemUsed               += HandleItemUsed;
+            EventManager.Instance.OnResearchCompleted      += HandleResearchCompleted;
         }
 
         private void OnDisable()
@@ -138,6 +139,7 @@ namespace NuclearReMind
             EventManager.Instance.OnUpgradeToroidalRequested -= UpgradeToroidal;
             EventManager.Instance.OnInstallPoloidalRequested -= InstallPoloidal;
             EventManager.Instance.OnItemUsed               -= HandleItemUsed;
+            EventManager.Instance.OnResearchCompleted      -= HandleResearchCompleted;
         }
 
         /// <summary>
@@ -155,7 +157,7 @@ namespace NuclearReMind
             EventManager.Instance.RaiseTowerProgressChanged(Current);
         }
 
-        // ───────────────────────── Unlock (Day 11) ─────────────────────────
+        // ───────────────────────── Unlock (Day 11 + วิจัย) ─────────────────────────
 
         private void HandleDayStarted(int day, bool timed)
         {
@@ -167,7 +169,20 @@ namespace NuclearReMind
                 EventManager.Instance.RaiseTowerProgressChanged(Current);
                 return;
             }
-            if (day < UnlockDay) return;
+            TryUnlock(day);
+        }
+
+        // ปลดเตาเมื่อครบ 2 เงื่อนไข: ถึงวัน (UnlockDay) + วิจัย "ปลดล็อก CORE TOWER" แล้ว (ResearchLab_Spec §3
+        // / GDD §6: ต้นทุนเตา "Iron 200 + Energy 200 + วิจัย") — read-only query · ไม่มี ResearchManager
+        // (เช่นใน EditMode tests) = ไม่บังคับวิจัย → พฤติกรรม Day 11 เดิมคงอยู่
+        private void TryUnlock(int day)
+        {
+            if (Current.isUnlocked || day < UnlockDay) return;
+            if (ResearchManager.Instance != null && !ResearchManager.Instance.CoreUnlockDone)
+            {
+                EventManager.Instance.RaiseNotice("CORE TOWER รอผลวิจัย 'ปลดล็อก CORE TOWER' จากห้องวิจัยก่อนเดินเครื่อง");
+                return;
+            }
 
             var t = Current;
             t.isUnlocked = true;
@@ -182,6 +197,25 @@ namespace NuclearReMind
             Debug.Log($"[CoreTower] ปลดล็อก Day {day} — CORE {StartPercent}%");
             EventManager.Instance.RaiseOverclockModeChanged(t.overclockMode);
             EventManager.Instance.RaiseTowerProgressChanged(Current);
+        }
+
+        // วิจัยเสร็จหลังถึง Day 11 แล้ว → ปลดเตาทันที (ไม่ต้องรอเช้าวันถัดไป)
+        private void HandleResearchCompleted(string projectId)
+        {
+            if (projectId != ResearchManager.ProjectCoreTower) return;
+            int day = GameManager.Instance != null ? GameManager.Instance.CurrentDay : 0;
+            TryUnlock(day);
+        }
+
+        // ควิซ #Tritium + #Tritium-2 (Codex_Spec v8) — เด้งตอน "ป้อน Tritium เข้าเตาครั้งแรก"
+        // latch ต่อรัน + AlreadyAnswered กันเด้งซ้ำข้ามเซฟ (precedent: OreDepositManager → Q5)
+        private bool _tritiumQuizFired;
+        private void TriggerTritiumQuizzesOnce()
+        {
+            if (_tritiumQuizFired) return;
+            _tritiumQuizFired = true;
+            if (QuizManager.Instance == null || QuizManager.Instance.AlreadyAnswered("QT1")) return;
+            QuizManager.Instance.TriggerByIds("QT1", "QT2");
         }
 
         // ───────────────────────── Turn (per day) ─────────────────────────
@@ -270,7 +304,10 @@ namespace NuclearReMind
 
                 if (deutFed > 0f) EventManager.Instance.RaiseResourceDelta(ResourceType.Deuterium, -deutFed * frac);
                 if (t.corePercent >= Phase3At && tritFed > 0f) // §7: เผา Tritium ช่วง CORE ≥ 80
+                {
                     EventManager.Instance.RaiseResourceDelta(ResourceType.Tritium, -tritFed * frac);
+                    TriggerTritiumQuizzesOnce(); // ควิซ #Tritium (Codex_Spec v8) — ป้อน Tritium ครั้งแรก
+                }
             }
 
             // ----- หล่อเย็น (§5): 15 + น้ำที่จัดสรร/10 + วิศวกรที่จัดสรร×4 + min(toroidalLv,3)×10 -----

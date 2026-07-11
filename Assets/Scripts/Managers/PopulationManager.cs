@@ -82,6 +82,7 @@ namespace NuclearReMind
             EventManager.Instance.OnPopulationDeaths += HandlePopulationDeaths;
             EventManager.Instance.OnPopulationSickInjected += HandlePopulationSickInjected;
             EventManager.Instance.OnPopulationSickSet += HandlePopulationSickSet;
+            EventManager.Instance.OnPopulationSickCured += HandlePopulationSickCured;
         }
 
         private void OnDisable()
@@ -101,6 +102,7 @@ namespace NuclearReMind
             EventManager.Instance.OnPopulationDeaths -= HandlePopulationDeaths;
             EventManager.Instance.OnPopulationSickInjected -= HandlePopulationSickInjected;
             EventManager.Instance.OnPopulationSickSet -= HandlePopulationSickSet;
+            EventManager.Instance.OnPopulationSickCured -= HandlePopulationSickCured;
         }
 
         private void Start()
@@ -178,10 +180,10 @@ namespace NuclearReMind
             TryTrain(trainEngineerFood, trainEngineerEnergy, WorkerClass.Engineer, className: "วิศวกร");
         }
 
-        /// <summary>ฝึกแพทย์ — ต้องมีห้องปฏิบัติการ, มี Worker ว่าง, จ่าย Food/Energy · เสร็จวันถัดไป</summary>
+        /// <summary>ฝึกแพทย์ — ต้องมีโรงพยาบาล (สเปกโรงวิจัย: Medic ฝึกที่ รพ.), มี Worker ว่าง, จ่าย Food/Energy · เสร็จวันถัดไป</summary>
         public void TrainMedic()
         {
-            if (!_medicUnlocked) { Notice("ต้องสร้างห้องปฏิบัติการก่อนจึงจะฝึกแพทย์ได้"); return; }
+            if (!_medicUnlocked) { Notice("ต้องสร้างโรงพยาบาลก่อนจึงจะฝึกแพทย์ได้"); return; }
             TryTrain(trainMedicFood, trainMedicEnergy, WorkerClass.Medic, className: "แพทย์");
         }
 
@@ -272,6 +274,17 @@ namespace NuclearReMind
         {
             var pop = Current;
             pop.sick = Mathf.Clamp(count, 0, pop.total);
+            Current = pop;
+            EventManager.Instance.RaisePopulationChanged(pop);
+        }
+
+        // รักษาป่วยสูงสุด count คน (ResearchLab_Spec: ยาไอโซโทปรักษา ≤15) — ResearchManager สั่งผ่าน event
+        private void HandlePopulationSickCured(int count)
+        {
+            if (count <= 0) return;
+            var pop = Current;
+            if (pop.sick <= 0) return;
+            pop.sick = Mathf.Max(0, pop.sick - count);
             Current = pop;
             EventManager.Instance.RaisePopulationChanged(pop);
         }

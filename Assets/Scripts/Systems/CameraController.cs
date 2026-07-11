@@ -61,19 +61,14 @@ namespace NuclearReMind
             if (centerOnCoreTowerAtStart) CenterOnCityCenter();
         }
 
-        // เล็งกล้องที่ "ศูนย์กลางเมือง" = กลางโซน A (คอลัมน์ 0..zoneA-1 ที่สร้างได้) ไม่ใช่กลางกริดเต็ม 43 คอลัมน์
-        // โซน B (ดิน/รังสี ขวาสุด cols zoneA..42) ล็อกไว้ ผู้เล่นไม่ได้ใช้ → กลางกริดเต็มจะดันวิวไปชิดประตูโซน ดูเบี้ยว
-        // อ่าน zoneAColumns จาก OreDepositManager (แหล่งความจริงเดียว) — ไม่พบ → fallback กลางกริดเต็ม (พฤติกรรมเดิม)
+        // เล็งกล้องที่ "ศูนย์กลางเมือง" — Zone A เป็นสี่เหลี่ยมกลางแมพ (กรอบ Zone B ล้อมรอบสมมาตร)
+        // → ศูนย์กลาง Zone A = กลางกริดพอดี เล็งตรงกลางกริดเต็มได้เลย
         private void CenterOnCityCenter()
         {
             var grid = GridManager.Instance;
             if (grid == null) return;
 
-            var ore = OreDepositManager.Instance;
-            int focusCols = (ore != null && ore.zoneAColumns > 0 && ore.zoneAColumns <= grid.columns)
-                ? ore.zoneAColumns : grid.columns;
-
-            Vector3 center = grid.IsoToWorldF((focusCols - 1) * 0.5f, (grid.rows - 1) * 0.5f);
+            Vector3 center = grid.IsoToWorldF((grid.columns - 1) * 0.5f, (grid.rows - 1) * 0.5f);
             transform.position = new Vector3(center.x, center.y, transform.position.z);
         }
 

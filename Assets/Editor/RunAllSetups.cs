@@ -20,7 +20,7 @@ namespace NuclearReMind.EditorTools
         private static readonly string[] MenuOrder =
         {
             // ★ ต้องมาก่อนทุกขั้นที่คำนวณตำแหน่งจากขนาดกริด (pre-placed CORE TOWER §16, อนุสรณ์, แหล่งแร่ A/B)
-            "NuclearReMind/Setup Grid 43x28",
+            "NuclearReMind/Setup Grid 43x43",
 
             "NuclearReMind/Setup HUD Canvas",
             "NuclearReMind/Setup/Resource Icons + Rebuild HUD", // ไอคอนจริง + rebuild HUD (ต้องหลัง HUD Canvas ก่อนขั้นอื่น wire ทับ)
@@ -46,13 +46,15 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Story Content", // beats/records/info cards/อนุสรณ์ (ต้องหลัง Story UI + Crisis + Quiz)
             "NuclearReMind/Setup Hospital (GDD §6)",       // โรงพยาบาล — asset + hotbar (ต้องหลัง Building Balance + Day 11)
             "NuclearReMind/Apply Building Art (Team Pixel Art)", // art จริงแทน placeholder (ต้องหลัง Hospital — asset เพิ่งถูกสร้าง)
+            "NuclearReMind/Apply Building Level Art (L1-L3)",    // art แยกระดับอัปเกรด L1/L2/L3 (ทับ sprite เดี่ยวด้วย L1 — หลัง Building Art)
+            "NuclearReMind/Setup Core Tower UI Sprites",         // ตั้ง import sprite แผง CORE TOWER เป็น Sprite (โหลด runtime)
             "NuclearReMind/Setup Ore Deposits (Zone A-B)", // แหล่งแร่ A/B + ถอด Mine จาก hotbar (ต้องหลัง Building Balance + Day 11)
             "NuclearReMind/Apply Resource Caps (V4 §4)",   // เพดานคลัง 9999 + ปลดสะพาน Tritium ของ Lab (หลัง Phase 6)
             "NuclearReMind/Setup/Atlas UI (building icons + cursors + speed)", // map icon ตาม index buildingHotbar — ต้องหลังทุกขั้นที่แก้ hotbar (Hospital/Ore Deposits/Resource Caps)
             "NuclearReMind/Update Building Hover Panel",    // ย้ายบาร์ก่อสร้างเข้าแผง hover (GDD §6 — หลัง HUD Canvas)
             "NuclearReMind/Setup Inventory (Items GDD §13)", // ItemSO 6 ชนิด + InventoryManager + แผงไอเทม (หลัง Hospital — pet_scanner ใช้ BuildingType.Hospital)
 
-            "NuclearReMind/Setup Zone Barrier (Fence + Gate)", // รั้ว/ประตูเส้นแบ่งโซน (ต้องหลัง Ore Deposits — sync zoneAColumns)
+            "NuclearReMind/Setup Zone Barrier (Fence + Gate)", // ปิดรั้วเส้นตั้ง (Zone B เป็นกรอบรอบนอกแล้ว — ไม่ใช้รั้ว)
             "NuclearReMind/Setup Ground Tiles (Team Grass)",   // Tile หญ้าจาก Map.PNG (fallback ถ้าไม่มีไทล์คัด)
             "NuclearReMind/Setup Iso Nature Tileset (Import Only)", // นำเข้าไทล์ IsoNature (fallback ชุดเต็ม)
             "NuclearReMind/Fix Isometric Sort (Tile Walls)",   // ตั้ง sort ให้บล็อกขอบเรียงถูก (ต้องก่อน Fill Grids)

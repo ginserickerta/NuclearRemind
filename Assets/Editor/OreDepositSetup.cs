@@ -13,9 +13,9 @@ namespace NuclearReMind.EditorTools
     ///   3. ต่อทั้งคู่เข้า BuildingRegistry.allBuildingData (ให้เซฟ restore ได้ — **คง Mine ไว้** เซฟเก่าต้องใช้)
     ///   4. ถอด Mine ออกจาก hotbar (เหล็กมาจากการขุดแหล่งแร่เท่านั้น — การตัดสินใจออกแบบ)
     ///   5. สร้าง GameObject "OreDepositManager" + wire assets (root เดี่ยว — idiom RadiationSetup)
-    ///   6. ตั้งเส้นแบ่งโซน zoneAColumns — โซน A = คอลัมน์ 0..28 (29×28) · โซน B = 29..42 (14×28)
+    ///   6. ตั้งความหนากรอบ Zone B — Zone A = สี่เหลี่ยมกลาง (29×29) · Zone B = กรอบรอบนอกหนา 7 ช่อง
     ///
-    /// ★ ที่นี่คือ "แหล่งความจริงเดียว" ของเส้นแบ่งโซน — ZoneBarrierSetup อ่านค่านี้ไปวางรั้ว/ประตูให้ตรงแนว
+    /// ★ ที่นี่คือ "แหล่งความจริงเดียว" ของการแบ่งโซน (zoneBorderThickness) — GridSpriteFiller อ่านไประบายพื้น
     /// รัน: เมนู NuclearReMind/Setup Ore Deposits (Zone A-B) — หรือรวมใน Run All Setups
     /// </summary>
     public static class OreDepositSetup
@@ -25,8 +25,8 @@ namespace NuclearReMind.EditorTools
         private const string SpriteFolder = "Assets/Sprites/Buildings";
         private const int PixelsPerUnit = 64; // เท่าอาคาร (BuildingPixelsPerUnit)
 
-        // คอลัมน์แรกของโซน B บนกริด 43×28 → โซน A กว้าง 29 ช่อง · โซน B กว้าง 14 ช่อง
-        private const int ZoneAColumns = 29;
+        // ความหนากรอบ Zone B รอบนอก (ช่อง) — กริด 43×43 · border 7 → Zone A สี่เหลี่ยมกลาง 29×29
+        private const int ZoneBorderThickness = 7;
 
         [MenuItem("NuclearReMind/Setup Ore Deposits (Zone A-B)")]
         public static void SetupAll()
@@ -181,13 +181,13 @@ namespace NuclearReMind.EditorTools
             if (mgr == null) mgr = go.AddComponent<OreDepositManager>();
             mgr.zoneANode = nodeA;
             mgr.zoneBNode = nodeB;
-            mgr.zoneAColumns = ZoneAColumns; // เส้นแบ่งโซน — ZoneBarrierSetup วางรั้วตามค่านี้
+            mgr.zoneBorderThickness = ZoneBorderThickness; // ความหนากรอบ Zone B รอบนอก
             EditorUtility.SetDirty(mgr);
 
             var grid = Object.FindFirstObjectByType<GridManager>();
-            if (grid != null && ZoneAColumns >= grid.columns)
-                Debug.LogWarning($"[OreDepositSetup] zoneAColumns ({ZoneAColumns}) ≥ กริด {grid.columns} คอลัมน์ " +
-                                 "— โซน B จะไม่เหลือพื้นที่ (รัน Setup Grid ก่อน)");
+            if (grid != null && ZoneBorderThickness * 2 >= Mathf.Min(grid.columns, grid.rows))
+                Debug.LogWarning($"[OreDepositSetup] border ({ZoneBorderThickness}) หนาเกินครึ่งกริด {grid.columns}×{grid.rows} " +
+                                 "— Zone A กลางจะไม่เหลือพื้นที่ (รัน Setup Grid ก่อน)");
         }
 
         private static bool AppendIfMissing(ref BuildingData[] array, BuildingData item)

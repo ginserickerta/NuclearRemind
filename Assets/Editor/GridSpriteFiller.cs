@@ -33,7 +33,10 @@ namespace NuclearReMind.Editor
         //   แยกโซนด้วย index ตามช่วง IsoTilesetSetup: ดิน 0–21 · หญ้า 22–40
         private const string ArtTilesFolder = "Assets/Sprites/Art/Tiles";
         private const string FlatTilesFolder = "Assets/Sprites/Art/Tiles/Flat";
+        private const string FlatDarkTilesFolder = "Assets/Sprites/Art/Tiles/Flat/Dark"; // คู่เข้ม (tint เทา) สำหรับลายหมากรุก
         private const int DirtMaxIndex = 21; // index ≤ 21 = ดิน (Zone B) · ≥ 22 = หญ้า (Zone A)
+        // Zone A (หญ้า) ใช้เฉพาะไทล์ "สีอ่อนเรียบ" — ตัดใบเข้ม/พุ่มไม้ออก (27,28,31,32) แล้วสุ่มต่อช่อง
+        private static readonly int[] ZoneAGrassIndices = { 22, 23, 24, 37, 38, 39 };
         private const string GroundObjectName = "Ground";
         private const string FogObjectName = "FogOfWar";
         // fallback เมื่อไม่พบ GridManager ในซีน — ขนาดจริงอ่านจาก GridManager.columns×rows
@@ -75,16 +78,22 @@ namespace NuclearReMind.Editor
             if (grid == null)
                 Debug.LogWarning($"[GridSpriteFiller] ไม่พบ GridManager — ใช้ fallback {FallbackColumns}×{FallbackRows}");
 
-            // ★ ทางหลัก: ไทล์ที่ผู้ใช้คัดไว้ — บล็อกเต็ม tile_XXX (ขอบหน้า) + หน้าบนแบน flat_XXX (ข้างใน)
-            var (blockGrass, blockDirt) = LoadZonedTiles(ArtTilesFolder, "tile_");
-            var (flatGrass, flatDirt) = LoadZonedTiles(FlatTilesFolder, "flat_");
+            // ★ ทางหลัก: ไทล์ที่ผู้ใช้คัดไว้ — Zone B ดิน = สุ่มทั้งชุด · Zone A หญ้า = แค่ ZoneAGrassIndices (สลับกัน)
+            var (_, blockDirt) = LoadZonedTiles(ArtTilesFolder, "tile_");
+            var (_, flatDirt) = LoadZonedTiles(FlatTilesFolder, "flat_");
+            var blockGrass = LoadTilesByIndex(ArtTilesFolder, "tile_", ZoneAGrassIndices);
+            var flatGrass = LoadTilesByIndex(FlatTilesFolder, "flat_", ZoneAGrassIndices);
+            var flatGrassDark = LoadTilesByIndex(FlatDarkTilesFolder, "flat_", ZoneAGrassIndices); // คู่เข้ม (parallel กับ flatGrass)
             if (blockGrass.Count > 0 || blockDirt.Count > 0)
             {
                 if (flatGrass.Count == 0 && flatDirt.Count == 0)
                     Debug.LogWarning("[GridSpriteFiller] ยังไม่มีไทล์แบน (flat_XXX) — ข้างในจะใช้บล็อกเต็ม (ผนังโผล่) · " +
                                      "รัน 'Flatten Ground Tiles (Top Face)' ก่อนเพื่อพื้นข้างในเรียบ");
-                int zoneA = ReadZoneAColumns();
-                int g = FillZonedRandom(GroundObjectName, flatGrass, flatDirt, blockGrass, blockDirt, columns, rows, zoneA);
+                if (flatGrassDark.Count != flatGrass.Count)
+                    Debug.LogWarning("[GridSpriteFiller] ไม่มีไทล์คู่เข้มครบ (Flat/Dark) — Zone A จะเป็นสีอ่อนล้วน (ไม่มีลายหมากรุก) · " +
+                                     "รัน 'Flatten Ground Tiles (Top Face)' ใหม่เพื่อสร้างคู่เข้ม");
+                int border = ReadBorderThickness();
+                int g = FillZonedRandom(GroundObjectName, flatGrass, flatGrassDark, flatDirt, blockGrass, blockDirt, columns, rows, border);
                 if (g < 0) return (-1, 0);
                 // fog: ไทล์แบนใบเดียวถ้ามี (สะอาดใต้หมอก) ไม่งั้นไทล์แบน/บล็อกตัวแรกในชุด
                 TileBase fogTile = grassA
@@ -108,8 +117,8 @@ namespace NuclearReMind.Editor
                 EditorTools.IsoTilesetSetup.TileAssetPath(0));
             if (isoProbe != null)
             {
-                int zoneA = ReadZoneAColumns();
-                int isoGround = FillZonedIso(GroundObjectName, columns, rows, zoneA);
+                int border = ReadBorderThickness();
+                int isoGround = FillZonedIso(GroundObjectName, columns, rows, border);
                 if (isoGround < 0) return (-1, 0);
                 int isoFog = FillTilemap(FogObjectName, isoProbe, columns, rows);
                 return (isoGround, isoFog);
@@ -128,11 +137,11 @@ namespace NuclearReMind.Editor
             return (ground, fog);
         }
 
-        // เส้นแบ่งโซนจาก OreDepositManager (แหล่งความจริงเดียว) — fallback 29 (ค่าตั้งต้นบนกริด 43×28)
-        private static int ReadZoneAColumns()
+        // ความหนากรอบ Zone B รอบนอกจาก OreDepositManager (แหล่งความจริงเดียว) — fallback 7 (Zone A กลาง 29×29 บนกริด 43×43)
+        private static int ReadBorderThickness()
         {
             var ore = Object.FindFirstObjectByType<NuclearReMind.OreDepositManager>();
-            return ore != null ? ore.zoneAColumns : 29;
+            return ore != null ? ore.zoneBorderThickness : 7;
         }
 
         // โหลดไทล์จาก folder/prefix ที่กำหนด แยกเป็นหญ้า (index ≥ 22) / ดิน (index ≤ 21) ตามช่วง IsoTilesetSetup
@@ -150,6 +159,18 @@ namespace NuclearReMind.Editor
             return (grass, dirt);
         }
 
+        // โหลดไทล์ตาม index ที่ระบุ เรียงตามลำดับใน indices (ข้ามใบที่ไม่มีไฟล์) — ใช้เลือกไทล์ Zone A เฉพาะเจาะจง
+        private static List<TileBase> LoadTilesByIndex(string folder, string prefix, int[] indices)
+        {
+            var list = new List<TileBase>();
+            foreach (int i in indices)
+            {
+                var t = AssetDatabase.LoadAssetAtPath<TileBase>($"{folder}/{prefix}{i:000}.asset");
+                if (t != null) list.Add(t);
+            }
+            return list;
+        }
+
         private static TileBase FirstOr(List<TileBase> a, List<TileBase> b)
             => a.Count > 0 ? a[0] : (b.Count > 0 ? b[0] : null);
 
@@ -157,9 +178,10 @@ namespace NuclearReMind.Editor
         //   บล็อกเต็ม (blockGrass/blockDirt) เก็บไว้เป็น fallback เท่านั้น (ใช้เมื่อยังไม่ได้สร้างไทล์แบน)
         // ★ สุ่มด้วย IsoGroundPainter.Hash(col,row) ไม่ใช่ Random — ลายคงที่ทุก re-fill/โหลดเซฟ (อาคารไม่ขยับตามพื้น)
         private static int FillZonedRandom(string objectName,
-                                           List<TileBase> flatGrass, List<TileBase> flatDirt,
+                                           List<TileBase> flatGrass, List<TileBase> flatGrassDark,
+                                           List<TileBase> flatDirt,
                                            List<TileBase> blockGrass, List<TileBase> blockDirt,
-                                           int columns, int rows, int zoneAColumns)
+                                           int columns, int rows, int border)
         {
             Tilemap map = FindTilemap(objectName);
             if (map == null) return -1;
@@ -167,11 +189,14 @@ namespace NuclearReMind.Editor
             Undo.RegisterCompleteObjectUndo(map, "Fill Grid");
             map.ClearAllTiles();
 
+            // ลายหมากรุก Zone A ทำได้ต่อเมื่อมีคู่เข้มครบ parallel กับหญ้าอ่อน
+            bool checker = flatGrassDark.Count == flatGrass.Count && flatGrass.Count > 0;
+
             int count = 0;
             for (int x = 0; x < columns; x++)
                 for (int y = 0; y < rows; y++)
                 {
-                    bool zoneA = NuclearReMind.IsoGroundPainter.IsZoneA(x, zoneAColumns);
+                    bool zoneA = NuclearReMind.IsoGroundPainter.IsZoneA(x, y, columns, rows, border);
 
                     // ทุกช่องใช้หน้าบนแบนของโซน · ถ้ายังไม่มีไทล์แบน ถอยไปบล็อกเต็ม
                     var flat = zoneA ? flatGrass : flatDirt;
@@ -182,16 +207,18 @@ namespace NuclearReMind.Editor
                     if (list.Count == 0) list = FallbackList(zoneA, flatGrass, flatDirt, blockGrass, blockDirt);
                     if (list.Count == 0) continue;
 
-                    int h = NuclearReMind.IsoGroundPainter.Hash(x, y);
-                    map.SetTile(new Vector3Int(x, y, 0), list[h % list.Count]);
+                    // สุ่มคงที่ด้วย Hash(col,row) — เลือก "ใบหญ้า" · Zone A: ช่อง (x+y) คี่ = คู่เข้ม (ลายหมากรุก)
+                    int idx = NuclearReMind.IsoGroundPainter.Hash(x, y) % list.Count;
+                    bool darkCell = checker && zoneA && list == flatGrass && ((x + y) & 1) == 1;
+                    map.SetTile(new Vector3Int(x, y, 0), darkCell ? flatGrassDark[idx] : list[idx]);
                     count++;
                 }
 
             map.CompressBounds();
             EditorUtility.SetDirty(map);
             Debug.Log($"[GridSpriteFiller] เติม '{objectName}' {columns}×{rows} = {count} ช่อง " +
-                      $"(หน้าบนแบนทั้งแมพ · หญ้าแบน {flatGrass.Count}/บล็อก {blockGrass.Count} · " +
-                      $"ดินแบน {flatDirt.Count}/บล็อก {blockDirt.Count})");
+                      $"(Zone A {(checker ? "ลายหมากรุกอ่อน/เข้ม" : "อ่อนล้วน")} · หญ้าแบน {flatGrass.Count}/เข้ม {flatGrassDark.Count}/บล็อก {blockGrass.Count} · " +
+                      $"ดินแบน {flatDirt.Count})");
             return count;
         }
 
@@ -207,7 +234,7 @@ namespace NuclearReMind.Editor
         }
 
         // ระบาย Ground แบ่งโซน: Zone A หญ้า / Zone B ดิน — พื้นเนียนใบเดียว + โรย variety (IsoGroundPainter)
-        private static int FillZonedIso(string objectName, int columns, int rows, int zoneAColumns)
+        private static int FillZonedIso(string objectName, int columns, int rows, int border)
         {
             Tilemap map = FindTilemap(objectName);
             if (map == null) return -1;
@@ -230,7 +257,7 @@ namespace NuclearReMind.Editor
             for (int x = 0; x < columns; x++)
                 for (int y = 0; y < rows; y++)
                 {
-                    int idx = IsoGroundPainter.TileIndexFor(x, y, zoneAColumns);
+                    int idx = IsoGroundPainter.TileIndexFor(x, y, columns, rows, border);
                     var tile = Load(idx);
                     if (tile == null) { missing++; continue; }
                     map.SetTile(new Vector3Int(x, y, 0), tile);
@@ -242,7 +269,7 @@ namespace NuclearReMind.Editor
             if (missing > 0)
                 Debug.LogWarning($"[GridSpriteFiller] ขาด Tile asset {missing} ช่อง — รัน 'Setup Iso Nature Tileset' ให้ครบก่อน");
             Debug.Log($"[GridSpriteFiller] เติม '{objectName}' {columns}×{rows} = {count} ช่อง " +
-                      $"(Zone A หญ้า cols 0–{zoneAColumns - 1} · Zone B ดิน cols {zoneAColumns}–{columns - 1})");
+                      $"(Zone A หญ้า สี่เหลี่ยมกลาง · Zone B ดิน กรอบรอบนอกหนา {border} ช่อง)");
             return count;
         }
 

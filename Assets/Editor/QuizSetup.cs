@@ -6,28 +6,19 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
-    /// เฟส 1 (T1.A3 / V4 §12) — สร้าง 10 QuizQuestionSO assets จากเนื้อหาควิซฉบับเต็ม
+    /// สร้าง 12 QuizQuestionSO assets (Q1–Q10 + QT1/QT2 ควิซ Tritium ใหม่ v8)
     /// + wire เข้า QuizManager.allQuizzes + ผูก linkedQuizIds ให้ crisis dilemma
     /// รันผ่านเมนู NuclearReMind / Setup Quiz System
     ///
-    /// สีตามหมวด (§17): Q1,2,3,8,9 = Reactor · Q6,7 = Agriculture · Q4 = Medical · Q5,10 = Ethics
+    /// สีตามหมวด (§17): Q1,2,3,8,9,QT1,QT2 = Reactor · Q6,7 = Agriculture · Q4 = Medical · Q5,10 = Ethics
     ///
-    /// 🔓 ตาราง codexUnlockId (map "codexName" ในสคริปต์ → CodexEntry.entryId ที่มีจริงบนดิสก์):
-    ///   Q4 "Nuclear Medicine"  → "med_pet_scan"           (ดูหมายเหตุ Q4 ด้านล่าง — เปลี่ยนได้)
-    ///   Q5 "ALARA"             → "env_alara"
-    ///   Q6 "Mutation Breeding" → "agri_mutation_breeding"
-    ///   Q7 "Food Irradiation"  → "agri_irradiation"
-    ///   Q10 "ALARA"            → "env_alara"
-    ///   Q1 "Deuterium"          → "fusion_deuterium"      ✅ (Gap G1 ปิดแล้ว — เฟส 2)
-    ///   Q2 "Plasma Confinement" → "fusion_plasma"
-    ///   Q3 "Magnetic Confinement"→ "fusion_magnetic"
-    ///   Q8 "Nuclear Fusion"     → "fusion_reaction"
-    ///   Q9 "Clean Energy"       → "fusion_clean_energy"
-    /// (5 entry สาขา Fusion สร้างโดย CodexSetup.BuildEntryDefs — รัน Setup Codex System)
-    /// หมายเหตุ Q4: ไม่มี CodexEntry ชื่อ "Nuclear Medicine" ตรง ๆ (ถูกแตกเป็น PET/SPECT/TRT)
-    ///   เลือก "med_pet_scan" เป็นตัวแทน (เวชศาสตร์นิวเคลียร์ระดับเริ่มต้น "หาก่อน แล้วค่อยยิง")
-    ///   ทางเลือกอื่นที่รับได้: "med_spect_scan" (ผูกวิกฤต Outbreak) หรือ "med_radionuclide_therapy"
-    ///   (ยาเฉพาะจุด/targeted therapy) — reviewer ปรับได้จากตารางด้านบน
+    /// 🔓 ตาราง codexUnlockId (Codex_Spec v8 — 11 entry · Q10 ชี้กลับ ALARA เดิม ไม่นับแยก):
+    ///   Q1→codex_deuterium · Q2→codex_plasma_confinement · Q3→codex_magnetic_confinement
+    ///   Q4→codex_nuclear_medicine · Q5,Q10→codex_alara · Q6→codex_mutation_breeding
+    ///   Q7→codex_food_irradiation · Q8→codex_nuclear_fusion · Q9→codex_clean_energy
+    ///   QT1→codex_dt_fusion_fuel · QT2→codex_tritium_breeding (เด้งตอนป้อน Tritium เข้าเตาครั้งแรก
+    ///   — CoreTowerManager.TriggerTritiumQuizzes latch ครั้งเดียว)
+    /// entry ทั้ง 11 สร้างโดย CodexSetup — รัน Setup Codex System ก่อน/หลังได้ (match ด้วย id ตอนเล่น)
     /// </summary>
     public static class QuizSetup
     {
@@ -162,7 +153,7 @@ namespace NuclearReMind.EditorTools
                 },
                 correctIndex = 1,
                 explainText = "ดิวเทอเรียม (²H) เป็นไอโซโทปของไฮโดรเจนที่ปนอยู่ในน้ำทั่วไปอยู่แล้ว เราจึงแยกออกมาใช้เป็นเชื้อเพลิงฟิวชันได้เลย โดยไม่ต้องผลิตขึ้นใหม่",
-                codexUnlockId = "fusion_deuterium",   // Deuterium (ปิด Gap G1)
+                codexUnlockId = "codex_deuterium",   // ดิวเทอเรียม (Codex_Spec v8 #1)
             },
 
             // ── Q2 · ทำไมพลาสมาถึงพัง (Reactor · Dr. Auren Vasek) ──
@@ -178,7 +169,7 @@ namespace NuclearReMind.EditorTools
                 },
                 correctIndex = 0,
                 explainText = "ในโทคาแมก พลาสมาร้อนหลายล้านองศาถูกกักด้วยสนามแม่เหล็ก ถ้าสนามไม่นิ่ง พลาสมาหลุดไปชนผนัง จะถ่ายเทความร้อนเข้าตัวอาคารจนหลอมละลาย",
-                codexUnlockId = "fusion_plasma",   // Plasma Confinement (ปิด Gap G1)
+                codexUnlockId = "codex_plasma_confinement",   // การกักพลาสมา (v8 #2)
             },
 
             // ── Q3 · สนามแม่เหล็กคู่คืออะไร (Reactor · VESTA) ──
@@ -194,7 +185,7 @@ namespace NuclearReMind.EditorTools
                 },
                 correctIndex = 2,
                 explainText = "สนามแม่เหล็กคู่ทำงานร่วมกัน — Toroidal บีบพลาสมาให้เป็นวง ส่วน Poloidal กันไม่ให้พลาสมาชนผนัง เมื่อเสริมให้แข็งแรงจะกักพลาสมาไว้กลางเตาและรีดความร้อนที่รั่วออก",
-                codexUnlockId = "fusion_magnetic",   // Magnetic Confinement (ปิด Gap G1)
+                codexUnlockId = "codex_magnetic_confinement",   // สนามแม่เหล็กคู่ (v8 #3)
             },
 
             // ── Q4 · เวชศาสตร์นิวเคลียร์: หาก่อน แล้วค่อยยิง (Medical · แพทย์ประจำเมือง) ──
@@ -210,7 +201,7 @@ namespace NuclearReMind.EditorTools
                 },
                 correctIndex = 1,
                 explainText = "เวชศาสตร์นิวเคลียร์ทำงาน 2 ขั้น — (1) วินิจฉัย: PET/SPECT ฉีดสารเภสัชรังสีถ่ายภาพหาตำแหน่งเซลล์ผิดปกติ (2) รักษา: ยาเฉพาะจุด (targeted therapy) ส่งรังสีไปทำลายเฉพาะเป้า กระทบเนื้อดีน้อย",
-                codexUnlockId = "med_pet_scan",   // Nuclear Medicine (ดูหมายเหตุ Q4 ด้านบน)
+                codexUnlockId = "codex_nuclear_medicine",   // เวชศาสตร์นิวเคลียร์ (v8 #6)
             },
 
             // ── Q5 · ใครห้ามเข้าเขตรังสี (ALARA) (Ethics · VESTA) ──
@@ -226,7 +217,7 @@ namespace NuclearReMind.EditorTools
                 },
                 correctIndex = 0,
                 explainText = "ALARA (As Low As Reasonably Achievable) คือ \"ให้คนรับรังสีน้อยที่สุดเท่าที่ทำได้\" และต้องปกป้องกลุ่มที่ไวต่อรังสีเป็นพิเศษ (ผู้ป่วย/เด็ก) ก่อนเสมอ",
-                codexUnlockId = "env_alara",   // ALARA
+                codexUnlockId = "codex_alara",   // หลัก ALARA (v8 #7 — Q10 ชี้กลับ entry เดิม ไม่นับแยก)
             },
 
             // ── Q6 · แก้ที่ต้นเหตุ ไม่ใช่ปลายเหตุ (Agriculture · Dr. Auren Vasek) ──
@@ -242,7 +233,7 @@ namespace NuclearReMind.EditorTools
                 },
                 correctIndex = 2,
                 explainText = "การฉายรังสีกระตุ้นให้เกิดการกลายพันธุ์ นักวิจัยคัดเลือกเฉพาะสายพันธุ์ที่ทนทานและให้ผลผลิตสูงไว้ใช้ถาวร เช่น ข้าว กข6 ของไทย เป็นการแก้ปัญหาที่ต้นเหตุ",
-                codexUnlockId = "agri_mutation_breeding",   // Mutation Breeding
+                codexUnlockId = "codex_mutation_breeding",   // ปรับปรุงพันธุ์ด้วยรังสี (v8 #8)
             },
 
             // ── Q7 · หยุดอาหารเน่าด้วยรังสี (Agriculture · VESTA) ──
@@ -258,7 +249,7 @@ namespace NuclearReMind.EditorTools
                 },
                 correctIndex = 1,
                 explainText = "รังสีแกมมาทะลุผ่านอาหารและฆ่าจุลินทรีย์/เชื้อรา ทำให้เก็บได้นานขึ้น โดยอาหารไม่กลายเป็นสารกัมมันตรังสี (อาหารฉายรังสี ≠ อาหารมีรังสี)",
-                codexUnlockId = "agri_irradiation",   // Food Irradiation
+                codexUnlockId = "codex_food_irradiation",   // ฉายรังสีถนอมอาหาร (v8 #9)
             },
 
             // ── Q8 · ฟิวชันคืออะไร (Reactor · VESTA) ──
@@ -274,7 +265,7 @@ namespace NuclearReMind.EditorTools
                 },
                 correctIndex = 0,
                 explainText = "ฟิวชันคือการหลอมรวมนิวเคลียสเบา (เช่น ไฮโดรเจน) ให้กลายเป็นธาตุที่หนักกว่า แล้วปลดปล่อยพลังงานมหาศาล \"ตรงข้าม\" กับฟิชชันที่เป็นการแตกตัวของนิวเคลียสหนัก",
-                codexUnlockId = "fusion_reaction",   // Nuclear Fusion (ปิด Gap G1)
+                codexUnlockId = "codex_nuclear_fusion",   // ฟิวชันคืออะไร (v8 #10)
             },
 
             // ── Q9 · ทำไมฟิวชันถึงสะอาด (Reactor · Dr. Auren Vasek) ──
@@ -290,7 +281,7 @@ namespace NuclearReMind.EditorTools
                 },
                 correctIndex = 2,
                 explainText = "ฟิวชันสะอาดกว่าเพราะเชื้อเพลิงหาได้จากน้ำ ไม่ปล่อย CO₂ ถ้าเสียสมดุลเตาจะดับเอง (ไม่ระเบิด) และไม่มีกากรังสีอายุยืนแบบฟิชชัน — แต่ \"สะอาดกว่า\" ไม่ได้แปลว่า \"ไม่มีรังสีเลย\" เพราะเชื้อเพลิง D-T ยังปล่อยนิวตรอน",
-                codexUnlockId = "fusion_clean_energy",   // Clean Energy (ปิด Gap G1)
+                codexUnlockId = "codex_clean_energy",   // ทำไมฟิวชันสะอาด (v8 #11)
             },
 
             // ── Q10 · จริยธรรม (Decree) (Ethics · Dr. Auren Vasek) ──
@@ -306,7 +297,39 @@ namespace NuclearReMind.EditorTools
                 },
                 correctIndex = 1,
                 explainText = "การส่งผู้ป่วย/เด็กเข้าเขตรังสีขัดหลัก ALARA เพราะคนกลุ่มนี้ไวต่อรังสีเป็นพิเศษ การตัดสินใจนี้เป็นของผู้เล่น เกมไม่ตัดสินถูก-ผิดแทน แต่ผลของมันคือ Hope และแรงงานในรอบนั้น",
-                codexUnlockId = "env_alara",   // ALARA
+                codexUnlockId = "codex_alara",   // หลัก ALARA (v8 #7 — Q10 ชี้กลับ entry เดิม ไม่นับแยก)
+            },
+
+            // ── QT1 · ควิซ #Tritium (ใหม่ v8) — เด้งตอนป้อน Tritium เข้าเตาครั้งแรก (~Day 21+) ──
+            new QuizDef
+            {
+                id = "QT1", category = QuizCategory.Reactor, speaker = "VESTA",
+                question = "เราเพิ่งป้อนทริเทียมเข้าเตาคู่กับดิวเทอเรียม ทำไมต้องใช้เชื้อเพลิง \"คู่ D–T\" ถึงจะดันเตาถึงจุดติดเต็มร้อย?",
+                options = new[]
+                {
+                    "เพราะทริเทียมถูกกว่าดิวเทอเรียม ประหยัดงบเมือง",
+                    "เพราะคู่ D–T หลอมรวมได้ง่ายที่สุด จุดติดที่อุณหภูมิต่ำกว่าเชื้อเพลิงคู่อื่น",
+                    "เพราะทริเทียมทำให้เตาเย็นลง ไม่ต้องหล่อเย็นอีก",
+                },
+                correctIndex = 1,
+                explainText = "เชื้อเพลิงที่หลอมรวมได้ง่ายที่สุดคือคู่ดิวเทอเรียม–ทริเทียม (D–T) เพราะจุดติดที่อุณหภูมิต่ำกว่าคู่อื่น ดิวเทอเรียมจากน้ำพาเตาขึ้นมาได้ระดับหนึ่ง แต่การดันถึงจุดติดเต็มร้อยต้องมีทริเทียมป้อนคู่",
+                codexUnlockId = "codex_dt_fusion_fuel",   // เชื้อเพลิงคู่ D–T (v8 #4)
+            },
+
+            // ── QT2 · ควิซ #Tritium-2 (ใหม่ v8) — เด้งต่อจาก QT1 ──
+            new QuizDef
+            {
+                id = "QT2", category = QuizCategory.Reactor, speaker = "VESTA",
+                question = "ทริเทียมแทบไม่มีในธรรมชาติ แล้วเตาฟิวชันจริงจะเอาทริเทียมมาจากไหนได้อย่างยั่งยืน?",
+                options = new[]
+                {
+                    "สั่งซื้อจากเมืองอื่น เพราะผลิตเองไม่ได้เลย",
+                    "กลั่นจากน้ำทะเลเหมือนดิวเทอเรียม",
+                    "เพาะเอง — ใช้นิวตรอนจากฟิวชันยิงใส่ลิเทียม (breeding blanket) ให้แตกตัวเป็นทริเทียม",
+                },
+                correctIndex = 2,
+                explainText = "ทริเทียมผลิตได้ด้วยการนำนิวตรอนที่เกิดจากปฏิกิริยาฟิวชันไปยิงใส่ลิเทียม (breeding blanket) ลิเทียมจะแตกตัวให้ทริเทียม — เตาฟิวชันจึงผลิตเชื้อเพลิงส่วนหนึ่งของตัวเองได้",
+                codexUnlockId = "codex_tritium_breeding",   // การเพาะทริเทียม (v8 #5)
             },
         };
 

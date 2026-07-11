@@ -21,7 +21,10 @@ namespace NuclearReMind
         private const string SortingLayer = "Buildings";
         private const int PostPixelsPerUnit = 64;
 
-        [Header("เส้นแบ่งโซน (ต้องตรงกับ OreDepositManager.zoneAColumns)")]
+        [Tooltip("เปิดรั้วเส้นตั้งคั่นโซน — โมเดลปัจจุบัน Zone B เป็นกรอบรอบนอก จึงปิดไว้ (เปิดเองถ้าอยากได้รั้วกลับ)")]
+        public bool active = false;
+
+        [Header("เส้นแบ่งโซน (ใช้เมื่อ active = true)")]
         [Tooltip("คอลัมน์แรกของโซน B — รั้ววางบนขอบระหว่างคอลัมน์นี้กับคอลัมน์ก่อนหน้า")]
         public int barrierColumn = 29;
 
@@ -49,7 +52,7 @@ namespace NuclearReMind
         private static Sprite _railSprite;
         private static Sprite _signSprite;
 
-        private void Start() => Rebuild();
+        private void Start() { if (active) Rebuild(); }
 
         /// <summary>ลบรั้วเดิมแล้วสร้างใหม่ตามค่าปัจจุบัน — เรียกซ้ำได้ (Inspector/Editor tool)</summary>
         [ContextMenu("Rebuild Barrier")]
@@ -254,7 +257,7 @@ namespace NuclearReMind
         // เส้นแบ่งโซนใน Scene view (เห็นแนวได้แม้ยังไม่กด Play — ล้อ GridManager.OnDrawGizmos)
         private void OnDrawGizmos()
         {
-            if (!showBoundaryGizmo) return;
+            if (!active || !showBoundaryGizmo) return;
 
             var grid = GridManager.Instance != null
                 ? GridManager.Instance

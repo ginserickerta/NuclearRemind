@@ -36,6 +36,12 @@ namespace NuclearReMind
         /// triggerParam = คีย์ เช่น "water"/"food" — StoryDirector จดคีย์ตอน resolve
         /// (DilemmaData.choiceX_DeferredCrisis) แล้วยิง beat นี้หลังหน่วง 2 วัน</summary>
         OnDeferredCrisis,
+
+        /// <summary>triggerParam = buildingName (สตริงไทย เช่น "ห้องปฏิบัติการ") — ยิงเมื่ออาคารนั้น
+        /// "มีคนเข้าประจำครั้งแรก" (OnWorkerAssignmentChanged count > 0) ★ สเปกโรงวิจัย:
+        /// บันทึก Elara #01 ปลดตอน "สร้าง+จัดคนเข้าห้องวิจัย" — อาคาร pre-placed ใช้ OnBuildingBuilt
+        /// ไม่ได้เพราะ event ยิงตอนเริ่มเกมก่อนผู้เล่นทำอะไร (enum ต่อท้ายเท่านั้น — กันเลื่อนค่า serialize)</summary>
+        OnBuildingStaffed,
     }
 
     /// <summary>

@@ -26,6 +26,7 @@ namespace NuclearReMind
         {
             EventManager.Instance.OnBuildingPlaced    += HandleBuildingPlaced;
             EventManager.Instance.OnBuildingRemoved   += HandleBuildingRemoved;
+            EventManager.Instance.OnBuildingUpgraded  += HandleBuildingUpgraded;
             EventManager.Instance.OnSaveLoaded        += HandleSaveLoaded;
         }
 
@@ -34,6 +35,7 @@ namespace NuclearReMind
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnBuildingPlaced   -= HandleBuildingPlaced;
             EventManager.Instance.OnBuildingRemoved  -= HandleBuildingRemoved;
+            EventManager.Instance.OnBuildingUpgraded -= HandleBuildingUpgraded;
             EventManager.Instance.OnSaveLoaded       -= HandleSaveLoaded;
         }
 
@@ -49,6 +51,20 @@ namespace NuclearReMind
 
             DestroyVisual(go);
             _spawnedVisuals.Remove(position);
+        }
+
+        // อัปเกรดระดับ → สลับ sprite ตัวอาคารเป็นภาพของระดับใหม่ (L1/L2/L3) ถ้า asset มี levelSprites
+        private void HandleBuildingUpgraded(Vector2Int cell, int newLevel)
+        {
+            if (!_spawnedVisuals.TryGetValue(cell, out var go) || go == null) return;
+
+            var registry = BuildingRegistry.Instance;
+            if (registry == null ||
+                !registry.PlacedBuildings.TryGetValue(cell, out var data) || data == null)
+                return;
+
+            var sr = go.GetComponent<SpriteRenderer>(); // ตัวแม่ (Shadow เป็นลูก คนละ SpriteRenderer)
+            if (sr != null) sr.sprite = data.SpriteForLevel(newLevel);
         }
 
         /// <summary>
@@ -102,8 +118,11 @@ namespace NuclearReMind
             int sy = Mathf.Max(1, data.size.y);
             int baseSort = GridManager.SortOrder(position.x + (sx - 1) * 0.5f, position.y + (sy - 1) * 0.5f);
 
+            // เลือก sprite ตามระดับปัจจุบัน (โหลดเซฟ/วางใหม่ = L1) — มี levelSprites จึงสลับตาม, ไม่งั้นใช้ sprite เดี่ยว
+            int level = BuildingRegistry.Instance != null ? BuildingRegistry.Instance.GetLevel(position) : 1;
+
             var spriteRenderer = go.AddComponent<SpriteRenderer>();
-            spriteRenderer.sprite = data.sprite;
+            spriteRenderer.sprite = data.SpriteForLevel(level);
             spriteRenderer.sortingLayerName = BuildingsSortingLayer;
             spriteRenderer.sortingOrder = baseSort;
 

@@ -7,12 +7,15 @@ using UnityEngine.UI;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
-    /// Setup ครบชุดสำหรับ Day 10 — รันผ่าน NuclearReMind / Setup Codex System
+    /// ระบบ Codex ตาม Codex_Spec v8 — รันผ่าน NuclearReMind / Setup Codex System
     /// ขั้นตอน:
-    ///   1. สร้าง CodexEntry assets ทั้ง 5 ใน ScriptableObjects/CodexEntries/
-    ///   2. เพิ่ม CodexManager ใน scene + wire allCodexEntries
-    ///   3. สร้าง Codex Canvas (panel + list + detail) และ wire CodexUIController
-    ///   4. เพิ่มปุ่ม Codex เข้า HUDCanvas
+    ///   1. สร้าง/อัปเดต CodexEntry assets ทั้ง 11 (id/หมวด/icon/แหล่งปลด/เนื้อหา ตามสเปก §3+§7)
+    ///      + ลบ asset เก่านอกลิสต์ 11 ทิ้ง (ยุคก่อนมี 28 — สเปกใหม่เหลือ 11 ปลดจากควิซเท่านั้น)
+    ///   2. เพิ่ม CodexManager ใน scene + wire allCodexEntries (เรียงลำดับสเปก 1–11)
+    ///   3. สร้างหน้าจอ Codex ใหม่: หัว (ชื่อ+ปลดแล้ว x/11+ย้ำถาวร) · แถบกรอง 5 หมวด ·
+    ///      ลิสต์ซ้าย (ล็อก = "? ? ?") · รายละเอียดขวา (pill หมวด + แหล่งปลด + เนื้อหา + ท้าย +2)
+    ///   4. ปุ่ม Codex บน HUD (ค่าเมตา — เข้าถึงได้ตลอด ไม่ผูกห้องวิจัย)
+    /// การปลดล็อก: QuizManager.SubmitAnswer → codexUnlockId (ตั้งใน QuizSetup) → CodexManager.UnlockById
     /// </summary>
     public static class CodexSetup
     {
@@ -22,23 +25,23 @@ namespace NuclearReMind.EditorTools
         [MenuItem("NuclearReMind/Setup Codex System")]
         public static void SetupAll()
         {
-            // เปิด scene ถ้ายังไม่เปิด
             if (EditorSceneManager.GetActiveScene().path != ScenePath)
                 EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
             System.IO.Directory.CreateDirectory(EntriesPath);
 
             var entries = CreateOrLoadEntries();
+            DeleteStaleEntries(entries);
             SetupCodexManager(entries);
-            SetupCodexUI(entries);
+            SetupCodexUI();
 
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             AssetDatabase.SaveAssets();
-            Debug.Log("[CodexSetup] เสร็จแล้ว! กด Save Scene (Ctrl+S) เพื่อบันทึก");
+            Debug.Log("[CodexSetup] ✅ Codex 11 entry (สเปก v8) + UI ใหม่พร้อม — กด Save Scene (Ctrl+S)");
         }
 
         // ─────────────────────────────────────────────
-        //  1. สร้าง / โหลด CodexEntry assets
+        //  1. สร้าง / อัปเดต CodexEntry assets ทั้ง 11
         // ─────────────────────────────────────────────
         private static CodexEntry[] CreateOrLoadEntries()
         {
@@ -57,12 +60,16 @@ namespace NuclearReMind.EditorTools
                     Debug.Log($"[CodexSetup] สร้าง {path}");
                 }
 
-                asset.entryId           = defs[i].id;
-                asset.title             = defs[i].title;
-                asset.branch            = defs[i].branch;
-                asset.content           = defs[i].content;
-                asset.researchPointCost = defs[i].cost;
-                asset.unlockedByEvent   = defs[i].unlockedBy;
+                asset.entryId = defs[i].id;
+                asset.title = defs[i].titleTh;
+                asset.titleEn = defs[i].titleEn;
+                asset.category = defs[i].category;
+                asset.branch = defs[i].category.ToString(); // ฟิลด์เก่า — sync กับหมวดใหม่
+                asset.content = defs[i].body;
+                asset.iconName = defs[i].icon;
+                asset.unlockedFrom = defs[i].unlockedFrom;
+                asset.researchPointCost = 0;   // สเปกใหม่: ไม่มีซื้อด้วย RP
+                asset.unlockedByEvent = "";    // สเปกใหม่: ปลดจากควิซเท่านั้น
 
                 EditorUtility.SetDirty(asset);
                 result[i] = asset;
@@ -73,8 +80,26 @@ namespace NuclearReMind.EditorTools
             return result;
         }
 
+        // ลบ CodexEntry asset ที่ไม่อยู่ในลิสต์ 11 (ของเก่าจากยุค 28 entry) — กันโผล่ใน UI/นับเกิน
+        private static void DeleteStaleEntries(CodexEntry[] keep)
+        {
+            var keepPaths = new HashSet<string>();
+            foreach (var e in keep) keepPaths.Add(AssetDatabase.GetAssetPath(e));
+
+            int removed = 0;
+            foreach (var guid in AssetDatabase.FindAssets("t:CodexEntry", new[] { EntriesPath }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (keepPaths.Contains(path)) continue;
+                AssetDatabase.DeleteAsset(path);
+                removed++;
+            }
+            if (removed > 0)
+                Debug.Log($"[CodexSetup] ลบ entry เก่านอกสเปก {removed} ไฟล์ (สเปก v8 = 11 entry)");
+        }
+
         // ─────────────────────────────────────────────
-        //  2. เพิ่ม CodexManager ใน scene + wire entries
+        //  2. CodexManager ใน scene
         // ─────────────────────────────────────────────
         private static void SetupCodexManager(CodexEntry[] entries)
         {
@@ -91,85 +116,247 @@ namespace NuclearReMind.EditorTools
         }
 
         // ─────────────────────────────────────────────
-        //  3. สร้าง Codex Canvas + wire CodexUIController
+        //  3. หน้าจอ Codex (สเปก §6) — สร้างใหม่ทั้งแผง
         // ─────────────────────────────────────────────
-        private static void SetupCodexUI(CodexEntry[] entries)
+        private static void SetupCodexUI()
         {
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var font = Resources.Load<Font>("Fonts/Kanit-Regular");
+            if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            // หา HUDCanvas ที่มีอยู่แล้ว (สร้างโดย HUDCanvasSetup)
             var hudCanvas = GameObject.Find("HUDCanvas");
             if (hudCanvas == null)
             {
-                Debug.LogWarning("[CodexSetup] ไม่พบ HUDCanvas — รัน NuclearReMind/Setup HUD Canvas ก่อน แล้วรัน Codex System อีกครั้ง");
+                Debug.LogWarning("[CodexSetup] ไม่พบ HUDCanvas — รัน Setup HUD Canvas ก่อน แล้วรันเมนูนี้อีกครั้ง");
                 return;
             }
 
-            // ── CodexUIController component ──
             var codexGO = GameObject.Find("CodexUIController");
             if (codexGO == null) codexGO = new GameObject("CodexUIController");
             var ui = codexGO.GetComponent<CodexUIController>() ?? codexGO.AddComponent<CodexUIController>();
 
-            // ── Codex Panel (ขวา เปิดทับ screen) ──
+            // แผงเดิม (โครงเก่า) ทิ้ง — สร้างใหม่ให้ตรงสเปก (มีแถบกรอง/หัวใหม่)
+            var old = hudCanvas.transform.Find("CodexPanel");
+            if (old != null) Object.DestroyImmediate(old.gameObject);
+
+            // ── Panel (ขวา 720px เต็มสูง) ──
             var panel = CreateOrGet("CodexPanel", hudCanvas.transform);
             {
                 var rect = panel.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(1f, 0f);
-                rect.anchorMax = new Vector2(1f, 1f);
-                rect.pivot     = new Vector2(1f, 0.5f);
-                rect.anchoredPosition = new Vector2(0, 0);
-                rect.sizeDelta        = new Vector2(720, 0);
-                EnsureImage(panel).color = new Color(0.08f, 0.08f, 0.12f, 0.97f);
+                rect.anchorMin = new Vector2(1f, 0f); rect.anchorMax = new Vector2(1f, 1f);
+                rect.pivot = new Vector2(1f, 0.5f);
+                rect.anchoredPosition = Vector2.zero;
+                rect.sizeDelta = new Vector2(720, 0);
+                EnsureImage(panel).color = new Color(0.07f, 0.075f, 0.11f, 0.97f);
                 panel.SetActive(false);
             }
             ui.codexPanel = panel;
 
-            // ── Header bar ──
+            // ── Header (h 88): ชื่อ + ความคืบหน้า + ย้ำถาวร + ปิด ──
             var header = CreateOrGet("CodexHeader", panel.transform);
             {
                 var rect = header.GetComponent<RectTransform>();
                 rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1);
                 rect.pivot = new Vector2(0.5f, 1); rect.anchoredPosition = Vector2.zero;
-                rect.sizeDelta = new Vector2(0, 50);
-                EnsureImage(header).color = new Color(0.04f, 0.04f, 0.08f, 1f);
+                rect.sizeDelta = new Vector2(0, 88);
+                EnsureImage(header).color = new Color(0.045f, 0.05f, 0.08f, 1f);
 
-                var title = CreateText("CodexTitle", header.transform, font, "LEARNING CODEX", 22,
-                    new Vector2(-60, 0), new Vector2(580, 50), TextAnchor.MiddleLeft);
-                title.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0);
-                title.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
+                var title = CreateText("CodexTitle", header.transform, font, "คลังความรู้ (Codex)", 24,
+                    new Vector2(16, -8), new Vector2(400, 34), TextAnchor.MiddleLeft);
+                TopLeft(title.rectTransform);
                 title.fontStyle = FontStyle.Bold;
-                title.color = new Color(0.4f, 0.9f, 1f);
+                title.color = new Color(0.45f, 0.85f, 1f);
 
-                var rpText = CreateText("RPText", header.transform, font, "RP: 0", 18,
-                    new Vector2(-10, 0), new Vector2(100, 50), TextAnchor.MiddleRight);
-                rpText.GetComponent<RectTransform>().anchorMin = new Vector2(1, 0);
-                rpText.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
-                rpText.color = new Color(1f, 0.85f, 0.2f);
-                ui.researchPointText = rpText;
+                ui.progressText = CreateText("Progress", header.transform, font, "ปลดแล้ว 0 / 11", 20,
+                    new Vector2(-70, -12), new Vector2(240, 30), TextAnchor.MiddleRight);
+                TopRight(ui.progressText.rectTransform);
+                ui.progressText.color = new Color(1f, 0.85f, 0.35f);
+                ui.progressText.fontStyle = FontStyle.Bold;
+
+                var note = CreateText("PersistNote", header.transform, font,
+                    "ความรู้บันทึกถาวร — ไม่รีเซ็ตแม้เริ่มเกมใหม่", 14,
+                    new Vector2(16, -48), new Vector2(500, 22), TextAnchor.MiddleLeft);
+                TopLeft(note.rectTransform);
+                note.color = new Color(0.55f, 0.62f, 0.68f);
 
                 var closeBtn = CreateButton("CloseBtn", header.transform, font, "✕", 20,
-                    new Vector2(-5, 0), new Vector2(40, 40));
-                closeBtn.GetComponent<RectTransform>().anchorMin = new Vector2(1, 0.5f);
-                closeBtn.GetComponent<RectTransform>().anchorMax = new Vector2(1, 0.5f);
-                closeBtn.onClick.AddListener(() => ui.Toggle());
+                    new Vector2(-8, -8), new Vector2(40, 40));
+                TopRight(closeBtn.GetComponent<RectTransform>());
+                EnsureImage(closeBtn.gameObject).color = new Color(0.45f, 0.18f, 0.16f, 1f);
+                ui.closeButton = closeBtn; // wire ตอน runtime ใน CodexUIController.WireTabs (lambda จาก editor ไม่ persist)
             }
 
-            // ── Left pane: Entry list + RP counter ──
+            // ── Tabs (h 40): ทั้งหมด / เตา-ฟิวชัน / แพทย์-รังสี / เกษตร / จริยธรรม ──
+            var tabs = CreateOrGet("CodexTabs", panel.transform);
+            {
+                var rect = tabs.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1);
+                rect.pivot = new Vector2(0.5f, 1);
+                rect.anchoredPosition = new Vector2(0, -88);
+                rect.sizeDelta = new Vector2(0, 40);
+                EnsureImage(tabs).color = new Color(0.06f, 0.065f, 0.095f, 1f);
+
+                float w = (720f - 24f) / 5f;
+                ui.tabAll = TabButton(tabs.transform, font, "TabAll", "ทั้งหมด", 0, w);
+                ui.tabReactor = TabButton(tabs.transform, font, "TabReactor", "เตา/ฟิวชัน", 1, w);
+                ui.tabMedical = TabButton(tabs.transform, font, "TabMedical", "แพทย์/รังสี", 2, w);
+                ui.tabAgriculture = TabButton(tabs.transform, font, "TabAgri", "เกษตร", 3, w);
+                ui.tabEthics = TabButton(tabs.transform, font, "TabEthics", "จริยธรรม", 4, w);
+            }
+
+            // ── Left pane: entry list (w 260) ──
             var leftPane = CreateOrGet("EntryListPane", panel.transform);
             {
                 var rect = leftPane.GetComponent<RectTransform>();
                 rect.anchorMin = new Vector2(0, 0); rect.anchorMax = new Vector2(0, 1);
                 rect.pivot = new Vector2(0, 0.5f);
-                rect.anchoredPosition = new Vector2(0, -50);
-                rect.sizeDelta = new Vector2(260, -50);
-                EnsureImage(leftPane).color = new Color(0.06f, 0.06f, 0.10f, 1f);
+                rect.anchoredPosition = new Vector2(0, -64);
+                rect.sizeDelta = new Vector2(260, -128);
+                EnsureImage(leftPane).color = new Color(0.055f, 0.06f, 0.09f, 1f);
+            }
+            var content = BuildScrollList(leftPane.transform, out var template, font);
+            ui.entryListParent = content.transform;
+            ui.entryButtonPrefab = template;
+
+            // ── Right pane: detail ──
+            var detailPane = CreateOrGet("DetailPane", panel.transform);
+            {
+                var rect = detailPane.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0, 0); rect.anchorMax = new Vector2(1, 1);
+                rect.pivot = new Vector2(0, 0.5f);
+                rect.offsetMin = new Vector2(264, 0);
+                rect.offsetMax = new Vector2(0, -128);
+                EnsureImage(detailPane).color = new Color(0.05f, 0.052f, 0.085f, 1f);
             }
 
-            // scroll view inside left pane
-            var scroll = CreateOrGet("EntryScroll", leftPane.transform);
+            // pill หมวด + แหล่งปลด (แถวบนของแผงขวา)
+            var pillGO = CreateOrGet("DetailPill", detailPane.transform);
+            {
+                var rect = pillGO.GetComponent<RectTransform>();
+                TopLeft(rect);
+                rect.anchoredPosition = new Vector2(12, -12);
+                rect.sizeDelta = new Vector2(120, 26);
+                ui.detailPill = EnsureImage(pillGO);
+                ui.detailPill.color = new Color(0.3f, 0.55f, 0.9f);
+                ui.detailPillLabel = CreateText("PillLabel", pillGO.transform, font, "หมวด", 14,
+                    Vector2.zero, new Vector2(120, 26), TextAnchor.MiddleCenter);
+                Stretch(ui.detailPillLabel.rectTransform);
+                ui.detailPillLabel.fontStyle = FontStyle.Bold;
+            }
+            ui.detailUnlockFrom = CreateText("DetailUnlockFrom", detailPane.transform, font, "", 14,
+                new Vector2(142, -12), new Vector2(280, 26), TextAnchor.MiddleLeft);
+            TopLeft(ui.detailUnlockFrom.rectTransform);
+            ui.detailUnlockFrom.color = new Color(0.6f, 0.68f, 0.74f);
+
+            ui.detailTitle = CreateText("DetailTitle", detailPane.transform, font, "เลือกหัวข้อทางซ้าย", 22,
+                new Vector2(12, -46), new Vector2(-24, 32), TextAnchor.MiddleLeft);
+            TopStretch(ui.detailTitle.rectTransform);
+            ui.detailTitle.fontStyle = FontStyle.Bold;
+
+            ui.detailTitleEn = CreateText("DetailTitleEn", detailPane.transform, font, "", 15,
+                new Vector2(12, -80), new Vector2(-24, 22), TextAnchor.MiddleLeft);
+            TopStretch(ui.detailTitleEn.rectTransform);
+            ui.detailTitleEn.color = new Color(0.55f, 0.62f, 0.68f);
+            ui.detailTitleEn.fontStyle = FontStyle.Italic;
+
+            // illustration (โชว์เมื่อ entry มีรูป)
+            var illustGO = CreateOrGet("DetailIllustration", detailPane.transform);
+            {
+                var rect = illustGO.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(1, 1); rect.anchorMax = new Vector2(1, 1);
+                rect.pivot = new Vector2(1, 1);
+                rect.anchoredPosition = new Vector2(-12, -46);
+                rect.sizeDelta = new Vector2(100, 80);
+                ui.detailIllustration = EnsureImage(illustGO);
+                ui.detailIllustration.color = Color.white;
+                illustGO.SetActive(false);
+            }
+
+            // เนื้อหา (scroll)
+            var dScroll = CreateOrGet("DetailScroll", detailPane.transform);
+            {
+                var rect = dScroll.GetComponent<RectTransform>();
+                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+                rect.offsetMin = new Vector2(12, 44); rect.offsetMax = new Vector2(-12, -108);
+            }
+            var dViewport = CreateOrGet("DViewport", dScroll.transform);
+            {
+                EnsureImage(dViewport).color = Color.clear;
+                var mask = dViewport.GetComponent<Mask>() ?? dViewport.AddComponent<Mask>();
+                mask.showMaskGraphic = false;
+                var rect = dViewport.GetComponent<RectTransform>();
+                Stretch(rect);
+            }
+            var dContent = CreateOrGet("DContent", dViewport.transform);
+            {
+                var rect = dContent.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1);
+                rect.pivot = new Vector2(0.5f, 1);
+                rect.anchoredPosition = Vector2.zero;
+                rect.sizeDelta = new Vector2(0, 600);
+                var dsr = dScroll.GetComponent<ScrollRect>() ?? dScroll.AddComponent<ScrollRect>();
+                dsr.content = rect; dsr.viewport = dViewport.GetComponent<RectTransform>();
+                dsr.horizontal = false; dsr.vertical = true;
+                dsr.movementType = ScrollRect.MovementType.Clamped;
+            }
+            ui.detailContent = CreateText("DetailContent", dContent.transform, font, "", 17,
+                Vector2.zero, new Vector2(0, 600), TextAnchor.UpperLeft);
+            {
+                var rect = ui.detailContent.rectTransform;
+                Stretch(rect);
+                rect.offsetMin = new Vector2(4, 4); rect.offsetMax = new Vector2(-4, -4);
+            }
+            ui.detailContent.color = new Color(0.92f, 0.92f, 0.88f);
+            ui.detailContent.horizontalOverflow = HorizontalWrapMode.Wrap;
+            ui.detailContent.verticalOverflow = VerticalWrapMode.Overflow;
+            ui.detailContent.lineSpacing = 1.35f;
+
+            // แถบท้าย: "+2 Knowledge" (ไม่มีผู้บรรยาย VESTA — ตัดตาม v8)
+            ui.detailFooter = CreateText("DetailFooter", detailPane.transform, font, "", 14,
+                new Vector2(12, 12), new Vector2(-24, 24), TextAnchor.MiddleLeft);
+            {
+                var rect = ui.detailFooter.rectTransform;
+                rect.anchorMin = new Vector2(0, 0); rect.anchorMax = new Vector2(1, 0);
+                rect.pivot = new Vector2(0.5f, 0);
+            }
+            ui.detailFooter.color = new Color(1f, 0.85f, 0.35f, 0.85f);
+
+            // ── ปุ่ม Codex บน HUD (ตำแหน่งเดิม — ค่าเมตา เข้าได้ตลอด) ──
+            var codexBtnGO = GameObject.Find("CodexToggleButton");
+            if (codexBtnGO == null)
+            {
+                var btn = CreateButton("CodexToggleButton", hudCanvas.transform, font, "Codex (C)", 16,
+                    new Vector2(20, 210), new Vector2(120, 36));
+                EnsureImage(btn.gameObject).color = new Color(0.1f, 0.15f, 0.28f, 0.9f);
+                codexBtnGO = btn.gameObject;
+            }
+            var toggleBtn = codexBtnGO.GetComponent<Button>();
+            ui.toggleButton = toggleBtn; // wire ตอน runtime ใน CodexUIController.WireTabs (lambda จาก editor ไม่ persist)
+            var btnRect = codexBtnGO.GetComponent<RectTransform>();
+            btnRect.anchorMin = Vector2.zero; btnRect.anchorMax = Vector2.zero;
+            btnRect.pivot = Vector2.zero;
+            btnRect.anchoredPosition = new Vector2(20, 210);
+            EditorUtility.SetDirty(codexBtnGO);
+
+            EditorUtility.SetDirty(ui);
+        }
+
+        private static Button TabButton(Transform parent, Font font, string name, string label, int index, float w)
+        {
+            var btn = CreateButton(name, parent, font, label, 15,
+                new Vector2(12 + index * w, -4), new Vector2(w - 4, 32));
+            var rect = btn.GetComponent<RectTransform>();
+            TopLeft(rect);
+            rect.anchoredPosition = new Vector2(12 + index * w, -4);
+            EnsureImage(btn.gameObject).color = new Color(0.13f, 0.14f, 0.18f, 1f);
+            return btn;
+        }
+
+        private static GameObject BuildScrollList(Transform pane, out GameObject template, Font font)
+        {
+            var scroll = CreateOrGet("EntryScroll", pane);
             {
                 var rect = scroll.GetComponent<RectTransform>();
-                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+                Stretch(rect);
                 rect.offsetMin = new Vector2(4, 4); rect.offsetMax = new Vector2(-4, -4);
             }
             var viewport = CreateOrGet("Viewport", scroll.transform);
@@ -177,9 +364,7 @@ namespace NuclearReMind.EditorTools
                 EnsureImage(viewport).color = Color.clear;
                 var mask = viewport.GetComponent<Mask>() ?? viewport.AddComponent<Mask>();
                 mask.showMaskGraphic = false;
-                var rect = viewport.GetComponent<RectTransform>();
-                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
-                rect.offsetMin = Vector2.zero; rect.offsetMax = Vector2.zero;
+                Stretch(viewport.GetComponent<RectTransform>());
             }
             var content = CreateOrGet("EntryContent", viewport.transform);
             {
@@ -187,7 +372,7 @@ namespace NuclearReMind.EditorTools
                 rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1);
                 rect.pivot = new Vector2(0.5f, 1);
                 rect.anchoredPosition = Vector2.zero;
-                rect.sizeDelta = new Vector2(0, 0);
+                rect.sizeDelta = Vector2.zero;
                 var vlg = content.GetComponent<VerticalLayoutGroup>() ?? content.AddComponent<VerticalLayoutGroup>();
                 vlg.spacing = 4f; vlg.padding = new RectOffset(4, 4, 4, 4);
                 vlg.childControlHeight = false; vlg.childForceExpandHeight = false;
@@ -198,458 +383,81 @@ namespace NuclearReMind.EditorTools
                 sr.horizontal = false; sr.vertical = true;
                 sr.movementType = ScrollRect.MovementType.Clamped;
             }
-            ui.entryListParent = content.transform;
 
-            // สร้าง entry button prefab (stored as child template — ซ่อนไว้)
-            var btnTemplate = CreateOrGet("EntryButtonTemplate", content.transform);
+            template = CreateOrGet("EntryButtonTemplate", content.transform);
             {
-                var rect = btnTemplate.GetComponent<RectTransform>();
-                rect.sizeDelta = new Vector2(248, 40);
-                EnsureImage(btnTemplate).color = new Color(0.15f, 0.15f, 0.22f, 1f);
-                var btn = btnTemplate.GetComponent<Button>() ?? btnTemplate.AddComponent<Button>();
-                btn.targetGraphic = btnTemplate.GetComponent<Image>();
+                var rect = template.GetComponent<RectTransform>();
+                rect.sizeDelta = new Vector2(244, 42);
+                EnsureImage(template).color = new Color(0.14f, 0.15f, 0.21f, 1f);
+                var btn = template.GetComponent<Button>() ?? template.AddComponent<Button>();
+                btn.targetGraphic = template.GetComponent<Image>();
                 var cb = btn.colors;
-                cb.normalColor      = new Color(0.15f, 0.15f, 0.22f, 1f);
-                cb.highlightedColor = new Color(0.25f, 0.35f, 0.55f, 1f);
-                cb.pressedColor     = new Color(0.1f, 0.2f, 0.4f, 1f);
+                cb.normalColor = new Color(0.14f, 0.15f, 0.21f, 1f);
+                cb.highlightedColor = new Color(0.24f, 0.34f, 0.52f, 1f);
+                cb.pressedColor = new Color(0.10f, 0.20f, 0.38f, 1f);
                 btn.colors = cb;
-                CreateText("Label", btnTemplate.transform, font, "Entry", 15,
-                    new Vector2(8, 0), new Vector2(232, 40), TextAnchor.MiddleLeft);
-                btnTemplate.SetActive(false);
+                var label = CreateText("Label", template.transform, font, "Entry", 15,
+                    new Vector2(10, 0), new Vector2(228, 42), TextAnchor.MiddleLeft);
+                TopLeft(label.rectTransform);
+                label.rectTransform.anchorMin = new Vector2(0, 0);
+                label.rectTransform.anchorMax = new Vector2(1, 1);
+                label.rectTransform.offsetMin = new Vector2(10, 0);
+                label.rectTransform.offsetMax = new Vector2(-6, 0);
+                template.SetActive(false);
             }
-            ui.entryButtonPrefab = btnTemplate;
-
-            // ── Right pane: Detail view ──
-            var detailPane = CreateOrGet("DetailPane", panel.transform);
-            {
-                var rect = detailPane.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0, 0); rect.anchorMax = new Vector2(1, 1);
-                rect.pivot = new Vector2(0, 0.5f);
-                rect.offsetMin = new Vector2(264, 0);
-                rect.offsetMax = new Vector2(0, -50);
-                EnsureImage(detailPane).color = new Color(0.05f, 0.05f, 0.09f, 1f);
-            }
-
-            ui.detailBranch = CreateText("DetailBranch", detailPane.transform, font, "BRANCH", 14,
-                new Vector2(12, -14), new Vector2(400, 20), TextAnchor.UpperLeft);
-            ui.detailBranch.GetComponent<RectTransform>().anchorMin = new Vector2(0, 1);
-            ui.detailBranch.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
-            ui.detailBranch.color = new Color(0.4f, 0.9f, 1f, 0.7f);
-            ui.detailBranch.fontStyle = FontStyle.Bold;
-
-            ui.detailTitle = CreateText("DetailTitle", detailPane.transform, font, "เลือก entry ทางซ้าย", 22,
-                new Vector2(12, -36), new Vector2(-24, 36), TextAnchor.UpperLeft);
-            ui.detailTitle.GetComponent<RectTransform>().anchorMin = new Vector2(0, 1);
-            ui.detailTitle.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
-            ui.detailTitle.fontStyle = FontStyle.Bold;
-            ui.detailTitle.color = Color.white;
-
-            // illustration placeholder (shown when CodexEntry.illustration != null)
-            var illustGO = CreateOrGet("DetailIllustration", detailPane.transform);
-            {
-                var rect = illustGO.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(1, 1); rect.anchorMax = new Vector2(1, 1);
-                rect.pivot = new Vector2(1, 1);
-                rect.anchoredPosition = new Vector2(-12, -36);
-                rect.sizeDelta = new Vector2(100, 80);
-                var img = illustGO.GetComponent<Image>() ?? illustGO.AddComponent<Image>();
-                img.color = new Color(1f, 1f, 1f, 0.15f);
-                ui.detailIllustration = img;
-            }
-
-            // scrollable content area
-            var detailScroll = CreateOrGet("DetailScroll", detailPane.transform);
-            {
-                var rect = detailScroll.GetComponent<RectTransform>();
-                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
-                rect.offsetMin = new Vector2(8, 8); rect.offsetMax = new Vector2(-8, -80);
-            }
-            var dViewport = CreateOrGet("DViewport", detailScroll.transform);
-            {
-                EnsureImage(dViewport).color = Color.clear;
-                var mask = dViewport.GetComponent<Mask>() ?? dViewport.AddComponent<Mask>();
-                mask.showMaskGraphic = false;
-                var rect = dViewport.GetComponent<RectTransform>();
-                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
-                rect.offsetMin = Vector2.zero; rect.offsetMax = Vector2.zero;
-            }
-            var dContent = CreateOrGet("DContent", dViewport.transform);
-            {
-                var rect = dContent.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1);
-                rect.pivot = new Vector2(0.5f, 1);
-                rect.anchoredPosition = Vector2.zero;
-                rect.sizeDelta = new Vector2(0, 400);
-                var dsr = detailScroll.GetComponent<ScrollRect>() ?? detailScroll.AddComponent<ScrollRect>();
-                dsr.content = rect; dsr.viewport = dViewport.GetComponent<RectTransform>();
-                dsr.horizontal = false; dsr.vertical = true;
-                dsr.movementType = ScrollRect.MovementType.Clamped;
-            }
-
-            ui.detailContent = CreateText("DetailContent", dContent.transform, font, "", 15,
-                Vector2.zero, new Vector2(0, 400), TextAnchor.UpperLeft);
-            {
-                var rect = ui.detailContent.GetComponent<RectTransform>();
-                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
-                rect.offsetMin = new Vector2(4, 4); rect.offsetMax = new Vector2(-4, -4);
-            }
-            ui.detailContent.color = new Color(0.9f, 0.9f, 0.85f);
-            ui.detailContent.horizontalOverflow = HorizontalWrapMode.Wrap;
-            ui.detailContent.verticalOverflow = VerticalWrapMode.Overflow;
-            ui.detailContent.lineSpacing = 1.3f;
-
-            // ── ปุ่ม Codex ใน HUD (ซ้ายล่าง เหนือ TooltipPanel) ──
-            // TooltipPanel กิน (20,20)–(440,200) ตอนเลือกวางอาคาร — ปุ่มอยู่ y 210 พ้นกัน
-            // label ไม่ใช้ 📖 (emoji นอก BMP — legacy Text วาดไม่ได้ เห็นเป็นช่องว่าง)
-            var codexBtnGO = GameObject.Find("CodexToggleButton");
-            if (codexBtnGO == null)
-            {
-                var btn = CreateButton("CodexToggleButton", hudCanvas.transform, font, "Codex", 16,
-                    new Vector2(20, 210), new Vector2(120, 36));
-                btn.onClick.AddListener(() => ui.Toggle());
-                EnsureImage(btn.gameObject).color = new Color(0.1f, 0.15f, 0.28f, 0.9f);
-                codexBtnGO = btn.gameObject;
-            }
-
-            // ตั้งตำแหน่งเสมอ (แม้ปุ่มมีอยู่แล้วจากรอบก่อน) — รันซ้ำแล้วตำแหน่งใหม่ถูก apply
-            var btnRect = codexBtnGO.GetComponent<RectTransform>();
-            btnRect.anchorMin = new Vector2(0, 0); btnRect.anchorMax = new Vector2(0, 0);
-            btnRect.pivot = new Vector2(0, 0);
-            btnRect.anchoredPosition = new Vector2(20, 210);
-            EditorUtility.SetDirty(codexBtnGO);
-
-            EditorUtility.SetDirty(ui);
+            return content;
         }
 
         // ─────────────────────────────────────────────
-        //  เนื้อหา 5 entries ภาษาไทย (ระดับมัธยม)
+        //  เนื้อหา 11 entry (Codex_Spec §3 + §7 — ก๊อปตรงจากสเปก)
         // ─────────────────────────────────────────────
-        private static EntryDef[] BuildEntryDefs()
+        private static EntryDef[] BuildEntryDefs() => new[]
         {
-            var core = new[]
-            {
-            new EntryDef(
-                "Core_01",
-                "ฟิชชัน (Nuclear Fission)",
-                "Core", 0, "phase_1_complete",
-@"ฟิชชัน (Nuclear Fission) คือปฏิกิริยาที่นิวเคลียสของอะตอมหนักแตกออกเป็นนิวเคลียสที่เบากว่า
-สองชิ้น พร้อมปล่อยนิวตรอนและพลังงานจำนวนมหาศาล
+            new EntryDef("codex_deuterium", "ดิวเทอเรียม", "Deuterium", QuizCategory.Reactor, "droplet", "ควิซ #1",
+                "ดิวเทอเรียม (²H) เป็นไอโซโทปของไฮโดรเจนที่ปนอยู่ในน้ำทั่วไปอยู่แล้ว " +
+                "เราจึงแยกออกมาใช้เป็นเชื้อเพลิงฟิวชันได้เลยโดยไม่ต้องผลิตขึ้นใหม่"),
 
-⚛️ กระบวนการ (ยูเรเนียม-235 เป็นตัวอย่าง)
-  นิวตรอนพลังงานต่ำ + U-235  →  U-236* (ไม่เสถียร)
-  U-236*  →  Kr-92 + Ba-141 + 3 นิวตรอน + ~200 MeV
+            new EntryDef("codex_plasma_confinement", "การกักพลาสมา", "Plasma Confinement", QuizCategory.Reactor, "flame", "ควิซ #2",
+                "ในโทคาแมก พลาสมาร้อนหลายล้านองศาถูกกักด้วยสนามแม่เหล็ก " +
+                "ถ้าสนามไม่นิ่งจนพลาสมาหลุดไปชนผนัง จะถ่ายเทความร้อนเข้าตัวอาคารจนหลอมละลาย"),
 
-  200 MeV ต่อหนึ่งฟิชชัน ฟังดูน้อย แต่ถ้านำ U-235 หนัก 1 กรัม
-  (~2.56 × 10²¹ อะตอม) มาทำฟิชชันทั้งหมด จะได้พลังงานเทียบเท่า
-  น้ำมันเตาประมาณ 2,700 ลิตร — นี่คือเหตุผลที่นิวเคลียร์ประหยัดเชื้อเพลิงมาก
+            new EntryDef("codex_magnetic_confinement", "สนามแม่เหล็กคู่", "Magnetic Confinement", QuizCategory.Reactor, "magnet", "ควิซ #3",
+                "สนามแม่เหล็กคู่ทำงานร่วมกัน — Toroidal บีบพลาสมาให้เป็นวง ส่วน Poloidal กันไม่ให้พลาสมาชนผนัง " +
+                "เมื่อเสริมให้แข็งแรงจะกักพลาสมาไว้กลางเตาและรีดความร้อนที่รั่วออก"),
 
-⚡ การนำไปใช้ในโรงไฟฟ้า
-  ความร้อนจากฟิชชัน → ต้มน้ำให้เป็นไอ → ไอหมุนกังหัน → ผลิตไฟฟ้า
-  กระบวนการนี้ไม่ปล่อย CO₂ โดยตรง ต่างจากการเผาถ่านหิน
+            new EntryDef("codex_dt_fusion_fuel", "เชื้อเพลิงคู่ D–T", "D–T Fusion Fuel", QuizCategory.Reactor, "atom-2", "ควิซ #Tritium",
+                "เชื้อเพลิงที่หลอมรวมได้ง่ายที่สุดคือคู่ดิวเทอเรียม–ทริเทียม (D–T) เพราะจุดติดที่อุณหภูมิต่ำกว่าคู่อื่น " +
+                "ดิวเทอเรียมจากน้ำพาเตาขึ้นมาได้ระดับหนึ่ง แต่การจะดันถึงจุดติดเต็มร้อยต้องมีทริเทียมป้อนคู่ — " +
+                "ทริเทียมหายากจึงต้องเปิด Zone B ผลิตเอง"),
 
-🔬 ฟิชชันกับฟิวชัน ต่างกันอย่างไร?
-  • ฟิชชัน  = นิวเคลียสใหญ่แตกออก → ใช้ในโรงไฟฟ้านิวเคลียร์ปัจจุบัน
-  • ฟิวชัน  = นิวเคลียสเล็กรวมกัน → CORE TOWER ของ Veltara คือฝันของเทคโนโลยีนี้"
-            ),
-            new EntryDef(
-                "Core_02",
-                "ปฏิกิริยาลูกโซ่ (Chain Reaction)",
-                "Core", 0, "phase_1_complete",
-@"ปฏิกิริยาลูกโซ่ (Chain Reaction) เกิดขึ้นเมื่อนิวตรอนจากฟิชชันหนึ่งครั้งไปก่อให้เกิดฟิชชัน
-ครั้งถัดไป ทำให้ปฏิกิริยาดำเนินต่อเนื่องด้วยตัวเองโดยไม่ต้องป้อนพลังงานจากภายนอก
+            new EntryDef("codex_tritium_breeding", "การเพาะทริเทียม", "Tritium Breeding", QuizCategory.Reactor, "atom", "ควิซ #Tritium-2",
+                "ทริเทียมแทบไม่มีในธรรมชาติ แต่ผลิตได้ด้วยการนำนิวตรอนที่เกิดจากปฏิกิริยาฟิวชันไปยิงใส่ลิเทียม " +
+                "(breeding blanket) ลิเทียมจะแตกตัวให้ทริเทียม — เตาฟิวชันจึงสามารถผลิตเชื้อเพลิงส่วนหนึ่งของตัวเองได้"),
 
-⛓️ ค่า k (Multiplication Factor) — หัวใจของการควบคุม
-  k < 1 : Sub-critical — จำนวนฟิชชันลดลงทุกรุ่น ปฏิกิริยาดับเอง
-  k = 1 : Critical     — จำนวนฟิชชันคงที่ ← สถานะที่โรงไฟฟ้าต้องรักษา
-  k > 1 : Super-critical — จำนวนฟิชชันระเบิดพุ่ง อันตราย
+            new EntryDef("codex_nuclear_medicine", "เวชศาสตร์นิวเคลียร์", "Nuclear Medicine", QuizCategory.Medical, "stethoscope", "ควิซ #4",
+                "เวชศาสตร์นิวเคลียร์ทำงาน 2 ขั้น — (1) วินิจฉัย: PET/SPECT ฉีดสารเภสัชรังสีถ่ายภาพหาตำแหน่งเซลล์ผิดปกติ " +
+                "(2) รักษา: ยาเฉพาะจุด (targeted therapy) ส่งรังสีไปทำลายเฉพาะเป้า กระทบเนื้อดีน้อย"),
 
-🎛️ แท่งควบคุม (Control Rods)
-  ทำจาก โบรอน (B) หรือ แฮฟเนียม (Hf) ซึ่งดูดซับนิวตรอนได้ดี
-  กดแท่งลึก → ดูดนิวตรอนมากขึ้น → k ลดลง → กำลังไฟฟ้าลด
-  ยกแท่งขึ้น → ดูดนิวตรอนน้อยลง → k เพิ่มขึ้น → กำลังไฟฟ้าเพิ่ม
+            new EntryDef("codex_alara", "หลัก ALARA", "ALARA", QuizCategory.Ethics, "shield", "ควิซ #5",
+                "ALARA (As Low As Reasonably Achievable) คือ ให้คนรับรังสีน้อยที่สุดเท่าที่ทำได้ " +
+                "และต้องปกป้องกลุ่มที่ไวต่อรังสีเป็นพิเศษ (ผู้ป่วย/เด็ก) ก่อนเสมอ"),
 
-🛡️ ระบบฉุกเฉิน (SCRAM)
-  ถ้าเซ็นเซอร์ตรวจพบความผิดปกติ แท่งควบคุมทุกอันจะถูกปล่อยให้ตกลงสู่แกนกลาง
-  ทันที กด k ให้ต่ำกว่า 1 ภายในไม่กี่วินาที หยุดปฏิกิริยาทั้งหมด"
-            ),
-            new EntryDef(
-                "Core_03",
-                "ครึ่งชีวิต (Half-Life)",
-                "Core", 50, "",
-@"ครึ่งชีวิต (Half-Life, t½) คือเวลาที่ใช้เพื่อให้ปริมาณสารกัมมันตรังสีลดลงเหลือครึ่งหนึ่ง
-เป็นค่าเฉพาะของแต่ละไอโซโทป ไม่ขึ้นกับอุณหภูมิหรือความดัน
+            new EntryDef("codex_mutation_breeding", "ปรับปรุงพันธุ์ด้วยรังสี", "Mutation Breeding", QuizCategory.Agriculture, "seeding", "ควิซ #6",
+                "การฉายรังสีกระตุ้นให้เกิดการกลายพันธุ์ นักวิจัยคัดเลือกเฉพาะสายพันธุ์ที่ทนทานและให้ผลผลิตสูงไว้ใช้ถาวร " +
+                "เช่น ข้าว กข6 ของไทย เป็นการแก้ปัญหาที่ต้นเหตุ"),
 
-📐 สมการการสลาย
-  N(t) = N₀ × (1/2)^(t / t½)
-  N₀ = ปริมาณเริ่มต้น | t = เวลาที่ผ่านไป | N(t) = ปริมาณที่เหลือ
+            new EntryDef("codex_food_irradiation", "ฉายรังสีถนอมอาหาร", "Food Irradiation", QuizCategory.Agriculture, "meat", "ควิซ #7",
+                "รังสีแกมมาทะลุผ่านอาหารและฆ่าจุลินทรีย์/เชื้อรา ทำให้เก็บได้นานขึ้น " +
+                "โดยอาหารไม่กลายเป็นสารกัมมันตรังสี (อาหารฉายรังสี ≠ อาหารมีรังสี)"),
 
-  ตัวอย่าง: ไอโอดีน-131 มี t½ = 8 วัน
-  วันที่  0: 100 หน่วย
-  วันที่  8:  50 หน่วย
-  วันที่ 16:  25 หน่วย
-  วันที่ 24:  12.5 หน่วย
+            new EntryDef("codex_nuclear_fusion", "ฟิวชันคืออะไร", "Nuclear Fusion", QuizCategory.Reactor, "atom-2", "ควิซ #8",
+                "ฟิวชันคือการหลอมรวมนิวเคลียสเบา (เช่น ไฮโดรเจน) ให้กลายเป็นธาตุที่หนักกว่า แล้วปลดปล่อยพลังงานมหาศาล " +
+                "ตรงข้ามกับฟิชชันที่เป็นการแตกตัวของนิวเคลียสหนัก"),
 
-⏱️ ครึ่งชีวิตของไอโซโทปสำคัญ
-  ไอโซโทป         ครึ่งชีวิต      การใช้งาน
-  ───────────────────────────────────────────────
-  ไอโอดีน-131     8 วัน          รักษามะเร็งต่อมไทรอยด์
-  เทคนีเชียม-99m   6 ชั่วโมง      ตรวจวินิจฉัยทางการแพทย์
-  ซีเซียม-137     30 ปี          กากนิวเคลียร์จากโรงไฟฟ้า
-  คาร์บอน-14      5,730 ปี       กำหนดอายุทางโบราณคดี
-  ยูเรเนียม-238   4,470 ล้านปี   เชื้อเพลิงนิวเคลียร์
-
-🏭 ความสำคัญต่อ Veltara
-  ครึ่งชีวิตบอกว่ากากนิวเคลียร์จากโรงไฟฟ้าต้องถูกเก็บนานแค่ไหน
-  ซีเซียม-137 ต้อง 10 ครึ่งชีวิต (~300 ปี) จึงจะลดลงเหลือน้อยกว่า 0.1%"
-            ),
-            new EntryDef(
-                "Core_04",
-                "สารหล่อเย็นในเครื่องปฏิกรณ์ (Coolant)",
-                "Core", 50, "",
-@"สารหล่อเย็น (Coolant) ไหลผ่านแกนปฏิกรณ์เพื่อดูดซับความร้อนจากฟิชชัน แล้วนำไปผลิตไอน้ำ
-หมุนกังหันผลิตไฟฟ้า — การเลือกสารหล่อเย็นกำหนดชนิดและประสิทธิภาพของเครื่องปฏิกรณ์
-
-💧 ชนิดสารหล่อเย็นและเครื่องปฏิกรณ์ที่ใช้
-  น้ำธรรมดา (H₂O)
-    • PWR (Pressurized Water Reactor) — แรงดันสูงป้องกันการเดือด
-    • BWR (Boiling Water Reactor)  — น้ำเดือดในแกน ไอตรงไปหมุนกังหัน
-    • พบมากที่สุดในโลก (>70% ของโรงไฟฟ้านิวเคลียร์ทั้งหมด)
-
-  น้ำหนัก (D₂O, Heavy Water)
-    • CANDU reactor — ใช้ยูเรเนียมธรรมชาติ ไม่ต้องเสริมสมรรถนะ
-
-  ก๊าซ (CO₂ หรือ He)
-    • HTGR (High Temperature Gas Reactor) — อุณหภูมิสูงมาก ประสิทธิภาพดี
-
-  โลหะเหลว (โซเดียม Na)
-    • Fast Breeder Reactor — ผลิตเชื้อเพลิงใหม่ขณะทำงาน
-
-🌡️ วงจรความร้อนแบบ PWR (สองวงจร)
-  วงจร 1: น้ำอัดแรงดัน → ดูดความร้อนจากแกน → เครื่องกำเนิดไอน้ำ
-  วงจร 2: น้ำวงจรสอง → รับความร้อน → กลายเป็นไอ → หมุนกังหัน → ผลิตไฟฟ้า
-  (น้ำวงจร 1 ไม่สัมผัสกังหัน ลดการปนเปื้อนกัมมันตรังสี)"
-            ),
-            new EntryDef(
-                "Core_05",
-                "รังสีและการป้องกัน (Radiation & Shielding)",
-                "Core", 75, "",
-@"รังสีนิวเคลียร์คือพลังงานหรืออนุภาคที่ปล่อยออกมาจากนิวเคลียสที่ไม่เสถียร
-แต่ละชนิดมีอำนาจทะลุทะลวงและอันตรายต่างกัน
-
-☢️ รังสีสามชนิดหลัก
-  รังสี  สิ่งที่ปล่อย         ทะลุทะลวง            การป้องกัน
-  ─────────────────────────────────────────────────────────────
-  แอลฟา (α) อนุภาค (2p+2n)   ต่ำ (ถูกผิวหนังหยุด)  กระดาษหนึ่งแผ่น
-  บีตา  (β) อิเล็กตรอน       กลาง                 แผ่นอะลูมิเนียม 1-2 ซม.
-  แกมมา (γ) คลื่นแม่เหล็กไฟฟ้า สูงมาก (ทะลุร่างกาย) ตะกั่วหนา หรือคอนกรีต
-
-  ⚠️ รังสีแอลฟา แม้ทะลุทะลวงน้อย แต่อันตรายมากถ้าสูดหรือกลืนเข้าร่างกาย
-     เพราะจะทำลายเซลล์ใกล้เคียงได้โดยตรง
-
-📏 หน่วยวัดรังสีที่ควรรู้
-  เบกเคอเรล (Bq)  : จำนวนนิวเคลียสที่สลายตัวต่อวินาที (วัดความแรงของแหล่งกำเนิด)
-  เกรย์ (Gy)      : พลังงานรังสีที่ร่างกายดูดซับ (J/kg)
-  ซีเวิร์ต (Sv)   : ผลกระทบทางชีวภาพที่ร่างกายได้รับ (คำนึงถึงชนิดรังสี)
-  ขีดจำกัดปลอดภัย : < 1 mSv/ปี สำหรับประชาชนทั่วไป (ICRP แนะนำ)
-  คนทำงานนิวเคลียร์: < 20 mSv/ปี (เฉลี่ย 5 ปี)
-
-🌟 รังสีในชีวิตประจำวัน
-  ทุกคนได้รับรังสีตามธรรมชาติ ~2.4 mSv/ปี จากพื้นดิน อาหาร และรังสีคอสมิก
-  X-Ray ทรวงอก ≈ 0.02 mSv | เที่ยวบินข้ามทวีป ≈ 0.1 mSv
-  รังสีในระดับต่ำเหล่านี้ร่างกายซ่อมแซมตัวเองได้ตามปกติ"
-            ),
-            };
-
-            // ─────────────────────────────────────────────
-            //  สาขา Fusion (V4) — ปลดล็อกด้วยการตอบควิซ (QuizManager.UnlockById) · unlockedBy = "" (ไม่ auto)
-            //  ปิด Gap G1: Q1→fusion_deuterium · Q2→fusion_plasma · Q3→fusion_magnetic · Q8→fusion_reaction · Q9→fusion_clean_energy
-            // ─────────────────────────────────────────────
-            var fusion = new[]
-            {
-            new EntryDef(
-                "fusion_deuterium",
-                "ดิวเทอเรียม — เชื้อเพลิงจากน้ำ (Deuterium)",
-                "Fusion", 0, "",
-@"ดิวเทอเรียม (²H หรือ D) คือ ""ไฮโดรเจนหนัก"" — ไอโซโทปของไฮโดรเจนที่นิวเคลียสมี
-โปรตอน 1 + นิวตรอน 1 (ไฮโดรเจนธรรมดามีแค่โปรตอน 1) จึงหนักเป็นสองเท่าแต่ยังเป็นธาตุเดิม
-
-💧 หาได้จากน้ำ — ไม่ต้องผลิตใหม่
-  ในน้ำทุก ๆ ไฮโดรเจนราว 6,420 อะตอม จะมีดิวเทอเรียมปนอยู่ 1 อะตอม
-  น้ำทะเล 1 ลูกบาศก์เมตร มีดิวเทอเรียม ~33 กรัม แยกได้ด้วยการกลั่น/แลกเปลี่ยนไอโซโทป
-  → เชื้อเพลิงฟิวชันแทบไม่มีวันหมด ต่างจากถ่านหิน/น้ำมันที่ต้องขุดหา
-
-⚛️ ทำไมเป็นเชื้อเพลิงฟิวชันตัวแรก
-  ดิวเทอเรียมเบา หลอมรวมง่ายกว่านิวเคลียสหนัก และมีอยู่แล้วในธรรมชาติ
-  ปฏิกิริยาหลักที่ใช้จริงคือ D-T:  D + T → ฮีเลียม-4 + นิวตรอน + พลังงาน 17.6 MeV
-
-🏙️ ใน Veltara
-  โรงน้ำระดับ L3 สกัดดิวเทอเรียมจากน้ำเพื่อป้อน CORE TOWER — นี่คือเหตุผลที่เชื้อเพลิง
-  ตัวแรกของเตา ""มาจากน้ำ"" ไม่ใช่จากการสร้างสารใหม่"
-            ),
-            new EntryDef(
-                "fusion_plasma",
-                "พลาสมา สถานะที่สี่ของสสาร (Plasma)",
-                "Fusion", 0, "",
-@"พลาสมา (Plasma) คือสถานะที่สี่ของสสาร ถัดจาก ของแข็ง → ของเหลว → ก๊าซ
-เกิดเมื่อก๊าซร้อนจัดจนอิเล็กตรอนหลุดออกจากอะตอม กลายเป็นกลุ่มไอออนบวกและอิเล็กตรอน
-ที่นำไฟฟ้าและตอบสนองต่อสนามแม่เหล็กได้
-
-🔥 ในเตาฟิวชันต้องร้อนแค่ไหน
-  ~100–150 ล้านองศาเซลเซียส — ร้อนกว่าใจกลางดวงอาทิตย์หลายเท่า
-  ต้องร้อนขนาดนี้เพื่อให้นิวเคลียสวิ่งเร็วพอเอาชนะแรงผลักคูลอมบ์ (ประจุบวกผลักกัน)
-  แล้วเข้าใกล้กันจนหลอมรวม
-
-⚠️ ปัญหา: ไม่มีภาชนะไหนทนได้
-  ไม่มีวัสดุใดทนความร้อนระดับนี้ ถ้าพลาสมาแตะผนังเตา จะเสียความร้อนทันที
-  (พลาสมาเย็นลง ฟิวชันดับ) และผนังเสียหาย
-  → ต้อง ""กัก"" พลาสมาให้ลอยอยู่กลางเตาโดยไม่แตะผนัง (ดู Codex สนามแม่เหล็กคู่)
-
-🌌 พลาสมาพบที่ไหนบ้าง
-  ดวงอาทิตย์และดาวฤกษ์ · สายฟ้า · ออโรรา · หลอดไฟนีออน · จอพลาสมา
-  จริง ๆ แล้วสสารในเอกภพกว่า 99% อยู่ในสถานะพลาสมา"
-            ),
-            new EntryDef(
-                "fusion_magnetic",
-                "สนามแม่เหล็กคู่ กักพลาสมา (Magnetic Confinement)",
-                "Fusion", 0, "",
-@"เพราะพลาสมาเป็นอนุภาคมีประจุ มันจึงถูก ""สนามแม่เหล็ก"" บังคับทางเดินได้
-โทคาแมก (Tokamak) ใช้สนามแม่เหล็กสองชุดทำงานร่วมกันขังพลาสมาให้วิ่งเป็นวงแหวน
-โดยไม่แตะผนังเตา
-
-🧲 สนามสองชุด
-  Toroidal Field (สนามวงแหวน)
-    • สร้างจากขดลวดที่พันรอบท่อวงแหวน บีบพลาสมาให้วิ่งเป็นวงกลมรอบแกน
-  Poloidal Field (สนามแนวขวาง)
-    • สร้างจากกระแสในตัวพลาสมาเอง + ขดลวดเสริม บิดเส้นสนามให้เป็นเกลียว
-    • กันพลาสมาไม่ให้ลอยออกไปชนผนัง = เสถียรขึ้น ลดความร้อนรั่ว
-
-  สนามสองชุดรวมกันเป็นเส้นสนามเกลียว (helical) ที่ขังพลาสมาไว้กลางเตาได้นาน
-
-🏗️ โครงการจริงระดับโลก
-  ITER (ฝรั่งเศส) — โทคาแมกที่ใหญ่ที่สุดในโลก ความร่วมมือ 35 ประเทศ
-  ตั้งเป้าพิสูจน์ว่าฟิวชันให้พลังงานออกมากกว่าที่ป้อนเข้า (Q > 1)
-
-🏙️ ใน Veltara
-  Toroidal Coils ยกเพดานหล่อเย็น · Poloidal Coils กันพลาสมาชนผนัง (กัน micro-damage)
-  ยิ่งลงทุนคอยล์ ยิ่ง Boost เตาได้แรงโดยไม่ Meltdown"
-            ),
-            new EntryDef(
-                "fusion_reaction",
-                "ฟิวชันนิวเคลียร์ (Nuclear Fusion)",
-                "Fusion", 0, "",
-@"ฟิวชันนิวเคลียร์ (Nuclear Fusion) คือการหลอมรวมนิวเคลียสเบาสองตัวเข้าด้วยกัน
-กลายเป็นนิวเคลียสที่หนักกว่า พร้อมปลดปล่อยพลังงานมหาศาล — ตรงข้ามกับฟิชชันที่เป็น
-การ ""แตกตัว"" ของนิวเคลียสหนัก
-
-⚛️ ปฏิกิริยา D-T (ที่ใช้จริงในเตา)
-  ดิวเทอเรียม (D) + ทริเทียม (T)  →  ฮีเลียม-4 + นิวตรอน + 17.6 MeV
-  มวลของผลลัพธ์ ""หายไป"" เล็กน้อย มวลที่หายกลายเป็นพลังงานตาม E = mc²
-  (c = ความเร็วแสง ยกกำลังสอง จึงได้พลังงานเยอะมากจากมวลนิดเดียว)
-
-☀️ ฟิวชันคือพลังงานของดวงดาว
-  ใจกลางดวงอาทิตย์หลอมไฮโดรเจนเป็นฮีเลียมทุกวินาที เปล่งแสงและความร้อนมากว่า
-  4,600 ล้านปี — เรากำลังพยายามสร้าง ""ดวงอาทิตย์จำลอง"" บนโลก
-
-🔬 ฟิวชัน vs ฟิชชัน
-  ฟิวชัน  : นิวเคลียสเบารวมกัน · เชื้อเพลิงจากน้ำ · ไม่มีปฏิกิริยาลูกโซ่ · กากรังสีน้อย
-  ฟิชชัน  : นิวเคลียสหนักแตก · ใช้ยูเรเนียม · มีปฏิกิริยาลูกโซ่ · กากรังสีอายุยืน"
-            ),
-            new EntryDef(
-                "fusion_clean_energy",
-                "ทำไมฟิวชันถึงสะอาดกว่า (Clean Energy)",
-                "Fusion", 0, "",
-@"ฟิวชันถูกเรียกว่าพลังงานสะอาดแห่งอนาคต แต่ ""สะอาดกว่า"" ไม่ได้แปลว่า ""ไม่มีรังสีเลย""
-มาดูกันว่าทำไมถึงสะอาดกว่า และมีข้อจำกัดอะไร
-
-✅ ข้อดีที่ทำให้สะอาดกว่า
-  • เชื้อเพลิงจากน้ำ (ดิวเทอเรียม) — แทบไม่มีวันหมด ไม่ต้องขุดเหมือง
-  • ไม่ปล่อย CO₂ ระหว่างผลิตพลังงาน (ต่างจากถ่านหิน/น้ำมัน)
-  • ไม่มีปฏิกิริยาลูกโซ่ที่คุมไม่ได้ — ถ้าเสียสมดุล พลาสมาจะเย็นและเตา ""ดับเอง""
-    (fail-safe) ไม่ระเบิดแบบภาพจำของโรงไฟฟ้าฟิชชัน
-  • ไม่มีกากรังสีอายุยืนหลายพันปีแบบฟิชชัน (เช่น ซีเซียม-137, พลูโทเนียม)
-
-⚠️ ข้อจำกัดที่ต้องซื่อสัตย์
-  ปฏิกิริยา D-T ปล่อย ""นิวตรอน"" พลังงานสูงออกมา นิวตรอนนี้ไปชนผนังเตา
-  ทำให้วัสดุผนังกลายเป็นสารกัมมันตรังสี (neutron activation)
-  → มีกากรังสีอยู่บ้าง แต่ส่วนใหญ่อายุสั้น (สิบ–ร้อยปี) จัดการง่ายกว่าฟิชชันมาก
-  น่าสนใจ: นิวตรอนชุดเดียวกันนี้เอาไปผลิต ""ไอโซโทปการแพทย์"" ได้ (ดูวิกฤตโรคระบาด)
-
-🌏 สรุป
-  ฟิวชัน = สะอาดกว่าอย่างชัดเจน แต่ยัง ""เกี่ยวกับนิวเคลียร์"" — เข้าใจตามจริง
-  ดีกว่าเชื่อว่ามันไร้รังสี 100%"
-            ),
-            };
-
-            // ── ใบความรู้จากห้องวิจัย (GDD §6): ปลดตอนสร้าง Lab / อัป L2 / อัป L3 ──
-            var lab = new[]
-            {
-            new EntryDef(
-                "lab_isotope_basics",
-                "ไอโซโทป — อะตอมพี่น้องต่างน้ำหนัก (Isotopes)",
-                "Core", 0, "lab_built",
-@"ห้องวิจัยแห่งแรกของ Veltara เปิดทำการ! ความรู้พื้นฐานชิ้นแรกที่ทีมวิจัยเรียบเรียง:
-ไอโซโทป (Isotope) คืออะตอมของธาตุเดียวกันที่มีจำนวนนิวตรอนต่างกัน
-
-⚛️ ตัวอย่างจากไฮโดรเจน — ธาตุเดียว 3 ไอโซโทป
-  • โปรเทียม (¹H)   : โปรตอน 1 · นิวตรอน 0 — ไฮโดรเจนทั่วไปในน้ำ
-  • ดิวเทอเรียม (²H / D): โปรตอน 1 · นิวตรอน 1 — ""น้ำหนัก"" สกัดได้จากน้ำทะเล
-  • ทริเทียม (³H / T)  : โปรตอน 1 · นิวตรอน 2 — กัมมันตรังสีอ่อน ครึ่งชีวิต ~12.3 ปี
-
-🔬 ทำไมสำคัญกับ CORE TOWER?
-  เชื้อเพลิงฟิวชันคือคู่ D-T — ดิวเทอเรียมจากโรงน้ำ + ทริเทียมจากแหล่งแร่โซน B
-  สมบัติเคมีของไอโซโทปเหมือนกัน แต่พฤติกรรมนิวเคลียร์ต่างกันโดยสิ้นเชิง
-
-🌾 นอกโรงไฟฟ้า
-  ไอโซโทปใช้ตามรอยน้ำใต้ดิน (O-18), หาอายุวัตถุโบราณ (C-14),
-  และรักษามะเร็ง (Co-60) — วิทยาศาสตร์เดียวกัน ใช้ได้ทั้งเมือง"
-            ),
-            new EntryDef(
-                "lab_neutron_activation",
-                "นิวตรอนกระตุ้น — เปลี่ยนธาตุด้วยอนุภาค (Neutron Activation)",
-                "Core", 0, "lab_l2",
-@"ห้องวิจัยระดับ 2 เข้าถึงเครื่องมือวัดที่ละเอียดขึ้น ทีมวิจัยไขกลไกสำคัญ:
-เมื่อนิวตรอนชนนิวเคลียส นิวเคลียสอาจ ""จับ"" นิวตรอนไว้ แล้วกลายเป็นไอโซโทปใหม่
-
-⚙️ กลไก (Neutron Capture)
-  X (ธาตุเดิม) + n → X* (ไอโซโทปหนักขึ้น มักไม่เสถียร) → สลายตัวปล่อยรังสี
-
-🏭 ในเตาฟิวชัน
-  นิวตรอนพลังงานสูงจาก D-T ชนผนังเตา → ผนังค่อยๆ กลายเป็นสารกัมมันตรังสีอายุสั้น
-  นี่คือเหตุผลที่ต้องเลือกวัสดุผนัง (เช่น เหล็กกล้าพิเศษ) และเปลี่ยนตามรอบ
-
-💊 ด้านสว่างของนิวตรอน
-  ใช้ผลิตไอโซโทปการแพทย์ (Mo-99 → Tc-99m สำหรับสแกนร่างกาย)
-  และวิเคราะห์ธาตุปนเปื้อนในอาหาร/ดิน แม่นระดับส่วนในพันล้าน (NAA)"
-            ),
-            new EntryDef(
-                "lab_breeding_tritium",
-                "เพาะทริเทียม — เชื้อเพลิงที่ผลิตตัวเองได้ (Tritium Breeding)",
-                "Core", 0, "lab_l3",
-@"ห้องวิจัยระดับสูงสุดปลดล็อกความลับสุดท้ายของวงจรเชื้อเพลิงฟิวชัน:
-ทริเทียมหายากมากในธรรมชาติ (ครึ่งชีวิตสั้น) — เตาฟิวชันจริงจึงต้อง ""เพาะ"" เอง
-
-🧪 สมการเพาะพันธุ์ (Breeding Blanket)
-  n (จากปฏิกิริยา D-T) + Li-6 → T + He-4 + พลังงาน
-  ผนังเตาบุด้วยลิเทียม → นิวตรอนที่หนีออกมาผลิตทริเทียมป้อนกลับเข้าเตา
-
-♻️ วงจรปิดในอุดมคติ
-  D-T ฟิวชัน → นิวตรอน → ชนลิเทียม → ทริเทียมใหม่ → กลับเข้าเตา
-  อัตราเพาะต้อง > 1 (TBR > 1) เตาจึงเลี้ยงตัวเองได้ — โจทย์วิศวกรรมที่ ITER กำลังไข
-
-🏙️ บทเรียนของ Veltara
-  ตอนนี้เมืองยังขุดทริเทียมจากแหล่งแร่โซน B — เสี่ยงรังสีทุกวัน
-  CORE TOWER ที่สมบูรณ์คือทางออก: ผลิตเชื้อเพลิงเองโดยไม่ต้องส่งคนเข้าโซนอันตราย"
-            ),
-            };
-
-            // เพิ่ม 15 entries ของสาขา Agriculture / Medical / Environment (CodexBranchContent.cs)
-            var all = new List<EntryDef>(core);
-            all.AddRange(fusion);
-            all.AddRange(lab);
-            foreach (var e in CodexBranchContent.Entries())
-                all.Add(new EntryDef(e.id, e.title, e.branch, e.cost, e.unlockedBy, e.content));
-            return all.ToArray();
-        }
+            new EntryDef("codex_clean_energy", "ทำไมฟิวชันสะอาด", "Clean Energy", QuizCategory.Reactor, "leaf", "ควิซ #9",
+                "ฟิวชันสะอาดกว่าเพราะเชื้อเพลิงหาได้จากน้ำ ไม่ปล่อย CO₂ ถ้าเสียสมดุลเตาจะดับเอง (ไม่ระเบิด) " +
+                "และไม่มีกากรังสีอายุยืนแบบฟิชชัน — แต่สะอาดกว่าไม่ได้แปลว่าไม่มีรังสีเลย เพราะเชื้อเพลิง D-T ยังปล่อยนิวตรอน"),
+        };
 
         // ─────────────────────────────────────────────
         //  Helper utilities
@@ -665,6 +473,24 @@ namespace NuclearReMind.EditorTools
 
         private static Image EnsureImage(GameObject go)
             => go.GetComponent<Image>() ?? go.AddComponent<Image>();
+
+        private static void Stretch(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+        }
+        private static void TopLeft(RectTransform rt)
+        {
+            rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        }
+        private static void TopRight(RectTransform rt)
+        {
+            rt.anchorMin = new Vector2(1, 1); rt.anchorMax = new Vector2(1, 1); rt.pivot = new Vector2(1, 1);
+        }
+        private static void TopStretch(RectTransform rt)
+        {
+            rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(1, 1); rt.pivot = new Vector2(0, 1);
+        }
 
         private static Text CreateText(string name, Transform parent, Font font,
             string content, int fontSize, Vector2 anchoredPos, Vector2 size, TextAnchor anchor)
@@ -690,18 +516,22 @@ namespace NuclearReMind.EditorTools
             img.color = new Color(0.2f, 0.2f, 0.3f, 1f);
             var btn = go.GetComponent<Button>() ?? go.AddComponent<Button>();
             btn.targetGraphic = img;
-            CreateText(name + "Label", go.transform, font, label, fontSize,
+            var t = CreateText(name + "Label", go.transform, font, label, fontSize,
                 Vector2.zero, size, TextAnchor.MiddleCenter);
+            Stretch(t.rectTransform);
             return btn;
         }
 
         private readonly struct EntryDef
         {
-            public readonly string id, title, branch, unlockedBy, content;
-            public readonly int cost;
-            public EntryDef(string id, string title, string branch, int cost, string unlockedBy, string content)
-            { this.id = id; this.title = title; this.branch = branch;
-              this.cost = cost; this.unlockedBy = unlockedBy; this.content = content; }
+            public readonly string id, titleTh, titleEn, icon, unlockedFrom, body;
+            public readonly QuizCategory category;
+            public EntryDef(string id, string titleTh, string titleEn, QuizCategory category,
+                string icon, string unlockedFrom, string body)
+            {
+                this.id = id; this.titleTh = titleTh; this.titleEn = titleEn;
+                this.category = category; this.icon = icon; this.unlockedFrom = unlockedFrom; this.body = body;
+            }
         }
     }
 }

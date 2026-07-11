@@ -118,6 +118,13 @@ namespace NuclearReMind
                 return;
             }
 
+            // โรงวิจัยมากับแมพหลังเดียว สร้างคืนไม่ได้ — ทุบแล้วฝึกคลาส/ผลิต Knowledge ตันถาวร จึงห้ามทุบ
+            if (data.buildingType == BuildingType.Laboratory)
+            {
+                EventManager.Instance.RaiseNotice("โรงวิจัยมากับเมืองแต่แรกและมีหลังเดียว — ทุบทิ้งไม่ได้");
+                return;
+            }
+
             // แหล่งแร่เป็นภูมิประเทศ (มากับแมพ สร้างคืนไม่ได้) — ห้ามทุบ เอาคนออกได้อย่างเดียว
             if (data.isOreNode)
             {

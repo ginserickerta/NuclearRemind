@@ -23,13 +23,18 @@ namespace NuclearReMind.EditorTools
     {
         private const string ArtTilesFolder = "Assets/Sprites/Art/Tiles";
         private const string FlatFolder = "Assets/Sprites/Art/Tiles/Flat";
+        private const string DarkFolder = "Assets/Sprites/Art/Tiles/Flat/Dark"; // คู่ "เข้ม" (สไปรต์เดิม tint เทา) สำหรับลายหมากรุก
         private const string SourceFolder = "Assets/Sprites/Tiles/IsoNature";
         private const int TilePixelsPerUnit = 32;
+        // ระดับความเข้มของช่องเข้มในลายหมากรุก (1 = เท่าเดิม, ต่ำลง = เข้มขึ้น) — ปรับได้
+        // 0.93 = ต่างกันเล็กน้อยแบบ Clash of Clans (ต้องมองดีๆ ถึงแยกออก)
+        private static readonly Color DarkTint = new Color(0.93f, 0.93f, 0.93f, 1f);
 
         [MenuItem("NuclearReMind/Flatten Ground Tiles (Top Face)")]
         public static void Apply()
         {
             Directory.CreateDirectory(FlatFolder);
+            Directory.CreateDirectory(DarkFolder);
 
             var indices = CuratedIndices();
             if (indices.Count == 0)
@@ -119,6 +124,23 @@ namespace NuclearReMind.EditorTools
             {
                 tile.sprite = sprite;
                 EditorUtility.SetDirty(tile);
+            }
+
+            // คู่ "เข้ม": สไปรต์เดียวกัน แต่ tile.color = เทา → เรนเดอร์เข้มลง (ไม่ต้องสร้าง PNG ใหม่)
+            string darkPath = $"{DarkFolder}/flat_{index:000}.asset";
+            var darkTile = AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.Tile>(darkPath);
+            if (darkTile == null)
+            {
+                darkTile = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
+                darkTile.sprite = sprite;
+                darkTile.color = DarkTint;
+                AssetDatabase.CreateAsset(darkTile, darkPath);
+            }
+            else
+            {
+                darkTile.sprite = sprite;
+                darkTile.color = DarkTint;
+                EditorUtility.SetDirty(darkTile);
             }
             return true;
         }

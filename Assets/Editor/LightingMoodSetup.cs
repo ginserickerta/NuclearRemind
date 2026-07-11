@@ -6,10 +6,10 @@ using UnityEngine.Rendering.Universal;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
-    /// มู้ดแสงบรรยากาศ (warm key + cool fill) — แทนไฟขาว flat ดวงเดียว ให้ภาพมีมิติ/อบอุ่น
-    ///   • Key  = Global Light 2D เดิม → โทนอุ่นแบบแสงกลางวัน
-    ///   • Fill = Global Light 2D ดวงใหม่ โทนเย็น intensity ต่ำ → ยกเงาให้ไม่ทึบ + สีมีคอนทราสต์อุ่น-เย็น
-    /// ไฟ Global ชนิดเดียวกัน (blend style 0) จะ "บวกกัน" → รวมกันเป็นแสงกลางวันอบอุ่น
+    /// มู้ดแสงบรรยากาศ (neutral key + cool fill จางๆ) — สีบนจอตรงกับ asset ดิบ ไม่ติดฟิลเตอร์อุ่น
+    ///   • Key  = Global Light 2D เดิม → ขาวกลาง (1,1,1) สีจริงของ sprite
+    ///   • Fill = Global Light 2D ดวงใหม่ โทนเย็นจางๆ intensity ต่ำ → ยกเงาให้ไม่แบน (ไม่กลบสี)
+    /// ไฟ Global ชนิดเดียวกัน (blend style 0) จะ "บวกกัน" → รวมเป็นแสงกลางวันเกือบขาวสนิท
     /// ทั้งสองดวงส่องทุก sorting layer (เหมือน LightingSetup) ครอบ sprite ทุกตัว
     ///
     /// ปรับโทน/ความสว่างที่ const ด้านล่าง · idempotent (รันซ้ำได้) · รัน: NuclearReMind/Lighting Mood (Warm Key + Cool Fill)
@@ -19,11 +19,11 @@ namespace NuclearReMind.EditorTools
         private const string ScenePath = "Assets/Scenes/Gamescene.unity";
 
         // ── ปรับมู้ดตรงนี้ ──
-        // โทนอุ่นแบบ golden hour — ดึง b (น้ำเงิน) ลงพอให้ Multiply "ติดสีอุ่น" เห็นชัด (ไม่งั้นคูณ≈ภาพเดิม)
-        private static readonly Color KeyColor  = new Color(1.00f, 0.87f, 0.66f); // อุ่น (แสงแดด)
+        // key = ขาวกลาง (1,1,1) → สีบนจอตรงกับ asset ดิบ ไม่ติดโทนอุ่น (เดิม 1,0.87,0.66 = ทำหญ้าเขียวอมเหลือง)
+        private static readonly Color KeyColor  = new Color(1.00f, 1.00f, 1.00f); // ขาวกลาง (ตรง asset)
         private const float KeyIntensity = 1.0f;
-        private static readonly Color FillColor = new Color(0.60f, 0.75f, 1.00f); // เย็น (ฟ้า)
-        private const float FillIntensity = 0.16f; // ต่ำลงเล็กน้อย ไม่ให้ล้างโทนอุ่นทิ้ง
+        private static readonly Color FillColor = new Color(0.85f, 0.92f, 1.00f); // เย็นจางๆ ยกเงาไม่ให้แบน (ไม่ติดสีชัด)
+        private const float FillIntensity = 0.12f; // ต่ำ ไม่ให้กลบสีจริง
 
         [MenuItem("NuclearReMind/Lighting Mood (Warm Key + Cool Fill)")]
         public static void Apply()

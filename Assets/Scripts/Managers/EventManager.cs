@@ -127,6 +127,11 @@ namespace NuclearReMind
         // ===== Population Sick (Story Guide §4 วิกฤตโรครังสี — CrisisEffectManager → PopulationManager) =====
         public event Action<int> OnPopulationSickInjected; // +n คนป่วย (เช่น Plasma B วิศวกร 2 คน)
         public event Action<int> OnPopulationSickSet;      // ตั้งจำนวนป่วยเป็น n (เช่น Outbreak A→5, B→0)
+        public event Action<int> OnPopulationSickCured;    // รักษาป่วยสูงสุด n คน (ResearchLab_Spec: ยาไอโซโทป ≤15)
+
+        // ===== Research (ResearchLab_Spec — โครงการวิจัย 3 อันของห้องวิจัย · ResearchManager) =====
+        public event Action<string> OnResearchRequested; // UI → ResearchManager (projectId: seeds/isotope/core_tower)
+        public event Action<string> OnResearchCompleted; // ResearchManager → CoreTower(gate)/CrisisEffect(ผลผลิต)/UI
 
         // ===== Pre-placed (ตึกที่มากับแมพ เช่น CORE TOWER กลางเมือง — สร้างเสร็จทันที ไม่เข้าคิวก่อสร้าง) =====
         public event Action<Vector2Int> OnConstructionCompleteRequested;
@@ -271,6 +276,11 @@ namespace NuclearReMind
         // ===== Population Sick =====
         public void RaisePopulationSickInjected(int count) => OnPopulationSickInjected?.Invoke(count);
         public void RaisePopulationSickSet(int count) => OnPopulationSickSet?.Invoke(count);
+        public void RaisePopulationSickCured(int count) => OnPopulationSickCured?.Invoke(count);
+
+        // ===== Research =====
+        public void RaiseResearchRequested(string projectId) => OnResearchRequested?.Invoke(projectId);
+        public void RaiseResearchCompleted(string projectId) => OnResearchCompleted?.Invoke(projectId);
 
         // ===== Pre-placed =====
         public void RaiseConstructionCompleteRequested(Vector2Int cell) => OnConstructionCompleteRequested?.Invoke(cell);

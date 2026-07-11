@@ -205,16 +205,20 @@ namespace NuclearReMind
             return rm.Current.energy >= data.energyCost && rm.Current.iron >= data.ironCost;
         }
 
-        /// <summary>CORE TOWER สร้างได้แค่หลังเดียว (V4 §8) — เช็กจาก registry ว่ามีอยู่แล้วหรือยัง</summary>
+        /// <summary>
+        /// อาคาร "หลังเดียว" สร้างซ้ำไม่ได้ — เช็กจาก registry ว่ามีอยู่แล้วหรือยัง
+        /// CORE TOWER (V4 §8) + โรงวิจัย (GDD rework: มากับแมพ ไม่อยู่ใน hotbar — เช็คนี้กันหลุดทางอื่น)
+        /// </summary>
         private static bool IsUniqueAlreadyPlaced(BuildingData data)
         {
-            if (data.buildingType != BuildingType.CoreTower) return false;
+            if (data.buildingType != BuildingType.CoreTower &&
+                data.buildingType != BuildingType.Laboratory) return false;
 
             var registry = BuildingRegistry.Instance;
             if (registry == null) return false;
 
             foreach (var kvp in registry.PlacedBuildings)
-                if (kvp.Value != null && kvp.Value.buildingType == BuildingType.CoreTower)
+                if (kvp.Value != null && kvp.Value.buildingType == data.buildingType)
                     return true;
 
             return false;

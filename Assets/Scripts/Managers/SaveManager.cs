@@ -142,6 +142,16 @@ namespace NuclearReMind
             if (InventoryManager.Instance != null)
                 save.inventory = InventoryManager.Instance.GetSaveState();
 
+            // โครงการวิจัยห้องวิจัย (ResearchLab_Spec) — read-only query · ไม่มี manager = default false
+            if (ResearchManager.Instance != null)
+            {
+                var rs = ResearchManager.Instance;
+                save.researchSeedsDone = rs.SeedsDone;
+                save.researchIsotopeDone = rs.IsotopeDone;
+                save.researchCoreUnlockDone = rs.CoreUnlockDone;
+                save.researchIsotopePending = rs.IsotopePending;
+            }
+
             File.WriteAllText(SavePath, JsonUtility.ToJson(save, true));
             Debug.Log($"[SaveManager] Saved to {SavePath}");
         }

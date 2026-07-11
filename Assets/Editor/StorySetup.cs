@@ -354,8 +354,10 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
                 b.noteTH = "logLines โชว์รวดเดียว (logLinesDaily=false) · triggerParam = buildingName ไทยของ PowerPlant.asset";
             }));
 
-            // ── PHASE 2 · recover_record_01 — สร้างห้องวิจัย → เริ่มกู้คืนข้อมูล ──
-            beats.Add(Beat("recover_record_01", StoryTriggerType.OnBuildingBuilt, "ห้องปฏิบัติการ", b =>
+            // ── recover_record_01 — จัดคนเข้าห้องวิจัย → เริ่มกู้คืนข้อมูล ──
+            // ★ สเปกโรงวิจัย: trigger = "สร้าง+จัดคนเข้า" ไม่ใช่สร้างเสร็จ (แล็บ pre-placed มากับแมพ —
+            //   OnBuildingBuilt จะยิงตั้งแต่เริ่มเกมก่อนผู้เล่นทำอะไร) → ใช้ OnBuildingStaffed
+            beats.Add(Beat("recover_record_01", StoryTriggerType.OnBuildingStaffed, "ห้องปฏิบัติการ", b =>
             {
                 b.record = records["elara_01"];
                 b.innerVoiceAfter = "Elara... ชื่อนี้อยู่บนอนุสรณ์ในฐาน";
@@ -531,7 +533,7 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
             // ตึกอนุสรณ์ pre-placed ข้างขวา CORE TOWER (ทาวเวอร์ 3×3 กลางกริด — เว้น 1 ช่อง)
             var grid = Object.FindFirstObjectByType<GridManager>();
             int columns = grid != null ? grid.columns : 43;
-            int rows    = grid != null ? grid.rows    : 28;
+            int rows    = grid != null ? grid.rows    : 43;
             var origin = new Vector2Int(columns / 2 + 4, rows / 2 - 1);
 
             var go = GameObject.Find("PrePlacedMemorial") ?? new GameObject("PrePlacedMemorial");

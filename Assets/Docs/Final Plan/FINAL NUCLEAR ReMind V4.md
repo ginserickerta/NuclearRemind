@@ -209,7 +209,7 @@ TimeManager.IsRunning == (activePauseReasons.Count == 0)
 | อาคาร | ผล | คน | ต้นทุนสร้าง | ค่าเดินระบบ/วัน | ปลดล็อก |
 |-------|-----|----|--------------| ----------------|---------|
 | **Shelter** | เพิ่มเพดานประชากร (ดู §5) | — | (ตาม §5) | — | Phase 1 |
-| **ห้องวิจัย** (Research Lab) | ปลดล็อกเทค · ฝึก Engineer · สกัด Deuterium · วิจัยยา/เมล็ดพันธุ์ | 2 (eng) | Iron 80 + Energy 120 | Energy 20 | Phase 2 |
+| **ห้องวิจัย** (Research Lab) | ปลดล็อกเทค · ฝึก Engineer · วิจัยยา/เมล็ดพันธุ์ | 2 (eng) | Iron 80 + Energy 120 | Energy 20 | Phase 2 |
 | **โรงพยาบาล** (Hospital) | รักษาคนป่วย · กันรังสี · ฝึก Medic | 2 | Iron 100 + Energy 150 | Energy 15 | Phase 3 |
 | **Zone A** (เหมืองลึก) | ขุดแร่หายาก (เสี่ยงรังสี) | — | ปลดผ่านอัป Mine L2 + Energy 100 | — | Phase 3 |
 | **Zone B** (บ่อเชื้อเพลิง) | ผลิต **Tritium** | 3 (eng) | Iron 150 + Energy 200 | Energy 30 + Water 30 | Phase 4 |

@@ -85,21 +85,23 @@ namespace NuclearReMind.Editor
                 b.upgradeEnergyCost = 150;
             });
 
-            // ── Research Lab (§6 อาคารวิจัย): Iron 80 + E 120 / 2 วิศวกร / upkeep 20⚡ · ปลดเฟส 2 ──
+            // ── Research Lab (§6 อาคารวิจัย): มากับแมพ Day 1 หลังเดียว (วางเอง/วางซ้ำไม่ได้ — ถอดจาก hotbar) ──
             // ศูนย์ฝึกทุกคลาส (ธง unlocks* ตั้งใน Phase3PopulationSetup) + ผลิต Knowledge 2/วัน (×ระดับ)
+            // cost 0 = จำเป็น: PrePlacedBuilding ยิง OnBuildingPlaced → ResourceManager หักตามราคา (เหมือน CORE TOWER)
             n += SetBuilding("Laboratory", b =>
             {
-                b.ironCost = 80;
-                b.energyCost = 120;
+                b.ironCost = 0;
+                b.energyCost = 0;
                 b.workerRequired = 2;
                 b.requiredClass = WorkerClass.Engineer;
                 b.energyConsumption = 20f;
                 b.waterConsumption = 0f;
                 b.knowledgeProduction = 2f;
-                b.unlockPhase = 2; // GDD §6 "ปลดล็อก Phase 2"
+                b.unlockPhase = 1; // มากับแมพตั้งแต่ Day 1 (ไม่อยู่ใน hotbar — ค่านี้แค่กัน UI อื่นสับสน)
                 b.upgradeIronCost = 40;
                 b.upgradeEnergyCost = 150;
-                b.description = "หัวใจงานวิจัย — ฝึกวิศวกร/แพทย์/เกษตรกร ผลิต Knowledge และปลดใบความรู้นิวเคลียร์ " +
+                b.description = "หัวใจงานวิจัย — มากับเมืองแต่แรก (มีหลังเดียว สร้างเพิ่ม/รื้อไม่ได้) " +
+                                "ฝึกวิศวกร/แพทย์/เกษตรกร ผลิต Knowledge และปลดใบความรู้นิวเคลียร์ " +
                                 "ต้องมีวิศวกรประจำ 2 คนจึงเดินเครื่อง";
             });
 
@@ -186,19 +188,22 @@ namespace NuclearReMind.Editor
 
             var conduit = AssetDatabase.LoadAssetAtPath<BuildingData>(Dir + "PowerConduit.asset");
             var coreTower = AssetDatabase.LoadAssetAtPath<BuildingData>(Dir + "CoreTower.asset");
+            var lab = AssetDatabase.LoadAssetAtPath<BuildingData>(Dir + "Laboratory.asset");
 
             var placement = Object.FindFirstObjectByType<PlacementController>();
             if (placement != null)
             {
                 // Mine ถอดจาก hotbar — เหล็กมาจากการขุดแหล่งแร่ (OreDepositSetup) เท่านั้น
                 // (เดิม AppendIfMissing — เปลี่ยนเป็นถอด กันรันซ้ำแล้ว Mine คืนชีพเข้า hotbar)
+                // Lab ถอดด้วย — มากับแมพหลังเดียว (PrePlacedLab) ผู้เล่นสร้างเอง/สร้างซ้ำไม่ได้
                 bool changed = RemoveIfPresent(ref placement.buildingHotbar, mine);
                 changed |= RemoveIfPresent(ref placement.buildingHotbar, conduit);
                 changed |= RemoveIfPresent(ref placement.buildingHotbar, coreTower);
+                changed |= RemoveIfPresent(ref placement.buildingHotbar, lab);
                 if (changed)
                 {
                     EditorUtility.SetDirty(placement);
-                    Debug.Log($"[BuildingBalanceSetup] hotbar = {placement.buildingHotbar.Length} ช่อง (Mine+Conduit+CoreTower ถอด)");
+                    Debug.Log($"[BuildingBalanceSetup] hotbar = {placement.buildingHotbar.Length} ช่อง (Mine+Conduit+CoreTower+Lab ถอด)");
                 }
 
                 // BuildingSelectionUI.buildings เป็น array แยก (serialize คนละก้อน) — sync ให้ตรง hotbar เสมอ
@@ -218,6 +223,7 @@ namespace NuclearReMind.Editor
             }
 
             EnsurePrePlacedCoreTower(coreTower);
+            EnsurePrePlacedLab(lab);
 
             if (placement == null || registry == null)
                 Debug.LogWarning("[BuildingBalanceSetup] ไม่พบ PlacementController/BuildingRegistry ในซีน — " +
@@ -228,7 +234,7 @@ namespace NuclearReMind.Editor
 
         /// <summary>
         /// สร้าง GameObject "PrePlacedCoreTower" (PrePlacedBuilding) — วาง CORE TOWER กลางกริดตอนเริ่มเกม
-        /// ตำแหน่งคำนวณจากขนาดกริดจริงในซีน (43×28, ตึก 3×3 → origin (20,12) กินช่อง col 20–22 / row 12–14)
+        /// ตำแหน่งคำนวณจากขนาดกริดจริงในซีน (43×43, ตึก 3×3 → origin (20,20) กินช่อง col 20–22 / row 20–22)
         /// </summary>
         private static void EnsurePrePlacedCoreTower(BuildingData coreTower)
         {
@@ -240,7 +246,7 @@ namespace NuclearReMind.Editor
 
             var grid = Object.FindFirstObjectByType<GridManager>();
             int columns = grid != null ? grid.columns : 43;
-            int rows = grid != null ? grid.rows : 28;
+            int rows = grid != null ? grid.rows : 43;
             var origin = new Vector2Int((columns - coreTower.size.x) / 2, (rows - coreTower.size.y) / 2);
 
             var go = GameObject.Find("PrePlacedCoreTower");
@@ -250,6 +256,34 @@ namespace NuclearReMind.Editor
             pre.cell = origin;
             EditorUtility.SetDirty(pre);
             Debug.Log($"[BuildingBalanceSetup] PrePlacedCoreTower ที่ ({origin.x},{origin.y}) ขนาด {coreTower.size.x}×{coreTower.size.y}");
+        }
+
+        /// <summary>
+        /// สร้าง GameObject "PrePlacedLab" (PrePlacedBuilding) — โรงวิจัยมากับแมพ Day 1 หลังเดียว (GDD rework)
+        /// ตำแหน่ง: ซ้ายของ CORE TOWER (origin กลาง −3 คอลัมน์, +1 แถว → (17,21) บนกริด 43×43)
+        /// สมมาตรกับอนุสรณ์ที่อยู่ฝั่งขวา · แหล่งแร่สุ่มทีหลังและเช็ค isOccupied — ไม่ชนกัน
+        /// </summary>
+        private static void EnsurePrePlacedLab(BuildingData lab)
+        {
+            if (lab == null)
+            {
+                Debug.LogWarning("[BuildingBalanceSetup] ไม่พบ Laboratory.asset — ข้าม pre-place โรงวิจัย");
+                return;
+            }
+
+            var grid = Object.FindFirstObjectByType<GridManager>();
+            int columns = grid != null ? grid.columns : 43;
+            int rows = grid != null ? grid.rows : 43;
+            var coreOrigin = new Vector2Int((columns - 3) / 2, (rows - 3) / 2); // ตรงกับ EnsurePrePlacedCoreTower (ตึก 3×3)
+            var origin = new Vector2Int(coreOrigin.x - 3, coreOrigin.y + 1);
+
+            var go = GameObject.Find("PrePlacedLab");
+            if (go == null) go = new GameObject("PrePlacedLab");
+            var pre = go.GetComponent<PrePlacedBuilding>() ?? go.AddComponent<PrePlacedBuilding>();
+            pre.building = lab;
+            pre.cell = origin;
+            EditorUtility.SetDirty(pre);
+            Debug.Log($"[BuildingBalanceSetup] PrePlacedLab (โรงวิจัย) ที่ ({origin.x},{origin.y})");
         }
 
         private static bool AppendIfMissing(ref BuildingData[] array, BuildingData item)

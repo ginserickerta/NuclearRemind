@@ -168,9 +168,12 @@ namespace NuclearReMind
             if (_backdrop != null) _backdrop.SetActive(false); // ปิดทั้งชุด (ไม่งั้น backdrop บังคลิกทั้งจอ)
         }
 
+        // Laboratory มีป๊อปอัพเฉพาะ (LabPanelUI — ฝึก/วิจัย/จัดคน/อัปเกรดครบในนั้น) — exclude กันเปิดซ้อน
+        // แบบเดียวกับ CoreTower (CoreTowerPanelUI) และ Memorial (MemorialPanelController)
         private static bool IsExcluded(BuildingData d)
             => d == null || d.buildingType == BuildingType.CoreTower || d.isCoreTowerPart
-               || d.buildingType == BuildingType.Memorial;
+               || d.buildingType == BuildingType.Memorial
+               || d.buildingType == BuildingType.Laboratory;
 
         // ═══════════════════════════ POPULATE ═══════════════════════════
         private void Refresh()

@@ -61,6 +61,7 @@ namespace NuclearReMind
             EventManager.Instance.OnDayEnded += HandleDayEnded;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
             EventManager.Instance.OnItemUsed += HandleItemUsed;
+            EventManager.Instance.OnResearchCompleted += HandleResearchCompleted;
         }
 
         private void OnDisable()
@@ -70,6 +71,18 @@ namespace NuclearReMind
             EventManager.Instance.OnDayEnded -= HandleDayEnded;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
             EventManager.Instance.OnItemUsed -= HandleItemUsed;
+            EventManager.Instance.OnResearchCompleted -= HandleResearchCompleted;
+        }
+
+        /// <summary>
+        /// โครงการวิจัย "เมล็ดพันธุ์ฉายรังสี" (ResearchLab_Spec §3.1 — ทางยั่งยืนของวิกฤต 3·A):
+        /// ผลผลิตฟาร์ม +100% ถาวร ผ่าน FoodYieldMultiplier ตัวเดียวกับวิกฤต/ไอเทม (persist ใน SaveData เดิม)
+        /// ขนาดโบนัสอ่านจาก ResearchManager (read-only query — ตัวเลขอยู่ที่ SerializeField ไม่ hardcode)
+        /// </summary>
+        private void HandleResearchCompleted(string projectId)
+        {
+            if (projectId != ResearchManager.ProjectSeeds || ResearchManager.Instance == null) return;
+            FoodYieldMultiplier += ResearchManager.Instance.seedsFoodYieldBonus;
         }
 
         /// <summary>

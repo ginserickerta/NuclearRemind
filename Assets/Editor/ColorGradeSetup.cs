@@ -23,7 +23,7 @@ namespace NuclearReMind.EditorTools
         // ── ปรับความสดตรงนี้ (มาก = สดขึ้น) ──
         private const float Saturation   = 22f;   // -100..100  (สีสด)
         private const float Contrast     = 10f;   // -100..100  (คอนทราสต์/ความเด้ง)
-        private const float PostExposure = 0.12f; // EV         (สว่างรวม)
+        private const float PostExposure = 0.45f; // EV         (สว่างรวม — สูงขึ้น = พื้น/ในเกมอ่อนขึ้น)
         private const float LightIntensity = 1.15f; // Global Light 2D (1 = เดิม)
 
         [MenuItem("NuclearReMind/Fix Colors (สี sprite สดขึ้น)")]
@@ -41,6 +41,7 @@ namespace NuclearReMind.EditorTools
                 ca.saturation.overrideState = true;   ca.saturation.value = Saturation;
                 ca.contrast.overrideState = true;     ca.contrast.value = Contrast;
                 ca.postExposure.overrideState = true; ca.postExposure.value = PostExposure;
+                ca.colorFilter.overrideState = true;  ca.colorFilter.value = Color.white; // กันฟิลเตอร์อุ่นค้าง (สีตรง asset)
                 EditorUtility.SetDirty(profile);
                 AssetDatabase.SaveAssets();
                 Debug.Log($"[ColorGradeSetup] ColorAdjustments: sat={Saturation} contrast={Contrast} exposure={PostExposure}");

@@ -6,8 +6,8 @@ namespace NuclearReMind
 {
     /// <summary>
     /// แหล่งแร่เหล็กบนแมพ (V4 §5 — โซน A ปลอดภัย · โซน B เสี่ยงรังสี/โควตาสูง)
-    /// แมพ 43×28 แบ่งเป็น 2 โซนตามคอลัมน์: โซน A = คอลัมน์ 0..28 (29×28, เมือง+CORE TOWER อยู่ฝั่งนี้)
-    /// · โซน B = คอลัมน์ 29..42 (14×28, HIGH RADIATION AREA — คั่นด้วยแนว GATE ที่คอลัมน์ 29)
+    /// แมพ 43×43 แบ่งเป็น 2 โซนแบบกรอบ: โซน A = สี่เหลี่ยมกลาง (29×29, เมือง+CORE TOWER อยู่ตรงกลาง)
+    /// · โซน B = กรอบรอบนอกหนา zoneBorderThickness ช่อง (HIGH RADIATION AREA ล้อมรอบทั้ง 4 ด้าน)
     /// scatter สุ่มตำแหน่งในพื้นที่โซนของตัวเอง ผ่านท่อเดียวกับ PrePlacedBuilding (โหนดอยู่ใน BuildingRegistry)
     ///
     /// งานขุดมีเวลา (ไม่ผลิตต่อเนื่องแบบอาคาร): แต่ละโหนดถือแร่ทั้งก้อน (payload สุ่มตอนโผล่)
@@ -31,8 +31,9 @@ namespace NuclearReMind
         public BuildingData zoneANode;
         public BuildingData zoneBNode;
 
-        [Header("Zone layout — แบ่งกริดตามคอลัมน์ (A = ฝั่งปลอดภัย · B = ฝั่งรังสีสูงหลังแนว GATE)")]
-        public int zoneAColumns = 29;       // โซน A = คอลัมน์ 0..zoneAColumns-1 · โซน B = ที่เหลือ (29..42 บนกริด 43×28)
+        [Header("Zone layout — Zone A สี่เหลี่ยมกลางแมพ · Zone B กรอบรังสีสูงรอบนอก")]
+        [Tooltip("ความหนากรอบ Zone B (ช่อง) รอบทั้ง 4 ด้าน — Zone A = ส่วนกลางที่เหลือ (กริด 43×43 · border 7 → Zone A 29×29)")]
+        public int zoneBorderThickness = 7;
 
         [Header("Scatter — สุ่มตำแหน่งในพื้นที่โซน (จูนได้)")]
         public int zoneACount = 5;
@@ -261,15 +262,21 @@ namespace NuclearReMind
                 return c != null && !c.isOccupied;
             };
 
-            // แบ่งโซนตามคอลัมน์: A = 0..split-1 (ฝั่งเมือง) · B = split..columns-1 (ฝั่งรังสีสูง)
-            int split = Mathf.Clamp(zoneAColumns, 1, grid.columns - 1);
+            // แบ่งโซนแบบกรอบ: A = สี่เหลี่ยมกลาง · B = กรอบรอบนอกหนา border ช่อง
+            int cols = grid.columns, rows = grid.rows;
+            int border = Mathf.Clamp(zoneBorderThickness, 0, Mathf.Min(cols, rows) / 2 - 1);
 
-            foreach (var pos in OreMath.PickPositionsInRect(zoneACount, 0, split - 1, 0, grid.rows - 1,
+            // Zone A = สี่เหลี่ยมกลาง [border..cols-1-border]×[border..rows-1-border]
+            foreach (var pos in OreMath.PickPositionsInRect(zoneACount,
+                         border, cols - 1 - border, border, rows - 1 - border,
                          minSpacing, isFree, _rng, maxAttemptsPerNode))
                 PlaceNode(pos, zoneANode);
 
-            foreach (var pos in OreMath.PickPositionsInRect(zoneBCount, split, grid.columns - 1, 0, grid.rows - 1,
-                         minSpacing, isFree, _rng, maxAttemptsPerNode))
+            // Zone B = กรอบรอบนอก (ทั้งกริด ยกเว้นสี่เหลี่ยมกลาง) — สุ่มทั้งกริดแล้วกรองเฉพาะช่องกรอบ
+            Func<Vector2Int, bool> isFreeZoneB = pos =>
+                isFree(pos) && !IsoGroundPainter.IsZoneA(pos.x, pos.y, cols, rows, border);
+            foreach (var pos in OreMath.PickPositionsInRect(zoneBCount, 0, cols - 1, 0, rows - 1,
+                         minSpacing, isFreeZoneB, _rng, maxAttemptsPerNode))
                 PlaceNode(pos, zoneBNode);
         }
 

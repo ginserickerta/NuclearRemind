@@ -47,6 +47,16 @@ namespace NuclearReMind
             Save();
         }
 
+        /// <summary>
+        /// เพิ่ม Codex id เดี่ยวแล้ว Save ทันที (Codex_Spec §5: ปลดจากควิซ → เข้า MetaProgress → Save()
+        /// ไม่รอจบเกม — กันหายถ้าเกม crash/ปิดกลางคัน)
+        /// </summary>
+        public static void AddCodex(string entryId)
+        {
+            if (string.IsNullOrEmpty(entryId)) return;
+            if (UnlockedCodex.Add(entryId)) Save();
+        }
+
         /// <summary>ล้างคลังความรู้ทั้งหมด (new game+ reset / เทสต์)</summary>
         public static void ResetAll()
         {

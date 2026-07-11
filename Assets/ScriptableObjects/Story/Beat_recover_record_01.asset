@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Beat_recover_record_01
   m_EditorClassIdentifier: NuclearReMind::NuclearReMind.StoryBeatSO
   beatId: recover_record_01
-  triggerType: 1
+  triggerType: 8
   triggerParam: "\u0E2B\u0E49\u0E2D\u0E07\u0E1B\u0E0F\u0E34\u0E1A\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23"
   record: {fileID: 11400000, guid: 7ac5470d352eb19498e78b95eb9d3994, type: 2}
   infoCard: {fileID: 0}

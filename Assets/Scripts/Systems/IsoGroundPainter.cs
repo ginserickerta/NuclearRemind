@@ -5,7 +5,7 @@ namespace NuclearReMind
     /// pure ล้วน ไม่มี scene/asset ให้เทสต์ตรวจได้ (GridSpriteFiller เรียกใช้ตอนระบาย Ground)
     ///
     /// แนวคิด:
-    ///   • Zone A (col &lt; zoneAColumns) = หญ้า · Zone B = ดิน/หิน
+    ///   • Zone A = สี่เหลี่ยมกลางแมพ (หญ้า/เมือง) · Zone B = กรอบรอบนอกหนา border ช่อง (ดิน/หิน/รังสี)
     ///   • ฐาน = ไทล์เดียวทั้งโซน (ไม่สลับ parity) → พื้นเนียน ไม่มีลายหมากรุกกวนตา
     ///   • ~VarietyPercent% ของช่อง สุ่มเป็นไทล์ variety (หญ้าหนา/ดินรอยแตก) เพิ่มชีวิตชีวาแบบกระจาย ไม่เป็นตาราง
     ///
@@ -31,10 +31,10 @@ namespace NuclearReMind
         /// </summary>
         public const int VarietyPercent = 0;
 
-        /// <summary>index ของไทล์ที่ช่อง (col,row) ควรใช้ · zoneAColumns = คอลัมน์แรกของ Zone B</summary>
-        public static int TileIndexFor(int col, int row, int zoneAColumns)
+        /// <summary>index ของไทล์ที่ช่อง (col,row) ควรใช้ · border = ความหนากรอบ Zone B รอบนอก</summary>
+        public static int TileIndexFor(int col, int row, int columns, int rows, int border)
         {
-            bool zoneA = col < zoneAColumns;
+            bool zoneA = IsZoneA(col, row, columns, rows, border);
             int[] baseTiles = zoneA ? GrassBase : DirtBase;
             int[] variety = zoneA ? GrassVariety : DirtVariety;
 
@@ -46,8 +46,13 @@ namespace NuclearReMind
             return baseTiles[0];
         }
 
-        /// <summary>true = ช่องนี้เป็น Zone A (หญ้า) · false = Zone B (ดิน/หิน)</summary>
-        public static bool IsZoneA(int col, int zoneAColumns) => col < zoneAColumns;
+        /// <summary>
+        /// true = Zone A (หญ้า/เมือง — สี่เหลี่ยมกลางแมพ) · false = Zone B (ดิน/หิน — กรอบรอบนอกหนา border ช่อง)
+        /// Zone A = ช่องที่ห่างจากขอบทุกด้าน ≥ border → [border..columns-1-border]×[border..rows-1-border]
+        /// </summary>
+        public static bool IsZoneA(int col, int row, int columns, int rows, int border)
+            => col >= border && col < columns - border
+            && row >= border && row < rows - border;
 
         /// <summary>
         /// hash (col,row) กระจายดี คงที่ (ไม่ใช้ Random) — บวกเสมอด้วย mask 0x7fffffff

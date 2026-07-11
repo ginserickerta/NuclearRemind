@@ -95,6 +95,7 @@ namespace NuclearReMind
             EventManager.Instance.OnDilemmaResolved += HandleDilemmaResolved;
             EventManager.Instance.OnStoryCardDismissed += HandleCardDismissed;
             EventManager.Instance.OnRadiationExposureChanged += HandleRadiationExposureChanged;
+            EventManager.Instance.OnWorkerAssignmentChanged += HandleWorkerAssignmentChanged;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
         }
 
@@ -109,6 +110,7 @@ namespace NuclearReMind
             EventManager.Instance.OnDilemmaResolved -= HandleDilemmaResolved;
             EventManager.Instance.OnStoryCardDismissed -= HandleCardDismissed;
             EventManager.Instance.OnRadiationExposureChanged -= HandleRadiationExposureChanged;
+            EventManager.Instance.OnWorkerAssignmentChanged -= HandleWorkerAssignmentChanged;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
         }
 
@@ -183,6 +185,22 @@ namespace NuclearReMind
             foreach (var beat in beats)
                 if (Eligible(beat) && beat.triggerType == StoryTriggerType.OnBuildingBuilt
                     && beat.triggerParam == data.buildingName) // buildingName ไทยเป๊ะ — ดูคอมเมนต์ StoryTriggerType
+                    FireBeat(beat);
+        }
+
+        // ★ สเปกโรงวิจัย: บันทึก Elara #01 ปลดตอน "จัดคนเข้าห้องวิจัย" (อาคาร pre-placed →
+        // OnBuildingBuilt ยิงตั้งแต่เริ่มเกม ใช้ไม่ได้) — ยิงเมื่ออาคารตาม triggerParam มีคนประจำ > 0
+        // Eligible() latch ต่อ beat อยู่แล้ว (เล่นครั้งเดียว + คงสถานะข้ามเซฟผ่าน firedStoryBeats)
+        private void HandleWorkerAssignmentChanged(Vector2Int cell, int newCount)
+        {
+            if (newCount <= 0) return;
+            var registry = BuildingRegistry.Instance;
+            if (registry == null || !registry.PlacedBuildings.TryGetValue(cell, out var data) || data == null)
+                return;
+
+            foreach (var beat in beats)
+                if (Eligible(beat) && beat.triggerType == StoryTriggerType.OnBuildingStaffed
+                    && beat.triggerParam == data.buildingName)
                     FireBeat(beat);
         }
 

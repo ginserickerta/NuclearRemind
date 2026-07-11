@@ -87,7 +87,9 @@ namespace NuclearReMind
             if (_unlockedIds.Add(entry.entryId))
             {
                 EventManager.Instance.RaiseCodexEntryUnlocked(entry);
-                EventManager.Instance.RaiseResourceDelta(ResourceType.Knowledge, 2f); // V4 §9: อ่าน Codex +2
+                EventManager.Instance.RaiseResourceDelta(ResourceType.Knowledge, 2f); // V4 §9: อ่าน Codex +2 (ครั้งแรกครั้งเดียว)
+                if (Application.isPlaying) // กัน EditMode tests เขียน PlayerPrefs จริง
+                    MetaProgress.AddCodex(entry.entryId); // Codex_Spec §5: เข้าคลังถาวรทันที ไม่รอจบเกม (§16)
             }
         }
 

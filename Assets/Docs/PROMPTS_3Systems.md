@@ -47,7 +47,7 @@
 - EventManager          — event bus กลาง (ดู Managers/EventManager.cs สำหรับรายการ event + เมธอด Raise*)
 - SaveManager/SaveData  — เซฟ/โหลด (มี placedBuildings, workerAssignmentCells, construction ฯลฯ)
 
-ยังคอมไพล์/รันจริงในเครื่องนี้ไม่ได้ (Unity Editor เปิดค้าง) — ส่งงานเป็นโค้ด + test + editor setup พร้อมรัน
+สามารถคอมไพล์/รันจริงบนเครื่องนี้ได้
 ```
 
 ---

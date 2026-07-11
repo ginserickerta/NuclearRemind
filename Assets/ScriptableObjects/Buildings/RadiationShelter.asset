@@ -30,6 +30,7 @@ MonoBehaviour:
   ironCost: 30
   energyCost: 5
   workerRequired: 2
+  workersPerLevel: 
   unlockPhase: 2
   buildTicks: 6
   foodProduction: 0
