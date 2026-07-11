@@ -96,6 +96,7 @@ namespace NuclearReMind
             EventManager.Instance.OnScramRequested         += HandleScramRequested;
             EventManager.Instance.OnUpgradeToroidalRequested += UpgradeToroidal;
             EventManager.Instance.OnInstallPoloidalRequested += InstallPoloidal;
+            EventManager.Instance.OnItemUsed               += HandleItemUsed;
         }
 
         private void OnDisable()
@@ -108,6 +109,17 @@ namespace NuclearReMind
             EventManager.Instance.OnScramRequested         -= HandleScramRequested;
             EventManager.Instance.OnUpgradeToroidalRequested -= UpgradeToroidal;
             EventManager.Instance.OnInstallPoloidalRequested -= InstallPoloidal;
+            EventManager.Instance.OnItemUsed               -= HandleItemUsed;
+        }
+
+        /// <summary>
+        /// ไอเทม §13 ที่กระทบเตา — น้ำหล่อเย็นฉุกเฉิน (วิกฤต 1·C): ลด HEAT ทันทีตามค่าใน asset
+        /// มาทาง event (InventoryManager ไม่เรียก CoreTowerManager ตรง) — ค่าลดอยู่ใน ItemSO ไม่ hardcode
+        /// </summary>
+        private void HandleItemUsed(ItemSO item)
+        {
+            if (item != null && item.coreHeatReduction > 0f)
+                ReduceHeat(item.coreHeatReduction);
         }
 
         private void Start()

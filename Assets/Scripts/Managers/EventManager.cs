@@ -130,6 +130,14 @@ namespace NuclearReMind
         // ===== Pre-placed (ตึกที่มากับแมพ เช่น CORE TOWER กลางเมือง — สร้างเสร็จทันที ไม่เข้าคิวก่อสร้าง) =====
         public event Action<Vector2Int> OnConstructionCompleteRequested;
 
+        // ===== Inventory (GDD §13 — ไอเทมคราฟต์ · InventoryManager) =====
+        public event Action<string> OnCraftItemRequested;   // UI → InventoryManager (itemId)
+        public event Action<string> OnUseItemRequested;     // UI → InventoryManager (itemId)
+        public event Action<ItemSO> OnItemCrafted;          // InventoryManager → UI/feedback (ได้ของแล้ว)
+        public event Action<ItemSO> OnItemUsed;             // InventoryManager → CoreTower/CrisisEffect (ผลไอเทมตาม field ใน asset)
+        public event Action OnInventoryChanged;             // จำนวนถือครองเปลี่ยน → UI refresh
+        public event Action<string, int, int> OnCraftProgressChanged; // (itemId, progress, craftTicks) — คิวคราฟต์คืบ
+
         // ===== Story (Story Guide — StoryDirector คุมลำดับ record → infoCard → crisis → outcome → quiz) =====
         public event Action<DilemmaData> OnDilemmaTriggerRequested; // StoryDirector → DilemmaManager (วิกฤตเข้า pipeline ปกติ)
         public event Action<RecordCardSO> OnStoryRecordShown;       // StoryDirector → Card UI (การ์ดบันทึกกู้คืน)
@@ -263,6 +271,14 @@ namespace NuclearReMind
 
         // ===== Pre-placed =====
         public void RaiseConstructionCompleteRequested(Vector2Int cell) => OnConstructionCompleteRequested?.Invoke(cell);
+
+        // ===== Inventory =====
+        public void RaiseCraftItemRequested(string itemId) => OnCraftItemRequested?.Invoke(itemId);
+        public void RaiseUseItemRequested(string itemId) => OnUseItemRequested?.Invoke(itemId);
+        public void RaiseItemCrafted(ItemSO item) => OnItemCrafted?.Invoke(item);
+        public void RaiseItemUsed(ItemSO item) => OnItemUsed?.Invoke(item);
+        public void RaiseInventoryChanged() => OnInventoryChanged?.Invoke();
+        public void RaiseCraftProgressChanged(string itemId, int progress, int total) => OnCraftProgressChanged?.Invoke(itemId, progress, total);
 
         // ===== Story =====
         public void RaiseDilemmaTriggerRequested(DilemmaData dilemma) => OnDilemmaTriggerRequested?.Invoke(dilemma);

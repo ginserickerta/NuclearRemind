@@ -138,6 +138,10 @@ namespace NuclearReMind
                 }
             }
 
+            // ไอเทมคราฟต์ (GDD §13) — read-only query · ไม่มี manager = คง default (คลังว่าง)
+            if (InventoryManager.Instance != null)
+                save.inventory = InventoryManager.Instance.GetSaveState();
+
             File.WriteAllText(SavePath, JsonUtility.ToJson(save, true));
             Debug.Log($"[SaveManager] Saved to {SavePath}");
         }

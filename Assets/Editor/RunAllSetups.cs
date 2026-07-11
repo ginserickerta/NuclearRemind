@@ -26,7 +26,9 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Tooltip and Dilemma UI",
             "NuclearReMind/Apply Building Balance (V4 §6)",
             "NuclearReMind/Apply Core Tower Sprite (Pixel Art)", // art จริงแทน placeholder (หลัง Building Balance)
+            "NuclearReMind/Apply Core Tower Animation",           // อนิเมชัน idle 4 เฟรม (ทับ sprite นิ่งด้วยเฟรม 0 + animationFrames)
             "NuclearReMind/Setup Phase 3 Population",
+            "NuclearReMind/Setup/Character Sprites (คนงาน·วิศวกร·หมอ)", // art จริงแทน placeholder คนงาน (หลัง Phase 3 — spawner เพิ่งถูกสร้าง)
             "NuclearReMind/Setup Phase 6 Buildings",
             "NuclearReMind/Setup Codex System",
             "NuclearReMind/Setup Radiation System", // RadiationManager — exposure สะสม (Zone A §4)
@@ -46,11 +48,16 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Ore Deposits (Zone A-B)", // แหล่งแร่ A/B + ถอด Mine จาก hotbar (ต้องหลัง Building Balance + Day 11)
             "NuclearReMind/Apply Resource Caps (V4 §4)",   // เพดานคลัง 9999 + ปลดสะพาน Tritium ของ Lab (หลัง Phase 6)
             "NuclearReMind/Update Building Hover Panel",    // ย้ายบาร์ก่อสร้างเข้าแผง hover (GDD §6 — หลัง HUD Canvas)
+            "NuclearReMind/Setup Inventory (Items GDD §13)", // ItemSO 6 ชนิด + InventoryManager + แผงไอเทม (หลัง Hospital — pet_scanner ใช้ BuildingType.Hospital)
 
             "NuclearReMind/Setup Zone Barrier (Fence + Gate)", // รั้ว/ประตูเส้นแบ่งโซน (ต้องหลัง Ore Deposits — sync zoneAColumns)
-            "NuclearReMind/Setup Ground Tiles (Team Grass)",   // Tile หญ้าจาก Map.PNG (ต้องก่อน Fill Grids)
-            "NuclearReMind/Fill Grids (Ground + Fog)",         // ระบาย Ground/Fog ตามขนาดกริดจริง (ต้องหลัง Setup Grid)
+            "NuclearReMind/Setup Ground Tiles (Team Grass)",   // Tile หญ้าจาก Map.PNG (fallback ถ้าไม่มีไทล์คัด)
+            "NuclearReMind/Setup Iso Nature Tileset (Import Only)", // นำเข้าไทล์ IsoNature (fallback ชุดเต็ม)
+            "NuclearReMind/Fix Isometric Sort (Tile Walls)",   // ตั้ง sort ให้บล็อกขอบเรียงถูก (ต้องก่อน Fill Grids)
+            "NuclearReMind/Flatten Ground Tiles (Top Face)",   // ★ สร้างไทล์หน้าบนแบน (ข้างในเรียบ · ขอบบล็อกเต็ม)
+            "NuclearReMind/Fill Grids (Ground + Fog)",         // ระบาย Ground/Fog แบ่งโซน สุ่มจากไทล์คัด
             "NuclearReMind/Fix 2D Lighting (Light All Sorting Layers)", // กัน sprite รันไทม์เรนเดอร์ดำ (Sprite-Lit-Default)
+            "NuclearReMind/Apply UI Scale (Font Size)", // ขยาย UI/ตัวอักษรทั้งเกม (ต้องหลังทุกขั้นที่สร้าง Canvas)
             "NuclearReMind/Apply Kanit Font (Scene + Prefabs)",
         };
 

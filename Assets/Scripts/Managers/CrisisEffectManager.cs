@@ -60,6 +60,7 @@ namespace NuclearReMind
             EventManager.Instance.OnDilemmaResolved += HandleDilemmaResolved;
             EventManager.Instance.OnDayEnded += HandleDayEnded;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
+            EventManager.Instance.OnItemUsed += HandleItemUsed;
         }
 
         private void OnDisable()
@@ -68,6 +69,22 @@ namespace NuclearReMind
             EventManager.Instance.OnDilemmaResolved -= HandleDilemmaResolved;
             EventManager.Instance.OnDayEnded -= HandleDayEnded;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+            EventManager.Instance.OnItemUsed -= HandleItemUsed;
+        }
+
+        /// <summary>
+        /// ไอเทม §13 ที่กระทบเศรษฐกิจอาหาร (ค่าอยู่ใน ItemSO asset — มาทาง event ไม่เรียกตรง):
+        /// เครื่องฉายโคบอลต์-60 (วิกฤต 3·B): stopsFoodSpoilage → อาหารหยุดเน่า (rate = 0)
+        /// เมล็ดพันธุ์ฉายรังสี (วิกฤต 3·A): foodYieldBonus → ผลผลิตอาหารเพิ่มถาวร
+        /// state ทั้งคู่ persist ผ่าน SaveData field เดิม (foodSpoilRatePerDay/foodYieldMultiplier)
+        /// </summary>
+        private void HandleItemUsed(ItemSO item)
+        {
+            if (item == null) return;
+            if (item.stopsFoodSpoilage)
+                FoodSpoilRatePerDay = 0f;
+            if (item.foodYieldBonus > 0f)
+                FoodYieldMultiplier += item.foodYieldBonus;
         }
 
         // ── ใช้ผลตอนเลือกวิกฤต (choiceIndex 0=A/1=B/2=C) ──
