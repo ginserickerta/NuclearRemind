@@ -64,10 +64,11 @@ namespace NuclearReMind
         // ค่าเริ่มต้น Day 1 ตาม V4 §4 / §18 — ปรับได้ใน Inspector (bump food/water กันขาดวัน 1-3)
         // iron = 240: Day 1 ต้องสร้าง 3 โรง (100) + Habitat (60) + Lab (35) · Day 1 ไม่มี consumption
         [Header("Starting Resources (V4 §4/§18)")]
-        [SerializeField] private float startEnergy = 200f;
-        [SerializeField] private float startWater = 220f;  // เดิม 150 → 220 (กันน้ำขาดวันแรก ๆ)
-        [SerializeField] private float startFood = 220f;   // เดิม 150 → 220 (กันอาหารขาดวันแรก ๆ)
-        [SerializeField] private float startIron = 240f;
+        [SerializeField] private float startEnergy = 160f;  // GDD v4.1 §18 (จงใจลด กัน early-game ว่าง/ชนะง่าย)
+        [SerializeField] private float startWater = 150f;   // GDD v4.1 §18
+        [SerializeField] private float startFood = 120f;    // GDD v4.1 §18
+        [SerializeField] private float startIron = 100f;    // GDD v4.1 §18
+        [SerializeField] private float zoneBActiveUpkeepEnergy = 40f; // GDD v4.1 §18: ค่าเดินระบบสกัด Zone B (Tritium) ต่อวันเมื่อกำลังขุด
 
         public ResourceData Current { get; private set; }
 
@@ -265,6 +266,8 @@ namespace NuclearReMind
             float efficiency = CrisisEffectManager.Instance != null ? CrisisEffectManager.Instance.WorkerEfficiencyMultiplier : 1f;
             float foodYield  = CrisisEffectManager.Instance != null ? CrisisEffectManager.Instance.FoodYieldMultiplier : 1f;
 
+            bool zoneBActive = false; // GDD v4.1 §18: มีคนขุด Zone B (ore มีรังสี) → เมืองจ่าย upkeep +40E/วัน
+
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
             {
                 if (!IsOperational(kvp.Key)) continue;
@@ -278,7 +281,12 @@ namespace NuclearReMind
 
                 // แหล่งแร่ (ore node): ไม่ผลิตต่อเนื่องแล้ว — เป็น "งานขุดมีเวลา" จัดการใน OreDepositManager
                 // (ขุดครบเวลา → เติมเหล็ก/ทริเทียมทั้งก้อนทีเดียว แล้วโหนดหาย) จึงข้ามที่นี่
-                if (data.isOreNode) continue;
+                // แต่ Zone B (ore มี exposure > 0) ที่มีคนขุด = เมืองจ่ายค่าเดินระบบสกัด (GDD v4.1 §18)
+                if (data.isOreNode)
+                {
+                    if (data.oreExposurePerWorkerDay > 0f) zoneBActive = true;
+                    continue;
+                }
 
                 // ค่าเดินระบบต่อ tick = ต่อวัน × dayFraction · ต้องมีในคลังก่อนจึงเดินเครื่อง (gate แบบลูปเดิม)
                 float upkeepE = data.energyConsumption * dayFraction;
@@ -321,6 +329,10 @@ namespace NuclearReMind
                     delta.tritium += data.tritiumProduction * workerScale * busyFactor * dayFraction;
                 }
             }
+
+            // Zone B active upkeep (GDD v4.1 §18): มีคนขุด Zone B อยู่ → −40E/วัน (energy sink คุม Phase 4)
+            if (zoneBActive)
+                delta.energy -= zoneBActiveUpkeepEnergy * dayFraction;
 
             return delta;
         }

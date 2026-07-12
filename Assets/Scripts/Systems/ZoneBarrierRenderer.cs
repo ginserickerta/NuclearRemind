@@ -21,12 +21,18 @@ namespace NuclearReMind
         private const string SortingLayer = "Buildings";
         private const int PostPixelsPerUnit = 64;
 
-        [Tooltip("เปิดรั้วเส้นตั้งคั่นโซน — โมเดลปัจจุบัน Zone B เป็นกรอบรอบนอก จึงปิดไว้ (เปิดเองถ้าอยากได้รั้วกลับ)")]
+        [Tooltip("เปิดรั้วเส้นตั้งคั่นโซน — Zone B เป็นแถบ NE (col ≥ barrierColumn) รั้วลากแนว NW↔SE")]
         public bool active = false;
 
         [Header("เส้นแบ่งโซน (ใช้เมื่อ active = true)")]
-        [Tooltip("คอลัมน์แรกของโซน B — รั้ววางบนขอบระหว่างคอลัมน์นี้กับคอลัมน์ก่อนหน้า")]
-        public int barrierColumn = 29;
+        [Tooltip("คอลัมน์แรกของโซน B — รั้ววางบนขอบระหว่างคอลัมน์นี้กับคอลัมน์ก่อนหน้า (= columns - zoneBorderThickness)")]
+        public int barrierColumn = 36;
+
+        [Header("สไปรต์แบริเออร์ (art จริง) — ว่าง = ใช้รั้วโปรซีเยอรัล (เสา+ราว)")]
+        [Tooltip("สไปรต์แบริเออร์คอนกรีต (blast_barrier) — ตั้งแล้วจะวางเรียงตามแนวรั้วแทนราว · pivot ล่างกลาง")]
+        public Sprite fenceSprite;
+        [Tooltip("สเกลสไปรต์แบริเออร์ต่อชิ้น (จูนให้พอดี ~1 ช่อง)")]
+        public float fenceSpriteScale = 1.2f;
 
         [Header("ประตู GATE")]
         [Tooltip("แถวกึ่งกลางประตู · -1 = กึ่งกลางแนวรั้วอัตโนมัติ")]
@@ -71,6 +77,19 @@ namespace NuclearReMind
 
             ComputeGate(rows, out int gateStart, out int gateEnd);
 
+            // มีสไปรต์แบริเออร์ (art จริง) → วางเรียงตามแนวรั้วแทนเสา/ราวโปรซีเยอรัล (เว้นช่องประตู)
+            if (fenceSprite != null)
+            {
+                for (int r = 0; r < rows; r++)
+                {
+                    if (gateStart <= gateEnd && r >= gateStart && r <= gateEnd) continue;
+                    SpawnBarrierSprite(grid, col, r);
+                }
+                if (gateStart <= gateEnd)
+                    SpawnGateSign(grid, col, gateStart, gateEnd);
+                return;
+            }
+
             // เสารั้ว: rows+1 ต้น ที่ปลายขอบแต่ละแถว (แถว r กินขอบจากจุด r ถึงจุด r+1)
             for (int r = 0; r <= rows; r++)
             {
@@ -88,6 +107,24 @@ namespace NuclearReMind
 
             if (gateStart <= gateEnd)
                 SpawnGateSign(grid, col, gateStart, gateEnd);
+        }
+
+        // วางสไปรต์แบริเออร์ 1 ชิ้นกึ่งกลางขอบแถว r (pivot ล่างกลาง → ฐานนั่งบนแนวเส้น)
+        private void SpawnBarrierSprite(GridManager grid, int col, int r)
+        {
+            Vector3 a = EdgePoint(grid, col, r);
+            Vector3 b = EdgePoint(grid, col, r + 1);
+            Vector3 mid = (a + b) * 0.5f;
+
+            var go = NewChild($"Barrier_{r}");
+            go.transform.position = mid;
+            float s = fenceSpriteScale > 0f ? fenceSpriteScale : 1f;
+            go.transform.localScale = new Vector3(s, s, 1f);
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = fenceSprite;
+            sr.sortingLayerName = SortingLayer;
+            sr.sortingOrder = SortingOrderAt(col, r);
         }
 
         private void OnDisable() => Clear();

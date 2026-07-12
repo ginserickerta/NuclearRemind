@@ -96,9 +96,9 @@ namespace NuclearReMind.Tests
         // ───────────────────────── Turn progression ─────────────────────────
 
         [Test]
-        public void EarlyGame_Normal_ConsumesDeuterium_AdvancesCore()
+        public void ColdAssembly_Normal_AdvancesWithoutConsumingDeuterium()
         {
-            // §9: ตั้งแต่ 30% กิน Deuterium ดัน fuelEff · Normal (mult 1) + Deuterium พอ → dCore = 3
+            // GDD v4.1 §8: 30–50% = Cold Assembly (เหล็ก+วิศวกร) → ดันโดยไม่ใช้ Deuterium · Normal (mult 1) → dCore = 3
             Inject(corePercent: 30f, phase: 1, mode: CoreTowerManager.ModeNormal,
                 unlocked: true, energy: 1000f, water: 0f, deuterium: 100f);
             PlaceCore(1, 1);
@@ -106,7 +106,7 @@ namespace NuclearReMind.Tests
             eventManager.RaiseDayEnded(11);
 
             Assert.AreEqual(33f, tower.Current.corePercent, 1e-3f);
-            Assert.AreEqual(90f, resources.Current.deuterium, 1e-3f, "เผา Deuterium 10 (fuelNeed Normal)");
+            Assert.AreEqual(100f, resources.Current.deuterium, 1e-3f, "Cold Assembly (30–50%) ไม่เผา Deuterium");
         }
 
         [Test]
@@ -123,16 +123,16 @@ namespace NuclearReMind.Tests
         }
 
         [Test]
-        public void EarlyGame_NoDeuterium_NoCoreGain()
+        public void ColdAssembly_NoDeuterium_StillAdvances()
         {
-            // ไม่มี Deuterium → fuelEff 0 → dCore 0 (ไม่มีเชื้อเพลิงฟรีแล้ว)
+            // GDD v4.1 §8: 30–50% ไม่ต้องมี Deuterium (เดินด้วยเหล็ก+วิศวกร) → ดันได้แม้ Deuterium = 0
             Inject(corePercent: 30f, phase: 1, mode: CoreTowerManager.ModeNormal,
                 unlocked: true, energy: 1000f, water: 0f, deuterium: 0f);
             PlaceCore(1, 1);
 
             eventManager.RaiseDayEnded(11);
 
-            Assert.AreEqual(30f, tower.Current.corePercent, 1e-3f, "ไม่มี Deuterium → ไม่ดัน");
+            Assert.AreEqual(33f, tower.Current.corePercent, 1e-3f, "Cold Assembly ดันได้โดยไม่มี Deuterium");
         }
 
         [Test]
@@ -367,8 +367,8 @@ namespace NuclearReMind.Tests
             Inject(corePercent: 85f, phase: 3, mode: CoreTowerManager.ModeBoost,
                 unlocked: true, energy: 0f, water: 0f, coreHeat: 0f, tritium: 100f);
             PlaceCore(1, 1);
-            eventManager.RaiseDayEnded(25); // พายุ +20 (§4): dHeat = 20 + 20 − 15 = +25
-            Assert.AreEqual(25f, tower.Current.coreHeat, 1e-3f, "Day 25 พายุ +20");
+            eventManager.RaiseDayEnded(25); // พายุ +12 (GDD v4.1 §8): dHeat = 20 + 12 − 15 = +17
+            Assert.AreEqual(17f, tower.Current.coreHeat, 1e-3f, "Day 25 พายุ +12");
         }
 
         [Test]
@@ -444,7 +444,7 @@ namespace NuclearReMind.Tests
         [Test]
         public void UpgradeToroidal_IncrementsCoolingTowerLevel()
         {
-            // ค่าเริ่มต้น Awake: เหล็ก 240 + ไฟ 200 — พอจ่าย เหล็ก 50 + ไฟ 80 (§5)
+            // ค่าเริ่มต้น Awake: เหล็ก 100 + ไฟ 160 (GDD v4.1) — พอจ่าย เหล็ก 50 + ไฟ 80 (§5)
             Assert.AreEqual(0, tower.coolingTowerLevel);
             tower.UpgradeToroidal();
             Assert.AreEqual(1, tower.coolingTowerLevel);
@@ -465,7 +465,7 @@ namespace NuclearReMind.Tests
         [Test]
         public void InstallPoloidal_SetsFlag()
         {
-            // ค่าเริ่มต้น Awake: เหล็ก 240 + ไฟ 200 — พอจ่าย เหล็ก 60 + ไฟ 100 (§5)
+            // ค่าเริ่มต้น Awake: เหล็ก 100 + ไฟ 160 (GDD v4.1) — พอจ่าย เหล็ก 60 + ไฟ 100 (§5)
             Assert.IsFalse(tower.hasPoloidalCoils);
             tower.InstallPoloidal();
             Assert.IsTrue(tower.hasPoloidalCoils);

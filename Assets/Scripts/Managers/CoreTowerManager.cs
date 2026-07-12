@@ -8,12 +8,12 @@ namespace NuclearReMind
     /// <summary>
     /// CORE TOWER (V4 §8) — วัดด้วย CORE% (0→100) + ระบบความร้อน HEAT · ก้าวหน้าต่อวัน (OnDayEnded)
     ///
-    /// สูตร (CORE Spec §2/§7):
-    ///   Deuterium ดัน fuelEff เสมอ (Overclock ปลดล็อกตั้งแต่ Day 11/30%) · Tritium เป็น gate ที่ CORE ≥ 80
-    ///   (ดันแล้วไม่มี Tritium → ΔCORE=0 · Phase 4 เผา Deuterium + Tritium 10/วัน พร้อมกัน)
+    /// สูตร (GDD v4.1 §8 — 3 เฟสเชื้อเพลิงตามแบนด์ CORE%):
+    ///   30–50% Cold Assembly = เหล็ก+วิศวกร (ไม่ต้องมี Deuterium · fuelEff เต็ม) · 50–80% = Deuterium · 80–100% = Tritium (gate)
+    ///   Tritium gate: ดันช่วง ≥80 แล้วไม่มี Tritium → ΔCORE=0 · Ignition เผา Deuterium + Tritium พร้อมกัน
     ///   fuelEff = min(1, deuterium/FuelNeed[mode]) + KnowBonus (Knowledge≥80 +0.10) · cap 1.10
     ///   cooling = 15 + waterUsed/10 + coolingEngineers×4 + min(toroidalLv,3)×10
-    ///   HEAT: warn 80 (micro-damage CORE%−2 ถ้าไม่มี Poloidal) · meltdown 100 · พายุ +20 (Day 25–30, CORE Spec §4)
+    ///   HEAT: warn 80 (micro-damage CORE%−2 ถ้าไม่มี Poloidal) · meltdown 100 · พายุ +12 (Day 25–30) · Boost/OD upkeep +60E/วัน
     /// เชื่อมครบทุกเฟสแล้ว: coolingEngineers จาก PopulationManager (เฟส 3) · Coils (เฟส 6) · Deuterium/Tritium จาก Water/Lab L3 (เฟส 6)
     /// </summary>
     public class CoreTowerManager : MonoBehaviour
@@ -41,7 +41,8 @@ namespace NuclearReMind
         public float tritiumFuelNeed = 10f;    // §7/§12: Tritium/วัน ที่เผาเมื่อดันช่วง CORE ≥ 80
         public float baseCooling = 15f;
         public float coolingWaterCap = 100f;   // น้ำสูงสุดที่ใช้หล่อเย็นต่อเทิร์น
-        public float stormHeat = 20f;          // พายุ Day 25–30 (CORE Spec §4/§12 — แก้จาก +12)
+        public float stormHeat = 12f;          // พายุ Day 25–30 (GDD v4.1 §8/§18 = +12/วัน)
+        public float reactorBoostUpkeepEnergy = 60f; // GDD v4.1 §18: Boost/Overdrive กิน energy upkeep +60/วัน (energy sink)
         public int   coolingTowerLevel = 0;    // Toroidal Coils (มีผล ×10, cap 3)
         public bool  hasPoloidalCoils = false; // Poloidal Coils (เปิด engineers×4 + กัน micro-damage)
 
@@ -280,18 +281,26 @@ namespace NuclearReMind
             // โหมด: วิกฤต 2·B บังคับ Idle > โหมดที่ผู้เล่นเลือก (Overclock ปลดล็อกตั้งแต่ Day 11/30% §9)
             int mode = forcedIdle ? ModeIdle : Mathf.Clamp(t.overclockMode, 0, 3);
 
-            // ----- เชื้อเพลิง (CORE Spec §2/§7) — ป้อนตามที่ผู้เล่นจัดสรร (_planDeut/_planTrit) -----
-            // Deuterium ดัน fuelEff เสมอ (ตาม fuelNeed ของโหมด) · Tritium เป็น "ประตู" ที่ช่วง CORE ≥ 80:
-            //   ป้อนแล้วไม่มี Tritium → ΔCORE% = 0 (ติดกำแพง 80%) · Phase 4 เผาทั้ง Deuterium + Tritium
+            // ----- เชื้อเพลิงตามแบนด์ CORE% (GDD v4.1 §8 — 3 เฟสเชื้อเพลิง) — ป้อนตามที่ผู้เล่นจัดสรร -----
+            //   30–50% Cold Assembly = เหล็ก+วิศวกร (ไม่ต้องมี Deuterium · fuelEff เต็ม)
+            //   50–80% Plasma Ramp   = Deuterium ดัน fuelEff (min(1, deut/need))
+            //   80–100% Ignition     = ต้องมี Tritium (gate: ไม่มี → ΔCORE=0) + เผา Deuterium & Tritium พร้อมกัน
             var rm = ResourceManager.Instance;
             float knowBonus = rm != null ? rm.KnowBonus : 0f;
             float need = FuelNeed[mode];
             float deutFed = Mathf.Clamp(_planDeut, 0f, rm != null ? rm.Current.deuterium : 0f);
             float tritFed = Mathf.Clamp(_planTrit, 0f, rm != null ? rm.Current.tritium : 0f);
-            float fuelEff = Mathf.Min((need > 0f ? Mathf.Min(1f, deutFed / need) : 1f) + knowBonus, 1.10f);
+
+            bool coldAssembly = t.corePercent < Phase2At;   // 30–50%: ยังไม่ต้องใช้เชื้อเพลิงฟิวชัน
+            bool ignition     = t.corePercent >= Phase3At;  // 80–100%: ต้องมี Tritium
+
+            // Cold Assembly → fuelEff เต็ม (เดินด้วยเหล็ก+วิศวกรที่มีอยู่แล้ว) · เฟส 2+ → ตาม Deuterium ที่ป้อน
+            float fuelEff = coldAssembly
+                ? Mathf.Min(1f + knowBonus, 1.10f)
+                : Mathf.Min((need > 0f ? Mathf.Min(1f, deutFed / need) : 1f) + knowBonus, 1.10f);
 
             bool pushing = mode != ModeIdle;
-            bool tritiumGateBlocked = pushing && t.corePercent >= Phase3At && tritFed <= 0f;
+            bool tritiumGateBlocked = pushing && ignition && tritFed <= 0f;
 
             float dCore;
             if (!pushing || tritiumGateBlocked)
@@ -302,13 +311,19 @@ namespace NuclearReMind
             {
                 dCore = baseCoreGain * ModeMultiplier[mode] * fuelEff;
 
-                if (deutFed > 0f) EventManager.Instance.RaiseResourceDelta(ResourceType.Deuterium, -deutFed * frac);
-                if (t.corePercent >= Phase3At && tritFed > 0f) // §7: เผา Tritium ช่วง CORE ≥ 80
+                // Cold Assembly (30–50%) ไม่เผา Deuterium · เฟส 2+ เผาตามที่จัดสรร
+                if (!coldAssembly && deutFed > 0f)
+                    EventManager.Instance.RaiseResourceDelta(ResourceType.Deuterium, -deutFed * frac);
+                if (ignition && tritFed > 0f) // §8: เผา Tritium ช่วง Ignition (CORE ≥ 80)
                 {
                     EventManager.Instance.RaiseResourceDelta(ResourceType.Tritium, -tritFed * frac);
                     TriggerTritiumQuizzesOnce(); // ควิซ #Tritium (Codex_Spec v8) — ป้อน Tritium ครั้งแรก
                 }
             }
+
+            // Boost/Overdrive upkeep (GDD v4.1 §18): +60E/วัน — energy sink ทำให้ Phase 4 ตึงตาม climax
+            if (pushing && mode >= ModeBoost)
+                EventManager.Instance.RaiseResourceDelta(ResourceType.Energy, -reactorBoostUpkeepEnergy * frac);
 
             // ----- หล่อเย็น (§5): 15 + น้ำที่จัดสรร/10 + วิศวกรที่จัดสรร×4 + min(toroidalLv,3)×10 -----
             float water = rm != null ? rm.Current.water : 0f;
@@ -328,7 +343,7 @@ namespace NuclearReMind
             // ----- CORE% (× frac) -----
             t.corePercent = Mathf.Min(WinPercent, t.corePercent + dCore * frac);
 
-            // ----- HEAT (พายุ +20 เฉพาะ Day 25–30, §4) × frac -----
+            // ----- HEAT (พายุ +12 เฉพาะ Day 25–30, GDD v4.1 §8) × frac -----
             float storm = (day >= StormStartDay) ? stormHeat : 0f;
             float dHeat = ModeHeat[mode] + storm - cooling;
             t.coreHeat = Mathf.Max(0f, t.coreHeat + dHeat * frac);

@@ -21,7 +21,7 @@ namespace NuclearReMind.Tests
         public void SetUp()
         {
             eventManager = NewComponent<EventManager>("EventManager");
-            resources = NewComponent<ResourceManager>("ResourceManager"); // คลังแร่เหล็ก (default iron=240)
+            resources = NewComponent<ResourceManager>("ResourceManager"); // คลังแร่เหล็ก (default iron=100, energy=160 · GDD v4.1)
             registry = NewComponent<BuildingRegistry>("BuildingRegistry");
             registry.allBuildingData = new BuildingData[0];
         }
@@ -59,7 +59,7 @@ namespace NuclearReMind.Tests
             eventManager.RaiseUpgradeBuildingRequested(cell);
 
             Assert.AreEqual(2, registry.GetLevel(cell));
-            Assert.AreEqual(200f, resources.Current.iron, 1e-3f, "อัป L1→L2 หัก 40 (×ระดับ 1) จาก iron เริ่ม 240");
+            Assert.AreEqual(60f, resources.Current.iron, 1e-3f, "อัป L1→L2 หัก 40 (×ระดับ 1) จาก iron เริ่ม 100 (GDD v4.1)");
         }
 
         [Test]
@@ -78,41 +78,41 @@ namespace NuclearReMind.Tests
         [Test]
         public void Upgrade_DeductsEnergyToo()
         {
-            // V4 §6: ค่าอัปมีทั้ง Iron และ Energy (×ระดับ) — energy เริ่ม 200
+            // V4 §6: ค่าอัปมีทั้ง Iron และ Energy (×ระดับ) — energy เริ่ม 160 (GDD v4.1)
             var cell = Place(1, 1, upgradeCost: 40, upgradeEnergy: 50);
             eventManager.RaiseUpgradeBuildingRequested(cell);
 
             Assert.AreEqual(2, registry.GetLevel(cell));
-            Assert.AreEqual(200f, resources.Current.iron, 1e-3f, "หักแร่เหล็ก 40 จาก iron เริ่ม 240");
-            Assert.AreEqual(150f, resources.Current.energy, 1e-3f, "หักพลังงาน 50 (×ระดับ 1)");
+            Assert.AreEqual(60f, resources.Current.iron, 1e-3f, "หักแร่เหล็ก 40 จาก iron เริ่ม 100 (GDD v4.1)");
+            Assert.AreEqual(110f, resources.Current.energy, 1e-3f, "หักพลังงาน 50 (×ระดับ 1) จาก energy เริ่ม 160");
         }
 
         [Test]
         public void Upgrade_InsufficientEnergy_Blocked()
         {
-            var cell = Place(1, 1, upgradeCost: 40, upgradeEnergy: 300); // energy 200 < 300
+            var cell = Place(1, 1, upgradeCost: 40, upgradeEnergy: 300); // energy 160 < 300 (GDD v4.1)
             eventManager.RaiseUpgradeBuildingRequested(cell);
 
             Assert.AreEqual(1, registry.GetLevel(cell), "พลังงานไม่พอ → ไม่อัป");
-            Assert.AreEqual(240f, resources.Current.iron, 1e-3f, "ไม่หักแร่เหล็ก");
-            Assert.AreEqual(200f, resources.Current.energy, 1e-3f, "ไม่หักพลังงาน");
+            Assert.AreEqual(100f, resources.Current.iron, 1e-3f, "ไม่หักแร่เหล็ก");
+            Assert.AreEqual(160f, resources.Current.energy, 1e-3f, "ไม่หักพลังงาน");
         }
 
         [Test]
         public void Upgrade_InsufficientIron_Blocked()
         {
-            var cell = Place(1, 1, upgradeCost: 999); // iron 240 < 999
+            var cell = Place(1, 1, upgradeCost: 999); // iron 100 < 999 (GDD v4.1)
             eventManager.RaiseUpgradeBuildingRequested(cell);
 
             Assert.AreEqual(1, registry.GetLevel(cell), "แร่เหล็กไม่พอ → ไม่อัป");
-            Assert.AreEqual(240f, resources.Current.iron, 1e-3f, "ไม่หักแร่เหล็ก");
+            Assert.AreEqual(100f, resources.Current.iron, 1e-3f, "ไม่หักแร่เหล็ก");
         }
 
         [Test]
         public void Upgrade_NonexistentCell_NoOp()
         {
             eventManager.RaiseUpgradeBuildingRequested(new Vector2Int(5, 5)); // ไม่มีอาคาร
-            Assert.AreEqual(240f, resources.Current.iron, 1e-3f, "ไม่มีอาคาร → ไม่หักอะไร");
+            Assert.AreEqual(100f, resources.Current.iron, 1e-3f, "ไม่มีอาคาร → ไม่หักอะไร");
         }
 
         private T NewComponent<T>(string name) where T : Component

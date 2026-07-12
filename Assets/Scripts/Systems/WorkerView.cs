@@ -21,16 +21,17 @@ namespace NuclearReMind
         public float speed = 1.0f;
 
         [Header("Idle wander (คนว่างงานเดินเล่น)")]
-        [Tooltip("รัศมีเดินเล่นรอบจุดพัก (world units)")]
-        public float wanderRadius = 0.9f;
+        [Tooltip("รัศมีเดินเล่นรอบจุดพัก (world units) — เล็กลง 0.9→0.35 กันคนว่างเดินรวมกองซ้อนกัน")]
+        public float wanderRadius = 0.35f;
         [Tooltip("ช่วงเวลาหยุดพักก่อนเดินไปจุดใหม่ (วินาที)")]
         public Vector2 idlePauseRange = new Vector2(0.6f, 2.4f);
         [Tooltip("เดินเล่นนานเกินนี้ยังไม่ถึง (โดนเบียดขวาง) → เลิกดัน เลือกจุดใหม่")]
         public float wanderTimeout = 4f;
 
         [Header("กันเดินทะลุกัน (crowd separation)")]
-        [Tooltip("ระยะห่างศูนย์กลางต่ำสุดระหว่างคนงาน (world x-units) — 0 = ปิดระบบ")]
-        public float personalRadius = WorkerSeparation.DefaultRadius;
+        [Tooltip("ระยะห่างศูนย์กลางต่ำสุดระหว่างคนงาน (world x-units) — 0 = ปิดระบบ · " +
+                 "0.55 กว้างกว่า DefaultRadius เพื่อให้ตัวละครไม่ดูซ้อนกัน")]
+        public float personalRadius = 0.55f;
         [Tooltip("ระยะผลักสูงสุดต่อวินาที — กันตัวละครกระเด็นตอนคนแออัด")]
         public float maxPushSpeed = 2f;
         [Tooltip("ถ้าถูกเบียดจนห่างจุดประจำเกินนี้ ให้เดินกลับ (world units)")]

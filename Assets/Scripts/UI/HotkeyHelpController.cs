@@ -25,8 +25,11 @@ namespace NuclearReMind
         /// <summary>สลับเปิด/ปิดหน้าต่างคีย์ลัด (ผูกกับปุ่ม HUD + แป้น F1)</summary>
         public void Toggle()
         {
-            if (helpPanel != null)
-                helpPanel.SetActive(!helpPanel.activeSelf);
+            if (helpPanel == null) return;
+            bool show = !helpPanel.activeSelf;
+            helpPanel.SetActive(show);
+            // เปิด → ดันไปบนสุดของ Canvas กันแผงอื่น (Codex ฯลฯ ที่สร้างทีหลัง) วาดทับ
+            if (show) helpPanel.transform.SetAsLastSibling();
         }
     }
 }

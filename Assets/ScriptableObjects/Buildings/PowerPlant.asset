@@ -26,11 +26,11 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 946c44dec4a5f8146842a229e1635005, type: 3}
   - {fileID: 21300000, guid: 9ef086e0d21d99249b0ef189f0e9c9f8, type: 3}
   - {fileID: 21300000, guid: 28110ed351f86fe4fb9bc59482d23990, type: 3}
-  spriteOffset: {x: 0, y: -0.98}
-  spriteScale: 0.8
+  spriteOffset: {x: 0, y: -1.45}
+  spriteScale: 1.2
   animationFrames: []
   animationFps: 6
-  size: {x: 2, y: 2}
+  size: {x: 3, y: 3}
   buildingType: 4
   ironCost: 40
   energyCost: 0

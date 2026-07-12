@@ -5,7 +5,7 @@ namespace NuclearReMind
     /// <summary>
     /// กล้อง Orthographic สไตล์ city builder:
     /// - WASD/ลูกศร เลื่อนแบบมีแรงเฉื่อย (SmoothDamp เร่ง/หน่วงนุ่ม ไม่กระตุก)
-    /// - คลิกกลางค้างแล้วลาก = จับแมพเลื่อน (จุดใต้เมาส์ตรึงอยู่กับที่)
+    /// - คลิกขวาค้างแล้วลาก = จับแมพเลื่อน (จุดใต้เมาส์ตรึงอยู่กับที่)
     /// - Scroll ซูมแบบ ease เข้าหาตำแหน่งเมาส์ (zoom-to-cursor)
     /// - ความเร็วเลื่อนสเกลตามระยะซูม (ซูมไกล = เลื่อนไว, ซูมใกล้ = ละเอียด)
     /// - clamp ไม่ให้ศูนย์กลางกล้องหลุดขอบแมพ (อ่านมุมกริดจาก GridManager)
@@ -18,14 +18,14 @@ namespace NuclearReMind
         public float panSmoothTime = 0.18f;   // เวลาหน่วงเร่ง/เบรก (วินาที) — ยิ่งมากยิ่งลื่นไหล
         public bool zoomScalesPanSpeed = true;
 
-        [Header("Drag Pan (คลิกกลางลาก)")]
+        [Header("Drag Pan (คลิกขวาลาก)")]
         public bool enableDragPan = true;
 
         [Header("Zoom")]
         public float zoomStepPerNotch = 1.6f; // ขนาดซูมต่อ 1 คลิกล้อเมาส์
         public float zoomSmoothTime = 0.12f;  // ease ของซูม
         public float minZoom = 3f;
-        public float maxZoom = 15f;           // เพดานซูมออกสูงสุด (ใช้เมื่อ limitZoomToMap = false)
+        public float maxZoom = 9f;            // เพดานซูมออกสูงสุด (แข็ง — ต่อให้ limitZoomToMap ก็ไม่เกินค่านี้ กันซูมออกจนอาคารเล็กเกิน)
         public bool zoomToCursor = true;      // ซูมเข้าหาจุดใต้เมาส์ (มาตรฐาน city builder)
 
         [Tooltip("จำกัดซูมออกไม่ให้เกินขอบแมพ — คำนวณเพดานจากขนาดกริด×อัตราส่วนจอ (ซูมออกสุด = พอดีขอบแมพ)")]
@@ -61,14 +61,16 @@ namespace NuclearReMind
             if (centerOnCoreTowerAtStart) CenterOnCityCenter();
         }
 
-        // เล็งกล้องที่ "ศูนย์กลางเมือง" — Zone A เป็นสี่เหลี่ยมกลางแมพ (กรอบ Zone B ล้อมรอบสมมาตร)
-        // → ศูนย์กลาง Zone A = กลางกริดพอดี เล็งตรงกลางกริดเต็มได้เลย
+        // เล็งกล้องที่ศูนย์กลาง "กริดเต็ม" 43×43 (CORE TOWER อยู่กลางแมพ — ผู้ใช้เลือกกลางแมพ ไม่ใช่กลาง Zone A)
         private void CenterOnCityCenter()
         {
             var grid = GridManager.Instance;
             if (grid == null) return;
 
-            Vector3 center = grid.IsoToWorldF((grid.columns - 1) * 0.5f, (grid.rows - 1) * 0.5f);
+            float centerCol = (grid.columns - 1) * 0.5f;
+            float centerRow = (grid.rows - 1) * 0.5f;
+
+            Vector3 center = grid.IsoToWorldF(centerCol, centerRow);
             transform.position = new Vector3(center.x, center.y, transform.position.z);
         }
 
@@ -100,17 +102,19 @@ namespace NuclearReMind
                 transform.position += (Vector3)(_panVelocity * dt);
         }
 
-        // ── คลิกกลางลาก: ตรึงจุด world ใต้เมาส์ตอนเริ่มลากไว้ใต้เมาส์ตลอด (แมพติดมือ) ──
+        // ── คลิกขวาลาก: ตรึงจุด world ใต้เมาส์ตอนเริ่มลากไว้ใต้เมาส์ตลอด (แมพติดมือ) ──
+        // ใช้ปุ่มขวา (1) แทนปุ่มกลาง (2) — คลิกขวาสั้น ๆ ยังยกเลิกวาง/ทุบได้ตามเดิม (คนละ controller) ·
+        // จะเริ่มเลื่อนจริงเมื่อ "ลาก" เท่านั้น คลิกเฉย ๆ ไม่ขยับกล้อง
         private void HandleDragPan()
         {
             if (!enableDragPan) return;
 
-            if (Input.GetMouseButtonDown(2))
+            if (Input.GetMouseButtonDown(1))
             {
                 _dragging = true;
                 _dragOriginWorld = cam.ScreenToWorldPoint(Input.mousePosition);
             }
-            if (Input.GetMouseButtonUp(2))
+            if (Input.GetMouseButtonUp(1))
                 _dragging = false;
 
             if (!_dragging) return;
@@ -173,28 +177,44 @@ namespace NuclearReMind
 
             float aspect = cam.aspect > 0.01f ? cam.aspect : 1.7778f;
             float fit = Mathf.Min(mapH * 0.5f, mapW / (2f * aspect)) + mapFitPadding;
-            return Mathf.Max(minZoom, fit);
+            // maxZoom เป็นเพดานแข็ง: ซูมออกได้ไม่เกิน min(พอดีขอบแมพ, maxZoom) — กันซูมออกไกลจนอาคารเล็กเกินไป
+            return Mathf.Clamp(fit, minZoom, maxZoom);
         }
 
-        // ── กันกล้องหลุดขอบแมพ — ใช้มุมทั้ง 4 ของกริด isometric (รูปขนมเปียกปูน) เป็นกรอบ ──
+        // ── กันกล้องหลุดขอบแมพ — clamp "ขอบวิว" (ไม่ใช่แค่ศูนย์กล้อง) ให้อยู่ในกรอบแมพ ──
+        // เดิม clamp เฉพาะจุดศูนย์ → ซูม/เลื่อนออกได้จนแมพไปกองมุมจอ เห็นดำเยอะ (บั๊กที่ผู้ใช้เจอ)
+        // ตอนนี้เผื่อครึ่งขนาดวิว (orthographicSize × aspect) → ขอบวิวไม่เลยขอบแมพเกิน boundsPadding
         private void ClampToBounds()
         {
             var grid = GridManager.Instance;
-            if (grid == null) return;
+            if (grid == null || cam == null) return;
 
             Vector3 c00 = grid.IsoToWorld(0, 0);
             Vector3 c10 = grid.IsoToWorld(grid.columns - 1, 0);
             Vector3 c01 = grid.IsoToWorld(0, grid.rows - 1);
             Vector3 c11 = grid.IsoToWorld(grid.columns - 1, grid.rows - 1);
 
+            float minX = Mathf.Min(c00.x, c10.x, c01.x, c11.x);
+            float maxX = Mathf.Max(c00.x, c10.x, c01.x, c11.x);
+            float minY = Mathf.Min(c00.y, c10.y, c01.y, c11.y);
+            float maxY = Mathf.Max(c00.y, c10.y, c01.y, c11.y);
+
+            float halfH = cam.orthographicSize;               // ครึ่งความสูงวิว
+            float halfW = halfH * (cam.aspect > 0.01f ? cam.aspect : 1.7778f); // ครึ่งความกว้างวิว
+
             var p = transform.position;
-            p.x = Mathf.Clamp(p.x,
-                Mathf.Min(c00.x, c10.x, c01.x, c11.x) - boundsPadding,
-                Mathf.Max(c00.x, c10.x, c01.x, c11.x) + boundsPadding);
-            p.y = Mathf.Clamp(p.y,
-                Mathf.Min(c00.y, c10.y, c01.y, c11.y) - boundsPadding,
-                Mathf.Max(c00.y, c10.y, c01.y, c11.y) + boundsPadding);
+            p.x = ClampViewAxis(p.x, minX, maxX, halfW);
+            p.y = ClampViewAxis(p.y, minY, maxY, halfH);
             transform.position = p;
+        }
+
+        // clamp ศูนย์กล้องแกนเดียวให้ขอบวิวอยู่ในแมพ · วิวใหญ่กว่าแมพ (lo>hi) → ตรึงกลางแมพ
+        private float ClampViewAxis(float center, float min, float max, float halfView)
+        {
+            float lo = min + halfView - boundsPadding;
+            float hi = max - halfView + boundsPadding;
+            if (lo > hi) return (min + max) * 0.5f; // วิวใหญ่กว่าแมพ → กึ่งกลาง (ไม่ให้แมพไปมุมจอ)
+            return Mathf.Clamp(center, lo, hi);
         }
     }
 }

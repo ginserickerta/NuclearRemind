@@ -80,36 +80,54 @@ namespace NuclearReMind
         private void UpdateHighlight()
         {
             _hoveredCell = InputManager.Instance.GetMouseGridPosition();
-            var cell = GridManager.Instance.GetCell(_hoveredCell.x, _hoveredCell.y);
 
             if (highlightRenderer == null) return;
 
-            bool isOccupied  = cell != null && cell.isOccupied;
-            bool inProgress  = ConstructionController.Instance != null &&
-                               ConstructionController.Instance.IsUnderConstruction(_hoveredCell);
+            // แปลงช่องใต้เมาส์ → อาคารที่ footprint ครอบอยู่ (ทุกช่องของตัวอาคาร ไม่ใช่แค่ origin)
+            // sprite อาคารวาดที่กึ่งกลาง footprint คลิกบนตัวอาคารจึงมักตกช่องที่ไม่ใช่ origin — ต้อง resolve ก่อน
+            bool demolishable = CanDemolishAt(_hoveredCell, out _, out _);
 
             highlightRenderer.transform.position =
                 GridManager.Instance.IsoToWorld(_hoveredCell.x, _hoveredCell.y);
-            highlightRenderer.color = (isOccupied && !inProgress)
-                ? canDemolishColor
-                : cannotDemolishColor;
+            highlightRenderer.color = demolishable ? canDemolishColor : cannotDemolishColor;
             highlightRenderer.gameObject.SetActive(true);
+        }
+
+        /// <summary>
+        /// อาคารที่ footprint ครอบ cell นี้ทุบได้ไหม — คืน origin ที่ใช้สั่งทุบ + data
+        /// (ทุบไม่ได้ = ไม่มีอาคาร / กำลังก่อสร้าง / CoreTower / Laboratory / แหล่งแร่)
+        /// </summary>
+        private bool CanDemolishAt(Vector2Int cell, out Vector2Int origin, out BuildingData data)
+        {
+            origin = default; data = null;
+            var registry = BuildingRegistry.Instance;
+            if (registry == null || !registry.TryGetBuildingAt(cell, out origin, out data))
+                return false;
+
+            if (ConstructionController.Instance != null &&
+                ConstructionController.Instance.IsUnderConstruction(origin))
+                return false;
+
+            if (data.buildingType == BuildingType.CoreTower ||
+                data.buildingType == BuildingType.Laboratory ||
+                data.isOreNode)
+                return false;
+
+            return true;
         }
 
         private void TryDemolish()
         {
-            var cell = GridManager.Instance.GetCell(_hoveredCell.x, _hoveredCell.y);
-            if (cell == null || !cell.isOccupied) return;
+            var registry = BuildingRegistry.Instance;
+            if (registry == null || !registry.TryGetBuildingAt(_hoveredCell, out var origin, out var data))
+                return; // ไม่มีอาคารที่ footprint ครอบช่องนี้
 
             if (ConstructionController.Instance != null &&
-                ConstructionController.Instance.IsUnderConstruction(_hoveredCell))
+                ConstructionController.Instance.IsUnderConstruction(origin))
             {
                 Debug.Log("[DemolitionController] อาคารนี้ยังก่อสร้างอยู่ — ยกเลิกผ่าน BuildingQueueUI แทน");
                 return;
             }
-
-            if (!BuildingRegistry.Instance.PlacedBuildings.TryGetValue(_hoveredCell, out var data))
-                return;
 
             // CORE TOWER มากับแมพและสร้างคืนไม่ได้ (ไม่อยู่ใน hotbar) — ทุบแล้วเกมตัน จึงห้ามทุบ
             if (data.buildingType == BuildingType.CoreTower)
@@ -132,13 +150,14 @@ namespace NuclearReMind
                 return;
             }
 
-            Debug.Log($"[DemolitionController] ทุบ {data.buildingName} ที่ ({_hoveredCell.x},{_hoveredCell.y})");
+            Debug.Log($"[DemolitionController] ทุบ {data.buildingName} ที่ origin ({origin.x},{origin.y})");
 
             // cascade: GridManager.HandleBuildingRemoved → free cells
             //          BuildingVisualSpawner.HandleBuildingRemoved → destroy sprite
             //          BuildingRegistry.HandleBuildingRemoved → remove from dict
             //          ConstructionController.HandleBuildingRemoved → no-op (not in queue)
-            EventManager.Instance.RaiseBuildingRemoved(_hoveredCell);
+            // ต้องสั่งด้วย origin เสมอ — dict/footprint ทั้งหมดคีย์ด้วย origin (ไม่ใช่ช่องที่คลิก)
+            EventManager.Instance.RaiseBuildingRemoved(origin);
 
             // workers เป็น reserve pool — ไม่ถูกหักตอนวาง จึงไม่ต้องคืนตอนทุบ
             // (อาคารหายไปจาก registry แล้ว demand รวมจะลดเอง ทำให้ workerScale ของอาคารอื่นดีขึ้น)

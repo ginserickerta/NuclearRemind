@@ -16,7 +16,7 @@ namespace NuclearReMind.Tests
         private readonly List<Object> _spawned = new List<Object>();
 
         private EventManager eventManager;
-        private ResourceManager resources;   // เริ่มต้น energy 200 / iron 240
+        private ResourceManager resources;   // เริ่มต้น energy 160 / iron 100 (GDD v4.1 §18)
         private BuildingRegistry registry;
         private PlacementController placement;
         private TimeManager time;
@@ -62,8 +62,8 @@ namespace NuclearReMind.Tests
             placement.ConfirmPlace(); // currentCell default (0,0) — ว่าง
 
             Assert.AreEqual(1, registry.PlacedBuildings.Count, "ทรัพยากรพอ → วางได้");
-            Assert.AreEqual(210f, resources.Current.iron, 1e-3f, "หักแร่เหล็ก 30 จาก iron เริ่ม 240");
-            Assert.AreEqual(190f, resources.Current.energy, 1e-3f, "หักพลังงาน 10");
+            Assert.AreEqual(70f, resources.Current.iron, 1e-3f, "หักแร่เหล็ก 30 จาก iron เริ่ม 100 (GDD v4.1)");
+            Assert.AreEqual(150f, resources.Current.energy, 1e-3f, "หักพลังงาน 10 จาก energy เริ่ม 160");
         }
 
         [Test]
@@ -75,7 +75,7 @@ namespace NuclearReMind.Tests
             placement.ConfirmPlace();
 
             Assert.AreEqual(0, registry.PlacedBuildings.Count, "แร่เหล็กไม่พอ → วางไม่ได้");
-            Assert.AreEqual(240f, resources.Current.iron, 1e-3f, "คลังไม่ถูกหัก");
+            Assert.AreEqual(100f, resources.Current.iron, 1e-3f, "คลังไม่ถูกหัก");
         }
 
         [Test]
@@ -87,7 +87,7 @@ namespace NuclearReMind.Tests
             placement.ConfirmPlace();
 
             Assert.AreEqual(0, registry.PlacedBuildings.Count, "พลังงานไม่พอ → วางไม่ได้");
-            Assert.AreEqual(200f, resources.Current.energy, 1e-3f, "คลังไม่ถูกหัก");
+            Assert.AreEqual(160f, resources.Current.energy, 1e-3f, "คลังไม่ถูกหัก");
         }
 
         [Test]

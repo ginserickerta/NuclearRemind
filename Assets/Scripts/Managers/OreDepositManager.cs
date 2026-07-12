@@ -262,19 +262,25 @@ namespace NuclearReMind
                 return c != null && !c.isOccupied;
             };
 
-            // แบ่งโซนแบบกรอบ: A = สี่เหลี่ยมกลาง · B = กรอบรอบนอกหนา border ช่อง
+            // โมเดล col-split: Zone A = col < cols-border (ฝั่ง SW) · Zone B = col ≥ cols-border (แถบ NE)
             int cols = grid.columns, rows = grid.rows;
             int border = Mathf.Clamp(zoneBorderThickness, 0, Mathf.Min(cols, rows) / 2 - 1);
 
-            // Zone A = สี่เหลี่ยมกลาง [border..cols-1-border]×[border..rows-1-border]
+            // ห้ามแร่เกิดชิดแนวรั้ว (col = fenceCol) — ต้องห่าง ≥ 1 tile ทั้งสองฝั่ง
+            // → Zone A ≤ fenceCol-2 · Zone B ≥ fenceCol+1 (เว้น col {fenceCol-1, fenceCol})
+            int fenceCol = cols - border;
+            Func<Vector2Int, bool> awayFromFence = pos => pos.x <= fenceCol - 2 || pos.x >= fenceCol + 1;
+
+            // Zone A = ฝั่ง SW (กันขอบแมพด้วย border) แต่ห่างรั้ว ≥ 1 tile
+            Func<Vector2Int, bool> isFreeZoneA = pos => isFree(pos) && awayFromFence(pos);
             foreach (var pos in OreMath.PickPositionsInRect(zoneACount,
                          border, cols - 1 - border, border, rows - 1 - border,
-                         minSpacing, isFree, _rng, maxAttemptsPerNode))
+                         minSpacing, isFreeZoneA, _rng, maxAttemptsPerNode))
                 PlaceNode(pos, zoneANode);
 
-            // Zone B = กรอบรอบนอก (ทั้งกริด ยกเว้นสี่เหลี่ยมกลาง) — สุ่มทั้งกริดแล้วกรองเฉพาะช่องกรอบ
+            // Zone B = แถบ NE (col ≥ fenceCol) แต่ห่างรั้ว ≥ 1 tile
             Func<Vector2Int, bool> isFreeZoneB = pos =>
-                isFree(pos) && !IsoGroundPainter.IsZoneA(pos.x, pos.y, cols, rows, border);
+                isFree(pos) && !IsoGroundPainter.IsZoneA(pos.x, pos.y, cols, rows, border) && awayFromFence(pos);
             foreach (var pos in OreMath.PickPositionsInRect(zoneBCount, 0, cols - 1, 0, rows - 1,
                          minSpacing, isFreeZoneB, _rng, maxAttemptsPerNode))
                 PlaceNode(pos, zoneBNode);

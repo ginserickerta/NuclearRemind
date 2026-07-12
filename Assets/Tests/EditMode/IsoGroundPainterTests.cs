@@ -5,14 +5,14 @@ namespace NuclearReMind.Tests
 {
     /// <summary>
     /// พื้นแบ่งโซน "ฐานเนียนใบเดียว + โรย variety" (V4 §5) — IsoGroundPainter
-    /// โมเดลกรอบ: Zone A = สี่เหลี่ยมกลาง · Zone B = กรอบรอบนอกหนา Border ช่อง
-    /// ตรวจ: deterministic · แบ่งโซนถูก (กลาง=หญ้า/รอบนอก=ดิน) · index อยู่ในเซ็ตของโซน · ฐานเนียนไม่มีหมากรุก
+    /// โมเดลใหม่ (2026-07): แบ่งครึ่งด้วยแนวรั้วตั้ง — Zone A = ฝั่ง SW (col &lt; Cols-Border) · Zone B = แถบ NE (col ≥ Cols-Border)
+    /// ตรวจ: deterministic · แบ่งโซนถูก (SW=หญ้า/NE=ดิน) · index อยู่ในเซ็ตของโซน · ฐานเนียนไม่มีหมากรุก
     /// </summary>
     public class IsoGroundPainterTests
     {
         private const int Cols = 43;
         private const int Rows = 43;
-        private const int Border = 7; // Zone B กรอบหนา 7 · Zone A = สี่เหลี่ยมกลาง cols/rows 7..35 (29×29)
+        private const int Border = 7; // Zone B = แถบ NE หนา 7 คอลัมน์ (col 36..42) · Zone A = col 0..35
 
         private static int Idx(int x, int y) => IsoGroundPainter.TileIndexFor(x, y, Cols, Rows, Border);
         private static bool ZoneA(int x, int y) => IsoGroundPainter.IsZoneA(x, y, Cols, Rows, Border);
@@ -34,41 +34,44 @@ namespace NuclearReMind.Tests
         }
 
         [Test]
-        public void ZoneA_CenterRect_UsesOnlyGrassTiles()
+        public void ZoneA_SWside_UsesOnlyGrassTiles()
         {
+            // Zone A = ฝั่ง SW ของแนวรั้ว (col 0..Cols-Border-1) ทุกแถว → หญ้าล้วน
             var grass = Set(IsoGroundPainter.GrassBase, IsoGroundPainter.GrassVariety);
-            for (int x = Border; x < Cols - Border; x++)
-                for (int y = Border; y < Rows - Border; y++)
+            for (int x = 0; x < Cols - Border; x++)
+                for (int y = 0; y < Rows; y++)
                     Assert.IsTrue(grass.Contains(Idx(x, y)),
                         $"Zone A ({x},{y}) ต้องเป็นไทล์หญ้า");
         }
 
         [Test]
-        public void ZoneB_OuterBorder_UsesOnlyDirtTiles()
+        public void ZoneB_NEstrip_UsesOnlyDirtTiles()
         {
             var dirt = Set(IsoGroundPainter.DirtBase, IsoGroundPainter.DirtVariety);
             for (int x = 0; x < Cols; x++)
                 for (int y = 0; y < Rows; y++)
-                    if (!ZoneA(x, y)) // ทุกช่องนอกสี่เหลี่ยมกลาง = กรอบ Zone B
+                    if (!ZoneA(x, y)) // แถบ NE (col ≥ Cols-Border) = Zone B
                         Assert.IsTrue(dirt.Contains(Idx(x, y)),
                             $"Zone B ({x},{y}) ต้องเป็นไทล์ดิน");
         }
 
         [Test]
-        public void ZoneBoundary_BorderRingExactlyThick()
+        public void ZoneBoundary_SplitAtColumn_RowIrrelevant()
         {
-            // ขอบใน (border) = Zone A · หนึ่งช่องนอกนั้น = Zone B — ทั้ง 4 ด้านสมมาตร
-            Assert.IsTrue(ZoneA(Border, 20), $"col {Border} = Zone A (ขอบในซ้าย)");
-            Assert.IsFalse(ZoneA(Border - 1, 20), $"col {Border - 1} = Zone B (กรอบซ้าย)");
-            Assert.IsTrue(ZoneA(Cols - 1 - Border, 20), $"col {Cols - 1 - Border} = Zone A (ขอบในขวา)");
-            Assert.IsFalse(ZoneA(Cols - Border, 20), $"col {Cols - Border} = Zone B (กรอบขวา)");
-            Assert.IsTrue(ZoneA(20, Border), $"row {Border} = Zone A (ขอบในล่าง)");
-            Assert.IsFalse(ZoneA(20, Border - 1), $"row {Border - 1} = Zone B (กรอบล่าง)");
-            Assert.IsTrue(ZoneA(20, Rows - 1 - Border), $"row {Rows - 1 - Border} = Zone A (ขอบในบน)");
-            Assert.IsFalse(ZoneA(20, Rows - Border), $"row {Rows - Border} = Zone B (กรอบบน)");
-            // มุมทั้งสี่ต้องเป็น Zone B เสมอ
-            Assert.IsFalse(ZoneA(0, 0), "มุม (0,0) = Zone B");
-            Assert.IsFalse(ZoneA(Cols - 1, Rows - 1), "มุม (42,42) = Zone B");
+            // แนวรั้วตั้งที่ col = Cols-Border : col-1 = Zone A · col = Zone B — row ไม่มีผล
+            int boundary = Cols - Border; // 36
+            Assert.IsTrue(ZoneA(boundary - 1, 20), $"col {boundary - 1} = Zone A (ก่อนรั้ว)");
+            Assert.IsFalse(ZoneA(boundary, 20), $"col {boundary} = Zone B (หลังรั้ว · NE)");
+            // row ไม่มีผล — คอลัมน์เดียวกันเป็นโซนเดียวกันทุกแถว
+            Assert.IsTrue(ZoneA(boundary - 1, 0), $"col {boundary - 1} = Zone A ทุกแถว");
+            Assert.IsTrue(ZoneA(boundary - 1, Rows - 1), $"col {boundary - 1} = Zone A ทุกแถว");
+            Assert.IsFalse(ZoneA(boundary, 0), $"col {boundary} = Zone B ทุกแถว");
+            Assert.IsFalse(ZoneA(boundary, Rows - 1), $"col {boundary} = Zone B ทุกแถว");
+            // ฝั่ง SW = Zone A (เมือง) · มุม N/E = Zone B (รังสี)
+            Assert.IsTrue(ZoneA(0, 0), "มุม SW (0,0) = Zone A");
+            Assert.IsTrue(ZoneA(0, Rows - 1), "มุม W (0,42) = Zone A");
+            Assert.IsFalse(ZoneA(Cols - 1, Rows - 1), "มุม N (42,42) = Zone B");
+            Assert.IsFalse(ZoneA(Cols - 1, 0), "มุม E (42,0) = Zone B");
         }
 
         [Test]

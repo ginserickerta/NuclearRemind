@@ -38,6 +38,14 @@ namespace NuclearReMind.EditorTools
                 Debug.Log("[HUDCanvasSetup] ลบ HUDCanvas เก่าออก (Ctrl+Z เพื่อคืน)");
             }
 
+            // ลบแผง CORE TOWER ล่างจอเดิม (CoreTowerUI) — แผงเตาย้ายไป CoreTowerPanelUI (คลิกจากตัวหอบนแมพ) แล้ว
+            var oldCoreUI = GameObject.Find("CoreTowerUI");
+            if (oldCoreUI != null)
+            {
+                Undo.DestroyObjectImmediate(oldCoreUI);
+                Debug.Log("[HUDCanvasSetup] ลบ CoreTowerUI เดิมออก (แผงเตาใช้ CoreTowerPanelUI แทน)");
+            }
+
             var font = LoadFont();
 
             // ===== Canvas =====
@@ -135,20 +143,11 @@ namespace NuclearReMind.EditorTools
             hud.knowledgeText = CreateTextRow("KnowledgeText", popPanel.transform, font, "Knowledge: 0 / 100 · Novice", LoadIcon("Knowledge"));
             hud.knowledgeBar = CreateSliderRow("KnowledgeBar", popPanel.transform, new Color(0.62f, 0.5f, 1f));
 
-            // ===== Train class buttons (ใต้ Population panel — V4 §5: 3 คลาสจากห้องวิจัย) =====
-            var trainPanel = CreatePanel("TrainPanel", canvasGO.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -258), new Vector2(260, 44));
-            hud.trainEngineerButton = CreateButton("TrainEngineerBtn", trainPanel.transform, font, "ฝึกวิศวกร",   new Vector2(-86, 0), new Vector2(80, 36));
-            hud.trainMedicButton    = CreateButton("TrainMedicBtn",    trainPanel.transform, font, "ฝึกแพทย์",    new Vector2(0, 0),   new Vector2(80, 36));
-            hud.trainFarmerButton   = CreateButton("TrainFarmerBtn",   trainPanel.transform, font, "ฝึกเกษตรกร", new Vector2(86, 0),  new Vector2(80, 36));
-            // ปุ่มแคบลง (3 ปุ่มใน 260px) — ลด font กันข้อความล้น
-            ShrinkButtonLabel(hud.trainEngineerButton, 14);
-            ShrinkButtonLabel(hud.trainMedicButton, 14);
-            ShrinkButtonLabel(hud.trainFarmerButton, 14);
-
-            // ===== Decree buttons (ประกาศฉุกเฉิน — V4 §11) =====
-            var decreePanel = CreatePanel("DecreePanel", canvasGO.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -306), new Vector2(260, 44));
-            hud.decree1Button = CreateButton("Decree1Btn", decreePanel.transform, font, "ประกาศ①", new Vector2(-64, 0), new Vector2(122, 36));
-            hud.decree2Button = CreateButton("Decree2Btn", decreePanel.transform, font, "ประกาศ②", new Vector2(64, 0),  new Vector2(122, 36));
+            // ===== (ลบแล้ว) Train class buttons + Decree buttons =====
+            // แผงฝึกคลาส (ฝึกวิศวกร/แพทย์/เกษตรกร) + แผงประกาศฉุกเฉิน ถูกลบออกจาก HUD ตามคำขอผู้ใช้
+            // การฝึก Engineer ย้ายไปแผงห้องวิจัย (LabPanelUI · คลิกอาคาร Lab) แล้ว
+            // hud.trainEngineerButton/trainMedicButton/trainFarmerButton/decree1Button/decree2Button = null
+            // → UIManagerHUD.Start null-guard ไว้แล้ว ปล่อยไม่ผูกได้ปลอดภัย
 
             // ===== Speed controls (top-center ขวาของ DayPanel) =====
             // เดิมอยู่ bottom-center (0,20) ทับ BuildingSelectionPanel hotbar — ย้ายไปคู่กับนาฬิกาวัน
@@ -189,37 +188,10 @@ namespace NuclearReMind.EditorTools
             // ===== Hotkey Help (ปุ่ม "คีย์ลัด" ซ้ายล่าง เหนือปุ่ม Codex + แผงสรุปปุ่ม เปิด/ปิดด้วย F1) =====
             SetupHotkeyHelp(canvasGO, font);
 
-            // ===== CORE TOWER overclock panel (bottom-center, เหนือ hotbar) =====
-            // hotbar (BuildingSelectionPanel) กิน y 4–122 — เริ่มที่ 130 กันทับ
-            var corePanel = CreatePanel("CoreTowerPanel", canvasGO.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 130), new Vector2(380, 150));
-
-            var coreStatus = CreateText("CoreStatusText", corePanel.transform, font, "CORE TOWER — ล็อก (Day 11)", 16, new Vector2(0, 58), new Vector2(370, 22), TextAnchor.MiddleCenter);
-            var coreBar = CreateSlider("CoreBar", corePanel.transform, new Color(0.3f, 0.8f, 1f), new Vector2(0, 34), new Vector2(360, 16));
-            var heatBar = CreateSlider("HeatBar", corePanel.transform, new Color(1f, 0.6f, 0.2f), new Vector2(0, 12), new Vector2(360, 16));
-            var heatFill = heatBar.transform.Find("Fill Area/Fill").GetComponent<Image>();
-
-            var idleBtn = CreateButton("ModeIdle",      corePanel.transform, font, "0x",    new Vector2(-152, -20), new Vector2(70, 36));
-            var normalBtn = CreateButton("ModeNormal",  corePanel.transform, font, "1x",    new Vector2(-76, -20),  new Vector2(70, 36));
-            var boostBtn = CreateButton("ModeBoost",    corePanel.transform, font, "2x",    new Vector2(0, -20),    new Vector2(70, 36));
-            var odBtn = CreateButton("ModeOverdrive",   corePanel.transform, font, "3x",    new Vector2(76, -20),   new Vector2(70, 36));
-            var scramBtn = CreateButton("ScramButton",  corePanel.transform, font, "SCRAM", new Vector2(152, -20),  new Vector2(70, 36));
-
-            var coreUIGo = GameObject.Find("CoreTowerUI") ?? new GameObject("CoreTowerUI");
-            var coreUI = coreUIGo.GetComponent<CoreTowerUI>() ?? coreUIGo.AddComponent<CoreTowerUI>();
-            coreUI.statusText = coreStatus;
-            coreUI.coreBar = coreBar;
-            coreUI.heatBar = heatBar;
-            coreUI.heatFill = heatFill;
-            coreUI.idleButton = idleBtn;
-            coreUI.normalButton = normalBtn;
-            coreUI.boostButton = boostBtn;
-            coreUI.overdriveButton = odBtn;
-            coreUI.scramButton = scramBtn;
-            EditorUtility.SetDirty(coreUI);
-
-            // ปุ่ม Coils (V4 §6) — wire onClick ตอน runtime ใน UIManagerHUD.Start
-            hud.toroidalButton = CreateButton("ToroidalBtn", corePanel.transform, font, "+Toroidal", new Vector2(-95, -56), new Vector2(160, 30));
-            hud.poloidalButton = CreateButton("PoloidalBtn", corePanel.transform, font, "+Poloidal", new Vector2(95, -56), new Vector2(160, 30));
+            // ===== (ลบแล้ว) CORE TOWER overclock panel ล่างจอ =====
+            // แผงเตาล่างจอ (0x/1x/2x/3x/SCRAM + Toroidal/Poloidal) ถูกลบตามคำขอผู้ใช้
+            // ระบบเตาย้ายไป CoreTowerPanelUI (runtime-built · เปิดด้วยคลิกตัวหอ CORE TOWER บนแมพ) แล้ว
+            // CoreTowerUI เดิมถูกลบทิ้งตอนต้นเมธอด (ดู oldCoreUI cleanup)
 
             // ===== Building upgrade hover panel (ลอยเหนืออาคารที่ชี้) =====
             var upPanel = new GameObject("BuildingUpgradePanel", typeof(RectTransform));
@@ -456,27 +428,51 @@ namespace NuclearReMind.EditorTools
             EditorUtility.SetDirty(timeMgrGO);
         }
 
-        // ===== Hotkey Help: แผงสรุปคีย์ลัดทั้งเกม (ซ้ายกลางจอ) + ปุ่ม toggle + F1 =====
+        // ===== Hotkey Help: แผงสรุปคีย์ลัด (กลางจอ + ฉากหลังทึบ) + ปุ่ม toggle + F1 =====
+        // ดีไซน์ใหม่: แผงกลางจอบนฉากหลังมืด — ไม่ทับ/ไม่ถูกทับกับปุ่มมุมจออีก (ผู้ใช้ขอ #5)
         private static void SetupHotkeyHelp(GameObject canvasGO, Font font)
         {
-            // แผง: ซ้ายกลางจอ — พ้น TooltipPanel (ล่าง y ถึง 200) และ ResourcePanel (บนซ้าย)
-            var panel = CreatePanel("HotkeyHelpPanel", canvasGO.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20, -30), new Vector2(470, 430));
-            var bg = panel.AddComponent<Image>();
-            bg.color = new Color(0.05f, 0.06f, 0.11f, 0.93f);
+            // ฉากหลังเต็มจอมืดโปร่ง — เป็น root ของหน้าต่าง (toggle ตัวนี้ = เปิด/ปิดทั้งหน้าต่าง)
+            var backdrop = CreatePanel("HotkeyHelpPanel", canvasGO.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var bdRect = backdrop.GetComponent<RectTransform>();
+            bdRect.anchorMin = Vector2.zero; bdRect.anchorMax = Vector2.one;
+            bdRect.offsetMin = Vector2.zero; bdRect.offsetMax = Vector2.zero;
+            var bdImg = backdrop.AddComponent<Image>();
+            bdImg.color = new Color(0f, 0f, 0f, 0.6f);
+            // คลิกฉากหลังเพื่อปิด (สะดวก · ไม่หยุดเวลาอยู่แล้ว)
+            var bdBtn = backdrop.AddComponent<Button>();
+            bdBtn.transition = Selectable.Transition.None;
 
-            var title = CreateText("HelpTitle", panel.transform, font, "คีย์ลัด", 22, new Vector2(0, -14), new Vector2(430, 28), TextAnchor.MiddleCenter);
+            // แผงจริง — กึ่งกลางจอ ทึบ + ขอบ
+            var panel = CreatePanel("HotkeyHelpBox", backdrop.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(560, 560));
+            var pRect = panel.GetComponent<RectTransform>();
+            pRect.pivot = new Vector2(0.5f, 0.5f);
+            var bg = panel.AddComponent<Image>();
+            bg.color = new Color(0.06f, 0.07f, 0.12f, 0.98f);
+            var outline = panel.AddComponent<Outline>();
+            outline.effectColor = new Color(0.35f, 0.6f, 0.85f, 1f);
+            outline.effectDistance = new Vector2(2.5f, 2.5f);
+            outline.useGraphicAlpha = false;
+
+            var title = CreateText("HelpTitle", panel.transform, font, "คีย์ลัด", 26, new Vector2(0, -18), new Vector2(520, 34), TextAnchor.MiddleCenter);
             var titleRect = title.GetComponent<RectTransform>();
             titleRect.anchorMin = new Vector2(0.5f, 1f); titleRect.anchorMax = new Vector2(0.5f, 1f);
             titleRect.pivot = new Vector2(0.5f, 1f);
             title.color = new Color(0.5f, 0.9f, 1f);
             title.fontStyle = FontStyle.Bold;
 
-            var body = CreateText("HelpBody", panel.transform, font, HotkeyHelpText(), 17, new Vector2(0, -50), new Vector2(430, 360), TextAnchor.UpperLeft);
+            var body = CreateText("HelpBody", panel.transform, font, HotkeyHelpText(), 18, new Vector2(0, -62), new Vector2(500, 440), TextAnchor.UpperLeft);
             var bodyRect = body.GetComponent<RectTransform>();
             bodyRect.anchorMin = new Vector2(0.5f, 1f); bodyRect.anchorMax = new Vector2(0.5f, 1f);
             bodyRect.pivot = new Vector2(0.5f, 1f);
-            body.lineSpacing = 1.25f;
+            body.lineSpacing = 1.28f;
             body.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            var hint = CreateText("HelpHint", panel.transform, font, "กด F1 หรือคลิกนอกกรอบเพื่อปิด", 15, new Vector2(0, 14), new Vector2(520, 24), TextAnchor.LowerCenter);
+            var hintRect = hint.GetComponent<RectTransform>();
+            hintRect.anchorMin = new Vector2(0.5f, 0f); hintRect.anchorMax = new Vector2(0.5f, 0f);
+            hintRect.pivot = new Vector2(0.5f, 0f);
+            hint.color = new Color(0.55f, 0.62f, 0.7f);
 
             // ปุ่ม toggle — ซ้ายล่าง เหนือปุ่ม Codex (Codex อยู่ (20,210) สูง 36 — CodexSetup สร้างทีหลังในลำดับ chain)
             var toggleBtn = CreateButton("HotkeyHelpButton", canvasGO.transform, font, "คีย์ลัด (F1)", new Vector2(20, 254), new Vector2(120, 36));
@@ -489,11 +485,12 @@ namespace NuclearReMind.EditorTools
 
             var helpGO = GameObject.Find("HotkeyHelpController") ?? new GameObject("HotkeyHelpController");
             var help = helpGO.GetComponent<HotkeyHelpController>() ?? helpGO.AddComponent<HotkeyHelpController>();
-            help.helpPanel = panel;
+            help.helpPanel = backdrop;
             UnityEventTools.AddPersistentListener(toggleBtn.onClick, new UnityAction(help.Toggle));
+            UnityEventTools.AddPersistentListener(bdBtn.onClick, new UnityAction(help.Toggle));
             EditorUtility.SetDirty(help);
 
-            panel.SetActive(false); // เริ่มซ่อน — เปิดด้วยปุ่ม/F1
+            backdrop.SetActive(false); // เริ่มซ่อน — เปิดด้วยปุ่ม/F1
         }
 
         private static string HotkeyHelpText() =>

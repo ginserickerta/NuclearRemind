@@ -47,12 +47,13 @@ namespace NuclearReMind
         }
 
         /// <summary>
-        /// true = Zone A (หญ้า/เมือง — สี่เหลี่ยมกลางแมพ) · false = Zone B (ดิน/หิน — กรอบรอบนอกหนา border ช่อง)
-        /// Zone A = ช่องที่ห่างจากขอบทุกด้าน ≥ border → [border..columns-1-border]×[border..rows-1-border]
+        /// true = Zone A (หญ้า/เมือง — ฝั่ง SW ของแนวรั้ว) · false = Zone B (ดิน/หิน/รังสี — ฝั่ง NE)
+        /// โมเดลใหม่ (2026-07): แบ่งครึ่งด้วยแนวรั้วตั้งที่ col = columns-border (เส้นทแยง NW↔SE บนจอ) —
+        /// Zone B = แถบ NE หนา border คอลัมน์ (col ≥ columns-border) · row ไม่มีผล (เดิมเป็นกรอบรอบนอก)
+        /// รั้วจริงวาดโดย ZoneBarrierRenderer.barrierColumn = columns-border
         /// </summary>
         public static bool IsZoneA(int col, int row, int columns, int rows, int border)
-            => col >= border && col < columns - border
-            && row >= border && row < rows - border;
+            => col < columns - border;
 
         /// <summary>
         /// hash (col,row) กระจายดี คงที่ (ไม่ใช้ Random) — บวกเสมอด้วย mask 0x7fffffff

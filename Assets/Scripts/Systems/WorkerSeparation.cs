@@ -22,7 +22,8 @@ namespace NuclearReMind
     /// </summary>
     public static class WorkerSeparation
     {
-        /// <summary>ระยะห่างศูนย์กลางต่ำสุด (world x-units) — ประมาณความกว้างตัวละคร (sprite 1067px @ PPU 3200 ≈ 0.33)</summary>
+        /// <summary>ระยะห่างศูนย์กลางต่ำสุด (world x-units) — ค่ามาตรฐานของสูตร (เทสต์อ้างค่านี้)
+        /// · ค่าที่ใช้จริงต่อคนงานตั้งที่ WorkerView.personalRadius (bump ให้ตัวไม่ซ้อน)</summary>
         public const float DefaultRadius = 0.34f;
 
         /// <summary>ตัวยืดแกน y เริ่มต้น = tileWidth/tileHeight ของกริดมาตรฐาน (1 / 0.5)</summary>

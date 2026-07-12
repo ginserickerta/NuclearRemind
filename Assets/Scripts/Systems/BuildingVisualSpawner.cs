@@ -112,11 +112,11 @@ namespace NuclearReMind
             float visScale = data.spriteScale > 0f ? data.spriteScale : 1f;
             go.transform.localScale = new Vector3(visScale, visScale, 1f);
 
-            // sort ตามฐานอาคาร = กึ่งกลาง footprint (ให้ตรงกับ anchor ที่ย้ายมากึ่งกลางแล้ว)
-            // ไม่งั้นอาคาร multi-tile จะ sort ที่มุมหลัง → วาดทับกันผิด
+            // sort ตาม "ช่องหน้าสุด" ของ footprint (col+row มากสุด = ใกล้ผู้ชมสุด) — iso depth มาตรฐาน
+            // เดิมใช้กึ่งกลาง footprint → อาคาร 3×3 สไปรต์ใหญ่ซ้อนกันแล้วลำดับหน้า-หลังสลับ (บั๊กที่ผู้ใช้เจอ)
             int sx = Mathf.Max(1, data.size.x);
             int sy = Mathf.Max(1, data.size.y);
-            int baseSort = GridManager.SortOrder(position.x + (sx - 1) * 0.5f, position.y + (sy - 1) * 0.5f);
+            int baseSort = GridManager.SortOrder(position.x + (sx - 1), position.y + (sy - 1));
 
             // เลือก sprite ตามระดับปัจจุบัน (โหลดเซฟ/วางใหม่ = L1) — มี levelSprites จึงสลับตาม, ไม่งั้นใช้ sprite เดี่ยว
             int level = BuildingRegistry.Instance != null ? BuildingRegistry.Instance.GetLevel(position) : 1;

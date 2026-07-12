@@ -190,13 +190,15 @@ namespace NuclearReMind
 
             // header
             var (primEmoji, primLabel, primBase) = PrimaryOutput(data);
-            if (_iconImg != null) { _iconImg.sprite = data.sprite; _iconImg.enabled = data.sprite != null; }
+            // ใช้ sprite ตามระดับปัจจุบัน (realtime) — เช่น โรงไฟฟ้า Lv.3 โชว์ภาพ Lv.3 ที่พรีวิวซ้ายบน
+            var curSprite = data.SpriteForLevel(level);
+            if (_iconImg != null) { _iconImg.sprite = curSprite; _iconImg.enabled = curSprite != null; }
             if (_nameTxt != null) _nameTxt.text = data.buildingName;
             if (_headLvTxt != null) _headLvTxt.text = $"Lv. {level}";
             if (_descTxt != null) _descTxt.text = string.IsNullOrEmpty(data.description)
                                                 ? "อาคารในเมือง Veltara" : data.description;
             if (_hintTxt != null) _hintTxt.text = data.isOreNode ? "แหล่งแร่ธรรมชาติ (ไม่มีระดับ)" : "";
-            if (_spriteImg != null) { _spriteImg.sprite = data.sprite; _spriteImg.enabled = data.sprite != null; }
+            if (_spriteImg != null) { _spriteImg.sprite = curSprite; _spriteImg.enabled = curSprite != null; }
 
             // ผลิต + คนงาน (ค่าจริงตามคนที่ประจำ)
             int required = BuildingRegistry.Instance.WorkersRequired(_currentCell);
@@ -316,7 +318,9 @@ namespace NuclearReMind
                 if (c.root != null) c.root.SetActive(lv <= maxLv);
                 if (lv > maxLv) continue;
                 if (c.lv != null) c.lv.text = $"Lv.{lv}";
-                if (c.sprite != null) { c.sprite.sprite = data.sprite; c.sprite.enabled = data.sprite != null; }
+                // การ์ดแต่ละใบโชว์ sprite ของระดับตัวเอง (Lv.1/2/3 = ภาพคนละแบบ)
+                var cardSprite = data.SpriteForLevel(lv);
+                if (c.sprite != null) { c.sprite.sprite = cardSprite; c.sprite.enabled = cardSprite != null; }
                 if (c.output != null) c.output.text = primBase > 0f
                     ? $"{primEmoji}+{Mathf.RoundToInt(primBase * ResourceManager.LevelMultiplier(lv))} /วัน" : "—";
                 bool current = lv == level, done = lv < level;

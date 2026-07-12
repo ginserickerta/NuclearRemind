@@ -247,6 +247,7 @@ namespace NuclearReMind.Editor
             var grid = Object.FindFirstObjectByType<GridManager>();
             int columns = grid != null ? grid.columns : 43;
             int rows = grid != null ? grid.rows : 43;
+            // กลาง "กริดเต็ม" 43×43 (ผู้ใช้เลือกกลางแมพ ไม่ใช่กลาง Zone A) → origin (20,20) ตึก 3×3 กินช่อง 20–22
             var origin = new Vector2Int((columns - coreTower.size.x) / 2, (rows - coreTower.size.y) / 2);
 
             var go = GameObject.Find("PrePlacedCoreTower");
@@ -274,7 +275,7 @@ namespace NuclearReMind.Editor
             var grid = Object.FindFirstObjectByType<GridManager>();
             int columns = grid != null ? grid.columns : 43;
             int rows = grid != null ? grid.rows : 43;
-            var coreOrigin = new Vector2Int((columns - 3) / 2, (rows - 3) / 2); // ตรงกับ EnsurePrePlacedCoreTower (ตึก 3×3)
+            var coreOrigin = new Vector2Int((columns - 3) / 2, (rows - 3) / 2); // ตรงกับ EnsurePrePlacedCoreTower (กลางกริดเต็ม · ตึก 3×3)
             var origin = new Vector2Int(coreOrigin.x - 3, coreOrigin.y + 1);
 
             var go = GameObject.Find("PrePlacedLab");

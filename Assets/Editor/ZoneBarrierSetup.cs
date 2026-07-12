@@ -6,14 +6,16 @@ namespace NuclearReMind.EditorTools
 {
     /// <summary>
     /// จัดการ GameObject "ZoneBarrier" (ZoneBarrierRenderer) ในซีน
-    ///   • โมเดลปัจจุบัน Zone B เป็นกรอบรอบนอก → ปิดรั้วเส้นตั้ง (active = false)
-    ///   • เก็บคอมโพเนนต์ไว้เผื่ออยากได้รั้วกลับ (ตั้ง active = true เอง)
+    ///   • โมเดลใหม่ (2026-07): Zone B = แถบ NE (col ≥ columns-border) → เปิดรั้วเส้นตั้งลากแนว NW↔SE
+    ///   • ตั้ง barrierColumn = columns - zoneBorderThickness (ให้ตรงกับ IsoGroundPainter.IsZoneA)
+    ///   • wire สไปรต์แบริเออร์ blast_barrier.png (art ผู้ใช้) — ว่างเมื่อไม่พบ → ใช้รั้วโปรซีเยอรัล
     ///
     /// รัน: เมนู NuclearReMind/Setup Zone Barrier (Fence + Gate) — หรือรวมใน Run All Setups
     /// </summary>
     public static class ZoneBarrierSetup
     {
         private const string ScenePath = "Assets/Scenes/Gamescene.unity";
+        private const string FenceSpritePath = "Assets/Sprites/Art/Fence/blast_barrier.png";
 
         [MenuItem("NuclearReMind/Setup Zone Barrier (Fence + Gate)")]
         public static void SetupAll()
@@ -30,16 +32,30 @@ namespace NuclearReMind.EditorTools
 
             var barrier = go.GetComponent<ZoneBarrierRenderer>() ?? go.AddComponent<ZoneBarrierRenderer>();
 
-            // โมเดลปัจจุบัน Zone B เป็นกรอบรอบนอก — ไม่ใช้รั้วเส้นตั้งคั่น A|B จึงปิดไว้
-            barrier.active = false;
+            // เปิดรั้ว + ตั้งเส้นแบ่งให้ตรงกับ Zone B (แถบ NE = col ≥ columns-border)
+            barrier.active = true;
+
+            int columns = 43, border = 7;
+            var grid = Object.FindFirstObjectByType<GridManager>();
+            if (grid != null) columns = grid.columns;
+            var ore = Object.FindFirstObjectByType<OreDepositManager>();
+            if (ore != null) border = ore.zoneBorderThickness;
+            barrier.barrierColumn = Mathf.Clamp(columns - border, 1, columns - 1);
+
+            // สไปรต์แบริเออร์ (art ผู้ใช้) — ไม่พบ → ปล่อย null (renderer ใช้รั้วโปรซีเยอรัลแทน)
+            var fence = AssetDatabase.LoadAssetAtPath<Sprite>(FenceSpritePath);
+            if (fence != null) barrier.fenceSprite = fence;
+            else Debug.LogWarning($"[ZoneBarrierSetup] ไม่พบสไปรต์ {FenceSpritePath} — ใช้รั้วโปรซีเยอรัลแทน (เสา+ราว)");
+
             EditorUtility.SetDirty(barrier);
 
             var scene = EditorSceneManager.GetActiveScene();
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            Debug.Log("[ZoneBarrierSetup] ✅ ปิดรั้วเส้นตั้ง (active = false) — Zone B เป็นกรอบรอบนอกแล้ว " +
-                      "· ตั้ง active = true ในคอมโพเนนต์ถ้าอยากได้รั้วกลับ");
+            Debug.Log($"[ZoneBarrierSetup] ✅ เปิดรั้ว (active = true) · barrierColumn = {barrier.barrierColumn} " +
+                      $"(columns {columns} - border {border}) · Zone B = แถบ NE · " +
+                      (fence != null ? "ใช้สไปรต์ blast_barrier" : "ใช้รั้วโปรซีเยอรัล"));
         }
     }
 }

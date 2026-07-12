@@ -28,11 +28,11 @@ namespace NuclearReMind.EditorTools
         {
             var items = CreateItemAssets();
             SetupManager(items);
-            SetupUI();
+            RemoveOldInventoryUI(); // คลังแบบลิสต์เดิม (คราฟต์/ใช้) ถูกยกเลิก — ใช้ InventoryGridUI (ปุ่ม I) แทน
 
             AssetDatabase.SaveAssets();
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-            Debug.Log("[InventorySetup] สร้าง ItemSO 6 ชนิด + InventoryManager + แผง Inventory สำเร็จ — กด Save Scene (Ctrl+S)");
+            Debug.Log("[InventorySetup] อัปเดต ItemSO + InventoryManager · ลบแผงคลังเก่า (คราฟต์) ออก — ใช้ InventoryGridUI แทน · กด Save Scene (Ctrl+S)");
         }
 
         // ─────────────────────────────────────────────
@@ -175,209 +175,25 @@ namespace NuclearReMind.EditorTools
         }
 
         // ─────────────────────────────────────────────
-        //  3. UI — InventoryCanvas (แยกจาก HUDCanvas แบบ StoryCanvas → รัน Setup HUD ซ้ำแล้วไม่โดนลบ)
+        //  3. ลบคลังไอเทมแบบลิสต์เดิม (คราฟต์/ใช้) — ยกเลิกระบบคราฟต์ตามคำขอผู้ใช้
+        //     เหลือแค่ InventoryGridUI (กริด ดู/ทิ้ง · ปุ่ม I · auto-spawn ใต้ HUDCanvas)
+        //     ItemSO + InventoryManager ยังอยู่ (เป็นข้อมูล + ตัวจัดการ discard ที่กริดใหม่เรียกใช้)
         // ─────────────────────────────────────────────
-        private static void SetupUI()
+        private static void RemoveOldInventoryUI()
         {
-            var font = LoadFont();
-
-            var existing = GameObject.Find("InventoryCanvas");
-            if (existing != null)
+            var canvas = GameObject.Find("InventoryCanvas");
+            if (canvas != null)
             {
-                Undo.DestroyObjectImmediate(existing);
-                Debug.Log("[InventorySetup] ลบ InventoryCanvas เก่าออก (Ctrl+Z เพื่อคืน)");
+                Undo.DestroyObjectImmediate(canvas);
+                Debug.Log("[InventorySetup] ลบ InventoryCanvas (คลังเก่า) ออก");
             }
 
-            // เหนือ HUDCanvas(0) ใต้ StoryCanvas(60)/PauseCanvas(100)
-            var canvasGO = new GameObject("InventoryCanvas", typeof(RectTransform));
-            var canvas = canvasGO.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 50;
-            var scaler = canvasGO.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            canvasGO.AddComponent<GraphicRaycaster>();
-
-            // ── แผงหลักกลางจอ (light theme — Palette) ──
-            var panel = CreatePanel("InventoryPanel", canvasGO.transform);
-            Center(panel, new Vector2(560, 470));
-            panel.AddComponent<Image>().color = Palette.PanelBg;
-
-            // header
-            var header = CreatePanel("Header", panel.transform);
-            var hRect = header.GetComponent<RectTransform>();
-            hRect.anchorMin = new Vector2(0, 1); hRect.anchorMax = new Vector2(1, 1);
-            hRect.pivot = new Vector2(0.5f, 1); hRect.anchoredPosition = Vector2.zero;
-            hRect.sizeDelta = new Vector2(0, 46);
-            header.AddComponent<Image>().color = Palette.HeaderBg;
-
-            var title = CreateText("Title", header.transform, font, "🎒 คลังไอเทม (GDD §13)", 20, TextAnchor.MiddleLeft);
-            title.color = Palette.TextPrimary;
-            title.fontStyle = FontStyle.Bold;
-            var tRect = title.GetComponent<RectTransform>();
-            tRect.anchorMin = Vector2.zero; tRect.anchorMax = Vector2.one;
-            tRect.offsetMin = new Vector2(14, 0); tRect.offsetMax = new Vector2(-50, 0);
-
-            var closeBtn = CreateButton("CloseBtn", header.transform, font, "✕", 20, new Vector2(38, 38));
-            var cRect = closeBtn.GetComponent<RectTransform>();
-            cRect.anchorMin = new Vector2(1, 0.5f); cRect.anchorMax = new Vector2(1, 0.5f);
-            cRect.pivot = new Vector2(1, 0.5f);
-            cRect.anchoredPosition = new Vector2(-4, 0);
-
-            // content — แถวไอเทมเรียงลง (controller instantiate จาก template ตอน runtime)
-            var content = CreatePanel("Content", panel.transform);
-            var ctRect = content.GetComponent<RectTransform>();
-            ctRect.anchorMin = new Vector2(0, 0); ctRect.anchorMax = new Vector2(1, 1);
-            ctRect.offsetMin = new Vector2(10, 10); ctRect.offsetMax = new Vector2(-10, -52);
-            var layout = content.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 6;
-            layout.childControlWidth = true;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-
-            var rowTemplate = CreateRowTemplate(content.transform, font);
-
-            // ── ปุ่ม toggle ซ้ายล่าง — เหนือปุ่ม Records (20, 298) ──
-            var toggleBtn = CreateButton("InventoryToggleButton", canvasGO.transform, font, "🎒 ไอเทม (I)", 15, new Vector2(120, 36));
-            var tgRect = toggleBtn.GetComponent<RectTransform>();
-            tgRect.anchorMin = Vector2.zero; tgRect.anchorMax = Vector2.zero;
-            tgRect.pivot = new Vector2(0, 0);
-            tgRect.anchoredPosition = new Vector2(20, 340);
-
-            // ── controller GO อยู่นอก canvas (รอดตอนรัน setup ซ้ำ) แล้ว re-wire ──
-            var ctrlGO = GameObject.Find("InventoryPanelController") ?? new GameObject("InventoryPanelController");
-            var ctrl = ctrlGO.GetComponent<InventoryPanelController>() ?? ctrlGO.AddComponent<InventoryPanelController>();
-            ctrl.panel = panel;
-            ctrl.rowsParent = content.transform;
-            ctrl.rowTemplate = rowTemplate;
-            ctrl.toggleButton = toggleBtn;
-            ctrl.closeButton = closeBtn;
-            EditorUtility.SetDirty(ctrlGO);
-
-            panel.SetActive(false); // เริ่มปิด — controller.Toggle เปิด
-        }
-
-        /// <summary>แถวต้นแบบ (inactive): Icon / Name / Info / CraftBtn / UseBtn — ชื่อลูกต้องตรงกับ controller</summary>
-        private static GameObject CreateRowTemplate(Transform parent, Font font)
-        {
-            var row = CreatePanel("RowTemplate", parent);
-            var rect = row.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(0, 58);
-            row.AddComponent<Image>().color = Palette.PanelBgAlt;
-            var layoutElem = row.AddComponent<LayoutElement>();
-            layoutElem.minHeight = 58;
-            layoutElem.preferredHeight = 58;
-
-            var icon = CreateText("Icon", row.transform, font, "⚛", 24, TextAnchor.MiddleCenter);
-            icon.color = Palette.TextPrimary;
-            var iRect = icon.GetComponent<RectTransform>();
-            iRect.anchorMin = new Vector2(0, 0); iRect.anchorMax = new Vector2(0, 1);
-            iRect.pivot = new Vector2(0, 0.5f);
-            iRect.anchoredPosition = new Vector2(6, 0);
-            iRect.sizeDelta = new Vector2(36, 0);
-
-            var name = CreateText("Name", row.transform, font, "ไอเทม ×0", 16, TextAnchor.UpperLeft);
-            name.color = Palette.TextPrimary;
-            name.fontStyle = FontStyle.Bold;
-            var nRect = name.GetComponent<RectTransform>();
-            nRect.anchorMin = new Vector2(0, 1); nRect.anchorMax = new Vector2(0, 1);
-            nRect.pivot = new Vector2(0, 1);
-            nRect.anchoredPosition = new Vector2(48, -6);
-            nRect.sizeDelta = new Vector2(300, 24);
-
-            var info = CreateText("Info", row.transform, font, "ต้นทุน: —", 13, TextAnchor.LowerLeft);
-            info.color = Palette.TextMuted;
-            var fRect = info.GetComponent<RectTransform>();
-            fRect.anchorMin = new Vector2(0, 0); fRect.anchorMax = new Vector2(0, 0);
-            fRect.pivot = new Vector2(0, 0);
-            fRect.anchoredPosition = new Vector2(48, 6);
-            fRect.sizeDelta = new Vector2(320, 22);
-
-            var craft = CreateButton("CraftBtn", row.transform, font, "⚒ ผลิต", 14, new Vector2(92, 40));
-            var crRect = craft.GetComponent<RectTransform>();
-            crRect.anchorMin = new Vector2(1, 0.5f); crRect.anchorMax = new Vector2(1, 0.5f);
-            crRect.pivot = new Vector2(1, 0.5f);
-            crRect.anchoredPosition = new Vector2(-86, 0);
-
-            var use = CreateButton("UseBtn", row.transform, font, "ใช้", 14, new Vector2(72, 40));
-            var uRect = use.GetComponent<RectTransform>();
-            uRect.anchorMin = new Vector2(1, 0.5f); uRect.anchorMax = new Vector2(1, 0.5f);
-            uRect.pivot = new Vector2(1, 0.5f);
-            uRect.anchoredPosition = new Vector2(-8, 0);
-
-            row.SetActive(false); // template — controller ใช้ Instantiate
-            return row;
-        }
-
-        // ───────────────────────── helpers (แบบ StoryUISetup) ─────────────────────────
-
-        private static Font LoadFont()
-        {
-            var kanit = AssetDatabase.LoadAssetAtPath<Font>("Assets/Resources/Fonts/Kanit-Regular.ttf");
-            if (kanit != null) return kanit;
-            return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        }
-
-        private static GameObject CreatePanel(string name, Transform parent)
-        {
-            var go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            return go;
-        }
-
-        private static void Center(GameObject go, Vector2 size)
-        {
-            var rect = go.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.5f, 0.5f);
-            rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = size;
-        }
-
-        private static Text CreateText(string name, Transform parent, Font font, string content, int fontSize, TextAnchor anchor)
-        {
-            var go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            var text = go.AddComponent<Text>();
-            text.font = font;
-            text.fontSize = fontSize;
-            text.color = Color.white;
-            text.alignment = anchor;
-            text.text = content;
-            text.verticalOverflow = VerticalWrapMode.Overflow; // Kanit line height สูง — กัน truncate ทั้งบรรทัด
-            return text;
-        }
-
-        private static Button CreateButton(string name, Transform parent, Font font, string label, int fontSize, Vector2 size)
-        {
-            var go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            go.GetComponent<RectTransform>().sizeDelta = size;
-
-            var img = go.AddComponent<Image>();
-            img.color = new Color(0.2f, 0.2f, 0.3f, 1f);
-            var btn = go.AddComponent<Button>();
-            btn.targetGraphic = img;
-
-            var textGO = new GameObject("Label", typeof(RectTransform));
-            textGO.transform.SetParent(go.transform, false);
-            var tRect = textGO.GetComponent<RectTransform>();
-            tRect.anchorMin = Vector2.zero;
-            tRect.anchorMax = Vector2.one;
-            tRect.offsetMin = new Vector2(4, 0);
-            tRect.offsetMax = new Vector2(-4, 0);
-            var t = textGO.AddComponent<Text>();
-            t.font = font;
-            t.fontSize = fontSize;
-            t.fontStyle = FontStyle.Bold;
-            t.color = Color.white;
-            t.alignment = TextAnchor.MiddleCenter;
-            t.text = label;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
-
-            return btn;
+            var ctrl = GameObject.Find("InventoryPanelController");
+            if (ctrl != null)
+            {
+                Undo.DestroyObjectImmediate(ctrl);
+                Debug.Log("[InventorySetup] ลบ InventoryPanelController (คลังเก่า) ออก");
+            }
         }
     }
 }
