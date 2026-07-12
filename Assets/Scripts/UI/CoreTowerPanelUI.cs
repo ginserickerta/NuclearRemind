@@ -22,9 +22,10 @@ namespace NuclearReMind
         const string SpriteDir = "CoreTowerUI/";
 
         // ── theme ──
-        static readonly Color CBackdrop = new Color(0f, 0f, 0f, 0.40f);                 // จางลง — เห็นเกมรอบแผง
-        static readonly Color CPanelTop = new Color(0.035f, 0.045f, 0.062f, 0.86f);     // โปร่งแสงเข้ม (สไตล์ Frostpunk)
+        static readonly Color CBackdrop = new Color(0f, 0.006f, 0.012f, 0.46f);         // หรี่จอ โทนเย็นเล็กน้อย
+        static readonly Color CPanelTop = new Color(0.013f, 0.028f, 0.042f, 0.82f);     // dark liquid โปร่งแสง (แก้ว-น้ำเข้ม)
         static readonly Color CPanelBot = new Color(0.070f, 0.078f, 0.094f, 1f);
+        static readonly Color CGlassSheen = new Color(0.42f, 0.62f, 0.78f, 1f);          // แสงเหลือบผิวแก้ว (บนสุดของการ์ด)
         static readonly Color CBorder   = new Color(0.227f, 0.251f, 0.282f, 1f);
         static readonly Color CBorderLo = new Color(0.157f, 0.172f, 0.196f, 1f);
         static readonly Color CText     = new Color(0.92f, 0.94f, 0.96f, 1f);
@@ -126,7 +127,7 @@ namespace NuclearReMind
             var ct = CoreTowerManager.Instance;
             _pendingMode = ct != null ? Mathf.Clamp(ct.Current.overclockMode, 0, 3) : CoreTowerManager.ModeNormal;
             Refresh();
-            if (_rootPop != null) _rootPop.PlayFrom(0.9f); // pop-in ทั้งแผง
+            if (_rootPop != null) _rootPop.PlayFrom(0.5f); // pop-in ทั้งแผง — เด้งจากเล็กไปใหญ่
         }
 
         private void Hide()
@@ -234,7 +235,15 @@ namespace NuclearReMind
             var inner = Img("InnerLine", _root.transform, new Color(0,0,0,0));
             SetRectTL(inner.rectTransform, 10, 10, panelSize.x - 20, panelSize.y - 20);
             AddBorder(inner.gameObject, CBorderLo, 2f); inner.raycastTarget = false;
-            // ไม่มีหมุดมุม — พื้นหลังโปร่งแสงเข้มสไตล์เรียบ (ตามภาพอ้างอิง)
+
+            // แสงเหลือบผิวแก้ว (dark liquid) — ไล่จางจากขอบบนลงมา ให้การ์ดดูเป็นของเหลว/แก้วโปร่ง
+            var sheen = Img("GlassSheen", _root.transform, Color.white);
+            sheen.sprite = TopSheenSprite(); sheen.type = Image.Type.Simple; sheen.raycastTarget = false;
+            var srt = sheen.rectTransform;
+            srt.anchorMin = new Vector2(0f, 1f); srt.anchorMax = new Vector2(1f, 1f); srt.pivot = new Vector2(0.5f, 1f);
+            srt.sizeDelta = new Vector2(-12f, panelSize.y * 0.46f);  // x: inset 6 ต่อข้าง · y: สูง 46% ของการ์ด
+            srt.anchoredPosition = new Vector2(0f, -6f);
+            sheen.color = new Color(CGlassSheen.r, CGlassSheen.g, CGlassSheen.b, 0.11f);
 
             // ย่อทั้งแผงให้พอดีจอ (แผง portrait สูงเกินจอ 16:9) — ตั้ง scale ก่อนแนบ pop เพื่อให้ base ถูก
             var canvasRT = canvas != null ? canvas.GetComponent<RectTransform>() : null;
@@ -242,7 +251,9 @@ namespace NuclearReMind
             float fit = ch > 1f ? Mathf.Min(1f, ch * 0.94f / panelSize.y) : 1f;
             _root.transform.localScale = Vector3.one * fit;
 
+            // pop-in ทั้งแผง: เด้งขยายจากเล็ก (0.5×) ไปใหญ่ · สปริงเกินนิดก่อนเข้าที่
             _rootPop = UIClickPop.Attach(_root); _rootPop.playOnClick = false;
+            _rootPop.duration = 0.36f; _rootPop.overshoot = 2.2f;
 
             // ===== HEADER =====
             ReactorIcon(46, 40, 120, 120);
@@ -283,13 +294,15 @@ namespace NuclearReMind
             float rx = 690, rw = 270;
             Label("FuelHdr", rx + rw/2, 452, 22, CGreen, TextAnchor.MiddleCenter, FontStyle.Bold, 260, "เชื้อเพลิง");
             // Deuterium — ถังสไปรต์ทีม (aspect ~0.52) + ป้าย/ปุ่มคนละแถว ไม่ทับถัง
-            SpriteImg("fuel_d2", rx, 478, 54, deriveH: true, boxH: 0).raycastTarget = false;
+            var d2Icon = SpriteImg("fuel_d2", rx, 478, 54, deriveH: true, boxH: 0); d2Icon.raycastTarget = false;
+            UIGlowPulse.Attach(d2Icon.gameObject, CDeut, min: 0.10f, max: 0.55f, dist: 5f, spd: 2.1f);
             Label("DeutL", rx + 168, 496, 20, CText, TextAnchor.MiddleCenter, FontStyle.Bold, 200, "Deuterium");
             _deutMinus = SpriteButton("btn_minus", rx + 68, 522, 46, 52); _deutMinus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, -5)); Pop(_deutMinus);
             _deutTxt = Label("DeutV", rx + 155, 548, 26, CGold, TextAnchor.MiddleCenter, FontStyle.Bold, 90);
             _deutPlus  = SpriteButton("btn_plus", rx + 200, 522, 46, 52); _deutPlus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, 5)); Pop(_deutPlus);
             // Tritium
-            SpriteImg("fuel_t3", rx, 592, 54, deriveH: true, boxH: 0).raycastTarget = false;
+            var t3Icon = SpriteImg("fuel_t3", rx, 592, 54, deriveH: true, boxH: 0); t3Icon.raycastTarget = false;
+            UIGlowPulse.Attach(t3Icon.gameObject, CTrit, min: 0.10f, max: 0.55f, dist: 5f, spd: 2.3f);
             Label("TritL", rx + 168, 610, 20, CText, TextAnchor.MiddleCenter, FontStyle.Bold, 200, "Tritium");
             _tritMinus = SpriteButton("btn_minus", rx + 68, 636, 46, 52); _tritMinus.onClick.AddListener(() => Adjust(ReactorAllocation.Tritium, -5)); Pop(_tritMinus);
             _tritTxt = Label("TritV", rx + 155, 662, 26, CGold, TextAnchor.MiddleCenter, FontStyle.Bold, 90);
@@ -324,7 +337,17 @@ namespace NuclearReMind
             btn.targetGraphic = img;
             btn.transition = Selectable.Transition.None; // คุมสีเอง (เลือก=ขาว, ไม่เลือก=หรี่) ไม่ให้ ColorTint ทับ
             int m = mode; btn.onClick.AddListener(() => SelectMode(m)); Pop(btn);
+            UIGlowPulse.Attach(img.gameObject, ModeGlowColor(mode), min: 0.07f, max: 0.42f, dist: 5f, spd: 1.9f);
             return new ModeBtn { btn = btn, img = img, mode = mode };
+        }
+
+        // สีเรืองแสงต่อโหมด — ล้อสีลูกศร/โทนของโหมด (overdrive/boost ร้อน · normal เขียว · idle ฟ้า)
+        private static Color ModeGlowColor(int mode)
+        {
+            if (mode == CoreTowerManager.ModeOverdrive) return new Color(0.94f, 0.30f, 0.22f, 1f);
+            if (mode == CoreTowerManager.ModeBoost)     return new Color(0.96f, 0.62f, 0.20f, 1f);
+            if (mode == CoreTowerManager.ModeNormal)    return new Color(0.47f, 0.78f, 0.35f, 1f);
+            return new Color(0.47f, 0.72f, 0.86f, 1f); // idle
         }
 
         // หลอด gauge: วาง sprite frame แล้ววาง fill (สี) ทับด้านในหลอด (anchor ล่าง ปรับ anchorMax.y)
@@ -344,15 +367,24 @@ namespace NuclearReMind
             fill = frt; fillImg = f;
         }
 
+        private static readonly Color CReactorGlow = new Color(1f, 0.52f, 0.18f, 1f); // ส้ม-แกนเตา
+
         private void ReactorIcon(float x, float y, float w, float h)
         {
             var s = Resources.Load<Sprite>(SpriteDir + "reactor");
-            if (s != null) { var img = Img("Reactor", _root.transform, Color.white); img.sprite = s; img.preserveAspect = true; SetRectTL(img.rectTransform, x, y, w, h); img.raycastTarget = false; return; }
-            // procedural: กล่องเหล็ก + แกนเรืองแสง
+            if (s != null)
+            {
+                var img = Img("Reactor", _root.transform, Color.white); img.sprite = s; img.preserveAspect = true;
+                SetRectTL(img.rectTransform, x, y, w, h); img.raycastTarget = false;
+                UIGlowPulse.Attach(img.gameObject, CReactorGlow, min: 0.14f, max: 0.72f, dist: 7f, spd: 1.7f);
+                return;
+            }
+            // procedural: กล่องเหล็ก + แกนเรืองแสง (แกนเต้นแสง)
             var box = Img("Reactor", _root.transform, new Color(0.157f,0.172f,0.196f,1f));
             SetRectTL(box.rectTransform, x, y, w, h); AddBorder(box.gameObject, CBorder, 3f); box.raycastTarget = false;
             var core = Img("rc", box.transform, new Color(0.90f,0.47f,0.16f,1f));
             SetRectTL(core.rectTransform, w*0.36f, h*0.30f, w*0.28f, h*0.44f); core.raycastTarget = false;
+            UIGlowPulse.Attach(core.gameObject, CReactorGlow, min: 0.18f, max: 0.85f, dist: 8f, spd: 1.7f, brighten: true);
         }
 
         // ─────────── sprite/text helpers ───────────
@@ -454,6 +486,25 @@ namespace NuclearReMind
             rt.sizeDelta = new Vector2(w, h);
             rt.anchoredPosition = new Vector2(x + w/2f, -(y + h/2f));
         }
+        // gradient แนวตั้งสำหรับแสงเหลือบผิวแก้ว — ขาวโปร่ง เข้มสุดขอบบน จางลงล่าง (cache ครั้งเดียว)
+        private static Sprite _sheenSprite;
+        private static Sprite TopSheenSprite()
+        {
+            if (_sheenSprite != null) return _sheenSprite;
+            const int w = 4, h = 128;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                float t = y / (float)(h - 1);   // 0 ล่าง → 1 บน
+                float a = t * t;                 // เข้มสุดบนสุด จางแบบ ease ลงล่าง
+                for (int x = 0; x < w; x++) px[y * w + x] = new Color(1f, 1f, 1f, a);
+            }
+            tex.SetPixels(px); tex.Apply();
+            _sheenSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+            return _sheenSprite;
+        }
+
         // ฟอนต์เฉพาะแผง CORE TOWER = Chakra Petch (มี Thai glyph) — fallback Kanit → builtin
         private static Font LoadFont()
         {
