@@ -11,6 +11,7 @@ namespace NuclearReMind.EditorTools
     /// ชิ้นส่วน:
     ///   1. StoryDirector (GameObject เดี่ยว — beats wire โดย Story Setup เฟส 4)
     ///   2. การ์ดเนื้อเรื่องกลางจอ + CardUIController (record / info / outcome)
+    ///   2b. บทสนทนาหลายตัวละคร VN (portrait ซ้าย/ขวา + บอลลูน) + DialogueUIController (v8.5)
     ///   3. แผง Records ย้อนอ่านบันทึก + ปุ่ม "บันทึก" ซ้ายล่าง + RecordsPanelController
     ///   4. แผงอนุสรณ์ + MemorialPanelController (ตึก/ข้อมูล wire โดยเฟส 4)
     /// ปุ่มทุกปุ่ม wire onClick ตอน runtime ใน controller.Start — รัน setup ซ้ำได้ไม่มี listener ซ้ำ
@@ -42,6 +43,7 @@ namespace NuclearReMind.EditorTools
 
             SetupStoryDirector();
             SetupCardUI(canvasGO.transform, font);
+            SetupDialogueUI(canvasGO.transform, font);
             SetupRecordsPanel(canvasGO.transform, font);
             SetupMemorialPanel(canvasGO.transform, font);
 
@@ -119,6 +121,110 @@ namespace NuclearReMind.EditorTools
             card.dismissButton = dismissBtn;
             card.dismissLabel = dismissBtn.GetComponentInChildren<Text>();
             EditorUtility.SetDirty(card);
+        }
+
+        // ─────────────────────────────────────────────
+        //  2b. บทสนทนาหลายตัวละคร (v8.5) — VN portrait ซ้าย/ขวา + บอลลูนล่างจอ
+        // ─────────────────────────────────────────────
+        private static void SetupDialogueUI(Transform canvas, Font font)
+        {
+            // overlay หรี่จอ + คลุมคลิกทั้งจอ (คลิกที่ไหนก็ไปบรรทัดถัดไป)
+            var overlay = CreatePanel("StoryDialoguePanel", canvas);
+            Stretch(overlay);
+            var ovImg = overlay.AddComponent<Image>();
+            ovImg.color = new Color(0f, 0f, 0f, 0.35f);
+            var advBtn = overlay.AddComponent<Button>();
+            advBtn.targetGraphic = ovImg;
+            advBtn.transition = Selectable.Transition.None; // คลิกแล้วไม่ tint แผงหรี่
+
+            // portrait ซ้าย (มุมล่างซ้าย) — placeholder สี + อักษรย่อ
+            var (leftPortrait, leftInitial) = CreatePortrait("DialoguePortraitLeft", overlay.transform, font, true);
+            // portrait ขวา (มุมล่างขวา)
+            var (rightPortrait, rightInitial) = CreatePortrait("DialoguePortraitRight", overlay.transform, font, false);
+
+            // บอลลูนคำพูด (ล่างกลาง ระหว่าง portrait สองฝั่ง)
+            var box = CreatePanel("DialogueBox", overlay.transform);
+            var boxRect = box.GetComponent<RectTransform>();
+            boxRect.anchorMin = new Vector2(0f, 0f);
+            boxRect.anchorMax = new Vector2(1f, 0f);
+            boxRect.pivot = new Vector2(0.5f, 0f);
+            boxRect.offsetMin = new Vector2(470, 40);   // เว้นระยะ portrait ซ้าย
+            boxRect.offsetMax = new Vector2(-470, 300);  // เว้นระยะ portrait ขวา · สูง 260
+            box.AddComponent<Image>().color = new Color(0.08f, 0.09f, 0.13f, 0.95f);
+
+            // แถบชื่อผู้พูด (มุมบนของบอลลูน — เปลี่ยนสีตามคน)
+            var plateGO = CreatePanel("DialogueNamePlate", box.transform);
+            var plateRect = plateGO.GetComponent<RectTransform>();
+            plateRect.anchorMin = new Vector2(0f, 1f);
+            plateRect.anchorMax = new Vector2(1f, 1f);
+            plateRect.pivot = new Vector2(0.5f, 1f);
+            plateRect.anchoredPosition = new Vector2(0f, 6f);
+            plateRect.sizeDelta = new Vector2(-24, 44);
+            var plate = plateGO.AddComponent<Image>();
+            plate.color = new Color(0.3f, 0.7f, 0.95f);
+
+            var nameText = CreateText("DialogueName", plateGO.transform, font, "Kova", 22, TextAnchor.MiddleLeft);
+            var nameRect = nameText.GetComponent<RectTransform>();
+            nameRect.anchorMin = Vector2.zero; nameRect.anchorMax = Vector2.one;
+            nameRect.offsetMin = new Vector2(16, 0); nameRect.offsetMax = new Vector2(-16, 0);
+            nameText.fontStyle = FontStyle.Bold;
+            nameText.color = new Color(0.06f, 0.07f, 0.10f); // ตัวอักษรเข้มบนแถบสีสด
+
+            var body = CreateText("DialogueBody", box.transform, font, "", 22, TextAnchor.UpperLeft);
+            var bodyRect = body.GetComponent<RectTransform>();
+            bodyRect.anchorMin = Vector2.zero; bodyRect.anchorMax = Vector2.one;
+            bodyRect.offsetMin = new Vector2(24, 44); bodyRect.offsetMax = new Vector2(-24, -58);
+            body.color = new Color(0.93f, 0.94f, 0.88f);
+            body.lineSpacing = 1.3f;
+            body.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            var hint = CreateText("DialogueHint", box.transform, font, "▼ คลิกเพื่อไปต่อ", 15, TextAnchor.LowerRight);
+            var hintRect = hint.GetComponent<RectTransform>();
+            hintRect.anchorMin = new Vector2(1f, 0f); hintRect.anchorMax = new Vector2(1f, 0f);
+            hintRect.pivot = new Vector2(1f, 0f);
+            hintRect.anchoredPosition = new Vector2(-16, 10);
+            hintRect.sizeDelta = new Vector2(240, 22);
+            hint.color = new Color(0.7f, 0.72f, 0.8f, 0.8f);
+
+            overlay.SetActive(false);
+
+            var dlgGO = GameObject.Find("DialogueUIController") ?? new GameObject("DialogueUIController");
+            var dlg = dlgGO.GetComponent<DialogueUIController>() ?? dlgGO.AddComponent<DialogueUIController>();
+            dlg.overlayPanel = overlay;
+            dlg.advanceButton = advBtn;
+            dlg.leftPortrait = leftPortrait;
+            dlg.leftInitial = leftInitial;
+            dlg.rightPortrait = rightPortrait;
+            dlg.rightInitial = rightInitial;
+            dlg.dialogBox = box;
+            dlg.namePlate = plate;
+            dlg.nameText = nameText;
+            dlg.bodyText = body;
+            dlg.hintText = hint;
+            EditorUtility.SetDirty(dlg);
+        }
+
+        // portrait placeholder: กล่องสี (ตั้งค่าตอน runtime) + อักษรย่อกลาง · ยึดมุมล่างซ้าย/ขวา
+        private static (Image, Text) CreatePortrait(string name, Transform parent, Font font, bool left)
+        {
+            var go = CreatePanel(name, parent);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(left ? 0f : 1f, 0f);
+            rect.anchorMax = new Vector2(left ? 0f : 1f, 0f);
+            rect.pivot = new Vector2(left ? 0f : 1f, 0f);
+            rect.anchoredPosition = new Vector2(left ? 40f : -40f, 40f);
+            rect.sizeDelta = new Vector2(400, 620);
+            var img = go.AddComponent<Image>();
+            img.color = new Color(0.3f, 0.7f, 0.95f);
+
+            var initial = CreateText(name + "Initial", go.transform, font, "?", 200, TextAnchor.MiddleCenter);
+            var iRect = initial.GetComponent<RectTransform>();
+            iRect.anchorMin = Vector2.zero; iRect.anchorMax = Vector2.one;
+            iRect.offsetMin = Vector2.zero; iRect.offsetMax = Vector2.zero;
+            initial.fontStyle = FontStyle.Bold;
+            initial.color = Color.white;
+
+            return (img, initial);
         }
 
         // ─────────────────────────────────────────────

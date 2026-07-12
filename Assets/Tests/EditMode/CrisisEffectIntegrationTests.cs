@@ -51,8 +51,11 @@ namespace NuclearReMind.Tests
         [Test]
         public void ResourceManager_Spoilage_ReducesStoredFood()
         {
-            var rm = NewComponent<ResourceManager>("ResourceManager");           // food เริ่ม 150
+            var rm = NewComponent<ResourceManager>("ResourceManager");
             var crisis = NewComponent<CrisisEffectManager>("CrisisEffectManager");
+
+            // inject food = 150 ผ่าน load (ไม่พึ่ง startFood default — GDD v4.1 ปรับเป็น 120 แล้ว เทสต์ควรทนต่อการจูน)
+            eventManager.RaiseSaveLoaded(new SaveData { resources = new ResourceData { food = 150f } });
 
             // วิกฤตอาหารเหนี่ยวนำการเน่า 20%/วัน (ทางเลือกที่ไม่ได้หยุดเน่า)
             var d = ScriptableObject.CreateInstance<DilemmaData>();

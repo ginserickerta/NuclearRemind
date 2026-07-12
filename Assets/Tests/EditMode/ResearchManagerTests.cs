@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -36,7 +37,19 @@ namespace NuclearReMind.Tests
         {
             var go = new GameObject(name);
             _spawned.Add(go);
-            return go.AddComponent<T>();
+            var c = go.AddComponent<T>();
+            // EditMode: AddComponent ไม่เรียก Awake/OnEnable ให้ — ต้อง invoke เอง (idiom เดียวกับ ResourceManagerTests)
+            TryInvokePrivate(c, "Awake");
+            TryInvokePrivate(c, "OnEnable");
+            return c;
+        }
+
+        private static void TryInvokePrivate(object target, string methodName)
+        {
+            MethodInfo method = target.GetType().GetMethod(methodName,
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            try { method?.Invoke(target, null); }
+            catch (TargetInvocationException) { }
         }
 
         // ── gate พื้นฐาน: ไม่มีห้องวิจัยในเมือง → วิจัยไม่ได้ + แจ้งเหตุผล + ไม่หักของ ──

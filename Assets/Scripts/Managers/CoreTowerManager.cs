@@ -547,6 +547,7 @@ namespace NuclearReMind
             coolingTowerLevel++;
             Debug.Log($"[CoreTower] Toroidal Coils → level {coolingTowerLevel}");
             EventManager.Instance.RaiseTowerProgressChanged(Current);
+            EventManager.Instance.RaiseCoilsChanged(coolingTowerLevel, hasPoloidalCoils);
         }
 
         /// <summary>ติดตั้ง Poloidal Coils (เปิดเทอม engineers×4 + กัน micro-damage) — เหล็ก 60 + พลังงาน 100 ครั้งเดียว (§5)</summary>
@@ -557,6 +558,7 @@ namespace NuclearReMind
             hasPoloidalCoils = true;
             Debug.Log("[CoreTower] Poloidal Coils installed");
             EventManager.Instance.RaiseTowerProgressChanged(Current);
+            EventManager.Instance.RaiseCoilsChanged(coolingTowerLevel, hasPoloidalCoils);
         }
 
         // จ่ายเหล็ก + พลังงานพร้อมกัน — เช็กพอทั้งคู่ก่อนค่อยหัก (ไม่หักครึ่งเดียว)

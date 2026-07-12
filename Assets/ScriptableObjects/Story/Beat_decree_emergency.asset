@@ -19,6 +19,8 @@ MonoBehaviour:
   infoCard: {fileID: 11400000, guid: f3d1eb115bd27ac469c729a715e8ff9e, type: 2}
   crisis: {fileID: 11400000, guid: 84b00a94f027a334b8a56dadb9bbfd1c, type: 2}
   quiz: []
+  dialoguePre: []
+  dialoguePost: []
   npcLinePre: 
   innerVoiceAfter: 
   logLines: []

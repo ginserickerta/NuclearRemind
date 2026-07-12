@@ -86,9 +86,10 @@ namespace NuclearReMind.Tests
         [Test]
         public void CrisisBeats_TriggerParams_AreValidStatConditions()
         {
-            // เงื่อนไขที่รู้จักต้องประเมินได้ (เทียบ snapshot ที่เข้าเกณฑ์ต้องเป็น true)
+            // เงื่อนไขที่รู้จักต้องประเมินได้ (เทียบ snapshot late-game deep crisis ที่เข้าเกณฑ์ต้องเป็น true)
+            // core=85 ครอบคลุม beat v8.5 ที่ผูก CORE% ล้วน (tritium_warning core_above_78 / tritium_teach core_above_80)
             var resources = new ResourceData { food = 600f, energy = 50f, water = 50f };
-            var tower = new TowerData { coreHeat = 90f, corePercent = 40f };
+            var tower = new TowerData { coreHeat = 90f, corePercent = 85f };
 
             foreach (var beat in RequireBeats())
             {
@@ -158,6 +159,46 @@ namespace NuclearReMind.Tests
                         "แต่ไม่มี beat OnDeferredCrisis ที่ param ตรงกัน — วิกฤตซ้อนจะหายเงียบ");
                 }
             }
+        }
+
+        // v8.5 · knowledge-before-quiz ของ Tritium: QT1/QT2 ยิงจาก CoreTowerManager ตอนป้อน Tritium (นอก beat)
+        // จึงไม่โดน IronRule — ล็อกด้วยเทสต์นี้ว่า Info_tritium เด้งก่อน (beat tritium_teach ที่ CORE 80%)
+        // + tritium UI ล็อกถึง Day 25 (ป้อนไม่ได้ก่อน) → info (~Day 21) มาก่อนควิซเสมอ
+        [Test]
+        public void Tritium_TeachBeat_HasInfoCard_SoQuizHasKnowledgeFirst()
+        {
+            var beats = RequireBeats();
+            StoryBeatSO teach = null;
+            foreach (var b in beats) if (b.beatId == "tritium_teach") teach = b;
+
+            Assert.IsNotNull(teach, "ไม่พบ beat 'tritium_teach' — v8.5 ต้องมี (รัน Setup Story Content)");
+            Assert.IsNotNull(teach.infoCard, "tritium_teach ต้องมี InfoCard (Info_tritium) นำก่อนควิซ QT1/QT2");
+            Assert.AreEqual("core_above_80", teach.triggerParam,
+                "tritium_teach ต้อง trigger ที่ CORE 80% (info เด้งก่อนป้อน Tritium ที่ปลดล็อก Day 25)");
+        }
+
+        // v8.5 · กัน content บทสนทนาหายเงียบตอนรัน Setup Story Content ซ้ำ (Beat() ล้าง field ก่อน fill)
+        [Test]
+        public void V85_DialogueBeats_HaveDialogueLines()
+        {
+            var byId = new Dictionary<string, StoryBeatSO>();
+            foreach (var b in RequireBeats()) byId[b.beatId] = b;
+
+            string[] mustHavePre =
+            {
+                "reactor_preview", "crisis_plasma_stability", "crisis_radiation_disease",
+                "crisis_food_spoilage", "tritium_warning", "tritium_teach", "storm_first_light",
+            };
+            foreach (var id in mustHavePre)
+            {
+                Assert.IsTrue(byId.TryGetValue(id, out var beat), $"ไม่พบ beat '{id}' (v8.5)");
+                Assert.IsTrue(beat.dialoguePre != null && beat.dialoguePre.Length > 0,
+                    $"beat '{id}' ต้องมี dialoguePre (v8.5) — ว่างแปลว่า Setup ล้าง content หาย");
+            }
+
+            Assert.IsTrue(byId.TryGetValue("crisis_food_spoilage", out var food)
+                && food.dialoguePost != null && food.dialoguePost.Length > 0,
+                "crisis_food_spoilage ต้องมี dialoguePost (บทปิดวิกฤต 3 · Dorn)");
         }
 
         [Test]

@@ -22,6 +22,14 @@ namespace NuclearReMind.EditorTools
         private const string MainMenuPath = "Assets/Scenes/MainMenu.unity";
         private const string GameScenePath = "Assets/Scenes/Gamescene.unity";
 
+        // ── Pause menu art: ปุ่มแยก 4 อัน (สไปรต์ ~1600×320 · ข้อความ+กรอบ baked ในภาพ) ──
+        private const string BtnResumePath   = "Assets/Sprites/UI/pause_btn_resume.png";
+        private const string BtnRestartPath  = "Assets/Sprites/UI/pause_btn_restart.png";
+        private const string BtnMainMenuPath = "Assets/Sprites/UI/pause_btn_mainmenu.png";
+        private const string BtnQuitPath     = "Assets/Sprites/UI/pause_btn_quit.png";
+        // y-offset ของ 4 ปุ่มจากกลางจอ (pitch 126) — เล่นต่อ/เริ่มใหม่/กลับเมนู/ออก · จูนได้
+        private static readonly float[] ButtonY = { 189f, 63f, -63f, -189f };
+
         // ─────────────────────────────────────────────────────────────
         //  เมนูรวม
         // ─────────────────────────────────────────────────────────────
@@ -62,32 +70,48 @@ namespace NuclearReMind.EditorTools
             canvasGO.AddComponent<GraphicRaycaster>();
             EnsureEventSystem();
 
-            // panel ทึบเต็มจอ (บล็อกคลิกทะลุไป HUD)
+            // พื้นหลัง Pause: สีทึบโปร่งแสง (semi-transparent solid — บล็อกคลิกทะลุไป HUD ด้วย)
             var panel = NewUI("PausePanel", canvasGO.transform);
             Stretch(panel);
-            panel.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.78f);
-
-            // กล่องกลางจอ
-            var box = NewUI("Box", panel.transform);
-            Center(box.transform, Vector2.zero, new Vector2(480, 460));
-            box.AddComponent<Image>().color = new Color(0.06f, 0.07f, 0.12f, 1f);
-
-            var title = MakeText(box.transform, "Title", "หยุดชั่วคราว", 34, new Color(0.5f, 0.9f, 1f),
-                TextAnchor.MiddleCenter, font);
-            Center(title, new Vector2(0, 175), new Vector2(440, 50));
+            panel.AddComponent<Image>().color = new Color(0.04f, 0.05f, 0.08f, 0.82f);
 
             var controller = canvasGO.AddComponent<PauseMenuController>();
             controller.pausePanel = panel;
 
-            var btnSize = new Vector2(320, 56);
-            var resume  = MakeButton(box.transform, "ResumeButton",   "เล่นต่อ",       btnSize, new Color(0.16f, 0.45f, 0.20f), font);
-            var restart = MakeButton(box.transform, "RestartButton",  "เริ่มใหม่",      btnSize, new Color(0.20f, 0.35f, 0.55f), font);
-            var toMenu  = MakeButton(box.transform, "MainMenuButton", "กลับเมนูหลัก",   btnSize, new Color(0.30f, 0.30f, 0.36f), font);
-            var quit    = MakeButton(box.transform, "QuitButton",     "ออกจากเกม",      btnSize, new Color(0.50f, 0.16f, 0.16f), font);
-            Center(resume,  new Vector2(0, 80),   btnSize);
-            Center(restart, new Vector2(0, 12),   btnSize);
-            Center(toMenu,  new Vector2(0, -56),  btnSize);
-            Center(quit,    new Vector2(0, -124), btnSize);
+            var title = MakeText(panel.transform, "Title", "หยุดชั่วคราว", 46, new Color(0.55f, 0.9f, 1f),
+                TextAnchor.MiddleCenter, font);
+            Center(title, new Vector2(0, 300), new Vector2(760, 80));
+            title.fontStyle = FontStyle.Bold;
+
+            // ปุ่ม = สไปรต์แยก 4 อัน (ข้อความ baked ในภาพ) วางเป็น Button จริงบนพื้นหลังโปร่งแสง
+            var resumeSp   = AssetDatabase.LoadAssetAtPath<Sprite>(BtnResumePath);
+            var restartSp  = AssetDatabase.LoadAssetAtPath<Sprite>(BtnRestartPath);
+            var mainmenuSp = AssetDatabase.LoadAssetAtPath<Sprite>(BtnMainMenuPath);
+            var quitSp     = AssetDatabase.LoadAssetAtPath<Sprite>(BtnQuitPath);
+
+            Button resume, restart, toMenu, quit;
+            if (resumeSp != null && restartSp != null && mainmenuSp != null && quitSp != null)
+            {
+                var btnSize = new Vector2(560f, 112f); // ~อัตราส่วนภาพ 5:1 (preserveAspect)
+                resume  = MakeSpriteButton(panel.transform, "ResumeButton",   resumeSp,   new Vector2(0, ButtonY[0]), btnSize);
+                restart = MakeSpriteButton(panel.transform, "RestartButton",  restartSp,  new Vector2(0, ButtonY[1]), btnSize);
+                toMenu  = MakeSpriteButton(panel.transform, "MainMenuButton", mainmenuSp, new Vector2(0, ButtonY[2]), btnSize);
+                quit    = MakeSpriteButton(panel.transform, "QuitButton",     quitSp,     new Vector2(0, ButtonY[3]), btnSize);
+            }
+            else
+            {
+                // fallback (ยังไม่ import art) — ปุ่มสี+ข้อความแบบเดิม · รัน Setup ซ้ำหลัง Unity import
+                Debug.LogWarning("[MenuSystemSetup] ไม่พบสไปรต์ปุ่ม Pause — ใช้ปุ่มแบบเรียบชั่วคราว");
+                var fb = new Vector2(360f, 84f);
+                resume  = MakeButton(panel.transform, "ResumeButton",   "เล่นต่อ",     fb, new Color(0.16f, 0.45f, 0.20f), font);
+                restart = MakeButton(panel.transform, "RestartButton",  "เริ่มใหม่",    fb, new Color(0.20f, 0.35f, 0.55f), font);
+                toMenu  = MakeButton(panel.transform, "MainMenuButton", "กลับเมนูหลัก", fb, new Color(0.30f, 0.30f, 0.36f), font);
+                quit    = MakeButton(panel.transform, "QuitButton",     "ออกจากเกม",    fb, new Color(0.50f, 0.16f, 0.16f), font);
+                Center(resume,  new Vector2(0, ButtonY[0]), fb);
+                Center(restart, new Vector2(0, ButtonY[1]), fb);
+                Center(toMenu,  new Vector2(0, ButtonY[2]), fb);
+                Center(quit,    new Vector2(0, ButtonY[3]), fb);
+            }
 
             UnityEventTools.AddPersistentListener(resume.onClick,  new UnityAction(controller.Resume));
             UnityEventTools.AddPersistentListener(restart.onClick, new UnityAction(controller.Restart));
@@ -232,6 +256,32 @@ namespace NuclearReMind.EditorTools
             var lbl = MakeText(go.transform, "Label", label, 24, Color.white, TextAnchor.MiddleCenter, font);
             lbl.fontStyle = FontStyle.Bold;
             Stretch(lbl.gameObject);
+            return btn;
+        }
+
+        // ปุ่มจากสไปรต์ (ข้อความ baked ในภาพ) — hover/press = มืดลงเล็กน้อยเป็น feedback (ColorTint)
+        private static Button MakeSpriteButton(Transform parent, string name, Sprite sprite, Vector2 pos, Vector2 size)
+        {
+            var go = NewUI(name, parent);
+            Center(go.transform, pos, size);
+
+            var img = go.AddComponent<Image>();
+            img.sprite = sprite;
+            img.preserveAspect = true;
+            img.color = Color.white;
+
+            var btn = go.AddComponent<Button>();
+            btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.ColorTint;
+            var cb = btn.colors;
+            cb.normalColor      = Color.white;
+            cb.highlightedColor = new Color(0.86f, 0.86f, 0.86f, 1f); // hover มืดลงนิด
+            cb.pressedColor     = new Color(0.70f, 0.70f, 0.70f, 1f); // กดมืดลงชัด
+            cb.selectedColor    = Color.white;
+            cb.disabledColor    = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            cb.colorMultiplier  = 1f;
+            cb.fadeDuration     = 0.08f;
+            btn.colors = cb;
             return btn;
         }
 

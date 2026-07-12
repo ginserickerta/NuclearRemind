@@ -19,11 +19,15 @@ namespace NuclearReMind
         public StoryTriggerType triggerType;
         public string triggerParam;
 
-        [Header("ชิ้นส่วน — เล่นตามลำดับ record → infoCard → crisis → quiz (เว้น null ได้)")]
+        [Header("ชิ้นส่วน — เล่นตามลำดับ record → infoCard → dialoguePre → crisis → outcome → dialoguePost → quiz (เว้น null/ว่างได้)")]
         public RecordCardSO record;      // การ์ดบันทึกกู้คืน (เก็บเข้าแผง Records)
         public InfoCardSO infoCard;      // ★ ความรู้ก่อนควิซเสมอ — ห้ามมี quiz โดยไม่มีแหล่งความรู้นำ
         public DilemmaData crisis;       // การ์ดวิกฤต + ทางเลือก A/B/C (= CrisisSO ของ Story Guide)
         public QuizQuestionSO[] quiz;    // ควิซทบทวน ยิงหลัง Outcome (beat ไม่มี crisis ก็ยิงหลัง infoCard)
+
+        [Header("บทสนทนาหลายตัวละคร (v8.5 — portrait+บอลลูน VN · เว้นว่างได้)")]
+        public DialogueLine[] dialoguePre;   // บทเปิด: หลัง infoCard ก่อนการ์ดวิกฤต (Kova↔Mira↔Dorn สลับกัน)
+        public DialogueLine[] dialoguePost;  // บทปิด: หลัง outcome ก่อนควิซ (ใช้ร่วมทุกทางเลือก A/B/C)
 
         [Header("บรรยากาศ (optional — โชว์เป็นข้อความในการ์ด/log)")]
         [TextArea(1, 3)] public string npcLinePre;      // บทพูด NPC ก่อนเข้า beat เช่น "Kova: ..."

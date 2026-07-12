@@ -156,7 +156,7 @@ namespace NuclearReMind
             int day = GameManager.Instance != null ? GameManager.Instance.CurrentDay : 0;
 
             if (_dayTxt != null)
-                _dayTxt.text = d.isUnlocked ? $"Day {day}" : $"Day {day} · ล็อก (ปลด Day {CoreTowerManager.UnlockDay})";
+                _dayTxt.text = d.isUnlocked ? $"Day {day}" : $"Day {day} · {LockReason(day)}";
 
             // สมบูรณ์/CORE% = corePercent · ความร้อน = coreHeat เทียบ meltdown เป็น %
             float heatPct = Mathf.Clamp(d.coreHeat / CoreTowerManager.HeatMeltdown * 100f, 0f, 100f);
@@ -193,6 +193,15 @@ namespace NuclearReMind
             if (_scramBtn != null)
                 _scramBtn.interactable = d.isUnlocked && d.coreHeat >= ct.scramHeatThreshold && d.scramCooldown <= 0;
             if (_addCoolBtn != null) _addCoolBtn.interactable = d.isUnlocked;
+        }
+
+        // เหตุผลที่เตายังล็อกอยู่ — แยก "ยังไม่ถึงวัน" กับ "ถึงวันแล้วแต่ยังไม่วิจัย" (เดิมข้อความเดียวกันทั้งคู่
+        // ทำให้ผู้เล่นเข้าใจผิดว่าปุ่ม Overclock บั๊ก ทั้งที่ต้องไปกดวิจัย "ปลดล็อก CORE TOWER" ที่ห้องวิจัยก่อน)
+        private static string LockReason(int day)
+        {
+            if (day < CoreTowerManager.UnlockDay) return $"ล็อก (ปลด Day {CoreTowerManager.UnlockDay})";
+            bool researched = ResearchManager.Instance == null || ResearchManager.Instance.CoreUnlockDone;
+            return researched ? "ล็อก" : "ล็อก — ต้องวิจัย 'ปลดล็อก CORE TOWER' ที่ห้องวิจัยก่อน";
         }
 
         private static void SetInteractable(Button b, bool on) { if (b != null) b.interactable = on; }

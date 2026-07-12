@@ -64,7 +64,14 @@ namespace NuclearReMind
                 return;
 
             var sr = go.GetComponent<SpriteRenderer>(); // ตัวแม่ (Shadow เป็นลูก คนละ SpriteRenderer)
-            if (sr != null) sr.sprite = data.SpriteForLevel(newLevel);
+            if (sr == null) return;
+
+            var newSprite = data.SpriteForLevel(newLevel);
+            // Play mode → เล่นเอฟเฟกต์อัพเกรด (ฝุ่น+flash+เด้ง · สลับ sprite กลางฝุ่น) · edit mode/เทส → สลับทันที
+            if (Application.isPlaying)
+                BuildingUpgradeEffect.Play(go, sr, newSprite);
+            else
+                sr.sprite = newSprite;
         }
 
         /// <summary>

@@ -24,6 +24,7 @@ namespace NuclearReMind
         public event Action<Vector2Int, int> OnBuildingUpgraded;    // (cell, ระดับใหม่)
         public event Action OnUpgradeToroidalRequested;             // UI → CoreTower (Toroidal Coils +1)
         public event Action OnInstallPoloidalRequested;             // UI → CoreTower (Poloidal Coils)
+        public event Action<int, bool> OnCoilsChanged;              // CoreTower → Story (Toroidal level, hasPoloidal) — v8.5 record เสริม
 
         // ===== Resources =====
         public event Action<ResourceData> OnResourceChanged;
@@ -150,7 +151,8 @@ namespace NuclearReMind
         public event Action<RecordCardSO> OnStoryRecordShown;       // StoryDirector → Card UI (การ์ดบันทึกกู้คืน)
         public event Action<InfoCardSO> OnStoryInfoShown;           // StoryDirector → Card UI (การ์ดความรู้ — ก่อนควิซเสมอ)
         public event Action<string> OnStoryOutcomeShown;            // StoryDirector → Card UI (บทหลังเลือก afterText)
-        public event Action OnStoryCardDismissed;                   // Card UI → StoryDirector (ผู้เล่นกดปิดการ์ด → เดินลำดับต่อ)
+        public event Action<DialogueLine[]> OnStoryDialogueShown;   // StoryDirector → Dialogue UI (บทสนทนาหลายตัวละคร v8.5)
+        public event Action OnStoryCardDismissed;                   // Card UI / Dialogue UI → StoryDirector (ปิดการ์ด/จบบท → เดินลำดับต่อ)
         public event Action<RecordCardSO> OnRecordArchived;         // StoryDirector → RecordsPanel (บันทึกเข้าแผงย้อนอ่าน)
 
         private void Awake()
@@ -173,6 +175,7 @@ namespace NuclearReMind
         public void RaiseBuildingUpgraded(Vector2Int cell, int level) => OnBuildingUpgraded?.Invoke(cell, level);
         public void RaiseUpgradeToroidalRequested() => OnUpgradeToroidalRequested?.Invoke();
         public void RaiseInstallPoloidalRequested() => OnInstallPoloidalRequested?.Invoke();
+        public void RaiseCoilsChanged(int toroidalLevel, bool hasPoloidal) => OnCoilsChanged?.Invoke(toroidalLevel, hasPoloidal);
 
         // ===== Resources =====
         public void RaiseResourceChanged(ResourceData data) => OnResourceChanged?.Invoke(data);
@@ -299,6 +302,7 @@ namespace NuclearReMind
         public void RaiseStoryRecordShown(RecordCardSO record) => OnStoryRecordShown?.Invoke(record);
         public void RaiseStoryInfoShown(InfoCardSO infoCard) => OnStoryInfoShown?.Invoke(infoCard);
         public void RaiseStoryOutcomeShown(string afterText) => OnStoryOutcomeShown?.Invoke(afterText);
+        public void RaiseStoryDialogueShown(DialogueLine[] lines) => OnStoryDialogueShown?.Invoke(lines);
         public void RaiseStoryCardDismissed() => OnStoryCardDismissed?.Invoke();
         public void RaiseRecordArchived(RecordCardSO record) => OnRecordArchived?.Invoke(record);
     }

@@ -42,6 +42,14 @@ namespace NuclearReMind
         /// บันทึก Elara #01 ปลดตอน "สร้าง+จัดคนเข้าห้องวิจัย" — อาคาร pre-placed ใช้ OnBuildingBuilt
         /// ไม่ได้เพราะ event ยิงตอนเริ่มเกมก่อนผู้เล่นทำอะไร (enum ต่อท้ายเท่านั้น — กันเลื่อนค่า serialize)</summary>
         OnBuildingStaffed,
+
+        /// <summary>ได้ Tritium เข้าคลังครั้งแรก (latch แบบเดียวกับ OnDeuteriumExtracted) — ไม่ใช้ triggerParam
+        /// v8.5: ปลดบันทึก Elara เสริม (Zone B/ทริเทียม) ตอนสกัดทริเทียมได้ครั้งแรก</summary>
+        OnTritiumExtracted,
+
+        /// <summary>ติดตั้งขดลวดครบทั้งสองชนิด (Toroidal ≥ 1 + Poloidal) ครั้งแรก — ไม่ใช้ triggerParam
+        /// v8.5: ปลดบันทึก Elara เสริม (ขดลวดคู่) · ฟัง OnCoilsChanged จาก CoreTowerManager</summary>
+        OnCoilsComplete,
     }
 
     /// <summary>

@@ -21,6 +21,9 @@ namespace NuclearReMind
         /// <summary>CardUIController (เฟส 3) ตั้ง true ตอน OnEnable — ก่อนหน้านั้นการ์ดเป็น toast + auto-advance</summary>
         public static bool CardUIAvailable = false;
 
+        /// <summary>DialogueUIController (v8.5) ตั้ง true ตอน OnEnable — ก่อนหน้านั้นบทสนทนา degrade เป็น toast รายบรรทัด</summary>
+        public static bool DialogueUIAvailable = false;
+
         // วิกฤตซ้อน (deferredCrisis §4): เลือกทาง C แล้วปัญหาใหม่ตามมาอีก N วัน
         private const int DeferredCrisisDelayDays = 2;
 
@@ -29,7 +32,7 @@ namespace NuclearReMind
         private const string CoolingShortageKeyword = "coolingWorkerShortage";
         private const string CoolingShortageCondition = "heat_above_70";
 
-        private enum Step { Idle, Record, Info, Crisis, Outcome, Quiz }
+        private enum Step { Idle, Record, Info, DialoguePre, Crisis, Outcome, DialoguePost, Quiz }
         private Step _step = Step.Idle;
         private StoryBeatSO _activeBeat;
         private int _crisisChoice = -1;
@@ -46,7 +49,7 @@ namespace NuclearReMind
         private readonly List<int> _deferredFireDays = new List<int>();
 
         // latch — ยิงครั้งแรกครั้งเดียว (แบบเดียวกับ Q1 ใน QuizManager)
-        private bool _deuteriumFired, _reactorStartFired;
+        private bool _deuteriumFired, _tritiumFired, _reactorStartFired;
 
         // snapshot สำหรับ OnStatThreshold/OnStormActive (อ่านผ่าน event — ไม่ direct reference manager)
         private ResourceData _resources;
@@ -96,6 +99,7 @@ namespace NuclearReMind
             EventManager.Instance.OnStoryCardDismissed += HandleCardDismissed;
             EventManager.Instance.OnRadiationExposureChanged += HandleRadiationExposureChanged;
             EventManager.Instance.OnWorkerAssignmentChanged += HandleWorkerAssignmentChanged;
+            EventManager.Instance.OnCoilsChanged += HandleCoilsChanged;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
         }
 
@@ -111,6 +115,7 @@ namespace NuclearReMind
             EventManager.Instance.OnStoryCardDismissed -= HandleCardDismissed;
             EventManager.Instance.OnRadiationExposureChanged -= HandleRadiationExposureChanged;
             EventManager.Instance.OnWorkerAssignmentChanged -= HandleWorkerAssignmentChanged;
+            EventManager.Instance.OnCoilsChanged -= HandleCoilsChanged;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
         }
 
@@ -207,11 +212,28 @@ namespace NuclearReMind
         private void HandleResourceChanged(ResourceData data)
         {
             _resources = data;
+            // latch เชื้อเพลิงครั้งแรก — เช็คทั้งคู่แยกกัน (ห้าม early-return ที่ deuterium ไม่งั้น tritium ไม่ถูกจับ)
+            TryFireFuelLatch(ref _deuteriumFired, data.deuterium, StoryTriggerType.OnDeuteriumExtracted);
+            TryFireFuelLatch(ref _tritiumFired, data.tritium, StoryTriggerType.OnTritiumExtracted);
+        }
 
-            if (_deuteriumFired || data.deuterium <= 0f) return;
-            _deuteriumFired = true;
+        // ยิง beat ของ trigger เชื้อเพลิงครั้งแรกที่ amount > 0 (latch กันยิงซ้ำ · OnResourceChanged ถี่)
+        private void TryFireFuelLatch(ref bool latch, float amount, StoryTriggerType type)
+        {
+            if (latch || amount <= 0f) return;
+            latch = true;
             foreach (var beat in beats)
-                if (Eligible(beat) && beat.triggerType == StoryTriggerType.OnDeuteriumExtracted)
+                if (Eligible(beat) && beat.triggerType == type)
+                    FireBeat(beat);
+        }
+
+        // ติดตั้งขดลวดครบทั้งสองชนิด (Toroidal ≥ 1 + Poloidal) — v8.5 ปลดบันทึกเสริม
+        // ไม่ต้อง latch: Eligible() กันยิงซ้ำ (beat เข้า _fired แล้ว) · OnCoilsChanged ยิงไม่ถี่
+        private void HandleCoilsChanged(int toroidalLevel, bool hasPoloidal)
+        {
+            if (toroidalLevel < 1 || !hasPoloidal) return;
+            foreach (var beat in beats)
+                if (Eligible(beat) && beat.triggerType == StoryTriggerType.OnCoilsComplete)
                     FireBeat(beat);
         }
 
@@ -299,6 +321,15 @@ namespace NuclearReMind
                                  $"📘 {_activeBeat.infoCard.title}");
                         return;
                     }
+                    Advance(Step.DialoguePre);
+                    return;
+
+                case Step.DialoguePre:
+                    if (_activeBeat.dialoguePre != null && _activeBeat.dialoguePre.Length > 0)
+                    {
+                        ShowDialogue(_activeBeat.dialoguePre);
+                        return;
+                    }
                     Advance(Step.Crisis);
                     return;
 
@@ -318,6 +349,15 @@ namespace NuclearReMind
                     if (!string.IsNullOrEmpty(afterText))
                     {
                         ShowCard(() => EventManager.Instance.RaiseStoryOutcomeShown(afterText), afterText);
+                        return;
+                    }
+                    Advance(Step.DialoguePost);
+                    return;
+
+                case Step.DialoguePost:
+                    if (_activeBeat.dialoguePost != null && _activeBeat.dialoguePost.Length > 0)
+                    {
+                        ShowDialogue(_activeBeat.dialoguePost);
                         return;
                     }
                     Advance(Step.Quiz);
@@ -356,6 +396,20 @@ namespace NuclearReMind
             // มี UI → รอ OnStoryCardDismissed
         }
 
+        // แสดงบทสนทนาหลายตัวละคร (v8.5) ผ่าน Dialogue UI — ยังไม่มี UI → toast รายบรรทัด + เดินต่อ
+        private void ShowDialogue(DialogueLine[] lines)
+        {
+            EventManager.Instance.RaiseStoryDialogueShown(lines);
+            if (!DialogueUIAvailable)
+            {
+                foreach (var line in lines)
+                    if (!string.IsNullOrEmpty(line.textTH))
+                        Notice(SpeakerMeta.Prefix(line.speaker) + line.textTH);
+                AdvancePastCurrentCard();
+            }
+            // มี UI → รอ OnStoryCardDismissed (Dialogue UI raise ตอนจบบททั้งชุด)
+        }
+
         private void HandleCardDismissed() => AdvancePastCurrentCard();
 
         private void AdvancePastCurrentCard()
@@ -363,8 +417,10 @@ namespace NuclearReMind
             switch (_step)
             {
                 case Step.Record: Advance(Step.Info); break;
-                case Step.Info: Advance(Step.Crisis); break;
-                case Step.Outcome: Advance(Step.Quiz); break;
+                case Step.Info: Advance(Step.DialoguePre); break;
+                case Step.DialoguePre: Advance(Step.Crisis); break;
+                case Step.Outcome: Advance(Step.DialoguePost); break;
+                case Step.DialoguePost: Advance(Step.Quiz); break;
             }
         }
 
@@ -437,8 +493,9 @@ namespace NuclearReMind
                     }
             }
 
-            // latch ตามสถานะเซฟ — ไม่ยิงซ้ำหลังโหลด
+            // latch ตามสถานะเซฟ — ไม่ยิงซ้ำหลังโหลด (coils ไม่มีใน save → พึ่ง _fired dedup พอ)
             _deuteriumFired = save.resources.deuterium > 0f;
+            _tritiumFired = save.resources.tritium > 0f;
             _reactorStartFired = save.tower.isUnlocked;
             _resources = save.resources;
             _tower = save.tower;

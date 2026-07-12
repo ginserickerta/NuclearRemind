@@ -248,7 +248,8 @@ namespace NuclearReMind.Tests
         [Test]
         public void DailyProduction_UpgradedToL3_ProducesDeuterium()
         {
-            SetResources(energy: 100f, water: 100f, workers: 20);
+            // §4: โรงน้ำ L3 สกัด D โดยกินน้ำ 25:1 เหนือ reserve 100 → ต้องมีน้ำ ≥ 100 + (8×25=200) = 300 จึงสกัดครบ 8
+            SetResources(energy: 100f, water: 400f, workers: 20);
             eventManager.RaiseResourceDelta(ResourceType.Iron, 500f);
             var water = MakeBuilding("Water", 0f, 0f, workerRequired: 1);
             water.deuteriumProduction = 8f;

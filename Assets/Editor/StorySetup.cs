@@ -95,6 +95,23 @@ namespace NuclearReMind.EditorTools
 ถ้ามันกำลังจะมา เตาต้องติดเต็มร้อยก่อนมันจะถึง นั่นคือทางเดียว",
                 archiveTitle: "บันทึก #สุดท้าย — รายงานเตือนพายุ");
 
+            // ── v8.5 ส่วนเสริม — บันทึก Elara optional (ปลดตอนติดคอยล์ครบ / เปิด Zone B) ──
+            records["elara_coils"] = Record("elara_coils",
+                author: "ระบบถอดรหัสข้อมูลเพิ่มเติมสำเร็จ · ผู้บันทึก: Dr. Elara Vane",
+                body:
+@"ขดลวดคู่ไม่ใช่แค่แม่เหล็ก มันคือวินัยของทั้งทีม
+วันที่เราแพ้ ไม่ใช่เพราะสนามอ่อน แต่เพราะมีคนเร่งเตาก่อนคอยล์จะพร้อม
+ถ้านายอ่านถึงตรงนี้ — อย่ารีบ ติดให้ครบก่อน แล้วเตาจะไม่ทรยศนาย",
+                archiveTitle: "บันทึก #เสริม — ขดลวดคู่");
+
+            records["elara_tritium"] = Record("elara_tritium",
+                author: "ระบบถอดรหัสข้อมูลเพิ่มเติมสำเร็จ · ผู้บันทึก: Dr. Elara Vane",
+                body:
+@"Zone B ไม่ได้ปิดตายเพราะมันพัง — เราปิดมันเองเพราะเรากลัวทริเทียม
+เตาที่เลี้ยงเชื้อเพลิงของตัวเองได้ คือเตาที่ไม่ต้องพึ่งใคร แต่เราไม่กล้าพอจะไว้ใจมัน
+ถ้านายอ่านถึงตรงนี้ — เปิดมันเถอะ นายจะไปได้ไกลกว่าที่เราไปถึง",
+                archiveTitle: "บันทึก #เสริม — Zone B / ทริเทียม");
+
             return records;
         }
 
@@ -154,6 +171,30 @@ namespace NuclearReMind.EditorTools
 การบังคับให้พวกเขาเข้าเขตเสี่ยงรังสี ขัดหลัก ALARA โดยตรง
 การตัดสินใจนี้เป็นของคุณ เกมไม่ตัดสินถูก-ผิดแทน แต่ผลของมันคือ Hope ของเมือง",
                 button: "ตัดสินใจ");
+
+            // ── v8.5 ส่วนเสริม — Info card ใหม่ 3 ใบ (verbatim) ──
+            infos["reactor_preview"] = Info("reactor_preview", "หอเตากลางเมือง", CardCategory.Reactor,
+@"หอสูงกลางเมืองคือ เตาฟิวชัน — งานหลักของนาย ตอนนี้มันยังไม่เดินเครื่อง ค้างอยู่ที่ 30%
+เตาจะเริ่มดันขึ้นก็ต่อเมื่อมี เชื้อเพลิง (ได้จากการสกัดน้ำ Day 11) แต่ตอนนี้เดินดูระบบมันก่อนได้:
+• CORE% — ความพร้อมของเตา ต้องดันให้ถึง 100%
+• โหมดเดินเครื่อง — ยิ่งเร่ง เตายิ่งไว แต่ยิ่งร้อน (จะใช้ได้เมื่อเตาติดแล้ว)
+จำหน้าตามันไว้ Day 11 ได้จุดจริง",
+                button: "รับทราบ");
+
+            infos["cooling_coils"] = Info("cooling_coils", "หล่อเย็นเตาด้วยขดลวดคู่", CardCategory.Reactor,
+@"สนามแม่เหล็กที่ขังพลาสมาไว้ ก็คือ ""ระบบหล่อเย็น"" ของเตานี้ ยิ่งสนามแรง ยิ่งกันความร้อน (HEAT) ไม่ให้ทะลุผนังได้มาก
+เราเพิ่มกำลังหล่อเย็นได้ด้วยการ ติดตั้ง/อัปเกรดขดลวด 2 ชนิด ที่หอควบคุมเตา:
+• Toroidal Coils — ขดลวดวงรอบ บีบพลาสมาให้วิ่งเป็นวง → ยกเพดานกำลังหล่อเย็น (รับ Boost ได้แรงขึ้น)
+• Poloidal Coils — ขดลวดรัดแนวตั้ง กันพลาสมาชนผนัง → ลด HEAT ต่อเทิร์น และกันเตาสึกทีละนิด
+→ ถ้า HEAT ไต่ใกล้ 100 (Meltdown) ให้เสริมขดลวดก่อนเสมอ อย่าเพิ่งเร่งเตา",
+                button: "รับทราบ");
+
+            infos["tritium"] = Info("tritium", "เชื้อเพลิงระยะสอง: ทำไมต้องมีทริเทียม", CardCategory.Fusion,
+@"เตาฟิวชันจุดง่ายที่สุดด้วยเชื้อเพลิงคู่ ดิวเทอเรียม–ทริเทียม (D–T) เพราะหลอมรวมกันได้ที่อุณหภูมิต่ำกว่าคู่อื่น
+ช่วงแรกเราใช้ดิวเทอเรียม (²H) จากน้ำดันเตาขึ้นมาได้ถึง 80% — แต่แค่ดิวเทอเรียมล้วน ปฏิกิริยาไม่แรงพอจะดันต่อถึงจุดติด
+ตั้งแต่ 80% ขึ้นไป เตาต้องการทริเทียม (³H) มาป้อนคู่กัน ไม่งั้น CORE% จะค้างอยู่กับที่ (ไม่ขึ้นเลย)
+→ ทริเทียมหายากในธรรมชาติ ต้องเปิด Zone B เพื่อผลิตมันขึ้นเอง แล้วป้อนเข้าเตาควบคู่ดิวเทอเรียม",
+                button: "รับทราบ");
 
             return infos;
         }
@@ -365,6 +406,21 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
                            "triggerParam = buildingName ไทยเป๊ะของห้องปฏิบัติการ (guide: ResearchLab)";
             }));
 
+            // ── v8.5 · reactor_preview (Preview เตา ~Day 6) — เด้งต่อจาก Record #01 ตอนจัดคนเข้าห้องวิจัย ──
+            // ★ trigger เดียวกับ recover_record_01 (OnBuildingStaffed ห้องปฏิบัติการ) · วางหลังในลิสต์ → คิวเล่นต่อจากบันทึก
+            //   ไม่ผูกควิซ (เตายังไม่เดินเครื่องก่อน Day 11) · info → Kova ×2 → Inner Voice (dialoguePre เล่นหลัง InfoCard)
+            beats.Add(Beat("reactor_preview", StoryTriggerType.OnBuildingStaffed, "ห้องปฏิบัติการ", b =>
+            {
+                b.infoCard = infos["reactor_preview"];
+                b.dialoguePre = new[]
+                {
+                    L(Speaker.Kova, "เห็นหอสูงกลางเมืองไหม เตาฟิวชัน — นั่นแหละงานหลักของนาย"),
+                    L(Speaker.Kova, "ยังจุดไม่ได้หรอก ไม่มีเชื้อเพลิง แต่พอถึงเวลาจริง ฉันไม่อยากให้นายมัวงงกับปุ่ม"),
+                    L(Speaker.InnerVoice, "หอนั่น ทีมเก่าสร้างค้างไว้ครึ่งทาง... ที่เหลือเป็นของผมแล้ว"),
+                };
+                b.noteTH = "v8.5 ส่วนเสริม Preview เตา · หลัง Record #01 ก่อน Day 11 · เด้งครั้งเดียว ไม่ผูกควิซ";
+            }));
+
             // ── PHASE 2→3 · deuterium_ignition — ★ ความรู้มาก่อนควิซ (InfoCard → Record → Q1) ──
             beats.Add(Beat("deuterium_ignition", StoryTriggerType.OnDeuteriumExtracted, "", b =>
             {
@@ -384,30 +440,85 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
 
             // ── PHASE 3 · วิกฤต 3 ใบ (InfoCard → Crisis → Outcome → Quiz ผ่าน DilemmaManager) ──
             // ★ เงื่อนไข/วันทั้งหมดมาจาก CrisisSchedule (runtime) — GDD §10 + Victory Loop §14 · EditMode test คุมวันเด้ง
-            beats.Add(Beat("crisis_plasma_stability", StoryTriggerType.OnStatThreshold, CrisisSchedule.PlasmaTrigger, b =>
+            // ── v8.5 วิกฤต 1 (ลำดับ ห้ามสลับ): InfoCard พลาสมา → InfoCard ขดลวด + บท Kova/Mira → Crisis → Q2,Q3 ──
+            //   ใช้ 2 beat แยก (ผู้ใช้เลือก) · trigger เดียวกัน (PlasmaTrigger) · beat info วางก่อน → คิวเล่นก่อน beat วิกฤต
+            beats.Add(Beat("crisis1_plasma_info", StoryTriggerType.OnStatThreshold, CrisisSchedule.PlasmaTrigger, b =>
             {
                 b.infoCard = infos["plasma"];
+                b.noteTH = "v8.5 · การ์ดความรู้ใบแรกของวิกฤต 1 (พลาสมาถูกขังด้วยอะไร) — เล่นก่อน beat crisis_plasma_stability";
+            }));
+
+            beats.Add(Beat("crisis_plasma_stability", StoryTriggerType.OnStatThreshold, CrisisSchedule.PlasmaTrigger, b =>
+            {
+                b.infoCard = infos["cooling_coils"]; // v8.5: การ์ดใบสอง(ขดลวดคู่) · ใบแรก(พลาสมา) อยู่ beat ก่อนหน้า
+                b.dialoguePre = new[]
+                {
+                    // Kova ชี้ทางติดคอยล์ (ต่อจาก InfoCard ขดลวด)
+                    L(Speaker.Kova, "เตาไม่ได้ร้อนเพราะมันเกลียดนายหรอก ไปที่หอควบคุม ติดคอยล์ให้ครบสองตัวก่อน แล้วค่อยคิดเรื่องเร่ง"),
+                    L(Speaker.Kova, "Toroidal ยกเพดานให้ดันแรงขึ้น Poloidal รีดความร้อนทิ้ง — ขาดตัวใดตัวหนึ่ง เตาก็เอาไม่อยู่"),
+                    L(Speaker.InnerVoice, "คอยล์คู่นี่แหละ... กำแพงเดียวที่กั้นเรากับการหลอมละลาย"),
+                    // บทเปิดวิกฤต Kova → Mira → Kova → Mira + Inner Voice
+                    L(Speaker.Kova, "ไม่ไหวแล้ว สนามแม่เหล็กเริ่มเอาพลาสมาไม่อยู่ ถ้ามันหลุด เตาละลายทั้งลูก"),
+                    L(Speaker.Mira, "แล้วคนที่ประจำอยู่หอควบคุมล่ะ"),
+                    L(Speaker.Kova, "นั่นแหละที่ผมห่วง พวกเขาอยู่ใกล้สุด"),
+                    L(Speaker.Mira, "งั้นรีบตัดสินใจ ฉันจะไปเตรียมที่พยาบาลไว้ เผื่อไว้ก่อน"),
+                    L(Speaker.InnerVoice, "เพิ่งตั้งเมืองได้ไม่กี่วัน... เตาก็จะเอาคืนแล้ว"),
+                };
                 b.crisis = plasmaCrisis;
-                b.noteTH = "Day 17 (§14) · §10 ระบุ \"HEAT>80 หรือ Q>0.3 (จบเฟส 1)\" — จบเฟส 1 = CORE% 50 (§8) " +
-                           "จึงใช้ core_above_50 ไม่ใช่ q_above_0.3 (Q=CORE%/100 → 0.3 = CORE% 30 = ค่าเริ่มต้นตอนปลดล็อก Day 11 " +
-                           "เงื่อนไขเดิมทำให้วิกฤตเด้ง Day 11) · ควิซ Q2,Q3 ผูกที่ crisis.linkedQuizIds";
+                b.noteTH = "Day 17 (§14) · v8.5: InfoCard ขดลวดคู่ + Kova(ติดคอยล์)×2 + บทเปิด Kova↔Mira + Inner Voice " +
+                           "→ Crisis → Q2,Q3 (crisis.linkedQuizIds) · การ์ดพลาสมาอยู่ beat crisis1_plasma_info";
+            }));
+
+            // ── v8.5 · recover_coils (optional) — ปลดบันทึก Elara เสริม ตอนติดคอยล์ครบทั้งสองชนิดครั้งแรก ──
+            beats.Add(Beat("recover_coils", StoryTriggerType.OnCoilsComplete, "", b =>
+            {
+                b.record = records["elara_coils"];
+                b.innerVoiceAfter = "คนก่อนหน้าผม... แพ้ตรงจุดเดียวกับที่ผมเกือบพลาด";
+                b.noteTH = "v8.5 optional · ยิงตอน Toroidal≥1 + Poloidal ครบ (OnCoilsChanged) · ตัดออกได้ไม่กระทบสมดุล";
             }));
 
             beats.Add(Beat("crisis_radiation_disease", StoryTriggerType.OnStatThreshold, CrisisSchedule.OutbreakTrigger, b =>
             {
                 b.infoCard = infos["medicine"];
+                b.dialoguePre = new[] // v8.5 บทเปิดวิกฤต 2 (Mira นำ · Kova ถามแทนผู้เล่น) — ต่อจาก Info รังสีกับร่างกายคน
+                {
+                    L(Speaker.Mira, "หยุดส่งคนลงเหมืองก่อน — ที่ล้มไปสิบห้าคนน่ะ ไม่ใช่หมดแรง เนื้อมันเริ่มโตผิดที่แล้ว"),
+                    L(Speaker.Kova, "โตผิดที่... หมายความว่ายังไง"),
+                    L(Speaker.Mira, "รังสีสะสม Kova ฉันเคยเห็นมาก่อน ปล่อยไว้อีกสามวันมีคนตายแน่"),
+                    L(Speaker.Kova, "แล้วแก้ยังไง"),
+                    L(Speaker.Mira, "มีทางอยู่ — แต่ไม่มีทางไหนฟรี เอาคน เอาพลังงาน หรือเอาเวลาไปเสี่ยง เลือกเอา"),
+                    L(Speaker.InnerVoice, "คนพวกนั้นขุดแร่ให้เมืองมาตลอด... ผมจะหันหลังตอนนี้ไม่ได้"),
+                };
                 b.crisis = outbreakCrisis;
                 b.noteTH = "Day 20 (§14) · §10: ส่งคนขุดโซนเสี่ยงมากเกินไป — จำลองด้วย RadiationManager exposure สะสม " +
-                           "(ลดด้วย Shelter/Medic ตาม ALARA) · เพดานวัน day_reached_20 (เดิม 23 ไม่ตรง §14) · ควิซ Q4,Q5";
+                           "(ลดด้วย Shelter/Medic ตาม ALARA) · เพดานวัน day_reached_20 (เดิม 23 ไม่ตรง §14) · ควิซ Q4,Q5 · " +
+                           "v8.5: บทเปิด Mira↔Kova + Inner Voice (dialoguePre)";
             }));
 
             beats.Add(Beat("crisis_food_spoilage", StoryTriggerType.OnStatThreshold, CrisisSchedule.FoodTrigger, b =>
             {
                 b.infoCard = infos["food"];
+                b.dialoguePre = new[] // v8.5 บทเปิดวิกฤต 3 (Dorn หัวหน้าฟาร์ม กลัวรังสี · Mira เฉลย) — ต่อจาก Info อาหาร
+                {
+                    L(Speaker.Dorn, "ผมทำนามาทั้งชีวิต ไม่เคยเห็นข้าวเน่าเร็วขนาดนี้ — สามวันเกลี้ยงยุ้ง"),
+                    L(Speaker.Kova, "ไม่ใช่ฝีมือนายหรอก Dorn — รังสีพื้นหลังมันสูงผิดปกติ ของถึงเน่าไวขนาดนี้"),
+                    L(Speaker.Dorn, "แล้วนี่คุณจะให้ผมเอา 'รังสี' ไปยิงใส่ข้าวที่คนต้องกินงั้นเหรอ บ้าไปแล้ว"),
+                    L(Speaker.Mira, "ฉายรังสีฆ่าเชื้อ ไม่ได้ทำให้อาหารมีรังสี Dorn คนละเรื่องกัน — มันจะเก็บได้นานขึ้น ไม่ใช่เป็นพิษ"),
+                    L(Speaker.Dorn, "...ถ้ามันช่วยให้คนไม่อดตาย ผมก็ยอมลองของคุณ แต่ถ้าใครป่วยขึ้นมา ผมเอาเรื่องแน่"),
+                    L(Speaker.InnerVoice, "คนที่กลัวที่สุด... มักเป็นคนที่แบกปากท้องคนอื่นไว้"),
+                };
+                b.dialoguePost = new[] // v8.5 บทปิดวิกฤต 3 (กลาง · ใช้ได้ทุกทางเลือก A/B/C) — หลัง outcome ก่อนควิซ #6/#7
+                {
+                    L(Speaker.Dorn, "ยุ้งข้าวไม่ว่างเปล่าแล้ว... เท่านี้ผมก็หายใจได้อีกหน่อย"),
+                    L(Speaker.Mira, "เมืองยังมีข้าวกิน ก็ยังมีแรงสู้ต่อ Dorn"),
+                    L(Speaker.Dorn, "ผมเคยคิดว่าของพวกคุณมันน่ากลัว แต่ที่น่ากลัวกว่าคือคนอดตายทั้งเมือง — คราวนี้ผมเชื่อคุณ"),
+                    L(Speaker.InnerVoice, "ความกลัวจางลงได้ ถ้าคนเรายอมเข้าใจมันก่อน"),
+                };
                 b.crisis = foodCrisis;
                 b.noteTH = "Day 24 (§14) · §10: \"อาหาร>500 หรือไม่มี Agri Dome\" — ยังไม่มี Agri Dome วงเล็บหลังจึงจริงเสมอ " +
                            "และ food_above_500 ใช้ไม่ได้ (เพดานคลังอาหาร = 500 → ชนเพดาน ~Day 12 วิกฤตเด้งก่อนกำหนด 12 วัน) " +
-                           "· ควิซรายทางเลือก: A→Q6 (mutation) · B→Q7 (irradiation) · C→ไม่มี";
+                           "· ควิซรายทางเลือก: A→Q6 (mutation) · B→Q7 (irradiation) · C→ไม่มี · " +
+                           "v8.5: บทเปิด Dorn↔Kova↔Mira (dialoguePre) + บทปิดกลาง Dorn↔Mira (dialoguePost, ทุก A/B/C) + Inner Voice ×2";
             }));
 
             // ── วิกฤตซ้อน (เฟส 5 — deferredCrisis §4): ยิง 2 วันหลังเลือกทาง C ของวิกฤตแม่ ──
@@ -446,6 +557,41 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
                            "รายงานที่ Auren ส่ง = รายงานเตือนพายุนี้ เกมไม่ตอกย้ำ";
             }));
 
+            // ── v8.5 · ระบบเชื้อเพลิงระยะสอง Tritium & Zone B (~Day 21, CORE 80%) ──
+            //   ลำดับ ห้ามสลับ: [ระบบ]+Kova เตือน (~78%) → InfoCard Tritium (80%) + Kova/Mira + Inner Voice
+            //   → ผู้เล่นเปิด Zone B → ป้อน Tritium → QT1/QT2 (ยิงจาก CoreTowerManager ตอนป้อน Tritium ครั้งแรก — ไม่ผูกที่ beat)
+            beats.Add(Beat("tritium_warning", StoryTriggerType.OnStatThreshold, "core_above_78", b =>
+            {
+                b.dialoguePre = new[]
+                {
+                    L(Speaker.System, "ประสิทธิภาพเชื้อเพลิงเริ่มลดลง · ดิวเทอเรียมใกล้ดันเตาถึงเพดานของมันแล้ว"),
+                    L(Speaker.Kova, "ดิวเทอเรียมพาเรามาได้ไกลถึงตรงนี้ แต่มันดันต่อไม่ไหวแล้ว จากนี้เตาต้องการเชื้อเพลิงอีกตัว ไปเปิด Zone B ซะ"),
+                    L(Speaker.InnerVoice, "Zone B... โซนที่ทีมเก่าปิดตายไว้ ผมเริ่มเข้าใจแล้วว่าทำไม"),
+                };
+                b.noteTH = "v8.5 · สัญญาณเตือนล่วงหน้าก่อนเตาตัน (CORE ~78%) · เตือนก่อน InfoCard Tritium";
+            }));
+
+            beats.Add(Beat("tritium_teach", StoryTriggerType.OnStatThreshold, "core_above_80", b =>
+            {
+                b.infoCard = infos["tritium"];
+                b.dialoguePre = new[]
+                {
+                    L(Speaker.Kova, "Zone B คือโรงเพาะทริเทียม เอานิวตรอนจากเตายิงใส่ลิเทียม มันก็คายทริเทียมออกมา — เตาเลี้ยงเชื้อเพลิงของตัวเองได้"),
+                    L(Speaker.Mira, "แต่ทริเทียมมันกัมมันตรังสี จัดคนเข้า Zone B ให้น้อยที่สุด แล้วอย่าลืมชุดกันรังสี — ALARA เหมือนเดิม"),
+                    L(Speaker.InnerVoice, "เตาที่เลี้ยงเชื้อเพลิงตัวเองได้... นี่แหละที่ทีมเก่าฝันถึง"),
+                };
+                b.noteTH = "v8.5 · InfoCard เชื้อเพลิงระยะสอง(Tritium) เด้งตอน CORE 80% + Kova/Mira ชี้เปิด Zone B + Inner Voice · " +
+                           "ควิซ QT1/QT2 ยิงจาก CoreTowerManager ตอนป้อน Tritium ครั้งแรก (ความรู้มาก่อน: info นี้เด้งก่อนป้อน)";
+            }));
+
+            // ── v8.5 · recover_tritium (optional) — ปลดบันทึก Elara เสริม ตอนสกัดทริเทียมได้ครั้งแรก (เปิด Zone B) ──
+            beats.Add(Beat("recover_tritium", StoryTriggerType.OnTritiumExtracted, "", b =>
+            {
+                b.record = records["elara_tritium"];
+                b.innerVoiceAfter = "พวกเขากลัวสิ่งเดียวกับที่ตอนนี้ผมต้องกล้าใช้มัน";
+                b.noteTH = "v8.5 optional · ยิงตอนได้ Tritium เข้าคลังครั้งแรก (OnTritiumExtracted) · ตัดออกได้ไม่กระทบสมดุล";
+            }));
+
             // ── storm_first_light — พายุมาถึง Day 25 (InfoCard ฟิวชัน → Q8,Q9) ──
             beats.Add(Beat("storm_first_light", StoryTriggerType.OnStormApproach, "", b =>
             {
@@ -456,9 +602,20 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
                     "[ระบบ] อุณหภูมิแกนเตาจะเพิ่มต่อเนื่องตราบที่พายุยังอยู่ · ทางเดียวที่จะรอด: ดันเตาให้ถึง 100%",
                 };
                 b.infoCard = infos["fusion"];
+                b.dialoguePre = new[] // v8.5 บทเปิดไคลแม็กซ์ (โทนนิ่งแต่กดดัน) — หลัง Info ฟิวชัน ก่อนเฟสดันเตา/ควิซ
+                {
+                    L(Speaker.Kova, "ค่ามันขึ้นเร็วกว่าที่คิด นายมีเวลาน้อยกว่าที่วางไว้"),
+                    L(Speaker.Mira, "ข้างล่างเริ่มถามกันแล้วว่าจะเป็นยังไง"),
+                    L(Speaker.Kova, "ยังไม่ต้องบอกอะไรเขา ยังไม่ถึงเวลา"),
+                    L(Speaker.Mira, "แล้วเมื่อไหร่ถึงเวลา"),
+                    L(Speaker.Kova, "พอ CORE แตะร้อยเมื่อไหร่ ฉันจะบอกเอง"),
+                    L(Speaker.Kova, "เอาละ วิศวกร ที่เหลือนายจัดการ ฉันจะไปคุมหล่อเย็น"),
+                    L(Speaker.InnerVoice, "มือผมสั่น... แต่ไม่มีเวลาให้สั่นแล้ว"),
+                };
                 b.quiz = NonNull(q8, q9);
                 b.noteTH = "climax: พายุ +12 heat/วัน Day 25–30 (มีแล้วใน CoreTowerManager) · " +
-                           "Q8,Q9 ย้ายมาจาก CoreTowerManager phase-complete เพื่อให้ InfoCard นำก่อน";
+                           "Q8,Q9 ย้ายมาจาก CoreTowerManager phase-complete เพื่อให้ InfoCard นำก่อน · " +
+                           "v8.5: บทเปิดไคลแม็กซ์ Kova↔Mira + Inner Voice (dialoguePre · หลัง Info ฟิวชัน)";
             }));
 
             // ── decree_emergency — การ์ดจริยธรรม (เฟส 5 ปลุกแล้ว) ──
@@ -488,11 +645,17 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
             beat.innerVoiceAfter = "";
             beat.logLines = new string[0];
             beat.logLinesDaily = false;
+            beat.dialoguePre = new DialogueLine[0];
+            beat.dialoguePost = new DialogueLine[0];
             beat.noteTH = "";
             fill(beat);
             EditorUtility.SetDirty(beat);
             return beat;
         }
+
+        // สร้าง DialogueLine หนึ่งบรรทัด (v8.5) — ย่อให้กรอกบทสนทนาใน array อ่านง่าย
+        private static DialogueLine L(Speaker speaker, string text)
+            => new DialogueLine { speaker = speaker, textTH = text };
 
         private static QuizQuestionSO[] NonNull(params QuizQuestionSO[] quizzes)
         {
