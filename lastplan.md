@@ -32,10 +32,10 @@
 | # | งาน | สถานะ |
 |---|-----|-------|
 | 1 | **Crisis UI** (กรอบสนิม A/B/C + ยืนยัน) | ✅ **CODE COMPLETE** (รอ user รัน setup + compile) |
-| 2 | **Quiz Explanation UI** (หน้าอธิบายหลังตอบ) | 🔶 **IN PROGRESS** — core เสร็จ เหลือ 2 ไฟล์ (setup + RunAllSetups) |
-| 3 | **Decor spawner** (โปรยของนอกกริด) | ⬜ ยังไม่เริ่ม (มีสเปคครบ · density=8% ตัดสินแล้ว) |
-| 4 | **iPad Touch** (input/gesture/responsive/WebGL save) | ⬜ ยังไม่เริ่ม (มี inventory ครบ · ต้องถาม decision ก่อน) |
-| 5 | **WebGL build + itch.io** | 🔒 BLOCKED — ทำหลัง #4 + ต้องรอ credential itch |
+| 2 | **Quiz Explanation UI** (หน้าอธิบายหลังตอบ) | ✅ **CODE COMPLETE** (รอ user รัน setup + compile) — เพิ่ม `QuizExplanationSetup.cs` + RunAllSetups แล้ว (2026-07-13) |
+| 3 | **Decor spawner** (โปรยของนอกกริด) | 🔶 **CODE COMPLETE** — `DecorSpawner.cs`+`DecorSetup.cs`+RunAllSetups เสร็จ · รอ asset PNG ลง `Assets/Sprites/Decor/` (2026-07-13) |
+| 4 | **iPad Touch** (input/gesture/responsive/WebGL save) | 🔶 **CODE COMPLETE (v1)** — touch กล้อง 2 นิ้ว (แพน+พินช์) + WebGL save flush · ไฮบริดคงเมาส์/คีย์บอร์ด · Canvas responsive อยู่แล้ว · รอเทสต์บน iPad จริง (2026-07-13) |
+| 5 | **WebGL build + itch.io** | 🔶 **CODE READY** — `WebGLBuilder.cs` เสร็จ · build ต้อง**ปิด Unity**ก่อนรัน batch · push รอ itch credential (user/slug + `butler login`) (2026-07-13) |
 
 ### Decision ที่ผู้ใช้ยืนยันแล้ว
 - **#2 badge คะแนน** = "Badge อย่างเดียว (ไม่แตะ balance)" → เพิ่ม `scoreDelta` โชว์ +N เขียว/−N แดง · Knowledge จริงคงเดิม (ถูก+8/ผิด+3)
@@ -180,9 +180,10 @@
 
 ## 8) ลำดับทำต่อ (แนะนำ)
 
-1. **จบ #2**: เขียน `QuizExplanationSetup.cs` + เพิ่มใน `RunAllSetups.cs` → compile
-2. **#3 Decor**: คัดลอก asset → DecorSpawner + DecorSetup → compile
-3. **#4 Touch**: ถาม decision → ทำ A→B→C→D (compile ทุกส่วน)
-4. **#5**: หลัง #4 → WebGLBuilder → ถาม credential → butler push
+1. ~~**จบ #2**: เขียน `QuizExplanationSetup.cs` + เพิ่มใน `RunAllSetups.cs`~~ ✅ เสร็จ 2026-07-13 → **รอ compile ในเอดิเตอร์ + รันเมนู "Setup Quiz Explanation UI"**
+2. ~~**#3 Decor**: DecorSpawner + DecorSetup + RunAllSetups~~ ✅ โค้ดเสร็จ 2026-07-13 → **คัดลอก 8 PNG ลง `Assets/Sprites/Decor/` แล้วรันเมนู "Setup Decor"** (ไม่มี asset = spawner เปล่า ไม่พัง)
+3. ~~**#4 Touch**~~ ✅ v1 เสร็จ 2026-07-13 (default: ไฮบริด · 2 นิ้ว=กล้อง · 1 นิ้ว=แตะวาง) → **เทสต์บน iPad จริง** ปรับ `pinchZoomSpeed`/`enableTouch` ใน CameraController Inspector ได้ · (ยังไม่ทำ: ปุ่มลอย cancel/help, safe-area — ทำเพิ่มถ้าเทสต์แล้วขาด)
+4. **#5**: ~~WebGLBuilder~~ ✅ โค้ดเสร็จ 2026-07-13 → **ปิด Unity → รัน "Build WebGL" (หรือ batch -executeMethod ...WebGLBuilder.Build)** → `butler login` → `butler push Build/WebGL <user>/<game>:html5` (ต้องรอ user/slug + login itch)
 
-> เมื่อจบแต่ละงาน: **ปิด Unity → รัน compile batch → error CS ต้อง = 0** แล้วให้ผู้ใช้รันเมนู setup ที่เกี่ยวข้อง (+ RunAllSetups) เพื่อ apply UI ในซีน
+> ⚠ repo hygiene: `QuizExplanationPopupController.cs.meta` มาจาก pull แบบ untracked (source machine commit `.cs` แต่ไม่ commit `.meta`) — ต้อง `git add` .meta ทั้งของไฟล์นี้ + 3 ไฟล์ใหม่ (QuizExplanationSetup/DecorSetup/DecorSpawner) ให้สองเครื่อง GUID ตรงกัน
+> เมื่อจบแต่ละงาน: **ปิด Unity → รัน compile batch → error CS ต้อง = 0** (หรือ focus เอดิเตอร์ที่เปิดอยู่ให้ recompile) แล้วให้ผู้ใช้รันเมนู setup ที่เกี่ยวข้อง (+ RunAllSetups) เพื่อ apply UI ในซีน

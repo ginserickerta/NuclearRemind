@@ -68,5 +68,19 @@ namespace NuclearReMind
 
             return GridManager.Instance.WorldToIso(worldPos);
         }
+
+        /// <summary>
+        /// ตำแหน่งเมาส์ปัจจุบันใน world space (ไม่ปัดเป็น cell) — สำหรับ raycast Physics2D โดนตัวสไปรต์อาคาร
+        /// (แผง CoreTower/Lab/Memorial คลิกโดนตัวอาคารจริง แทนการเช็ก footprint cell)
+        /// </summary>
+        public Vector3 GetMouseWorldPosition()
+        {
+            if (mainCamera == null)
+                mainCamera = Camera.main;
+
+            Vector3 worldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+            worldPos.z = 0f;
+            return worldPos;
+        }
     }
 }

@@ -137,6 +137,9 @@ namespace NuclearReMind
             spriteRenderer.sortingLayerName = BuildingsSortingLayer;
             spriteRenderer.sortingOrder = baseSort;
 
+            // Collider2D + click target ตามรูปสไปรต์ → แผงคลิกโดนตัวอาคารจริง (คลิกตัวสูง ๆ ก็เปิด ไม่ต้องเล็งฐาน footprint)
+            AddClickTarget(go, spriteRenderer, position, data);
+
             // อนิเมชัน idle (ถ้า asset มีเฟรม ≥ 2) — สลับ sprite วนลูป ไม่ใช้ Animator (ดูเหตุผลใน SpriteFrameAnimator)
             if (data.animationFrames != null && data.animationFrames.Length >= 2)
                 go.AddComponent<SpriteFrameAnimator>().Play(data.animationFrames, data.animationFps);
@@ -144,6 +147,20 @@ namespace NuclearReMind
             AddShadow(go, position, data, baseSort);
 
             _spawnedVisuals[position] = go;
+        }
+
+        // Collider2D (trigger) ครอบรูปสไปรต์ + BuildingClickTarget → ให้แผง (CoreTower/Lab/Memorial) raycast โดนตัวอาคารจริง
+        // isTrigger = ไม่บล็อก worker/placement (query ด้วย Physics2D.OverlapPoint ได้อย่างเดียว) · sr.sprite.bounds = พิกัด local ตาม pivot (ฐานล่างกลาง)
+        private static void AddClickTarget(GameObject go, SpriteRenderer sr, Vector2Int position, BuildingData data)
+        {
+            if (sr == null || sr.sprite == null) return;
+            var box = go.AddComponent<BoxCollider2D>();
+            box.isTrigger = true;
+            box.size = (Vector2)sr.sprite.bounds.size;
+            box.offset = (Vector2)sr.sprite.bounds.center;
+            var target = go.AddComponent<BuildingClickTarget>();
+            target.originCell = position;
+            target.data = data;
         }
 
         // เงา ellipse นุ่ม ๆ ใต้อาคาร — child แยกจาก SpriteRenderer ตัวแม่

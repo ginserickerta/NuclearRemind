@@ -45,6 +45,7 @@ namespace NuclearReMind
         {
             EventManager.Instance.OnBuildingPlaced += HandleBuildingPlaced;
             EventManager.Instance.OnWorkerAssignmentChanged += HandleWorkerAssignmentChanged;
+            EventManager.Instance.OnDayStarted += HandleDayStarted; // พ้น Day 1 → ซ่อนพาเนล (กันค้างข้ามวัน)
         }
 
         private void OnDisable()
@@ -52,6 +53,7 @@ namespace NuclearReMind
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnBuildingPlaced -= HandleBuildingPlaced;
             EventManager.Instance.OnWorkerAssignmentChanged -= HandleWorkerAssignmentChanged;
+            EventManager.Instance.OnDayStarted -= HandleDayStarted;
         }
 
         private void Start()
@@ -83,6 +85,13 @@ namespace NuclearReMind
             if (count <= 0) return;
             _assignDone = true;
             Refresh();
+        }
+
+        // พ้น Day 1 (จบ tutorial ด้วยปุ่ม, debug end-day, หรือโหลดเซฟวัน 2+) → ซ่อนพาเนลถาวร
+        // Start() เช็ก CurrentDay แค่ครั้งเดียว ถ้าวันเปลี่ยนทีหลังต้องมี hook นี้ ไม่งั้นพาเนลค้าง (บั๊กที่เจอ)
+        private void HandleDayStarted(int day, bool timed)
+        {
+            if (day > 1 && tutorialPanel != null) tutorialPanel.SetActive(false);
         }
 
         // ── ui ──

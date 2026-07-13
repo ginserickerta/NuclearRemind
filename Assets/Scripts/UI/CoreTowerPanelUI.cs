@@ -111,13 +111,20 @@ namespace NuclearReMind
             if (_shown && Input.GetKeyDown(KeyCode.Escape)) Hide();
         }
 
+        // คลิกโดน "ตัวสไปรต์" ของ CORE TOWER (raycast Collider2D จาก BuildingVisualSpawner) —
+        // เดิมเช็ก footprint cell ใต้เมาส์ ทำให้ต้องเล็งฐาน (สไปรต์สูงในมุม iso แมพไปช่องว่างด้านบน)
         private bool ClickedCoreTower()
         {
-            var reg = BuildingRegistry.Instance;
-            if (reg == null || InputManager.Instance == null) return false;
-            var cell = InputManager.Instance.GetMouseGridPosition();
-            return reg.TryGetBuildingAt(cell, out _, out var data) && data != null
-                   && (data.buildingType == BuildingType.CoreTower || data.isCoreTowerPart);
+            if (InputManager.Instance == null) return false;
+            var hits = Physics2D.OverlapPointAll((Vector2)InputManager.Instance.GetMouseWorldPosition());
+            foreach (var h in hits)
+            {
+                var t = h.GetComponent<BuildingClickTarget>();
+                if (t != null && t.data != null
+                    && (t.data.buildingType == BuildingType.CoreTower || t.data.isCoreTowerPart))
+                    return true;
+            }
+            return false;
         }
 
         private void Open()

@@ -438,20 +438,13 @@ namespace NuclearReMind.EditorTools
 
             panel.SetActive(false);
 
-            // ปุ่มเปิดแผง — ซ้ายล่าง เหนือปุ่ม "คีย์ลัด (F1)" (y 254 สูง 36 → 298 พ้นกัน)
-            var toggleBtn = CreateButton("RecordsToggleButton", canvas, font, "บันทึก", 15, new Vector2(120, 36));
-            var tRect = toggleBtn.GetComponent<RectTransform>();
-            tRect.anchorMin = Vector2.zero; tRect.anchorMax = Vector2.zero;
-            tRect.pivot = Vector2.zero;
-            tRect.anchoredPosition = new Vector2(20, 298);
-            toggleBtn.image.color = new Color(0.1f, 0.15f, 0.28f, 0.9f);
-            var tLabel = toggleBtn.GetComponentInChildren<Text>();
-            if (tLabel != null) tLabel.color = Color.white;
+            // ปุ่มเปิดแผง Records เรียบสีเข้มเดิม (RecordsToggleButton) ถอดออกแล้ว — ใช้ปุ่มสไปรต์ใหม่แทน
+            // RecordsPanelController.toggleButton null-safe · ปุ่มใหม่ผูก RecordsPanelController.Toggle เอง
 
             var recGO = GameObject.Find("RecordsPanelController") ?? new GameObject("RecordsPanelController");
             var rec = recGO.GetComponent<RecordsPanelController>() ?? recGO.AddComponent<RecordsPanelController>();
             rec.recordsPanel = panel;
-            rec.toggleButton = toggleBtn;
+            rec.toggleButton = null;
             rec.closeButton = closeBtn;
             rec.entryListParent = listContent.transform;
             rec.entryButtonTemplate = template.gameObject;

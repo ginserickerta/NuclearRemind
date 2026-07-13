@@ -23,6 +23,12 @@ namespace NuclearReMind
 
         private static string SavePath => Path.Combine(Application.persistentDataPath, SaveFileName);
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        // WebGL: persistentDataPath = IndexedDB (ผ่าน MEMFS) — ต้อง flush หลังเขียนไฟล์ ไม่งั้นเซฟหายเมื่อรีเฟรช (jslib NuclearSave)
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern void NuclearSyncFs();
+#endif
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -153,6 +159,9 @@ namespace NuclearReMind
             }
 
             File.WriteAllText(SavePath, JsonUtility.ToJson(save, true));
+#if UNITY_WEBGL && !UNITY_EDITOR
+            NuclearSyncFs();   // flush ลง IndexedDB (WebGL) ให้เซฟติดเบราว์เซอร์ · เดสก์ท็อป/เอดิเตอร์ข้ามบล็อกนี้
+#endif
             Debug.Log($"[SaveManager] Saved to {SavePath}");
         }
 

@@ -22,7 +22,7 @@ namespace NuclearReMind
 
         public static GroundPalette Default => new GroundPalette
         {
-            zoneA_base = Hex(0x3E4A2E), zoneA_alt = Hex(0x4D5936),
+            zoneA_base = Hex(0x7A8C4E), zoneA_alt = Hex(0x6E7A47),   // หญ้าโอลีฟ (คู่หมากรุก)
             zoneB_base = Hex(0x4A4327), zoneB_alt = Hex(0x5C5230),
             transitionWidth = 6f, jitterStrength = 1f,
             outsideDarken = 0.80f, edgeDarkenWidth = 3,
@@ -128,7 +128,43 @@ namespace NuclearReMind
             return LerpLinear(a, b, t);
         }
 
+        /// <summary>
+        /// เลือกโซนต่อช่องแบบ "ไล่รอยต่อ" (dither) สำหรับวางสไปรต์จริง — pure/deterministic (Hash) จึงเทสต์ได้
+        ///   • true  = ใช้สไปรต์หญ้า (Zone A · ฝั่ง SW)
+        ///   • false = ใช้สไปรต์ดิน (Zone B · แถบ NE)
+        /// ใช้เส้นแบ่ง/jitter/smoothstep ชุดเดียวกับ ColorForTile → รอยต่อตรงกับที่ tint เคยไล่สีไว้
+        /// ในแถบ ±transitionWidth/2 รอบเส้นแบ่ง จะสลับหญ้า/ดินตามความน่าจะเป็น (t) เทียบ hash คนละ salt กับ jitter
+        /// นอกแถบ = โซนตายตัว เท่ากับ IsZoneA (t=0 → หญ้าเสมอ · t=1 → ดินเสมอ เพราะ hash01 ∈ [0,1))
+        /// </summary>
+        public static bool PickZoneA(int col, int row, int columns, int rows, int border,
+                                     float transitionWidth, float jitterStrength)
+        {
+            float boundary = columns - border;
+            float jitter = (Hash01(col, row) - 0.5f) * 2f * jitterStrength;
+            float signed = (col - boundary) + jitter;            // − = SW/หญ้า · + = NE/ดิน
+            float hw = Mathf.Max(1e-4f, transitionWidth * 0.5f);
+            float t = Smoothstep(-hw, hw, signed);               // 0 = หญ้าแน่ · 1 = ดินแน่
+            return Hash01Salt(col, row) >= t;                    // r ≥ t → หญ้า (Zone A)
+        }
+
+        /// <summary>
+        /// เลือก index สไปรต์ variety ภายในโซน (0..count−1) คงที่ต่อช่อง — count = จำนวนสไปรต์ในโซนนั้น
+        /// ★ deterministic (Hash) → ลายคงที่ทุก re-fill/โหลดเซฟ · /7 กันชนบิตล่างที่ jitter/dither ใช้
+        /// </summary>
+        public static int VarietyPick(int col, int row, int count)
+        {
+            if (count <= 1) return 0;
+            return (Hash(col, row) / 7) % count;
+        }
+
+        /// <summary>ตัวคูณความมืดของช่องนอกกริด (1.0 ที่ขอบ → outsideDarken เมื่อห่าง) — ใช้ tint สไปรต์ดิน apron ให้ดูรกร้าง</summary>
+        public static float OutsideDarken(int col, int row, int columns, int rows, GroundPalette pal)
+            => OutsideDarkenFactor(col, row, columns, rows, pal);
+
         // ── helpers (pure) ──
+        // hash คนละชุดกับ jitter (Hash01) — กันสหสัมพันธ์ระหว่างตำแหน่งรอยต่อกับการสุ่ม dither
+        private static float Hash01Salt(int col, int row) => Hash(col + 1013, row + 809) / 2147483647f;
+
         private static float Hash01(int col, int row) => Hash(col, row) / 2147483647f; // Hash ∈ [0, 0x7fffffff]
 
         private static float Smoothstep(float e0, float e1, float v)

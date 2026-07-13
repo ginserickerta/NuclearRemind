@@ -54,11 +54,19 @@ namespace NuclearReMind
             if (DemolitionController.Instance != null && DemolitionController.Instance.IsDemolishing) return;
 
             if (_camera == null) _camera = Camera.main;
-            if (_camera == null || GridManager.Instance == null) return;
+            if (_camera == null) return;
 
+            // คลิกโดน "ตัวสไปรต์" อนุสรณ์ (raycast Collider2D) — เดิมเช็ก footprint ต้องเล็งฐาน
             Vector3 world = _camera.ScreenToWorldPoint(Input.mousePosition);
-            world.z = 0f;
-            TryOpenAtCell(GridManager.Instance.WorldToIso(world));
+            foreach (var h in Physics2D.OverlapPointAll((Vector2)world))
+            {
+                var t = h.GetComponent<BuildingClickTarget>();
+                if (t != null && t.data != null && t.data.buildingType == BuildingType.Memorial)
+                {
+                    Open();
+                    return;
+                }
+            }
         }
 
         /// <summary>เปิดแผงถ้า cell อยู่บน footprint ของตึกอนุสรณ์ (query registry แบบ read-only)</summary>

@@ -42,6 +42,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Crisis Effects",   // CrisisEffectManager — ผลกระทบวิกฤตเต็มระบบ (§4)
             "NuclearReMind/Setup Crisis Dilemmas",
             "NuclearReMind/Setup Quiz System",
+            "NuclearReMind/Setup Quiz Explanation UI", // หน้าคำอธิบายหลังตอบควิส (canvas แยก order 70 · หลัง Quiz System — ใช้สกิน frame_metal/plate_inset ที่ import แล้ว)
             "NuclearReMind/Setup Decrees",
             // Power Grid ถอดจาก chain แล้ว — GDD V4 ไม่มีกลไกรัศมีไฟ (ต้นทุนพลังงาน = upkeep §6)
             // และ setup เดิมจะยัด PowerConduit (no-op) กลับเข้า hotbar — เมนูยังอยู่ ถ้าอยากรันเอง
@@ -69,6 +70,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Fix Isometric Sort (Tile Walls)",   // ตั้ง sort ให้บล็อกขอบเรียงถูก (ต้องก่อน Fill Grids)
             "NuclearReMind/Flatten Ground Tiles (Top Face)",   // ★ สร้างไทล์หน้าบนแบน (ข้างในเรียบ · ขอบบล็อกเต็ม)
             "NuclearReMind/Fill Grids (Ground + Fog)",         // ระบาย Ground/Fog แบ่งโซน สุ่มจากไทล์คัด
+            "NuclearReMind/Setup Decor",                       // โรยของประดับนอกกริด (apron) deterministic — หลัง Fill Grids (พื้น apron วาดแล้ว · ข้ามเงียบถ้ายังไม่มี asset)
             "NuclearReMind/Fix 2D Lighting (Light All Sorting Layers)", // กัน sprite รันไทม์เรนเดอร์ดำ (Sprite-Lit-Default)
             "NuclearReMind/Lighting Mood (Warm Key + Cool Fill)", // มู้ดแสงอุ่น+เย็น (ต้องหลัง Fix 2D Lighting)
             "NuclearReMind/Fix Colors (สี sprite สดขึ้น)",        // post-processing color grade (ต้องหลัง Lighting Mood)

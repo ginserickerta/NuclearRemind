@@ -41,6 +41,10 @@ namespace NuclearReMind
         [Tooltip("เริ่มเกมให้กล้องอยู่กลาง 'เมือง' (โซน A ที่สร้างได้ cols 0..zoneA-1) ไม่ใช่กลางกริดเต็ม — โซน B ดิน/รังสีขวาสุดล็อกไว้")]
         public bool centerOnCoreTowerAtStart = true;
 
+        [Header("Touch (iPad/มือถือ · ไฮบริดควบคู่เมาส์)")]
+        public bool enableTouch = true;
+        public float pinchZoomSpeed = 0.02f;  // ไวพินช์ซูม (ปรับบนอุปกรณ์จริงได้)
+
         private Camera cam;
         private Vector2 _panVelocity;   // ความเร็วปัจจุบัน (มีแรงเฉื่อย)
         private Vector2 _panDampVel;    // state ภายในของ SmoothDamp
@@ -48,6 +52,8 @@ namespace NuclearReMind
         private float _zoomVel;
         private bool _dragging;
         private Vector3 _dragOriginWorld;
+        private bool _touchPanning;
+        private Vector3 _touchPanOriginWorld;
 
         private void Awake()
         {
@@ -80,6 +86,7 @@ namespace NuclearReMind
             HandleKeyboardPan(dt);
             HandleDragPan();
             HandleZoom(dt);
+            if (enableTouch) HandleTouchPanZoom();
             if (clampToGrid) ClampToBounds();
         }
 
@@ -141,18 +148,55 @@ namespace NuclearReMind
 
             if (Mathf.Approximately(cam.orthographicSize, _targetZoom)) return;
 
-            Vector3 mouseWorldBefore = zoomToCursor ? cam.ScreenToWorldPoint(Input.mousePosition) : default;
+            bool zoomCursor = zoomToCursor && Input.touchCount < 2; // 2 นิ้ว = พินช์ (ยึดจุดกลางนิ้วแทนเมาส์)
+            Vector3 mouseWorldBefore = zoomCursor ? cam.ScreenToWorldPoint(Input.mousePosition) : default;
 
             cam.orthographicSize = Mathf.SmoothDamp(cam.orthographicSize, _targetZoom, ref _zoomVel,
                 zoomSmoothTime, Mathf.Infinity, dt);
 
-            if (zoomToCursor)
+            if (zoomCursor)
             {
                 // ขยับกล้องให้จุด world ใต้เมาส์เดิมกลับมาอยู่ใต้เมาส์ — ได้ฟีล "ซูมเข้าหาสิ่งที่ชี้"
                 Vector3 mouseWorldAfter = cam.ScreenToWorldPoint(Input.mousePosition);
                 Vector3 offset = mouseWorldBefore - mouseWorldAfter;
                 offset.z = 0f;
                 transform.position += offset;
+            }
+        }
+
+        // ── Touch (iPad/มือถือ): 2 นิ้ว = แพน (ตรึงจุดกลางนิ้ว) + พินช์ซูม · 1 นิ้ว = แตะ/วาง (ผ่าน mouse sim เดิม) ──
+        // เสริมควบคู่ของเดิม (ไฮบริด) — คีย์บอร์ด/เมาส์ PC ยังทำงานปกติ · reuse ClampToBounds/EffectiveMaxZoom เดิม
+        // ใช้ 2 นิ้วสำหรับกล้อง เพื่อไม่ชนกับ 1 นิ้ว=แตะวาง/เลือก (ผ่านการจำลองเมาส์ของ Unity)
+        private void HandleTouchPanZoom()
+        {
+            if (Input.touchCount < 2) { _touchPanning = false; return; }
+
+            Touch t0 = Input.GetTouch(0);
+            Touch t1 = Input.GetTouch(1);
+            Vector2 p0 = t0.position, p1 = t1.position;
+
+            // พินช์ซูม: ระยะระหว่างนิ้วเปลี่ยน → ตั้งเป้าซูม (HandleZoom ทำ SmoothDamp ต่อเฟรมถัดไป)
+            Vector2 p0Prev = p0 - t0.deltaPosition;
+            Vector2 p1Prev = p1 - t1.deltaPosition;
+            float distDelta = (p0 - p1).magnitude - (p0Prev - p1Prev).magnitude;
+            if (Mathf.Abs(distDelta) > 0.01f)
+                _targetZoom = Mathf.Clamp(_targetZoom - distDelta * pinchZoomSpeed, minZoom, EffectiveMaxZoom());
+
+            // แพน 2 นิ้ว: ตรึงจุด world ที่กึ่งกลางสองนิ้วไว้ (แมพติดมือ — สูตรเดียวกับ drag-pan คลิกขวา)
+            Vector2 midScreen = (p0 + p1) * 0.5f;
+            Vector3 midWorld = cam.ScreenToWorldPoint(new Vector3(midScreen.x, midScreen.y, 0f));
+            if (!_touchPanning)
+            {
+                _touchPanning = true;
+                _touchPanOriginWorld = midWorld;
+            }
+            else
+            {
+                Vector3 diff = _touchPanOriginWorld - midWorld;
+                diff.z = 0f;
+                transform.position += diff;
+                _panVelocity = Vector2.zero;   // ตัดแรงเฉื่อยคีย์บอร์ด ไม่ให้สองระบบแย่งกล้อง
+                _panDampVel = Vector2.zero;
             }
         }
 

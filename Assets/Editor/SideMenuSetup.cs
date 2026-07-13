@@ -41,6 +41,10 @@ namespace NuclearReMind.EditorTools
             // ลบปุ่มเรียบเดิม + แถบเก่า (รันซ้ำได้)
             DestroyIfExists(hud, "CodexToggleButton");
             DestroyIfExists(hud, "HotkeyHelpButton");
+            // ปุ่ม "บันทึก" (Records) เรียบสีเข้มเดิม (RecordsToggleButton จาก StoryUISetup) — ลบทิ้ง ใช้ปุ่มสไปรต์ใหม่แทน
+            // อาจอยู่คนละ canvas → หาแบบ global · RecordsPanelController.toggleButton เป็น null-safe (ไม่พัง)
+            var oldRecordsBtn = GameObject.Find("RecordsToggleButton");
+            if (oldRecordsBtn != null) Object.DestroyImmediate(oldRecordsBtn);
             var oldBar = hud.transform.Find("SideMenuBar");
             if (oldBar != null) Object.DestroyImmediate(oldBar.gameObject);
 

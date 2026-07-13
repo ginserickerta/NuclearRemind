@@ -110,15 +110,21 @@ namespace NuclearReMind
             if (_shown && Input.GetKeyDown(KeyCode.Escape)) Hide();
         }
 
+        // คลิกโดน "ตัวสไปรต์" ของโรงวิจัย (raycast Collider2D) — เดิมเช็ก footprint ต้องเล็งฐาน
         private bool ClickedLab()
         {
-            var reg = BuildingRegistry.Instance;
-            if (reg == null || InputManager.Instance == null) return false;
-            var cell = InputManager.Instance.GetMouseGridPosition();
-            if (!reg.TryGetBuildingAt(cell, out var origin, out var data) || data == null) return false;
-            if (data.buildingType != BuildingType.Laboratory) return false;
-            _labCell = origin;
-            return true;
+            if (InputManager.Instance == null) return false;
+            var hits = Physics2D.OverlapPointAll((Vector2)InputManager.Instance.GetMouseWorldPosition());
+            foreach (var h in hits)
+            {
+                var t = h.GetComponent<BuildingClickTarget>();
+                if (t != null && t.data != null && t.data.buildingType == BuildingType.Laboratory)
+                {
+                    _labCell = t.originCell;
+                    return true;
+                }
+            }
+            return false;
         }
 
         private void Open()
