@@ -29,8 +29,7 @@ namespace NuclearReMind
 
         public bool IsShowing { get; private set; }
 
-        // สีแถบหัวการ์ดตามชนิด (record = เหลืองอำพันแบบเทปเก่า / outcome = เทา)
-        private static readonly Color RecordBar  = new Color(0.85f, 0.65f, 0.25f);
+        // สีแถบหัวการ์ดตามชนิด (outcome = เทา · info ใช้สีหมวด)
         private static readonly Color OutcomeBar = new Color(0.55f, 0.60f, 0.68f);
 
         private void Awake()
@@ -45,7 +44,7 @@ namespace NuclearReMind
 
         private void OnEnable()
         {
-            EventManager.Instance.OnStoryRecordShown += HandleRecordShown;
+            // record card แยกไป RecordCardUI แล้ว (mockup v2) — ตัวนี้เหลือ Info/Outcome
             EventManager.Instance.OnStoryInfoShown += HandleInfoShown;
             EventManager.Instance.OnStoryOutcomeShown += HandleOutcomeShown;
             StoryDirector.CardUIAvailable = true; // จากนี้ director รอผู้เล่นกดปิดการ์ดเอง
@@ -60,7 +59,6 @@ namespace NuclearReMind
                 TimeManager.Instance?.Resume(PauseReason.StoryCard);
             }
             if (EventManager.Instance == null) return;
-            EventManager.Instance.OnStoryRecordShown -= HandleRecordShown;
             EventManager.Instance.OnStoryInfoShown -= HandleInfoShown;
             EventManager.Instance.OnStoryOutcomeShown -= HandleOutcomeShown;
         }
@@ -69,16 +67,6 @@ namespace NuclearReMind
         {
             if (!IsShowing && overlayPanel != null) overlayPanel.SetActive(false);
             if (dismissButton != null) dismissButton.onClick.AddListener(Dismiss);
-        }
-
-        private void HandleRecordShown(RecordCardSO record)
-        {
-            if (record == null) return;
-            Show($"บันทึกกู้คืน · {record.authorLabel}",
-                 record.archiveTitle,
-                 record.bodyTH,
-                 string.IsNullOrEmpty(record.buttonLabel) ? "รับทราบ" : record.buttonLabel,
-                 RecordBar);
         }
 
         private void HandleInfoShown(InfoCardSO card)

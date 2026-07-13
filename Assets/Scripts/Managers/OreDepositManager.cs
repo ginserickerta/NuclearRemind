@@ -41,6 +41,22 @@ namespace NuclearReMind
         public int minSpacing = 3;          // ระยะห่างขั้นต่ำระหว่างโหนดในชุดเดียวกัน
         public int maxAttemptsPerNode = 200;
 
+        [Header("เว้นระยะอาคาร — กันแร่ spawn ทับ/เหนืออาคาร (บังสไปรต์อาคารสูง)")]
+        [Tooltip("จำนวนช่องเว้นทางทิศเหนือ (ขึ้นบนจอ = col+1,row+1 ต่อช่อง) เหนือ footprint อาคาร — 0 = กันเฉพาะช่องอาคาร")]
+        public int northClearance = 2;
+
+        [Header("พื้น isometric — GridSpriteFiller อ่านตอน 'Fill Grids' (สี/ขอบนอกกริด · ไม่กระทบ gameplay)")]
+        [Tooltip("ความกว้างขอบนอก (ช่อง/ด้าน) — outside = (43+2M)²−43² · M35 ≈ ลด 55% จาก M60")]
+        public int apronMargin = 35;
+        [Tooltip("พาเลตต์สี 4 โซน + ไล่เฟด A→B + มืดนอกกริด (คุมสีต่อ tile ผ่าน IsoGroundPainter.ColorForTile)")]
+        public GroundPalette groundPalette = GroundPalette.Default;
+
+        // เติมพาเลตต์ default ให้ instance เก่าที่เพิ่งมี field นี้ (Unity ไม่รัน initializer ตอน deserialize → struct เป็นศูนย์)
+        private void OnValidate()
+        {
+            if (groundPalette.zoneA_base.a < 0.5f) groundPalette = GroundPalette.Default; // alpha 0 = ยังไม่ตั้ง
+        }
+
         [Header("Mining Job — งานขุดมีเวลา (คนงานแปรผกผันกับเวลา)")]
         [Tooltip("เวลาฐาน (วินาที) ต่อการขุดจนหมดโหนดด้วยคนงาน 1 คน — เวลาจริง = base ÷ จำนวนคน")]
         public float baseMineSeconds = 60f;
@@ -256,8 +272,11 @@ namespace NuclearReMind
             if (grid == null || registry == null || EventManager.Instance == null) return;
             if (zoneANode == null || zoneBNode == null) return;
 
+            // ช่องต้องห้าม: footprint อาคาร (กันแร่ทับ) + แนวเหนืออาคาร (กันแร่เรนเดอร์ทับสไปรต์อาคารสูง)
+            var blocked = BuildBlockedCells();
             Func<Vector2Int, bool> isFree = pos =>
             {
+                if (blocked.Contains(pos)) return false;
                 var c = grid.GetCell(pos.x, pos.y);
                 return c != null && !c.isOccupied;
             };
@@ -284,6 +303,37 @@ namespace NuclearReMind
             foreach (var pos in OreMath.PickPositionsInRect(zoneBCount, 0, cols - 1, 0, rows - 1,
                          minSpacing, isFreeZoneB, _rng, maxAttemptsPerNode))
                 PlaceNode(pos, zoneBNode);
+        }
+
+        /// <summary>
+        /// ช่องที่ห้ามแร่ spawn = footprint ของอาคารจริง (ห้ามทับ) + แนวช่องทางทิศเหนือของอาคาร (ห้ามใกล้เหนือ)
+        /// ทิศเหนือ = ขึ้นบนจอ: y=(col+row)·h/2 → (col+1,row+1) คือตรงขึ้นบน · สไปรต์อาคารสูงยื่นขึ้นทับช่องเหนือ
+        /// เว้นโหนดแร่เอง (isOreNode) — ไม่สูง + ถูก rescatter อยู่แล้ว
+        /// </summary>
+        private HashSet<Vector2Int> BuildBlockedCells()
+        {
+            var blocked = new HashSet<Vector2Int>();
+            var registry = BuildingRegistry.Instance;
+            if (registry == null) return blocked;
+
+            int clear = Mathf.Max(0, northClearance);
+            foreach (var kvp in registry.PlacedBuildings)
+            {
+                var data = kvp.Value;
+                if (data == null || data.isOreNode) continue;
+                var o = kvp.Key;
+                int sx = Mathf.Max(1, data.size.x);
+                int sy = Mathf.Max(1, data.size.y);
+                for (int dx = 0; dx < sx; dx++)
+                    for (int dy = 0; dy < sy; dy++)
+                    {
+                        int fx = o.x + dx, fy = o.y + dy;
+                        blocked.Add(new Vector2Int(fx, fy));                  // (1) ห้ามทับ footprint
+                        for (int k = 1; k <= clear; k++)                     // (2) ห้ามเหนืออาคาร (ขึ้นบนจอ)
+                            blocked.Add(new Vector2Int(fx + k, fy + k));
+                    }
+            }
+            return blocked;
         }
 
         /// <summary>ถอนโหนดแร่ทั้งหมดออกจากแมพ (ปลดล็อก cell + คืนคน) — ใช้ก่อน scatter รอบใหม่</summary>

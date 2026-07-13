@@ -8,6 +8,15 @@ namespace NuclearReMind
     /// และตั้งเป้าหมายให้แต่ละตัวไปยืนที่อาคารที่ถูก assign (WorkerAssignmentManager) หรือจุดพัก idle
     /// แต่ละคลาสใช้ sprite ของตัวเอง (คนงาน/วิศวกร/หมอ) — คลาสที่ไม่ได้ wire sprite จะ fallback เป็น workerSprite
     /// event-driven เหมือน BuildingVisualSpawner · อ่าน Assignments/Current + PlacedBuildings แบบ read-only query
+    ///
+    /// ★ Reconcile แบบ diff (ไม่ remap ทั้งเมืองทุกครั้ง):
+    ///   เดิม RebuildLayout เดินลิสต์คนงานทั้งคลาสใหม่หมดทุกครั้งที่มี event (จัดคน/ประชากรเปลี่ยน "ที่ไหนก็ได้ในเมือง")
+    ///   แล้ว "เดา" ว่า list[idx] ตัวไหนควรไปอาคารไหนจากลำดับการวน Dictionary ล้วน ๆ — ไม่มีตัวตนคงที่เลย
+    ///   ผลคือคนงานถูกสลับบทบาทกันเองบ่อยมาก (แม้อาคารของตัวเองไม่มีอะไรเปลี่ยน) เดินตัดกันไปมา ดูเหมือนเลเยอร์ซ้อน
+    ///
+    ///   ตอนนี้ WorkerView เก็บ (AssignedCell, Slot) เป็นตัวตนของตัวเอง — ReconcileCell() เทียบ "จำนวนที่ต้องการ"
+    ///   กับ "คนที่อยู่ที่ cell นั้นแล้ว" เฉพาะ cell ที่เปลี่ยนจริง ส่วนเกินคืน idle (slot สูงสุดก่อน) ส่วนขาดดึงจาก
+    ///   idle pool มาเติม slot ถัดไป — คนที่ slot ไม่เปลี่ยนจะไม่ถูกเรียก SetAssigned/SetIdle เลย จึงไม่ขยับ
     /// </summary>
     public class WorkerVisualSpawner : MonoBehaviour
     {
@@ -64,6 +73,10 @@ namespace NuclearReMind
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
         }
 
+        // idle slot คงที่ต่อคนงาน — คืนเข้าคิวว่างให้ใช้ซ้ำเมื่อคนนั้นถูกดึงไปประจำอาคาร (กัน slot เลขวิ่งไม่หยุดตลอดเกม)
+        private readonly SortedSet<int> _freeIdleSlots = new SortedSet<int>();
+        private int _idleSlotWatermark;
+
         private void Start() => RebuildLayout(snap: true); // spawn ตามจำนวนประชากรเริ่มเกม
 
         private void HandleAssignmentChanged(Vector2Int cell, int count) => RebuildLayout(snap: false);
@@ -71,13 +84,12 @@ namespace NuclearReMind
         private void HandlePopulationChanged(PopulationData pop) => RebuildLayout(snap: false);
         private void HandleSaveLoaded(SaveData save) => RebuildLayout(snap: true);
 
-        // ปรับจำนวน sprite = จำนวนคนต่อคลาส แล้วตั้งเป้าหมายทีละตัว: assigned ก่อน แล้ว idle
+        // ปรับจำนวน sprite = จำนวนคนต่อคลาส แล้ว reconcile เฉพาะ cell ที่ต้องการคนเปลี่ยนจริง (ดู doc หัวไฟล์)
         private void RebuildLayout(bool snap)
         {
             if (GridManager.Instance == null || workerSprite == null) return;
 
             var assign = WorkerAssignmentManager.Instance;
-            int idleCounter = 0; // ตำแหน่งจุดพักไล่ต่อเนื่องข้ามคลาส (ไม่ให้ทับกัน)
 
             foreach (var cls in Classes)
             {
@@ -86,21 +98,81 @@ namespace NuclearReMind
                 while (list.Count < count) SpawnWorker(cls, list);
                 while (list.Count > count) DespawnLast(list);
 
-                int idx = 0;
-                // assigned: เฉพาะอาคารที่ต้องใช้คลาสนี้
+                // จำนวนที่ "ต้องการ" ต่อ cell (เฉพาะอาคารคลาสนี้)
+                var desired = new Dictionary<Vector2Int, int>();
                 if (assign != null)
-                {
                     foreach (var kvp in assign.Assignments)
-                    {
-                        if (ClassOfCell(kvp.Key) != cls) continue;
-                        for (int k = 0; k < kvp.Value && idx < list.Count; k++, idx++)
-                            list[idx].SetAssigned(WorkerWorldPos(kvp.Key, k), kvp.Key, snap);
-                    }
+                        if (ClassOfCell(kvp.Key) == cls) desired[kvp.Key] = kvp.Value;
+
+                // reconcile ทุก cell ที่ "ต้องการคนตอนนี้" รวมกับ cell ที่ "มีคนอยู่แล้ว" (เผื่อโดนถอด assignment/ทุบตึกไป)
+                var touchedCells = new HashSet<Vector2Int>(desired.Keys);
+                foreach (var w in list)
+                    if (w.AssignedCell.HasValue) touchedCells.Add(w.AssignedCell.Value);
+
+                foreach (var cell in touchedCells)
+                {
+                    int want = desired.TryGetValue(cell, out int d) ? d : 0;
+                    ReconcileCell(cell, want, list, snap);
                 }
-                // ที่เหลือ = ว่างงาน → เดินเล่นวนรอบจุดพักใกล้ CORE TOWER
-                for (; idx < list.Count; idx++)
-                    list[idx].SetIdle(IdleWorldPos(idleCounter++), snap);
+
+                // คนที่ยังไม่มีบทบาทเลย (เพิ่งสร้าง/โหลดเซฟ) → เข้าคิว idle
+                foreach (var w in list)
+                    if (!w.AssignedCell.HasValue && w.Slot < 0)
+                        PlaceIdle(w, snap);
             }
+        }
+
+        // เทียบจำนวนคนที่ต้องการ (want) กับคนที่ประจำ cell นี้อยู่แล้ว — แตะเฉพาะส่วนต่าง
+        // ส่วนเกิน (slot สูงสุดก่อน — "เข้าหลังออกก่อน") คืน idle · ส่วนขาดดึงจาก idle pool มาเติม slot ถัดไป
+        // คนที่ slot อยู่ในช่วง [0, want) เดิมอยู่แล้ว จะไม่ถูกเรียก SetAssigned เลย — ไม่ขยับ ไม่กระตุก
+        private void ReconcileCell(Vector2Int cell, int want, List<WorkerView> list, bool snap)
+        {
+            var current = new List<WorkerView>();
+            foreach (var w in list)
+                if (w.AssignedCell == cell) current.Add(w);
+            current.Sort((a, b) => a.Slot.CompareTo(b.Slot));
+
+            for (int i = current.Count - 1; i >= want; i--)
+                PlaceIdle(current[i], snap);
+
+            for (int slot = current.Count; slot < want; slot++)
+            {
+                var w = PullIdleWorker(list);
+                if (w == null) break; // ไม่มีคนว่างพอ (ไม่ควรเกิด — WorkerAssignmentManager จำกัดจำนวนไว้แล้ว)
+                if (w.Slot >= 0) FreeIdleSlot(w.Slot); // กำลังออกจาก idle — คืน slot พักให้คนอื่นใช้ต่อ
+                w.SetAssigned(WorkerWorldPos(cell, slot), cell, slot, snap);
+            }
+        }
+
+        // หาคนงานที่ยังว่าง (ไม่ประจำอาคารไหน) ตัวแรกในลิสต์ — ดึงไปเติม slot ที่ขาด
+        private static WorkerView PullIdleWorker(List<WorkerView> list)
+        {
+            foreach (var w in list)
+                if (!w.AssignedCell.HasValue) return w;
+            return null;
+        }
+
+        // ส่งเข้า idle pool ด้วย slot คงที่ (ใหม่หรือของเดิมถ้ายังไม่เคยมี) — SetIdle เองจะข้ามถ้า slot ไม่เปลี่ยน
+        private void PlaceIdle(WorkerView w, bool snap)
+        {
+            int slot = AcquireIdleSlot();
+            w.SetIdle(IdleWorldPos(slot), slot, snap);
+        }
+
+        private int AcquireIdleSlot()
+        {
+            if (_freeIdleSlots.Count > 0)
+            {
+                int slot = _freeIdleSlots.Min;
+                _freeIdleSlots.Remove(slot);
+                return slot;
+            }
+            return _idleSlotWatermark++;
+        }
+
+        private void FreeIdleSlot(int slot)
+        {
+            if (slot >= 0) _freeIdleSlots.Add(slot);
         }
 
         // จำนวนคนของคลาสนี้ที่ "มีอยู่" (อ่านจาก PopulationData — source of truth)
@@ -200,13 +272,23 @@ namespace NuclearReMind
             list.Add(go.AddComponent<WorkerView>());
         }
 
+        // เอาคนว่าง (idle) ออกก่อนเสมอ — กันทุบคนที่ยังประจำอาคารอยู่จนเกิดช่องว่างกลาง slot ของ cell นั้น
+        // (ไม่ควรมีคนประจำเหลือให้ทุบตอนนี้อยู่แล้ว เพราะ WorkerAssignmentManager ลด assignment ให้ตรงกับ
+        //  ประชากรก่อนเสมอ — เผื่อไว้ด้วย fallback ตัวสุดท้ายของลิสต์เพื่อความทนทาน)
         private void DespawnLast(List<WorkerView> list)
         {
-            int last = list.Count - 1;
-            if (last < 0) return;
-            var view = list[last];
-            list.RemoveAt(last);
-            if (view != null) DestroyVisual(view.gameObject);
+            int idx = -1;
+            for (int i = 0; i < list.Count; i++)
+                if (list[i] != null && !list[i].AssignedCell.HasValue) { idx = i; break; }
+            if (idx < 0) idx = list.Count - 1;
+            if (idx < 0) return;
+
+            var view = list[idx];
+            list.RemoveAt(idx);
+            if (view == null) return;
+
+            if (!view.AssignedCell.HasValue) FreeIdleSlot(view.Slot);
+            DestroyVisual(view.gameObject);
         }
 
         // DestroyImmediate นอก Play mode (EditMode tests) — Destroy() ใช้ได้เฉพาะ Play mode

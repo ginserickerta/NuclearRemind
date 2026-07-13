@@ -207,6 +207,15 @@ namespace NuclearReMind
         public const float SortScale = 16f;
         public static int SortOrder(float col, float row) => Mathf.RoundToInt((col + row) * SortScale);
 
+        // ── tiebreak ตามประเภท (เมื่อ iso depth เท่ากัน) ─────────────
+        // ลำดับวาดทับเมื่อซ้อนช่องเดียวกัน: Core Tower > Building > Ore > Player(unit) — เลขน้อย = อยู่บน
+        // bias เป็นทวีคูณ TierStep (4) แต่ < SortScale(16) → ต่างประเภทที่ depth เท่ากันแยกกันได้
+        //   แต่ "ไม่" override ความลึกจริง (ห่าง ≥1 tile = ต่าง ≥16 ยังชนะ bias) · เว้นช่องให้เงา (base-1) ไม่ชนประเภทอื่น
+        public const int TierStep = 4;
+        public enum SortTier { Unit = 0, Ore = 1, Building = 2, CoreTower = 3 }
+        public static int SortOrder(float col, float row, SortTier tier)
+            => SortOrder(col, row) + (int)tier * TierStep;
+
         /// <summary>
         /// แปลงตำแหน่ง world space เป็นพิกัด grid (col, row) ที่ใกล้ที่สุด
         /// </summary>

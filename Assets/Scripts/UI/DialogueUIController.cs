@@ -23,11 +23,20 @@ namespace NuclearReMind
         public GameObject overlayPanel;
         public Button advanceButton;   // ปุ่มคลุมทั้งจอ — คลิกที่ไหนก็ไปบรรทัดถัดไป
 
-        [Header("Portraits (placeholder สีตามตัวละคร — สลับภาพจริงภายหลัง)")]
-        public Image leftPortrait;
-        public Text  leftInitial;
-        public Image rightPortrait;
-        public Text  rightInitial;
+        [Header("Portraits (โฟกัสทีละคน — v9)")]
+        public Image leftPortrait;      // Auren (เสียงในใจ) — อยู่ซ้าย
+        public Text  leftInitial;       // (v9) ไม่ใช้แล้ว — Auren ใช้ภาพจริง
+        public Image rightPortrait;     // Kova — อยู่ขวา
+
+        [Header("Real portraits (index = Emotion) + speech frames (v9)")]
+        public Sprite[] kovaEmotionSprites;   // Kova (ขวา) · index = (int)Emotion
+        public Sprite[] aurenEmotionSprites;  // Auren/เสียงในใจ (ซ้าย) · index = (int)Emotion
+        public Sprite[] miraEmotionSprites;   // Mira/หมอ (ซ้าย) · index = (int)Emotion
+        public Sprite[] dornEmotionSprites;   // Dorn/ชาวสวน (ซ้าย) · index = (int)Emotion
+        public Sprite frameShort, frameMedium, frameLong; // กรอบพูด — เลือกตามความยาวประโยค
+        public float boxHeight = 230f;        // สูงกรอบคงที่ · กว้างตามอัตราส่วนกรอบ (สั้น=แคบ ยาว=กว้าง)
+        public int shortMaxChars = 45;        // ≤ = กรอบสั้น
+        public int mediumMaxChars = 95;       // ≤ = กรอบกลาง · เกิน = กรอบยาว
 
         [Header("บอลลูนคำพูด")]
         public GameObject dialogBox;
@@ -40,11 +49,7 @@ namespace NuclearReMind
 
         private DialogueLine[] _lines = System.Array.Empty<DialogueLine>();
         private int _index;
-
-        // ช่อง portrait ปัจจุบัน (dynamic) — คนใหม่ไปฝั่งตรงข้ามคนที่เพิ่งพูด
-        private Speaker _left, _right;
-        private bool _leftSet, _rightSet;
-        private bool _lastActiveIsRight;
+        // v9 Option A "สลับโฟกัส": โชว์ portrait เฉพาะคนพูด (Auren ซ้าย / Kova ขวา) · กรอบอยู่ฝั่งตรงข้าม
 
         private void Awake()
         {
@@ -97,8 +102,11 @@ namespace NuclearReMind
 
             _lines = lines;
             _index = 0;
-            _leftSet = _rightSet = false;
-            _lastActiveIsRight = true; // → คนแรกที่พูด (ฝั่งตรงข้าม) ไปนั่งซ้าย
+
+            // โฟกัสทีละคน → เริ่มด้วยซ่อนทั้งสอง portrait (RenderCurrent จะโชว์เฉพาะคนพูด)
+            if (leftInitial != null) leftInitial.gameObject.SetActive(false);
+            if (leftPortrait != null) { leftPortrait.preserveAspect = true; leftPortrait.gameObject.SetActive(false); }
+            if (rightPortrait != null) { rightPortrait.preserveAspect = true; rightPortrait.gameObject.SetActive(false); }
 
             if (overlayPanel != null) overlayPanel.SetActive(true);
             RenderCurrent();
@@ -126,62 +134,98 @@ namespace NuclearReMind
         {
             var line = _lines[_index];
             Speaker sp = line.speaker;
+            bool kova  = sp == Speaker.Kova;                              // ขวา
+            bool auren = sp == Speaker.InnerVoice;                        // ซ้าย (เสียงในใจ)
+            bool leftSpeaker = auren || sp == Speaker.Mira || sp == Speaker.Dorn; // ทีมซ้าย (โชว์ทีละคน)
+            Sprite[] leftSprites = auren ? aurenEmotionSprites
+                                 : sp == Speaker.Mira ? miraEmotionSprites
+                                 : dornEmotionSprites;
 
-            // -1 = กลาง (เสียงในใจ/ระบบ) · 0 = ซ้าย · 1 = ขวา
-            int activeSide = ResolveActiveSide(sp);
+            // โฟกัสทีละคน: โชว์เฉพาะ portrait ของคนพูด · กรอบไปฝั่งตรงข้าม (ซ้ายพูด→กรอบขวา · Kova→กรอบซ้าย)
+            if (leftPortrait != null)
+            {
+                if (leftSpeaker) { leftPortrait.sprite = Pick(leftSprites, line.emotion); leftPortrait.color = Color.white; }
+                leftPortrait.gameObject.SetActive(leftSpeaker);
+            }
+            if (rightPortrait != null)
+            {
+                if (kova) { rightPortrait.sprite = Pick(kovaEmotionSprites, line.emotion); rightPortrait.color = Color.white; }
+                rightPortrait.gameObject.SetActive(kova);
+            }
 
-            // portrait: แสดงเฉพาะช่องที่มีคนนั่ง · ฝั่งที่พูดสว่าง ฝั่งอื่นหรี่
-            SetPortrait(leftPortrait,  leftInitial,  _leftSet,  _left,  activeSide == 0);
-            SetPortrait(rightPortrait, rightInitial, _rightSet, _right, activeSide == 1);
+            SetBoxSide(leftSpeaker);   // กรอบอยู่ข้างๆ ตัวละคร (ซ้ายพูด→กรอบขวา · Kova→กรอบซ้าย)
+            ApplyFrame(line.textTH);       // กว้างตามความยาวประโยค
 
-            // แถบชื่อ + ข้อความ
+            // แถบชื่อ (สีตามผู้พูด) — เสียงในใจโชว์ "Auren" (มี portrait แล้ว)
             if (nameText != null)
             {
-                nameText.text = SpeakerMeta.DisplayName(sp);
-                nameText.alignment = activeSide == 1 ? TextAnchor.MiddleRight
-                                   : activeSide == 0 ? TextAnchor.MiddleLeft
-                                   : TextAnchor.MiddleCenter;
+                nameText.text = auren ? "Auren" : SpeakerMeta.DisplayName(sp);
+                nameText.alignment = TextAnchor.MiddleLeft;
             }
             if (namePlate != null) namePlate.color = SpeakerMeta.AccentColor(sp);
 
             if (bodyText != null)
             {
                 bodyText.text = line.textTH;
-                bool center = activeSide < 0;                 // เสียงในใจ/ระบบ = กลาง
+                bool center = sp == Speaker.System; // เฉพาะระบบ = กลาง (ไม่มี portrait)
                 bodyText.alignment = center ? TextAnchor.UpperCenter : TextAnchor.UpperLeft;
-                bodyText.fontStyle = sp == Speaker.InnerVoice ? FontStyle.Italic : FontStyle.Normal;
+                bodyText.fontStyle = auren ? FontStyle.Italic : FontStyle.Normal; // เสียงในใจ = เอียง
             }
 
             if (hintText != null) // บรรทัดสุดท้าย → บอกว่าปิด
                 hintText.text = _index >= _lines.Length - 1 ? "▼ คลิกเพื่อจบบท" : "▼ คลิกเพื่อไปต่อ";
         }
 
-        // จัดฝั่งผู้พูด · คืน -1 กลาง / 0 ซ้าย / 1 ขวา · อัปเดตช่อง portrait แบบ dynamic
-        private int ResolveActiveSide(Speaker sp)
+        // เลือก sprite ตามอารมณ์ (index หลุด/ว่าง → ตัวแรกที่ไม่ null)
+        private static Sprite Pick(Sprite[] arr, Emotion e)
         {
-            if (!SpeakerMeta.HasPortrait(sp)) return -1; // เสียงในใจ/ระบบ ไม่กินช่อง
-
-            if (_leftSet && _left == sp)  { _lastActiveIsRight = false; return 0; }
-            if (_rightSet && _right == sp) { _lastActiveIsRight = true;  return 1; }
-
-            // ผู้พูดใหม่ → ฝั่งตรงข้ามคนที่เพิ่งพูด
-            if (_lastActiveIsRight) { _left = sp;  _leftSet = true;  _lastActiveIsRight = false; return 0; }
-            _right = sp; _rightSet = true; _lastActiveIsRight = true; return 1;
+            if (arr == null || arr.Length == 0) return null;
+            int i = (int)e;
+            if (i >= 0 && i < arr.Length && arr[i] != null) return arr[i];
+            foreach (var s in arr) if (s != null) return s;
+            return null;
         }
 
-        private static void SetPortrait(Image img, Text initial, bool used, Speaker sp, bool active)
+        // วางกรอบ "ข้างๆ ตัวละคร" (เว้นคอลัมน์ portrait ~CharColumn) แล้วงอกกว้างออกไปด้านนอก
+        //   ตัวละครซ้าย (Auren/Mira/Dorn) → กรอบอยู่ด้านขวาของตัวละคร
+        //   Kova (ขวา) → กรอบอยู่ด้านซ้ายของตัวละคร
+        private const float CharColumn = 500f; // กว้างคอลัมน์ portrait + เว้นระยะ
+        private void SetBoxSide(bool leftSpeaker)
         {
-            if (img == null) return;
-            if (!used) { img.gameObject.SetActive(false); return; }
-
-            img.gameObject.SetActive(true);
-            Color accent = SpeakerMeta.AccentColor(sp);
-            img.color = active ? accent : Color.Lerp(accent, Color.black, 0.6f); // หรี่ = คล้ำลง
-            if (initial != null)
+            if (dialogBox == null) return;
+            var rt = dialogBox.GetComponent<RectTransform>();
+            if (leftSpeaker)
             {
-                initial.text = SpeakerMeta.Initial(sp);
-                initial.color = active ? Color.white : new Color(1f, 1f, 1f, 0.45f);
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0f); // งอกขวาจากคอลัมน์ซ้าย
+                rt.anchoredPosition = new Vector2(CharColumn, 56f);
             }
+            else
+            {
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0f); // งอกซ้ายจากคอลัมน์ขวา
+                rt.anchoredPosition = new Vector2(-CharColumn, 56f);
+            }
+        }
+
+        // เลือกกรอบตามจำนวนตัวอักษร → set sprite + ปรับกว้างตามอัตราส่วน (สูงคงที่ boxHeight)
+        private void ApplyFrame(string text)
+        {
+            int len = text != null ? text.Length : 0;
+            Sprite fr = len <= shortMaxChars ? frameShort
+                      : len <= mediumMaxChars ? frameMedium
+                      : frameLong;
+            if (dialogBox == null || fr == null) return;
+
+            var img = dialogBox.GetComponent<Image>();
+            if (img != null)
+            {
+                img.sprite = fr;
+                img.type = Image.Type.Simple;
+                img.preserveAspect = false; // ปรับกว้างตามอัตราส่วนเองแล้ว → ไม่ต้อง letterbox
+                img.color = Color.white;
+            }
+            var rt = dialogBox.GetComponent<RectTransform>();
+            float aspect = fr.rect.height > 0 ? fr.rect.width / fr.rect.height : 3f;
+            rt.sizeDelta = new Vector2(boxHeight * aspect, boxHeight);
         }
     }
 }

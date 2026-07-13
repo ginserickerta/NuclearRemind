@@ -9,14 +9,25 @@ namespace NuclearReMind
     public enum Speaker { System, InnerVoice, Kova, Mira, Dorn }
 
     /// <summary>
+    /// อารมณ์สีหน้าของตัวละครที่มี portrait จริง (ตอนนี้ Kova) — เลือกภาพ portrait ตามอารมณ์ของประโยค
+    /// index ตรงกับ DialogueUIController.kovaEmotionSprites · ต่อท้ายได้เท่านั้น (ห้ามแทรกกลาง)
+    /// Neutral=อกอ้อมมั่นใจ · Happy=ยิ้มร่า · Worried=กังวล · Serious=จริงจัง · Explain=อธิบาย(พิมพ์เขียว)
+    /// Excited=ฮึด · Welding=เชื่อม · Sad=เสียใจ · Proud=ยกนิ้วโป้ง
+    /// (Auren) Thinking=คิด · Surprised=ตกใจ · Determined=มุ่งมั่น/ชี้นิ้ว
+    /// </summary>
+    public enum Emotion { Neutral, Happy, Worried, Serious, Explain, Excited, Welding, Sad, Proud, Thinking, Surprised, Determined }
+
+    /// <summary>
     /// บทพูดหนึ่งบรรทัด — ผู้พูด + ข้อความ (v8.5 บทสนทนาหลายตัวละครสลับกัน)
     /// เรียงเป็น DialogueLine[] ใน StoryBeatSO (dialoguePre ก่อนวิกฤต / dialoguePost หลัง outcome)
+    /// emotion ใช้เฉพาะผู้พูดที่มี portrait จริง (Kova) — default Neutral (เซฟ/บทเก่าที่ไม่ตั้งค่าก็ได้)
     /// </summary>
     [System.Serializable]
     public struct DialogueLine
     {
         public Speaker speaker;
         [TextArea(1, 3)] public string textTH;
+        public Emotion emotion;
     }
 
     /// <summary>

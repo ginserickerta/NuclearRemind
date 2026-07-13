@@ -131,7 +131,7 @@ namespace NuclearReMind
         private void HandleResChanged(ResourceData _) { if (_shown) Refresh(); }
 
         // ═══════════════════════════ open / close ═══════════════════════════
-        private void Toggle() { if (_shown) Hide(); else Open(); }
+        public void Toggle() { if (_shown) Hide(); else Open(); }
 
         private void Open()
         {

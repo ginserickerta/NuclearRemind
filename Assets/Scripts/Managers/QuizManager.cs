@@ -81,8 +81,8 @@ namespace NuclearReMind
 
         /// <summary>
         /// ผู้เล่นตอบควิซข้อปัจจุบัน (ตอบบังคับ ข้ามไม่ได้ — V4 §12)
-        /// ถูก → +rewardKnowledge · ผิด → +3 · ปลด Codex ตาม codexUnlockId ถ้ามี (ทั้งถูกและผิด — D6/G6)
-        /// ไม่ว่าถูกหรือผิดก็ถือว่าตอบแล้ว → กันถามซ้ำ + เดินคิวข้อถัดไป/คืนเวลา
+        /// ถูก → +rewardKnowledge + ปลด Codex ตาม codexUnlockId (ผ่าน EventManager) · ผิด → +3 · ไม่ปลด Codex
+        /// ไม่ว่าถูกหรือผิดก็ถือว่าตอบแล้ว → กันถามซ้ำ + เดินคิวข้อถัดไป/คืนเวลา · หน้าอธิบายโผล่ผ่าน OnQuizAnswered
         /// </summary>
         public bool SubmitAnswer(int selectedIndex)
         {
@@ -96,10 +96,10 @@ namespace NuclearReMind
             float reward = correct ? quiz.rewardKnowledge : WrongAnswerKnowledge;
             EventManager.Instance.RaiseResourceDelta(ResourceType.Knowledge, reward);
 
-            // ปลด Codex เมื่อมีลิงก์ — เห็น explain แล้วทั้งถูก/ผิด (D6/G6)
-            // codexUnlockId ว่าง → UnlockById เป็น no-op (ปัจจุบันทั้ง 10 ข้อมี id ครบ — G1 ปิดแล้ว, fusion codex 5 ตัวอยู่บนดิสก์)
-            if (!string.IsNullOrEmpty(quiz.codexUnlockId))
-                CodexManager.Instance?.UnlockById(quiz.codexUnlockId);
+            // ปลด Codex ผ่าน EventManager — เฉพาะ "ตอบถูก" (mockup หน้าอธิบาย: ผิด→ไม่ปลด · ไม่เรียก CodexManager ตรง §5)
+            // ตอบผิดยังเห็นคำอธิบายได้ (QuizExplanationPopupController) แต่ไม่ได้ปลดล็อก entry
+            if (correct && !string.IsNullOrEmpty(quiz.codexUnlockId))
+                EventManager.Instance.RaiseCodexUnlockRequested(quiz.codexUnlockId);
 
             EventManager.Instance.RaiseQuizAnswered(quiz.id, correct);
 

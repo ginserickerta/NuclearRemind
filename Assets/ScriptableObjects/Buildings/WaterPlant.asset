@@ -24,8 +24,8 @@ MonoBehaviour:
   - {fileID: 21300000, guid: d6438dfc3c1fd02458381497c7333be1, type: 3}
   - {fileID: 21300000, guid: 71b76207f6db3d44cbb62f80c366f531, type: 3}
   - {fileID: 21300000, guid: b44365fb48612c34b89fd6a119402178, type: 3}
-  spriteOffset: {x: 0, y: -0.45}
-  spriteScale: 1.8
+  spriteOffset: {x: -0.05, y: -0.7}
+  spriteScale: 1.4
   animationFrames: []
   animationFps: 6
   size: {x: 2, y: 2}

@@ -30,7 +30,7 @@ namespace NuclearReMind
         public ResourceBarUI tritiumBar;   // เชื้อเพลิงฟิวชัน (ขุดจากแหล่งแร่โซน B)
 
         [Header("Day Cycle")]
-        public Text dayText;    // "DAY 12 / 30"
+        public Text dayText;    // เลขวันเท่านั้น (เช่น "12") — "DAY"/"/30" มากับสไปรต์แผ่นวัน (day_plate)
         public Text timerText;  // นับถอยหลังแยกเฟส "วางแผน 0:28" / "เดินเครื่อง 0:54" (Day 1 = "—")
 
         [Header("Day Phase (V4 §3) — แถบเวลาแบ่ง Planning|Live + แบนเนอร์เข้า Live")]
@@ -191,7 +191,7 @@ namespace NuclearReMind
         {
             _day = day;
             if (dayText != null)
-                dayText.text = $"DAY {day} / {GameManager.MaxDay}";
+                dayText.text = day.ToString(); // เลขวันอย่างเดียว — "DAY"/"/30" อยู่ในสไปรต์แผ่นวันแล้ว
 
             if (!timed) // Day 1 tutorial — ไม่จับเวลา
             {

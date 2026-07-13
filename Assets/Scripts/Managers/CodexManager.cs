@@ -43,6 +43,7 @@ namespace NuclearReMind
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
             EventManager.Instance.OnBuildingPlaced += HandleBuildingPlaced;
             EventManager.Instance.OnBuildingUpgraded += HandleBuildingUpgraded;
+            EventManager.Instance.OnCodexUnlockRequested += HandleCodexUnlockRequested;
         }
 
         private void OnDisable()
@@ -52,6 +53,7 @@ namespace NuclearReMind
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
             EventManager.Instance.OnBuildingPlaced -= HandleBuildingPlaced;
             EventManager.Instance.OnBuildingUpgraded -= HandleBuildingUpgraded;
+            EventManager.Instance.OnCodexUnlockRequested -= HandleCodexUnlockRequested;
         }
 
         /// <summary>
@@ -72,6 +74,9 @@ namespace NuclearReMind
             if (_entryById.TryGetValue(entryId, out var entry))
                 Unlock(entry);
         }
+
+        // ปลดล็อกผ่าน event (Quiz ตอบถูก → RaiseCodexUnlockRequested) — เลี่ยงเรียก CodexManager ตรงข้าม manager (กฎ §5)
+        private void HandleCodexUnlockRequested(string entryId) => UnlockById(entryId);
 
         /// <summary>คืน Codex ที่ปลดล็อกข้ามรอบ (MetaProgress §9) — เงียบ ไม่ raise event / ไม่บวก Knowledge</summary>
         public void RestoreUnlocked(IEnumerable<string> ids)

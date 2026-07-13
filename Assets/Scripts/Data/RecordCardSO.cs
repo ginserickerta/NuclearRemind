@@ -21,5 +21,11 @@ namespace NuclearReMind
 
         // ชื่อที่โชว์ในแผง Records เช่น "บันทึก #01 — เชื้อเพลิงในน้ำ"
         public string archiveTitle;
+
+        // ── ฟิลด์การ์ดบันทึก (mockup v2) — มี default กันเซฟ/asset เก่าที่ยังไม่ตั้ง ───────────
+        // คำมุมขวาบนหัวการ์ด (mockup = "กู้คืนสำเร็จ") · ว่าง → UI ใช้ default "กู้คืนสำเร็จ"
+        public string statusLabel = "กู้คืนสำเร็จ";
+        // ชื่อผู้บันทึกล้วน ๆ (mockup "- ผู้บันทึก: {recorderName}") · ว่าง → UI fallback ไป authorLabel
+        public string recorderName;
     }
 }

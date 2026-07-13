@@ -89,21 +89,36 @@ namespace NuclearReMind.EditorTools
             hud.tritiumBar = CreateResourceBar("TritiumBar", resourcePanel.transform, font, new Color(0.85f, 0.45f, 0.2f), "⚛",
                 LoadIcon("Tritium"));
 
-            // ===== Day panel (top-center, above tower) — วัน + timer แยกเฟส + แถบเวลา Planning|Live (V4 §3) =====
+            // ===== Day panel (top-center, above tower) — แผ่นโลหะ "DAY __ /30" (baked ในสไปรต์) โชว์เลขวันในช่องกลาง + timer/แถบเวลาใต้แผ่น (V4 §3) =====
             var planningCol = new Color(0.28f, 0.55f, 0.92f); // ฟ้า = วางแผน
             var liveCol = new Color(0.93f, 0.52f, 0.18f);     // ส้ม = เดินเครื่อง
-            var dayPanel = CreatePanel("DayPanel", canvasGO.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -20), new Vector2(320, 64));
-            // พื้น panel ทึบ + ข้อความเข้ม — กัน text ขาวจมหายบน light theme (Palette.CameraBackground = #E9EDF3)
-            var dayBg = dayPanel.AddComponent<Image>();
-            dayBg.color = Palette.PanelBg;
-            hud.dayText = CreateText("DayText", dayPanel.transform, font, "DAY 1 / 30", 20, new Vector2(0, 16), new Vector2(320, 26), TextAnchor.MiddleCenter);
-            hud.dayText.color = Palette.TextPrimary;
-            hud.timerText = CreateText("TimerText", dayPanel.transform, font, "—", 17, new Vector2(0, -6), new Vector2(320, 22), TextAnchor.MiddleCenter);
+            var dayPanel = CreatePanel("DayPanel", canvasGO.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -14), new Vector2(320, 100));
+
+            // แผ่นโลหะวัน (สไปรต์ day_plate: คำว่า "DAY" อยู่ซ้าย · "/30" อยู่ขวา · เว้นช่องกลางไว้ใส่เลข) วางบนสุดของแผง
+            // Simple + preserveAspect — ห้ามยืด (ข้อความ baked จะเพี้ยน) · fallback สีทึบถ้ายังไม่ import สไปรต์
+            var dayPlateSprite = LoadUISkin("Assets/Resources/HUD/day_plate.png");
+            var plateGO = new GameObject("DayPlate", typeof(RectTransform));
+            plateGO.transform.SetParent(dayPanel.transform, false);
+            var plateRect = plateGO.GetComponent<RectTransform>();
+            plateRect.anchoredPosition = new Vector2(0, 19); // ชิดบนสุดของแผง (ครึ่งความสูงแผ่น 63/2 ≈ 31.5)
+            plateRect.sizeDelta = new Vector2(320, 63);       // อัตราส่วนแผ่น ~5.08:1 (สไปรต์ 1430×280)
+            var plateImg = plateGO.AddComponent<Image>();
+            if (dayPlateSprite != null) { plateImg.sprite = dayPlateSprite; plateImg.type = Image.Type.Simple; plateImg.preserveAspect = true; plateImg.color = Color.white; }
+            else plateImg.color = Palette.PanelBg;
+
+            // เลขวันเท่านั้น (ไม่เขียน "DAY"/"/30" — มากับสไปรต์แล้ว) วางในช่องกลางแผ่น (frac 0.511 ของกว้าง)
+            hud.dayText = CreateText("DayText", plateGO.transform, font, "1", 30, new Vector2(4, 2), new Vector2(56, 44), TextAnchor.MiddleCenter);
+            hud.dayText.color = new Color(0.92f, 0.94f, 0.97f); // ขาวนวลให้เข้ากับตัวอักษร baked บนแผ่น
+            hud.dayText.fontStyle = FontStyle.Bold;
+
+            // timer + แถบเวลา ย้ายมาอยู่ "ใต้แผ่น" (ผู้ใช้เลือก) — ไม่มีพื้น panel ทึบแล้ว จึงใส่ Outline กัน text จมพื้น
+            hud.timerText = CreateText("TimerText", dayPanel.transform, font, "—", 17, new Vector2(0, -25), new Vector2(320, 22), TextAnchor.MiddleCenter);
             hud.timerText.color = Palette.TextMuted;
+            hud.timerText.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.85f);
             // แถบเวลาแบ่งเฟส 30|60 — ช่วงซ้าย (ฟ้า) = Planning 30s, ช่วงขวา (ส้ม) = Live 60s
-            hud.planningSegBar = CreateSlider("PlanningSeg", dayPanel.transform, planningCol, new Vector2(-94, -26), new Vector2(92, 9));
+            hud.planningSegBar = CreateSlider("PlanningSeg", dayPanel.transform, planningCol, new Vector2(-94, -41), new Vector2(92, 9));
             hud.planningSegBar.value = 0f;
-            hud.liveSegBar = CreateSlider("LiveSeg", dayPanel.transform, liveCol, new Vector2(48, -26), new Vector2(184, 9));
+            hud.liveSegBar = CreateSlider("LiveSeg", dayPanel.transform, liveCol, new Vector2(48, -41), new Vector2(184, 9));
             hud.liveSegBar.value = 0f;
 
             // ===== Live-phase banner (กลางจอ, เด้ง ~1.6s ตอนเข้า Live) =====
@@ -123,8 +138,8 @@ namespace NuclearReMind.EditorTools
             hud.livePhaseBanner = liveBanner;
             liveBanner.SetActive(false);
 
-            // ===== Tower panel (top-center, below day panel) =====
-            var towerPanel = CreatePanel("TowerPanel", canvasGO.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -80), new Vector2(320, 60));
+            // ===== Tower panel (top-center, below day panel) — เลื่อนลงหลบแผงวันที่สูงขึ้น (plate + timer/แถบ) =====
+            var towerPanel = CreatePanel("TowerPanel", canvasGO.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -118), new Vector2(320, 60));
             hud.towerPhaseText = CreateText("TowerPhaseText", towerPanel.transform, font, "CORE TOWER — Phase 1/3", 18, new Vector2(0, -2), new Vector2(320, 24), TextAnchor.UpperCenter);
             hud.towerProgressBar = CreateSlider("TowerProgressBar", towerPanel.transform, new Color(1f, 0.4f, 0.2f), new Vector2(0, -30), new Vector2(320, 20));
 
@@ -283,7 +298,8 @@ namespace NuclearReMind.EditorTools
             SetupQuizPopup(canvasGO.transform, font);
 
             // ===== Day 1 Tutorial checklist (GDD §3) — พาเนลมุมซ้าย ไม่บล็อกการเล่น =====
-            var tutPanel = CreatePanel("TutorialChecklistPanel", canvasGO.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20, 0), new Vector2(340, 190));
+            // ตำแหน่ง y=107 = ที่ผู้ใช้จัดเอง (อ่านจากซีน 13 ก.ค.) · เดิม y=0 (กึ่งกลางซ้าย)
+            var tutPanel = CreatePanel("TutorialChecklistPanel", canvasGO.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20, 107), new Vector2(340, 190));
             var tutBg = tutPanel.AddComponent<Image>();
             tutBg.color = Palette.PanelBg;
             var tutTitle = CreateText("TutTitle", tutPanel.transform, font, "ภารกิจ Day 1 — สอนเล่น", 16, new Vector2(0, 78), new Vector2(320, 24), TextAnchor.MiddleCenter);
@@ -330,6 +346,49 @@ namespace NuclearReMind.EditorTools
         // ─────────────────────────────────────────────────────────────
         private static void SetupQuizPopup(Transform canvasTransform, Font font)
         {
+            // สกินโลหะ (จาก Codex/StoryUI) — null-safe: ถ้ายังไม่ import ให้ fallback สีทึบ
+            var frameMetal = LoadUISkin("Assets/Resources/CodexUI/frame_metal.png");
+            var plateInset = LoadUISkin("Assets/Resources/StoryUI/plate_inset.png");
+            var bookIcon   = LoadUISkin("Assets/Resources/CodexUI/header_book.png");
+
+            var gold  = new Color(0.94f, 0.77f, 0.29f);
+            var blue  = new Color(0.59f, 0.80f, 1f);
+            var gray  = new Color(0.62f, 0.62f, 0.66f);
+            var light = new Color(0.90f, 0.90f, 0.86f);
+            var chip  = new Color(0.20f, 0.47f, 0.80f);
+
+            const float DW = 1220f, DH = 700f;
+
+            // วางแบบ pin มุมบนซ้ายของ dialog (x จากซ้าย, y จากบน)
+            void TL(Component c, float x, float y, float w, float h)
+            {
+                var r = c.GetComponent<RectTransform>();
+                r.anchorMin = r.anchorMax = new Vector2(0f, 1f);
+                r.pivot = new Vector2(0f, 1f);
+                r.anchoredPosition = new Vector2(x, -y);
+                r.sizeDelta = new Vector2(w, h);
+            }
+            Image Plate(string name, Transform parent, float x, float y, float w, float h)
+            {
+                var go = new GameObject(name, typeof(RectTransform));
+                go.transform.SetParent(parent, false);
+                var img = go.AddComponent<Image>();
+                if (plateInset != null) { img.sprite = plateInset; img.type = Image.Type.Sliced; img.color = Color.white; }
+                else img.color = new Color(0.12f, 0.13f, 0.17f, 0.98f);
+                TL(img, x, y, w, h);
+                return img;
+            }
+            Text Label(string name, Transform parent, string s, int size, Color col, TextAnchor anchor,
+                       float x, float y, float w, float h, bool bold = false)
+            {
+                var t = CreateText(name, parent, font, s, size, Vector2.zero, Vector2.zero, anchor);
+                t.color = col; t.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal;
+                t.horizontalOverflow = HorizontalWrapMode.Wrap;
+                t.verticalOverflow = VerticalWrapMode.Overflow;
+                TL(t, x, y, w, h);
+                return t;
+            }
+
             // ===== Full-screen overlay (มืด) =====
             var overlay = CreatePanel("QuizPopupPanel", canvasTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var overlayRect = overlay.GetComponent<RectTransform>();
@@ -338,60 +397,96 @@ namespace NuclearReMind.EditorTools
             overlayRect.offsetMin = Vector2.zero;
             overlayRect.offsetMax = Vector2.zero;
             var overlayImage = overlay.AddComponent<Image>();
-            overlayImage.color = new Color(0f, 0f, 0f, 0.72f);
+            overlayImage.color = new Color(0f, 0f, 0f, 0.74f);
 
-            // ===== Dialog box (center) =====
-            var dialog = CreatePanel("QuizDialog", overlay.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760, 540));
+            // ===== Dialog (กรอบโลหะ 9-slice, กลางจอ) =====
+            var dialog = CreatePanel("QuizDialog", overlay.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(DW, DH));
+            var dialogRect = dialog.GetComponent<RectTransform>();
+            dialogRect.pivot = new Vector2(0.5f, 0.5f);
             var dialogImage = dialog.AddComponent<Image>();
-            dialogImage.color = new Color(0.10f, 0.11f, 0.14f, 0.97f);
+            if (frameMetal != null) { dialogImage.sprite = frameMetal; dialogImage.type = Image.Type.Sliced; dialogImage.color = Color.white; }
+            else dialogImage.color = new Color(0.10f, 0.11f, 0.14f, 0.98f);
 
-            // แถบสีหมวด (บนสุด) — QuizPopupController จะเปลี่ยนสีตาม category ตอน runtime
-            var categoryGO = new GameObject("QuizCategoryBar", typeof(RectTransform));
-            categoryGO.transform.SetParent(dialog.transform, false);
-            var catRect = categoryGO.GetComponent<RectTransform>();
-            catRect.anchorMin = new Vector2(0f, 1f);
-            catRect.anchorMax = new Vector2(1f, 1f);
-            catRect.pivot = new Vector2(0.5f, 1f);
-            catRect.anchoredPosition = Vector2.zero;
-            catRect.sizeDelta = new Vector2(0, 10);
-            var categoryBar = categoryGO.AddComponent<Image>();
-            categoryBar.color = new Color(0.20f, 0.50f, 0.85f);
+            // แถบสีหมวด (แท่งตั้งซ้ายหัวเรื่อง) — controller เปลี่ยนสีตาม category
+            var categoryBar = new GameObject("QuizCategoryBar", typeof(RectTransform)).AddComponent<Image>();
+            categoryBar.transform.SetParent(dialog.transform, false);
+            categoryBar.color = chip;
+            TL(categoryBar, 76, 70, 8, 112);
 
-            var speakerText = CreateText("QuizSpeakerText", dialog.transform, font, "VESTA", 18, Vector2.zero, Vector2.zero, TextAnchor.UpperLeft);
-            speakerText.fontStyle = FontStyle.Bold;
-            speakerText.color = new Color(0.6f, 0.85f, 1f);
-            AnchorTop(speakerText, 18, new Vector2(720, 24));
+            // ── LEFT: หัวข้อ + ผู้พูด + โจทย์ ──
+            Label("QuizKicker", dialog.transform, "หัวข้อควิซ", 19, gray, TextAnchor.UpperLeft, 98, 66, 520, 24);
+            var topicText = Label("QuizTopicText", dialog.transform, "หัวข้อ", 40, gold, TextAnchor.UpperLeft, 98, 92, 548, 58, true);
+            var speakerText = Label("QuizSpeakerText", dialog.transform, "VESTA", 22, blue, TextAnchor.UpperLeft, 98, 158, 548, 30, true);
 
-            var questionText = CreateText("QuizQuestionText", dialog.transform, font, "คำถาม", 20, Vector2.zero, Vector2.zero, TextAnchor.UpperLeft);
-            questionText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            questionText.verticalOverflow = VerticalWrapMode.Overflow;
-            AnchorTop(questionText, 48, new Vector2(720, 110));
-
-            // ปุ่มตัวเลือก 3 ปุ่ม
-            var optionButtons = new Button[3];
-            var optionTexts = new Text[3];
-            float[] optionY = { 168f, 226f, 284f };
-            for (int i = 0; i < 3; i++)
-            {
-                var btn = CreateButton($"QuizOption{i}", dialog.transform, font, $"ตัวเลือก {i + 1}", Vector2.zero, new Vector2(700, 52));
-                AnchorTop(btn, optionY[i], new Vector2(700, 52));
-                optionButtons[i] = btn;
-                optionTexts[i] = btn.GetComponentInChildren<Text>();
-            }
-
-            var confirmButton = CreateButton("QuizConfirmButton", dialog.transform, font, "ยืนยัน", Vector2.zero, new Vector2(240, 48));
-            AnchorTop(confirmButton, 348, new Vector2(240, 48));
-
-            var explainText = CreateText("QuizExplainText", dialog.transform, font, "", 16, Vector2.zero, Vector2.zero, TextAnchor.UpperLeft);
-            explainText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            explainText.verticalOverflow = VerticalWrapMode.Overflow;
-            explainText.color = new Color(0.9f, 0.92f, 0.8f);
-            AnchorTop(explainText, 348, new Vector2(720, 120));
+            var qPlate = Plate("QuizQuestionPlate", dialog.transform, 76, 204, 560, 360);
+            Label("QuizQuestionLabel", qPlate.transform, "โจทย์", 20, gray, TextAnchor.UpperLeft, 24, 18, 200, 24);
+            var questionText = Label("QuizQuestionText", qPlate.transform, "คำถาม", 25, light, TextAnchor.UpperLeft, 24, 54, 512, 150);
+            var explainText = Label("QuizExplainText", qPlate.transform, "", 20, new Color(0.88f, 0.90f, 0.78f), TextAnchor.UpperLeft, 24, 202, 512, 150);
             explainText.gameObject.SetActive(false);
 
-            var closeButton = CreateButton("QuizCloseButton", dialog.transform, font, "ปิด", Vector2.zero, new Vector2(200, 46));
-            AnchorTop(closeButton, 478, new Vector2(200, 46));
+            // ── RIGHT: ตัวเลือก 3 ปุ่ม (แผ่นจม + letter chip + เรืองขอบ Outline) ──
+            var optionButtons = new Button[3];
+            var optionTexts = new Text[3];
+            const float rx = 668f, rw = DW - 54f - 668f, ah = 118f, gap = 14f, ry0 = 182f;
+            for (int i = 0; i < 3; i++)
+            {
+                float y = ry0 + i * (ah + gap);
+                var plate = Plate($"QuizOption{i}", dialog.transform, rx, y, rw, ah);
+                var btn = plate.gameObject.AddComponent<Button>();
+                btn.targetGraphic = plate;
+                btn.transition = Selectable.Transition.None; // controller คุมสี/เรืองขอบเอง
+                var outline = plate.gameObject.AddComponent<Outline>();
+                outline.effectColor = new Color(0.95f, 0.80f, 0.30f);
+                outline.effectDistance = new Vector2(3f, -3f);
+                outline.enabled = false;
+
+                // chip ตัวอักษร A/B/C
+                var chipImg = new GameObject("Letter", typeof(RectTransform)).AddComponent<Image>();
+                chipImg.transform.SetParent(plate.transform, false);
+                chipImg.color = chip;
+                var cr = chipImg.GetComponent<RectTransform>();
+                cr.anchorMin = cr.anchorMax = new Vector2(0f, 0.5f);
+                cr.pivot = new Vector2(0f, 0.5f);
+                cr.anchoredPosition = new Vector2(16, 0);
+                cr.sizeDelta = new Vector2(44, 44);
+                var cl = CreateText("L", chipImg.transform, font, ((char)('A' + i)).ToString(), 28, Vector2.zero, Vector2.zero, TextAnchor.MiddleCenter);
+                cl.fontStyle = FontStyle.Bold; cl.color = new Color(0.95f, 0.96f, 1f);
+                var clr = cl.GetComponent<RectTransform>();
+                clr.anchorMin = Vector2.zero; clr.anchorMax = Vector2.one; clr.offsetMin = Vector2.zero; clr.offsetMax = Vector2.zero;
+
+                optionTexts[i] = Label($"QuizOptionText{i}", plate.transform, $"ตัวเลือก {i + 1}", 22, new Color(0.90f, 0.90f, 0.86f), TextAnchor.MiddleLeft, 76, 0, rw - 96, ah);
+                // MiddleLeft เต็มความสูงปุ่ม → จัดกลางแนวตั้ง
+                var otr = optionTexts[i].GetComponent<RectTransform>();
+                otr.anchorMin = otr.anchorMax = new Vector2(0f, 0.5f);
+                otr.pivot = new Vector2(0f, 0.5f);
+                otr.anchoredPosition = new Vector2(76, 0);
+                optionButtons[i] = btn;
+            }
+
+            // ── footer "ปลดล็อก Codex : …" (ซ่อนถ้าไม่มี reward) ──
+            var codexFooter = Plate("QuizCodexFooter", dialog.transform, 76, 590, 560, 54).gameObject;
+            var fIcon = new GameObject("Icon", typeof(RectTransform)).AddComponent<Image>();
+            fIcon.transform.SetParent(codexFooter.transform, false);
+            if (bookIcon != null) { fIcon.sprite = bookIcon; fIcon.preserveAspect = true; } else fIcon.color = chip;
+            var fir = fIcon.GetComponent<RectTransform>();
+            fir.anchorMin = fir.anchorMax = new Vector2(0f, 0.5f); fir.pivot = new Vector2(0f, 0.5f);
+            fir.anchoredPosition = new Vector2(12, 0); fir.sizeDelta = new Vector2(38, 38);
+            Label("QuizCodexLabel", codexFooter.transform, "ปลดล็อก Codex :", 19, gray, TextAnchor.MiddleLeft, 60, 0, 185, 54);
+            var codexRewardText = Label("QuizCodexName", codexFooter.transform, "—", 20, blue, TextAnchor.MiddleLeft, 248, 0, 300, 54, true);
+            // ปรับ label/name ให้จัดกลางแนวตั้ง (MiddleLeft เต็มสูง footer)
+            foreach (var nm in new[] { "QuizCodexLabel", "QuizCodexName" })
+            {
+                var rt = codexFooter.transform.Find(nm).GetComponent<RectTransform>();
+                rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f); rt.pivot = new Vector2(0f, 0.5f);
+                rt.anchoredPosition = new Vector2(nm == "QuizCodexLabel" ? 60 : 248, 0);
+            }
+
+            // ── ปุ่ม ยืนยัน / ปิด (ตำแหน่งเดียวกัน มุมล่างขวา) ──
+            var confirmButton = QuizFooterButton("QuizConfirmButton", dialog.transform, font, "ยืนยัน", plateInset, gold, DW - 54f - 220f, 590);
+            var closeButton = QuizFooterButton("QuizCloseButton", dialog.transform, font, "ปิด", plateInset, gold, DW - 54f - 220f, 590);
             closeButton.gameObject.SetActive(false);
+            void _place(Component c) => TL(c, DW - 54f - 220f, 590, 220, 54);
+            _place(confirmButton); _place(closeButton);
 
             overlay.SetActive(false);
 
@@ -400,6 +495,7 @@ namespace NuclearReMind.EditorTools
             var quiz = quizGO.GetComponent<QuizPopupController>() ?? quizGO.AddComponent<QuizPopupController>();
             quiz.popupPanel = overlay;
             quiz.categoryBar = categoryBar;
+            quiz.topicText = topicText;
             quiz.speakerText = speakerText;
             quiz.questionText = questionText;
             quiz.explainText = explainText;
@@ -407,6 +503,8 @@ namespace NuclearReMind.EditorTools
             quiz.optionTexts = optionTexts;
             quiz.confirmButton = confirmButton;
             quiz.closeButton = closeButton;
+            quiz.codexFooter = codexFooter;
+            quiz.codexRewardText = codexRewardText;
 
             // Confirm/Close ผูกแบบ persistent (ปุ่มตัวเลือกผูกเองตอน runtime ใน controller.Start)
             UnityEventTools.AddPersistentListener(confirmButton.onClick, new UnityAction(quiz.Confirm));
@@ -714,6 +812,32 @@ namespace NuclearReMind.EditorTools
             // Kanit line height สูงกว่ากล่องที่วางไว้ — default Truncate จะตัดทั้งบรรทัดจนมองไม่เห็น
             text.verticalOverflow = VerticalWrapMode.Overflow;
             return text;
+        }
+
+        // โหลดสไปรต์สกิน (null ถ้ายังไม่ import — ผู้เรียกต้อง fallback สีทึบเอง)
+        private static Sprite LoadUISkin(string assetPath)
+            => AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+
+        // ปุ่มโลหะของ Quiz footer: แผ่นจม 9-slice + label ทองกลางปุ่ม (fallback สีทึบถ้าไม่มีสกิน)
+        private static Button QuizFooterButton(string name, Transform parent, Font font, string label, Sprite plate, Color labelColor, float x, float y)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var img = go.AddComponent<Image>();
+            if (plate != null) { img.sprite = plate; img.type = Image.Type.Sliced; img.color = Color.white; }
+            else img.color = new Color(0.16f, 0.17f, 0.21f, 0.98f);
+            var btn = go.AddComponent<Button>();
+            btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.ColorTint;
+            var cb = btn.colors;
+            cb.highlightedColor = new Color(0.82f, 0.82f, 0.82f); cb.pressedColor = new Color(0.66f, 0.66f, 0.66f);
+            btn.colors = cb;
+
+            var t = CreateText("Label", go.transform, font, label, 26, Vector2.zero, Vector2.zero, TextAnchor.MiddleCenter);
+            t.fontStyle = FontStyle.Bold; t.color = labelColor;
+            var tr = t.GetComponent<RectTransform>();
+            tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one; tr.offsetMin = Vector2.zero; tr.offsetMax = Vector2.zero;
+            return btn;
         }
 
         private static Button CreateButton(string name, Transform parent, Font font, string label, Vector2 anchoredPos, Vector2 size)

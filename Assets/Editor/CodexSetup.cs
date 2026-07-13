@@ -134,138 +134,129 @@ namespace NuclearReMind.EditorTools
             if (codexGO == null) codexGO = new GameObject("CodexUIController");
             var ui = codexGO.GetComponent<CodexUIController>() ?? codexGO.AddComponent<CodexUIController>();
 
-            // แผงเดิม (โครงเก่า) ทิ้ง — สร้างใหม่ให้ตรงสเปก (มีแถบกรอง/หัวใหม่)
+            // สกินโลหะ (นำเข้าโดย CodexUISetup — ต้องรัน 'Setup Codex UI Sprites' ก่อน)
+            var frame = LoadSkin("frame_metal");
+            ui.plateSprite = LoadSkin("plate_blank");
+            ui.iconAtom = LoadSkin("icon_atom");
+            ui.iconDroplet = LoadSkin("icon_droplet");
+            ui.iconShield = LoadSkin("icon_shield");
+            ui.iconPlant = LoadSkin("icon_plant");
+            ui.iconLock = LoadSkin("icon_lock");
+            if (frame == null)
+                Debug.LogWarning("[CodexSetup] ไม่พบสไปรต์ frame_metal — รัน 'Setup Codex UI Sprites' ก่อนแล้วรันเมนูนี้ซ้ำ");
+
+            // แผงเดิมทิ้ง — สร้างใหม่ตามสกินโลหะ (mockup)
             var old = hudCanvas.transform.Find("CodexPanel");
             if (old != null) Object.DestroyImmediate(old.gameObject);
 
-            // ── Panel (ขวา 720px เต็มสูง) ──
+            const float PW = 1360f, PH = 880f;
+
+            // ── Panel (กลางจอ · กรอบโลหะ 9-slice · ย่อ 0.9 ให้พอดี ref 1536×864) ──
             var panel = CreateOrGet("CodexPanel", hudCanvas.transform);
             {
                 var rect = panel.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(1f, 0f); rect.anchorMax = new Vector2(1f, 1f);
-                rect.pivot = new Vector2(1f, 0.5f);
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
                 rect.anchoredPosition = Vector2.zero;
-                rect.sizeDelta = new Vector2(720, 0);
-                EnsureImage(panel).color = new Color(0.07f, 0.075f, 0.11f, 0.97f);
+                rect.sizeDelta = new Vector2(PW, PH);
+                rect.localScale = new Vector3(0.9f, 0.9f, 1f);
+                SetSkin(panel, frame, sliced: true);
                 panel.SetActive(false);
             }
             ui.codexPanel = panel;
 
-            // ── Header (h 88): ชื่อ + ความคืบหน้า + ย้ำถาวร + ปิด ──
-            var header = CreateOrGet("CodexHeader", panel.transform);
+            // ── Header: ไอคอนหนังสือ + ชื่อ (ฟ้า) + ความคืบหน้า (ทอง) + ปิด ──
+            var icon = CreateOrGet("HeaderIcon", panel.transform);
             {
-                var rect = header.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1);
-                rect.pivot = new Vector2(0.5f, 1); rect.anchoredPosition = Vector2.zero;
-                rect.sizeDelta = new Vector2(0, 88);
-                EnsureImage(header).color = new Color(0.045f, 0.05f, 0.08f, 1f);
-
-                var title = CreateText("CodexTitle", header.transform, font, "คลังความรู้ (Codex)", 24,
-                    new Vector2(16, -8), new Vector2(400, 34), TextAnchor.MiddleLeft);
-                TopLeft(title.rectTransform);
-                title.fontStyle = FontStyle.Bold;
-                title.color = new Color(0.45f, 0.85f, 1f);
-
-                ui.progressText = CreateText("Progress", header.transform, font, "ปลดแล้ว 0 / 11", 20,
-                    new Vector2(-70, -12), new Vector2(240, 30), TextAnchor.MiddleRight);
-                TopRight(ui.progressText.rectTransform);
-                ui.progressText.color = new Color(1f, 0.85f, 0.35f);
-                ui.progressText.fontStyle = FontStyle.Bold;
-
-                var note = CreateText("PersistNote", header.transform, font,
-                    "ความรู้บันทึกถาวร — ไม่รีเซ็ตแม้เริ่มเกมใหม่", 14,
-                    new Vector2(16, -48), new Vector2(500, 22), TextAnchor.MiddleLeft);
-                TopLeft(note.rectTransform);
-                note.color = new Color(0.55f, 0.62f, 0.68f);
-
-                var closeBtn = CreateButton("CloseBtn", header.transform, font, "✕", 20,
-                    new Vector2(-8, -8), new Vector2(40, 40));
-                TopRight(closeBtn.GetComponent<RectTransform>());
-                EnsureImage(closeBtn.gameObject).color = new Color(0.45f, 0.18f, 0.16f, 1f);
-                ui.closeButton = closeBtn; // wire ตอน runtime ใน CodexUIController.WireTabs (lambda จาก editor ไม่ persist)
+                var rect = icon.GetComponent<RectTransform>();
+                TopLeft(rect); rect.anchoredPosition = new Vector2(30, -20); rect.sizeDelta = new Vector2(118, 118);
+                SetSkin(icon, LoadSkin("header_book"), sliced: false);
             }
 
-            // ── Tabs (h 40): ทั้งหมด / เตา-ฟิวชัน / แพทย์-รังสี / เกษตร / จริยธรรม ──
-            var tabs = CreateOrGet("CodexTabs", panel.transform);
-            {
-                var rect = tabs.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1);
-                rect.pivot = new Vector2(0.5f, 1);
-                rect.anchoredPosition = new Vector2(0, -88);
-                rect.sizeDelta = new Vector2(0, 40);
-                EnsureImage(tabs).color = new Color(0.06f, 0.065f, 0.095f, 1f);
+            var title = CreateText("CodexTitle", panel.transform, font, "คลังความรู้ (Codex)", 40,
+                new Vector2(168, -24), new Vector2(760, 56), TextAnchor.MiddleLeft);
+            TopLeft(title.rectTransform);
+            title.fontStyle = FontStyle.Bold;
+            title.color = new Color(0.47f, 0.84f, 1f);
 
-                float w = (720f - 24f) / 5f;
-                ui.tabAll = TabButton(tabs.transform, font, "TabAll", "ทั้งหมด", 0, w);
-                ui.tabReactor = TabButton(tabs.transform, font, "TabReactor", "เตา/ฟิวชัน", 1, w);
-                ui.tabMedical = TabButton(tabs.transform, font, "TabMedical", "แพทย์/รังสี", 2, w);
-                ui.tabAgriculture = TabButton(tabs.transform, font, "TabAgri", "เกษตร", 3, w);
-                ui.tabEthics = TabButton(tabs.transform, font, "TabEthics", "จริยธรรม", 4, w);
-            }
+            ui.progressText = CreateText("Progress", panel.transform, font, "ปลดแล้ว 0 / 11", 24,
+                new Vector2(172, -96), new Vector2(900, 34), TextAnchor.MiddleLeft);
+            TopLeft(ui.progressText.rectTransform);
+            ui.progressText.color = new Color(1f, 0.82f, 0.35f);
+            ui.progressText.fontStyle = FontStyle.Bold;
 
-            // ── Left pane: entry list (w 260) ──
+            var closeBtn = CreateButton("CloseBtn", panel.transform, font, "✕", 30,
+                new Vector2(-28, -22), new Vector2(72, 72));
+            TopRight(closeBtn.GetComponent<RectTransform>());
+            var closeImg = EnsureImage(closeBtn.gameObject);
+            closeImg.sprite = null; closeImg.type = Image.Type.Simple;
+            closeImg.color = new Color(0.16f, 0.13f, 0.11f, 1f);
+            ui.closeButton = closeBtn; // wire runtime ใน CodexUIController.WireTabs
+
+            // ── Tabs (5 แท็บโลหะ ข้อความ baked · เลือก = ขอบเรืองฟ้า) ──
+            const float gap = 12f, margin = 30f, th = 74f;
+            float tw = (PW - margin * 2 - gap * 4) / 5f;
+            ui.tabAll = TabButton(panel.transform, "TabAll", "tab_all", 0, tw, th, gap, margin);
+            ui.tabReactor = TabButton(panel.transform, "TabReactor", "tab_reactor", 1, tw, th, gap, margin);
+            ui.tabMedical = TabButton(panel.transform, "TabMedical", "tab_medical", 2, tw, th, gap, margin);
+            ui.tabAgriculture = TabButton(panel.transform, "TabAgri", "tab_agri", 3, tw, th, gap, margin);
+            ui.tabEthics = TabButton(panel.transform, "TabEthics", "tab_ethics", 4, tw, th, gap, margin);
+
+            // ── Left pane: entry list (กรอบโลหะ) ──
             var leftPane = CreateOrGet("EntryListPane", panel.transform);
             {
                 var rect = leftPane.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0, 0); rect.anchorMax = new Vector2(0, 1);
-                rect.pivot = new Vector2(0, 0.5f);
-                rect.anchoredPosition = new Vector2(0, -64);
-                rect.sizeDelta = new Vector2(260, -128);
-                EnsureImage(leftPane).color = new Color(0.055f, 0.06f, 0.09f, 1f);
+                rect.anchorMin = new Vector2(0.022f, 0.034f); rect.anchorMax = new Vector2(0.34f, 0.735f);
+                rect.offsetMin = Vector2.zero; rect.offsetMax = Vector2.zero;
+                SetSkin(leftPane, frame, sliced: true);
             }
-            var content = BuildScrollList(leftPane.transform, out var template, font);
+            var content = BuildScrollList(leftPane.transform, out var template, font, ui.plateSprite);
             ui.entryListParent = content.transform;
             ui.entryButtonPrefab = template;
 
-            // ── Right pane: detail ──
+            // ── Right pane: detail (กรอบโลหะ) ──
             var detailPane = CreateOrGet("DetailPane", panel.transform);
             {
                 var rect = detailPane.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0, 0); rect.anchorMax = new Vector2(1, 1);
-                rect.pivot = new Vector2(0, 0.5f);
-                rect.offsetMin = new Vector2(264, 0);
-                rect.offsetMax = new Vector2(0, -128);
-                EnsureImage(detailPane).color = new Color(0.05f, 0.052f, 0.085f, 1f);
+                rect.anchorMin = new Vector2(0.36f, 0.034f); rect.anchorMax = new Vector2(0.978f, 0.735f);
+                rect.offsetMin = Vector2.zero; rect.offsetMax = Vector2.zero;
+                SetSkin(detailPane, frame, sliced: true);
             }
 
-            // pill หมวด + แหล่งปลด (แถวบนของแผงขวา)
+            // pill หมวด + แหล่งปลด
             var pillGO = CreateOrGet("DetailPill", detailPane.transform);
             {
                 var rect = pillGO.GetComponent<RectTransform>();
-                TopLeft(rect);
-                rect.anchoredPosition = new Vector2(12, -12);
-                rect.sizeDelta = new Vector2(120, 26);
+                TopLeft(rect); rect.anchoredPosition = new Vector2(36, -28); rect.sizeDelta = new Vector2(140, 40);
                 ui.detailPill = EnsureImage(pillGO);
                 ui.detailPill.color = new Color(0.3f, 0.55f, 0.9f);
-                ui.detailPillLabel = CreateText("PillLabel", pillGO.transform, font, "หมวด", 14,
-                    Vector2.zero, new Vector2(120, 26), TextAnchor.MiddleCenter);
+                ui.detailPillLabel = CreateText("PillLabel", pillGO.transform, font, "หมวด", 18,
+                    Vector2.zero, new Vector2(140, 40), TextAnchor.MiddleCenter);
                 Stretch(ui.detailPillLabel.rectTransform);
                 ui.detailPillLabel.fontStyle = FontStyle.Bold;
             }
-            ui.detailUnlockFrom = CreateText("DetailUnlockFrom", detailPane.transform, font, "", 14,
-                new Vector2(142, -12), new Vector2(280, 26), TextAnchor.MiddleLeft);
+            ui.detailUnlockFrom = CreateText("DetailUnlockFrom", detailPane.transform, font, "", 18,
+                new Vector2(190, -28), new Vector2(340, 40), TextAnchor.MiddleLeft);
             TopLeft(ui.detailUnlockFrom.rectTransform);
-            ui.detailUnlockFrom.color = new Color(0.6f, 0.68f, 0.74f);
+            ui.detailUnlockFrom.color = new Color(0.62f, 0.7f, 0.76f);
 
-            ui.detailTitle = CreateText("DetailTitle", detailPane.transform, font, "เลือกหัวข้อทางซ้าย", 22,
-                new Vector2(12, -46), new Vector2(-24, 32), TextAnchor.MiddleLeft);
+            ui.detailTitle = CreateText("DetailTitle", detailPane.transform, font, "เลือกหัวข้อทางซ้าย", 34,
+                new Vector2(36, -78), new Vector2(-72, 52), TextAnchor.MiddleLeft);
             TopStretch(ui.detailTitle.rectTransform);
             ui.detailTitle.fontStyle = FontStyle.Bold;
 
-            ui.detailTitleEn = CreateText("DetailTitleEn", detailPane.transform, font, "", 15,
-                new Vector2(12, -80), new Vector2(-24, 22), TextAnchor.MiddleLeft);
+            ui.detailTitleEn = CreateText("DetailTitleEn", detailPane.transform, font, "", 16,
+                new Vector2(36, -128), new Vector2(-72, 24), TextAnchor.MiddleLeft);
             TopStretch(ui.detailTitleEn.rectTransform);
             ui.detailTitleEn.color = new Color(0.55f, 0.62f, 0.68f);
             ui.detailTitleEn.fontStyle = FontStyle.Italic;
 
-            // illustration (โชว์เมื่อ entry มีรูป)
+            // illustration (โชว์เมื่อ entry มีรูป — มุมขวาบน)
             var illustGO = CreateOrGet("DetailIllustration", detailPane.transform);
             {
                 var rect = illustGO.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(1, 1); rect.anchorMax = new Vector2(1, 1);
-                rect.pivot = new Vector2(1, 1);
-                rect.anchoredPosition = new Vector2(-12, -46);
-                rect.sizeDelta = new Vector2(100, 80);
+                rect.anchorMin = rect.anchorMax = new Vector2(1, 1); rect.pivot = new Vector2(1, 1);
+                rect.anchoredPosition = new Vector2(-20, -80); rect.sizeDelta = new Vector2(120, 96);
                 ui.detailIllustration = EnsureImage(illustGO);
                 ui.detailIllustration.color = Color.white;
                 illustGO.SetActive(false);
@@ -276,15 +267,14 @@ namespace NuclearReMind.EditorTools
             {
                 var rect = dScroll.GetComponent<RectTransform>();
                 rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
-                rect.offsetMin = new Vector2(12, 44); rect.offsetMax = new Vector2(-12, -108);
+                rect.offsetMin = new Vector2(36, 90); rect.offsetMax = new Vector2(-24, -156);
             }
             var dViewport = CreateOrGet("DViewport", dScroll.transform);
             {
                 EnsureImage(dViewport).color = Color.clear;
                 var mask = dViewport.GetComponent<Mask>() ?? dViewport.AddComponent<Mask>();
                 mask.showMaskGraphic = false;
-                var rect = dViewport.GetComponent<RectTransform>();
-                Stretch(rect);
+                Stretch(dViewport.GetComponent<RectTransform>());
             }
             var dContent = CreateOrGet("DContent", dViewport.transform);
             {
@@ -292,35 +282,46 @@ namespace NuclearReMind.EditorTools
                 rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1);
                 rect.pivot = new Vector2(0.5f, 1);
                 rect.anchoredPosition = Vector2.zero;
-                rect.sizeDelta = new Vector2(0, 600);
+                rect.sizeDelta = new Vector2(0, 700);
                 var dsr = dScroll.GetComponent<ScrollRect>() ?? dScroll.AddComponent<ScrollRect>();
                 dsr.content = rect; dsr.viewport = dViewport.GetComponent<RectTransform>();
                 dsr.horizontal = false; dsr.vertical = true;
                 dsr.movementType = ScrollRect.MovementType.Clamped;
             }
-            ui.detailContent = CreateText("DetailContent", dContent.transform, font, "", 17,
-                Vector2.zero, new Vector2(0, 600), TextAnchor.UpperLeft);
+            ui.detailContent = CreateText("DetailContent", dContent.transform, font, "", 22,
+                Vector2.zero, new Vector2(0, 700), TextAnchor.UpperLeft);
             {
                 var rect = ui.detailContent.rectTransform;
                 Stretch(rect);
                 rect.offsetMin = new Vector2(4, 4); rect.offsetMax = new Vector2(-4, -4);
             }
-            ui.detailContent.color = new Color(0.92f, 0.92f, 0.88f);
+            ui.detailContent.color = new Color(0.9f, 0.9f, 0.85f);
             ui.detailContent.horizontalOverflow = HorizontalWrapMode.Wrap;
             ui.detailContent.verticalOverflow = VerticalWrapMode.Overflow;
-            ui.detailContent.lineSpacing = 1.35f;
+            ui.detailContent.lineSpacing = 1.4f;
 
-            // แถบท้าย: "+2 Knowledge" (ไม่มีผู้บรรยาย VESTA — ตัดตาม v8)
-            ui.detailFooter = CreateText("DetailFooter", detailPane.transform, font, "", 14,
-                new Vector2(12, 12), new Vector2(-24, 24), TextAnchor.MiddleLeft);
+            // แถบท้าย: "+2 Knowledge" (ไม่มี VESTA) — แถบมืดบนกรอบ
+            var footerBar = CreateOrGet("FooterBar", detailPane.transform);
             {
-                var rect = ui.detailFooter.rectTransform;
+                var rect = footerBar.GetComponent<RectTransform>();
                 rect.anchorMin = new Vector2(0, 0); rect.anchorMax = new Vector2(1, 0);
                 rect.pivot = new Vector2(0.5f, 0);
+                rect.anchoredPosition = new Vector2(0, 22);
+                rect.sizeDelta = new Vector2(-72, 52);
+                var fimg = EnsureImage(footerBar);
+                fimg.sprite = null; fimg.type = Image.Type.Simple;
+                fimg.color = new Color(0.11f, 0.095f, 0.08f, 0.96f);
             }
-            ui.detailFooter.color = new Color(1f, 0.85f, 0.35f, 0.85f);
+            ui.detailFooter = CreateText("DetailFooter", footerBar.transform, font, "", 18,
+                Vector2.zero, Vector2.zero, TextAnchor.MiddleLeft);
+            {
+                var rect = ui.detailFooter.rectTransform;
+                Stretch(rect); rect.offsetMin = new Vector2(20, 0); rect.offsetMax = new Vector2(-20, 0);
+            }
+            ui.detailFooter.color = new Color(1f, 0.82f, 0.35f);
+            ui.detailFooter.fontStyle = FontStyle.Bold;
 
-            // ── ปุ่ม Codex บน HUD (ตำแหน่งเดิม — ค่าเมตา เข้าได้ตลอด) ──
+            // ── ปุ่ม Codex บน HUD (ค่าเมตา เข้าได้ตลอด · คีย์ลัด C) ──
             var codexBtnGO = GameObject.Find("CodexToggleButton");
             if (codexBtnGO == null)
             {
@@ -329,8 +330,7 @@ namespace NuclearReMind.EditorTools
                 EnsureImage(btn.gameObject).color = new Color(0.1f, 0.15f, 0.28f, 0.9f);
                 codexBtnGO = btn.gameObject;
             }
-            var toggleBtn = codexBtnGO.GetComponent<Button>();
-            ui.toggleButton = toggleBtn; // wire ตอน runtime ใน CodexUIController.WireTabs (lambda จาก editor ไม่ persist)
+            ui.toggleButton = codexBtnGO.GetComponent<Button>();
             var btnRect = codexBtnGO.GetComponent<RectTransform>();
             btnRect.anchorMin = Vector2.zero; btnRect.anchorMax = Vector2.zero;
             btnRect.pivot = Vector2.zero;
@@ -340,24 +340,33 @@ namespace NuclearReMind.EditorTools
             EditorUtility.SetDirty(ui);
         }
 
-        private static Button TabButton(Transform parent, Font font, string name, string label, int index, float w)
+        // แท็บโลหะ (สไปรต์ข้อความ baked) + Outline เรืองฟ้าตอนเลือก (ปิดไว้ก่อน)
+        private static Button TabButton(Transform parent, string name, string spriteName,
+            int index, float w, float h, float gap, float margin)
         {
-            var btn = CreateButton(name, parent, font, label, 15,
-                new Vector2(12 + index * w, -4), new Vector2(w - 4, 32));
-            var rect = btn.GetComponent<RectTransform>();
+            var go = CreateOrGet(name, parent);
+            var rect = go.GetComponent<RectTransform>();
             TopLeft(rect);
-            rect.anchoredPosition = new Vector2(12 + index * w, -4);
-            EnsureImage(btn.gameObject).color = new Color(0.13f, 0.14f, 0.18f, 1f);
+            rect.anchoredPosition = new Vector2(margin + index * (w + gap), -150f);
+            rect.sizeDelta = new Vector2(w, h);
+            var img = EnsureImage(go);
+            img.sprite = LoadSkin(spriteName); img.type = Image.Type.Simple; img.color = Color.white;
+            var btn = go.GetComponent<Button>() ?? go.AddComponent<Button>();
+            btn.targetGraphic = img;
+            var ol = go.GetComponent<UnityEngine.UI.Outline>() ?? go.AddComponent<UnityEngine.UI.Outline>();
+            ol.effectColor = new Color(0.35f, 0.82f, 1f, 0.95f);
+            ol.effectDistance = new Vector2(3, -3);
+            ol.enabled = false;
             return btn;
         }
 
-        private static GameObject BuildScrollList(Transform pane, out GameObject template, Font font)
+        private static GameObject BuildScrollList(Transform pane, out GameObject template, Font font, Sprite plate)
         {
             var scroll = CreateOrGet("EntryScroll", pane);
             {
                 var rect = scroll.GetComponent<RectTransform>();
                 Stretch(rect);
-                rect.offsetMin = new Vector2(4, 4); rect.offsetMax = new Vector2(-4, -4);
+                rect.offsetMin = new Vector2(16, 16); rect.offsetMax = new Vector2(-16, -16);
             }
             var viewport = CreateOrGet("Viewport", scroll.transform);
             {
@@ -374,8 +383,9 @@ namespace NuclearReMind.EditorTools
                 rect.anchoredPosition = Vector2.zero;
                 rect.sizeDelta = Vector2.zero;
                 var vlg = content.GetComponent<VerticalLayoutGroup>() ?? content.AddComponent<VerticalLayoutGroup>();
-                vlg.spacing = 4f; vlg.padding = new RectOffset(4, 4, 4, 4);
+                vlg.spacing = 8f; vlg.padding = new RectOffset(2, 2, 2, 2);
                 vlg.childControlHeight = false; vlg.childForceExpandHeight = false;
+                vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
                 var csf = content.GetComponent<ContentSizeFitter>() ?? content.AddComponent<ContentSizeFitter>();
                 csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
                 var sr = scroll.GetComponent<ScrollRect>() ?? scroll.AddComponent<ScrollRect>();
@@ -384,28 +394,51 @@ namespace NuclearReMind.EditorTools
                 sr.movementType = ScrollRect.MovementType.Clamped;
             }
 
+            // template แถว: แผ่นโลหะ + ไอคอนซ้าย + ชื่อ + Outline เรืองฟ้าตอนเลือก
             template = CreateOrGet("EntryButtonTemplate", content.transform);
             {
                 var rect = template.GetComponent<RectTransform>();
-                rect.sizeDelta = new Vector2(244, 42);
-                EnsureImage(template).color = new Color(0.14f, 0.15f, 0.21f, 1f);
+                rect.sizeDelta = new Vector2(0, 92);
+                var le = template.GetComponent<LayoutElement>() ?? template.AddComponent<LayoutElement>();
+                le.minHeight = 92; le.preferredHeight = 92;
+                var img = EnsureImage(template);
+                img.sprite = plate; img.type = Image.Type.Simple; img.color = Color.white;
                 var btn = template.GetComponent<Button>() ?? template.AddComponent<Button>();
-                btn.targetGraphic = template.GetComponent<Image>();
-                var cb = btn.colors;
-                cb.normalColor = new Color(0.14f, 0.15f, 0.21f, 1f);
-                cb.highlightedColor = new Color(0.24f, 0.34f, 0.52f, 1f);
-                cb.pressedColor = new Color(0.10f, 0.20f, 0.38f, 1f);
-                btn.colors = cb;
-                var label = CreateText("Label", template.transform, font, "Entry", 15,
-                    new Vector2(10, 0), new Vector2(228, 42), TextAnchor.MiddleLeft);
-                TopLeft(label.rectTransform);
-                label.rectTransform.anchorMin = new Vector2(0, 0);
-                label.rectTransform.anchorMax = new Vector2(1, 1);
-                label.rectTransform.offsetMin = new Vector2(10, 0);
-                label.rectTransform.offsetMax = new Vector2(-6, 0);
+                btn.targetGraphic = img;
+                var ol = template.GetComponent<UnityEngine.UI.Outline>() ?? template.AddComponent<UnityEngine.UI.Outline>();
+                ol.effectColor = new Color(0.35f, 0.82f, 1f, 0.95f);
+                ol.effectDistance = new Vector2(3, -3);
+                ol.enabled = false;
+
+                var iconGO = CreateOrGet("Icon", template.transform);
+                var ir = iconGO.GetComponent<RectTransform>();
+                ir.anchorMin = new Vector2(0, 0.5f); ir.anchorMax = new Vector2(0, 0.5f); ir.pivot = new Vector2(0, 0.5f);
+                ir.anchoredPosition = new Vector2(16, 0); ir.sizeDelta = new Vector2(64, 64);
+                EnsureImage(iconGO).color = Color.white; // sprite เซ็ตตอน runtime
+
+                var label = CreateText("Label", template.transform, font, "Entry", 26,
+                    Vector2.zero, Vector2.zero, TextAnchor.MiddleLeft);
+                var lr = label.rectTransform;
+                lr.anchorMin = new Vector2(0, 0); lr.anchorMax = new Vector2(1, 1);
+                lr.offsetMin = new Vector2(104, 0); lr.offsetMax = new Vector2(-10, 0);
+                label.fontStyle = FontStyle.Bold;
+
                 template.SetActive(false);
             }
             return content;
+        }
+
+        // ── สกินโลหะ helpers ──
+        private static Sprite LoadSkin(string name)
+            => AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/Resources/CodexUI/{name}.png");
+
+        // เซ็ตสไปรต์กรอบ/ไอคอนให้ Image · sliced = กรอบ 9-slice (frame_metal) · null = fallback สีมืด
+        private static void SetSkin(GameObject go, Sprite sprite, bool sliced)
+        {
+            var img = EnsureImage(go);
+            img.sprite = sprite;
+            img.type = sliced ? Image.Type.Sliced : Image.Type.Simple;
+            img.color = sprite != null ? Color.white : new Color(0.09f, 0.085f, 0.11f, 0.98f);
         }
 
         // ─────────────────────────────────────────────

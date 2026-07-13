@@ -42,6 +42,10 @@ namespace NuclearReMind.Editor
         // fallback เมื่อไม่พบ GridManager ในซีน — ขนาดจริงอ่านจาก GridManager.columns×rows
         private const int FallbackColumns = 20;
         private const int FallbackRows = 12;
+        // ขอบพื้นตกแต่ง "รกร้าง" รอบนอกกริดจริง — ค่าคุม (margin/darken/edge) เป็น serialized บน OreDepositManager
+        // ช่องนอก [0,columns)×[0,rows) ไม่ใช่ cell ของ GridManager → GetCell คืน null → วาง building ไม่ได้เอง
+        // fallback margin เมื่อไม่พบ OreDepositManager ในซีน (พาเลตต์สี fallback = GroundPalette.Default)
+        private const int FallbackApronMargin = 35;
 
         [MenuItem("NuclearReMind/Fill Grids (Ground + Fog)")]
         public static void FillFromMenu()
@@ -93,7 +97,12 @@ namespace NuclearReMind.Editor
                     Debug.LogWarning("[GridSpriteFiller] ไม่มีไทล์คู่เข้มครบ (Flat/Dark) — Zone A จะเป็นสีอ่อนล้วน (ไม่มีลายหมากรุก) · " +
                                      "รัน 'Flatten Ground Tiles (Top Face)' ใหม่เพื่อสร้างคู่เข้ม");
                 int border = ReadBorderThickness();
-                int g = FillZonedRandom(GroundObjectName, flatGrass, flatGrassDark, flatDirt, blockGrass, blockDirt, columns, rows, border);
+                // ทาสีต่อ tile ด้วย ColorForTile (ไล่เฟด A→B + มืดนอกกริด) — ใช้ carrier ใบเดียวเป็นตัวรับสี (tint)
+                TileBase carrier = flatGrass.Count > 0 ? flatGrass[0]
+                                 : flatDirt.Count > 0 ? flatDirt[0]
+                                 : blockGrass.Count > 0 ? blockGrass[0] : blockDirt[0];
+                var (gMargin, gPal) = ReadGroundConfig();
+                int g = FillTintedGround(GroundObjectName, carrier, columns, rows, border, gMargin, gPal);
                 if (g < 0) return (-1, 0);
                 // fog: ไทล์แบนใบเดียวถ้ามี (สะอาดใต้หมอก) ไม่งั้นไทล์แบน/บล็อกตัวแรกในชุด
                 TileBase fogTile = grassA
@@ -174,52 +183,51 @@ namespace NuclearReMind.Editor
         private static TileBase FirstOr(List<TileBase> a, List<TileBase> b)
             => a.Count > 0 ? a[0] : (b.Count > 0 ? b[0] : null);
 
-        // ระบาย Ground: ทุกช่อง (รวมขอบ) = หน้าบนแบน flat_XXX — พื้นเรียบเนียนทั้งแมพ ไม่มีผนัง/ขอบยกสูง
-        //   บล็อกเต็ม (blockGrass/blockDirt) เก็บไว้เป็น fallback เท่านั้น (ใช้เมื่อยังไม่ได้สร้างไทล์แบน)
-        // ★ สุ่มด้วย IsoGroundPainter.Hash(col,row) ไม่ใช่ Random — ลายคงที่ทุก re-fill/โหลดเซฟ (อาคารไม่ขยับตามพื้น)
-        private static int FillZonedRandom(string objectName,
-                                           List<TileBase> flatGrass, List<TileBase> flatGrassDark,
-                                           List<TileBase> flatDirt,
-                                           List<TileBase> blockGrass, List<TileBase> blockDirt,
-                                           int columns, int rows, int border)
+        // ทาสีพื้น isometric ต่อ tile ด้วย IsoGroundPainter.ColorForTile — carrier tile ใบเดียวเป็นตัวรับสี (SetColor)
+        //   ในกริด [0,columns)×[0,rows): ไล่เฟด A(เขียว)→B(น้ำตาล) เนียนต่อ tile + หมากรุก base/alt (คุมด้วยสี ไม่ใช่ไทล์)
+        //   นอกกริด (apron margin ช่องทุกด้าน): น้ำตาลคูณ outsideDarken ไล่เนียนที่ขอบ · นอก cell กริด = วาง building ไม่ได้
+        // ★ Hash(col,row) deterministic → ลายคงที่ทุก re-fill (ไม่ใช้ Random)
+        private static int FillTintedGround(string objectName, TileBase carrier,
+                                            int columns, int rows, int border, int margin, NuclearReMind.GroundPalette pal)
         {
             Tilemap map = FindTilemap(objectName);
             if (map == null) return -1;
+            if (carrier == null) { Debug.LogError($"[GridSpriteFiller] ไม่มี carrier tile สำหรับ '{objectName}'"); return -1; }
 
             Undo.RegisterCompleteObjectUndo(map, "Fill Grid");
             map.ClearAllTiles();
 
-            // ลายหมากรุก Zone A ทำได้ต่อเมื่อมีคู่เข้มครบ parallel กับหญ้าอ่อน
-            bool checker = flatGrassDark.Count == flatGrass.Count && flatGrass.Count > 0;
-
-            int count = 0;
-            for (int x = 0; x < columns; x++)
-                for (int y = 0; y < rows; y++)
+            int m = Mathf.Max(0, margin);
+            int count = 0, inner = 0;
+            for (int x = -m; x < columns + m; x++)
+                for (int y = -m; y < rows + m; y++)
                 {
-                    bool zoneA = NuclearReMind.IsoGroundPainter.IsZoneA(x, y, columns, rows, border);
-
-                    // ทุกช่องใช้หน้าบนแบนของโซน · ถ้ายังไม่มีไทล์แบน ถอยไปบล็อกเต็ม
-                    var flat = zoneA ? flatGrass : flatDirt;
-                    var block = zoneA ? blockGrass : blockDirt;
-                    var list = flat.Count > 0 ? flat : block;
-
-                    // ถ้าชุดของโซนว่าง ยืมอีกโซน (กันพื้นโหว่)
-                    if (list.Count == 0) list = FallbackList(zoneA, flatGrass, flatDirt, blockGrass, blockDirt);
-                    if (list.Count == 0) continue;
-
-                    // สุ่มคงที่ด้วย Hash(col,row) — เลือก "ใบหญ้า" · Zone A: ช่อง (x+y) คี่ = คู่เข้ม (ลายหมากรุก)
-                    int idx = NuclearReMind.IsoGroundPainter.Hash(x, y) % list.Count;
-                    bool darkCell = checker && zoneA && list == flatGrass && ((x + y) & 1) == 1;
-                    map.SetTile(new Vector3Int(x, y, 0), darkCell ? flatGrassDark[idx] : list[idx]);
+                    var pos = new Vector3Int(x, y, 0);
+                    map.SetTile(pos, carrier);
+                    map.SetTileFlags(pos, TileFlags.None); // ปลดล็อกสี ให้ SetColor มีผล
+                    map.SetColor(pos, NuclearReMind.IsoGroundPainter.ColorForTile(x, y, columns, rows, border, pal));
                     count++;
+                    if (x >= 0 && x < columns && y >= 0 && y < rows) inner++;
                 }
 
             map.CompressBounds();
             EditorUtility.SetDirty(map);
-            Debug.Log($"[GridSpriteFiller] เติม '{objectName}' {columns}×{rows} = {count} ช่อง " +
-                      $"(Zone A {(checker ? "ลายหมากรุกอ่อน/เข้ม" : "อ่อนล้วน")} · หญ้าแบน {flatGrass.Count}/เข้ม {flatGrassDark.Count}/บล็อก {blockGrass.Count} · " +
-                      $"ดินแบน {flatDirt.Count})");
+            Debug.Log($"[GridSpriteFiller] ทาสีพื้น '{objectName}' ในกริด {inner} + นอกกริด {count - inner} = {count} ช่อง " +
+                      $"(margin {m} · transition {pal.transitionWidth} · outsideDarken {pal.outsideDarken:0.00})");
             return count;
+        }
+
+        // ค่าคุมพื้น (margin + พาเลตต์สี) จาก OreDepositManager (serialized · แหล่งความจริงเดียว) — fallback ถ้าไม่พบ/ยังไม่ตั้ง
+        private static (int margin, NuclearReMind.GroundPalette pal) ReadGroundConfig()
+        {
+            var ore = Object.FindFirstObjectByType<NuclearReMind.OreDepositManager>();
+            if (ore != null)
+            {
+                var pal = ore.groundPalette;
+                if (pal.zoneA_base.a < 0.5f) pal = NuclearReMind.GroundPalette.Default; // instance เก่ายังไม่ตั้ง (struct ศูนย์)
+                return (Mathf.Max(0, ore.apronMargin), pal);
+            }
+            return (FallbackApronMargin, NuclearReMind.GroundPalette.Default);
         }
 
         // ชุดสำรองเมื่อโซนที่ต้องการว่าง — ไล่จากแบนโซนนั้น → บล็อกโซนนั้น → อีกโซน

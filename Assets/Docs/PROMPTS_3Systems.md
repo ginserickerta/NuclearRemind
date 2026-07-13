@@ -9,7 +9,7 @@
 
 ```
 คุณกำลังพัฒนา "NUCLEAR Re:Mind" เกม isometric edu-survival city-builder ใน Unity 6 (6000.3.6f1), C#.
-ยึด GDD ไฟล์ "Assets/Docs/Final Plan/FINAL NUCLEAR ReMind V4.md" เป็นสเปกหลัก (ตัวเลขทั้งหมดมาจากที่นี่)
+ยึด GDD ไฟล์ "Assets/Docs/Final Plan/FINAL NUCLEAR ReMind V4.1.md" เป็นสเปกหลัก (v4.1 ล่าสุด — ตัวเลขทั้งหมดมาจากที่นี่ ไม่ใช่ V4.md เก่า)
 
 กฎสถาปัตยกรรมที่ห้ามผิด (มีใน CLAUDE.md):
 1. โค้ดเกมทั้งหมดอยู่ assembly เดียว NuclearReMind.asmdef · namespace NuclearReMind ทุกคลาส

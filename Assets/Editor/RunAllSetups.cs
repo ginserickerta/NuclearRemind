@@ -22,6 +22,11 @@ namespace NuclearReMind.EditorTools
             // ★ ต้องมาก่อนทุกขั้นที่คำนวณตำแหน่งจากขนาดกริด (pre-placed CORE TOWER §16, อนุสรณ์, แหล่งแร่ A/B)
             "NuclearReMind/Setup Grid 43x43",
 
+            // สไปรต์สกินโลหะ/ไม้ — import ก่อน HUD/Story UI (Quiz popup ใช้ frame_metal/plate_inset · การ์ดบันทึกใช้ frame_wood)
+            "NuclearReMind/Setup Codex UI Sprites",
+            "NuclearReMind/Setup Story UI Sprites",
+            "NuclearReMind/Setup HUD Sprites", // แผ่นวัน day_plate (Quiz/การ์ดใช้ frame_metal จาก Codex/Story) — ต้องก่อน HUD Canvas
+
             "NuclearReMind/Setup HUD Canvas",
             "NuclearReMind/Setup/Resource Icons + Rebuild HUD", // ไอคอนจริง + rebuild HUD (ต้องหลัง HUD Canvas ก่อนขั้นอื่น wire ทับ)
             "NuclearReMind/Setup Tooltip and Dilemma UI",
@@ -31,6 +36,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Phase 3 Population",
             "NuclearReMind/Setup/Character Sprites (คนงาน·วิศวกร·หมอ)", // art จริงแทน placeholder คนงาน (หลัง Phase 3 — spawner เพิ่งถูกสร้าง)
             "NuclearReMind/Setup Phase 6 Buildings",
+            // (Setup Codex UI Sprites ย้ายขึ้นไปก่อน HUD แล้ว — Quiz popup ใช้สกินนี้ด้วย)
             "NuclearReMind/Setup Codex System",
             "NuclearReMind/Setup Radiation System", // RadiationManager — exposure สะสม (Zone A §4)
             "NuclearReMind/Setup Crisis Effects",   // CrisisEffectManager — ผลกระทบวิกฤตเต็มระบบ (§4)
@@ -42,8 +48,10 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Day 11 Systems",
             "NuclearReMind/Setup Demolition System",
             "NuclearReMind/Setup Pause Menu", // PauseCanvas แยกจาก HUDCanvas — กด ESC ตอนเล่น
+            "NuclearReMind/Setup Dialogue Art", // นำเข้า Kova 9 อารมณ์ + กรอบ 3 ขนาด (ต้องก่อน Setup Story UI — SetupDialogueUI ใช้)
             "NuclearReMind/Setup Story UI",   // StoryCanvas แยกเช่นกัน — การ์ดเนื้อเรื่อง + Records + อนุสรณ์
             "NuclearReMind/Setup Story Content", // beats/records/info cards/อนุสรณ์ (ต้องหลัง Story UI + Crisis + Quiz)
+            "NuclearReMind/Setup Record Card UI", // การ์ดบันทึกธีมไม้ 2 ปุ่ม (canvas แยก · หลัง Story UI ที่ลบ StoryCanvas)
             "NuclearReMind/Setup Hospital (GDD §6)",       // โรงพยาบาล — asset + hotbar (ต้องหลัง Building Balance + Day 11)
             "NuclearReMind/Apply Building Art (Team Pixel Art)", // art จริงแทน placeholder (ต้องหลัง Hospital — asset เพิ่งถูกสร้าง)
             "NuclearReMind/Apply Building Level Art (L1-L3)",    // art แยกระดับอัปเกรด L1/L2/L3 (ทับ sprite เดี่ยวด้วย L1 — หลัง Building Art)
@@ -53,6 +61,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup/Atlas UI (building icons + cursors + speed)", // map icon ตาม index buildingHotbar — ต้องหลังทุกขั้นที่แก้ hotbar (Hospital/Ore Deposits/Resource Caps)
             "NuclearReMind/Update Building Hover Panel",    // ย้ายบาร์ก่อสร้างเข้าแผง hover (GDD §6 — หลัง HUD Canvas)
             "NuclearReMind/Setup Inventory (Items GDD §13)", // ItemSO 6 ชนิด + InventoryManager + แผงไอเทม (หลัง Hospital — pet_scanner ใช้ BuildingType.Hospital)
+            "NuclearReMind/Setup Side Menu Buttons",         // แถบปุ่มด้านข้าง 4 ปุ่มสไปรต์ (ไอเทม/คีย์ลัด/Codex/บันทึก) — หลัง HUD+Codex+Inventory
 
             "NuclearReMind/Setup Zone Barrier (Fence + Gate)", // ปิดรั้วเส้นตั้ง (Zone B เป็นกรอบรอบนอกแล้ว — ไม่ใช้รั้ว)
             "NuclearReMind/Setup Ground Tiles (Team Grass)",   // Tile หญ้าจาก Map.PNG (fallback ถ้าไม่มีไทล์คัด)

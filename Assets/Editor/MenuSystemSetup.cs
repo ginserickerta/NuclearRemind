@@ -170,41 +170,83 @@ namespace NuclearReMind.EditorTools
             // → MainMenu.unity ไม่มี EventSystem = ปุ่มกดไม่ได้ทั้งจอ · ซีนใหม่ว่างเปล่า สร้างเสมอ
             CreateEventSystem();
 
-            // พื้นหลังไล่เฉดเข้ม
+            // พื้นหลังเข้ม (โทนอุตสาหกรรม เข้ากับสไปรต์โลหะ)
             var bg = NewUI("Background", canvasGO.transform);
             Stretch(bg);
-            bg.AddComponent<Image>().color = new Color(0.05f, 0.07f, 0.13f, 1f);
+            bg.AddComponent<Image>().color = new Color(0.04f, 0.045f, 0.06f, 1f);
 
-            // โลโก้/ชื่อเกม
-            var title = MakeText(canvasGO.transform, "Title", "Nuclear Re:Mind", 84,
-                new Color(0.55f, 0.9f, 1f), TextAnchor.MiddleCenter, font);
-            Anchor(title, new Vector2(0.5f, 1f), new Vector2(0, -230), new Vector2(1200, 120));
-            title.fontStyle = FontStyle.Bold;
+            // โลโก้เกม (สไปรต์โลหะ · ข้อความ baked) — fallback ข้อความถ้ายังไม่ import
+            var titleSp = LoadUISprite("menu_title");
+            if (titleSp != null)
+            {
+                var logo = MakeSpriteImage(canvasGO.transform, "TitleLogo", titleSp);
+                Anchor(logo, new Vector2(0.5f, 1f), new Vector2(0, -40), new Vector2(980, 300));
+            }
+            else
+            {
+                var title = MakeText(canvasGO.transform, "Title", "Nuclear Re:Mind", 84,
+                    new Color(0.55f, 0.9f, 1f), TextAnchor.MiddleCenter, font);
+                Anchor(title, new Vector2(0.5f, 1f), new Vector2(0, -230), new Vector2(1200, 120));
+                title.fontStyle = FontStyle.Bold;
+                var subtitle = MakeText(canvasGO.transform, "Subtitle", "นิวเคลียร์เปลี่ยนความคิดโลก", 34,
+                    new Color(0.8f, 0.85f, 0.95f), TextAnchor.MiddleCenter, font);
+                Anchor(subtitle, new Vector2(0.5f, 1f), new Vector2(0, -330), new Vector2(1000, 60));
+            }
 
-            var subtitle = MakeText(canvasGO.transform, "Subtitle", "นิวเคลียร์เปลี่ยนความคิดโลก", 34,
-                new Color(0.8f, 0.85f, 0.95f), TextAnchor.MiddleCenter, font);
-            Anchor(subtitle, new Vector2(0.5f, 1f), new Vector2(0, -330), new Vector2(1000, 60));
-
-            // ปุ่ม
+            // ปุ่ม (สไปรต์โลหะ เขียว/แดง · ข้อความ baked)
             var controllerGO = new GameObject("MainMenuController");
             var controller = controllerGO.AddComponent<MainMenuController>();
 
-            var btnSize = new Vector2(360, 66);
-            var newGame = MakeButton(canvasGO.transform, "NewGameButton", "เริ่มเกมใหม่", btnSize,
-                new Color(0.16f, 0.45f, 0.22f), font);
-            Center(newGame, new Vector2(0, -20), btnSize);
-
-            var quit = MakeButton(canvasGO.transform, "QuitButton", "ออกจากเกม", btnSize,
-                new Color(0.45f, 0.17f, 0.17f), font);
-            Center(quit, new Vector2(0, -110), btnSize);
+            var newSp  = LoadUISprite("menu_btn_newgame");
+            var quitSp = LoadUISprite("menu_btn_quit");
+            Button newGame, quit;
+            if (newSp != null && quitSp != null)
+            {
+                var btnSize = new Vector2(640f, 150f); // ~อัตราส่วน 4.4:1 (preserveAspect)
+                newGame = MakeSpriteButton(canvasGO.transform, "NewGameButton", newSp,  new Vector2(0, -10),  btnSize);
+                quit    = MakeSpriteButton(canvasGO.transform, "QuitButton",    quitSp, new Vector2(0, -190), btnSize);
+            }
+            else
+            {
+                Debug.LogWarning("[MenuSystemSetup] ไม่พบสไปรต์ปุ่มเมนูหลัก — ใช้ปุ่มแบบเรียบชั่วคราว (รัน Setup ซ้ำหลัง Unity import)");
+                var fb = new Vector2(360, 66);
+                newGame = MakeButton(canvasGO.transform, "NewGameButton", "เริ่มเกมใหม่", fb, new Color(0.16f, 0.45f, 0.22f), font);
+                Center(newGame, new Vector2(0, 20), fb);
+                quit = MakeButton(canvasGO.transform, "QuitButton", "ออกจากเกม", fb, new Color(0.45f, 0.17f, 0.17f), font);
+                Center(quit, new Vector2(0, -70), fb);
+            }
 
             UnityEventTools.AddPersistentListener(newGame.onClick, new UnityAction(controller.NewGame));
             UnityEventTools.AddPersistentListener(quit.onClick,    new UnityAction(controller.QuitGame));
 
-            // เครดิตล่าง
-            var credit = MakeText(canvasGO.transform, "Credit", "NSC 2026 · ทีมพัฒนา Veltara", 22,
-                new Color(0.5f, 0.55f, 0.65f), TextAnchor.MiddleCenter, font);
-            Anchor(credit, new Vector2(0.5f, 0f), new Vector2(0, 40), new Vector2(800, 40));
+            // เครดิตล่าง (สไปรต์ NSC 2026 · โปรแกรมเพื่อการเรียนรู้)
+            var footerSp = LoadUISprite("menu_footer");
+            if (footerSp != null)
+            {
+                var footer = MakeSpriteImage(canvasGO.transform, "Credit", footerSp);
+                Anchor(footer, new Vector2(0.5f, 0f), new Vector2(0, 40), new Vector2(820, 92));
+            }
+            else
+            {
+                var credit = MakeText(canvasGO.transform, "Credit", "NSC 2026 · ทีมพัฒนา Veltara", 22,
+                    new Color(0.5f, 0.55f, 0.65f), TextAnchor.MiddleCenter, font);
+                Anchor(credit, new Vector2(0.5f, 0f), new Vector2(0, 40), new Vector2(800, 40));
+            }
+        }
+
+        private static Sprite LoadUISprite(string name)
+            => AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/Sprites/UI/{name}.png");
+
+        // ภาพสไปรต์ตกแต่ง (ไม่กดได้) — โลโก้/เครดิต · preserveAspect กันภาพยืด
+        private static Image MakeSpriteImage(Transform parent, string name, Sprite sprite)
+        {
+            var go = NewUI(name, parent);
+            var img = go.AddComponent<Image>();
+            img.sprite = sprite;
+            img.preserveAspect = true;
+            img.color = Color.white;
+            img.raycastTarget = false;
+            return img;
         }
 
         private static void AddScenesToBuildSettings()

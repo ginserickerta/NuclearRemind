@@ -9,6 +9,9 @@ namespace NuclearReMind
     /// • ว่างงาน (idle): เดินเล่นวนไปมารอบจุดพักใกล้ CORE TOWER (เหมือนคนว่างงาน)
     /// recompute sortingOrder ทุกเฟรมจากตำแหน่งปัจจุบัน (จัดลำดับในหมู่คนงานด้วยกันตอนเดิน)
     ///
+    /// ★ ตัวตนคงที่ (AssignedCell + Slot): WorkerVisualSpawner เรียก SetAssigned/SetIdle เฉพาะตอนบทบาท
+    ///   "เปลี่ยนจริง ๆ" เท่านั้น — คนงานที่ยังอยู่ slot เดิมจะไม่ถูกแตะเลยแม้มีเหตุการณ์ประชากร/จัดคนที่อื่นในเมืองเกิดขึ้น
+    ///   (แก้บั๊กเดิม: ทุก event เคยสั่ง rebuild ตำแหน่งคนงานทั้งเมืองใหม่หมด ทำให้เดินตัดกัน/ซ้อนกันเรื่อย ๆ)
     /// ★ กันเดินทะลุกัน: LateUpdate แก้ตำแหน่งให้ไม่ซ้อนกัน (WorkerSeparation — ดูเหตุผลที่ไม่ใช้ฟิสิกส์ที่นั่น)
     ///   ทำใน LateUpdate เพราะทุกตัวเดินเสร็จใน Update แล้ว → ทุกคนเห็นตำแหน่งล่าสุดของกันและกัน
     /// ★ กันเดินทะลุอาคาร: ทุกการขยับ (ทั้งเดินเองและถูกเพื่อนดัน) ผ่าน MoveAvoidingBuildings
@@ -40,6 +43,13 @@ namespace NuclearReMind
         /// <summary>cell ของอาคารที่ประจำ (null = ว่าง/idle เดินเล่น)</summary>
         public Vector2Int? AssignedCell { get; private set; }
 
+        /// <summary>
+        /// ตัวตนที่คงที่ของ "บทบาท" ปัจจุบัน — slot ที่ N ของอาคาร (เมื่อ AssignedCell มีค่า)
+        /// หรือ slot พักที่ N ของแถวคนว่าง (เมื่อ AssignedCell เป็น null) · -1 = ยังไม่มีบทบาท (เพิ่งสร้าง)
+        /// WorkerVisualSpawner ใช้ค่านี้กันไม่ให้ "สลับตัว" คนงานทุกครั้งที่มีเหตุการณ์ไม่เกี่ยวข้องเกิดขึ้นที่อื่นในเมือง
+        /// </summary>
+        public int Slot { get; private set; } = -1;
+
         // ระยะที่ถือว่า "ถึงแล้ว" — ต้องใหญ่กว่า MoveTowards step ปกติเล็กน้อย
         private const float ArriveEpsilonSqr = 1e-4f;
 
@@ -60,10 +70,15 @@ namespace NuclearReMind
         private void OnEnable() => _active.Add(this);
         private void OnDisable() => _active.Remove(this);
 
-        /// <summary>ประจำอาคาร: เดินไปยืนที่ target แล้วหยุด (snap=true สำหรับ spawn ครั้งแรก/โหลดเซฟ)</summary>
-        public void SetAssigned(Vector3 target, Vector2Int cell, bool snap)
+        /// <summary>
+        /// ประจำอาคาร: เดินไปยืนที่ target แล้วหยุด (snap=true สำหรับ spawn ครั้งแรก/โหลดเซฟ)
+        /// slot = ตำแหน่งที่ N ของอาคารนี้ (คงที่ตราบใดที่ยังประจำอยู่ — WorkerVisualSpawner เป็นผู้คุม)
+        /// เรียกเฉพาะตอน "ได้ slot ใหม่จริง ๆ" เท่านั้น (ไม่เรียกซ้ำถ้ายังอยู่ slot เดิม) จึงไม่มี guard ในนี้
+        /// </summary>
+        public void SetAssigned(Vector3 target, Vector2Int cell, int slot, bool snap)
         {
             AssignedCell = cell;
+            Slot = slot;
             _wandering = false;
             _target = target;
             _seekTimer = 0f;
@@ -72,14 +87,18 @@ namespace NuclearReMind
             UpdateSorting();
         }
 
-        /// <summary>ว่างงาน: เดินเล่นวนรอบ anchor (จุดพักใกล้ CORE TOWER) — ไม่รีเซ็ตถ้ากำลังเดินเล่นจุดเดิมอยู่แล้ว</summary>
-        public void SetIdle(Vector3 anchor, bool snap)
+        /// <summary>
+        /// ว่างงาน: เดินเล่นวนรอบ anchor (จุดพักใกล้ CORE TOWER)
+        /// slot = ตำแหน่งพักที่ N (คงที่ตราบใดที่ยังว่างงาน) — slot เดิมเหมือนเดิม → ไม่รีเซ็ต (เดินเล่นต่อ ไม่กระตุกกลับ)
+        /// </summary>
+        public void SetIdle(Vector3 anchor, int slot, bool snap)
         {
-            bool alreadyWanderingHere = _wandering && (_idleAnchor - anchor).sqrMagnitude < 0.01f;
+            bool alreadyHere = !AssignedCell.HasValue && Slot == slot && _wandering;
             AssignedCell = null;
+            Slot = slot;
             _idleAnchor = anchor;
             _wandering = true;
-            if (alreadyWanderingHere) return; // เดินเล่นต่อ ไม่กระตุกกลับ anchor ทุกครั้งที่ rebuild
+            if (alreadyHere) return; // slot พักเดิม — เดินเล่นต่อ ไม่กระตุกกลับ anchor ทุกครั้งที่ rebuild
 
             _target = anchor;
             _pauseTimer = Random.Range(0f, idlePauseRange.y); // เหลื่อมเวลากันไม่ให้ทุกคนขยับพร้อมกัน
@@ -196,7 +215,8 @@ namespace NuclearReMind
             if (_sr == null) _sr = GetComponent<SpriteRenderer>();
             if (_sr == null || GridManager.Instance == null) return;
             var iso = GridManager.Instance.WorldToIso(transform.position);
-            _sr.sortingOrder = GridManager.SortOrder(iso.x, iso.y);
+            // Player(unit) = ชั้นล่างสุดตอนซ้อน depth เดียวกัน (อาคาร/แร่/tower ที่ depth เท่ากันวาดทับ)
+            _sr.sortingOrder = GridManager.SortOrder(iso.x, iso.y, GridManager.SortTier.Unit);
         }
     }
 }

@@ -13,6 +13,9 @@ namespace NuclearReMind
     {
         public string dilemmaId;
 
+        [Tooltip("หัวเรื่องวิกฤต (mockup: 'วิกฤต X') — data-driven ต่อ SO · ว่าง = UI ใช้ fallback 'เหตุการณ์วิกฤต'")]
+        public string title;
+
         [TextArea(3, 10)]
         public string scenarioText;
         public string choiceAText;

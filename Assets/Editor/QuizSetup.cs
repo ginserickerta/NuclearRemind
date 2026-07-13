@@ -59,6 +59,7 @@ namespace NuclearReMind.EditorTools
 
             asset.id              = def.id;
             asset.category        = def.category;
+            asset.topicTitle      = def.topicTitle;
             asset.question        = def.question;
             asset.options         = def.options;
             asset.correctIndex    = def.correctIndex;
@@ -144,6 +145,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "Q1", category = QuizCategory.Reactor, speaker = "VESTA",
+                topicTitle = "เชื้อเพลิงแรกจากน้ำ",
                 question = "เมื่อกี้เราสกัดเชื้อเพลิงตัวแรกจาก \"น้ำ\" ได้ เพราะอะไร?",
                 options = new[]
                 {
@@ -160,6 +162,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "Q2", category = QuizCategory.Reactor, speaker = "Dr. Auren Vasek",
+                topicTitle = "ทำไมพลาสมาถึงพัง",
                 question = "จาก Info Card เมื่อกี้ อะไรคือสาเหตุที่ทำให้เตาหลอมละลายเมื่อพลาสมาไม่เสถียร?",
                 options = new[]
                 {
@@ -176,6 +179,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "Q3", category = QuizCategory.Reactor, speaker = "VESTA",
+                topicTitle = "กันเตาไม่ให้ Meltdown",
                 question = "เมื่อ HEAT ของเตาเริ่มไต่สูง ควรทำอะไรเพื่อกันไม่ให้ถึง Meltdown?",
                 options = new[]
                 {
@@ -192,6 +196,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "Q4", category = QuizCategory.Medical, speaker = "แพทย์ประจำเมือง",
+                topicTitle = "เวชศาสตร์นิวเคลียร์",
                 question = "จาก Info Card เมื่อกี้ เวชศาสตร์นิวเคลียร์จัดการเซลล์เนื้อร้ายเป็น 2 ขั้นตอน ข้อใดถูก?",
                 options = new[]
                 {
@@ -208,6 +213,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "Q5", category = QuizCategory.Ethics, speaker = "VESTA",
+                topicTitle = "หลัก ALARA",
                 question = "ตามหลัก ALARA ที่เพิ่งอ่าน เมื่อต้องส่งคนเข้าพื้นที่เสี่ยงรังสี ควรจัดการอย่างไร?",
                 options = new[]
                 {
@@ -224,6 +230,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "Q6", category = QuizCategory.Agriculture, speaker = "Dr. Auren Vasek",
+                topicTitle = "ปรับปรุงพันธุ์ด้วยรังสี",
                 question = "จาก Info Card เมื่อกี้ การฉายรังสีใส่เมล็ดพันธุ์ช่วยแก้วิกฤตอาหารระยะยาวได้อย่างไร?",
                 options = new[]
                 {
@@ -240,6 +247,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "Q7", category = QuizCategory.Agriculture, speaker = "VESTA",
+                topicTitle = "ฉายรังสีถนอมอาหาร",
                 question = "จาก Info Card เมื่อกี้ การฉายรังสีแกมมาจากโคบอลต์-60 ช่วยถนอมอาหารด้วยกลไกใด?",
                 options = new[]
                 {
@@ -256,6 +264,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "Q8", category = QuizCategory.Reactor, speaker = "VESTA",
+                topicTitle = "ฟิวชันคืออะไร",
                 question = "จาก Info Card เมื่อกี้ \"ฟิวชันนิวเคลียร์\" ที่เพิ่งจุดติดในเตา แท้จริงคืออะไร?",
                 options = new[]
                 {
@@ -272,6 +281,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "Q9", category = QuizCategory.Reactor, speaker = "Dr. Auren Vasek",
+                topicTitle = "ทำไมฟิวชันสะอาด",
                 question = "จาก Info Card เมื่อกี้ ข้อใดอธิบายได้ถูกว่าทำไมพลังงานฟิวชันถึงสะอาดกว่าทางเลือกอื่น?",
                 options = new[]
                 {
@@ -288,6 +298,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "Q10", category = QuizCategory.Ethics, speaker = "Dr. Auren Vasek",
+                topicTitle = "จริยธรรมแรงงานฉุกเฉิน",
                 question = "จาก Info Card เมื่อกี้ การเกณฑ์แรงงานฉุกเฉินให้คนเข้าทำงานในเขตเสี่ยงรังสีขณะวิกฤต ขัดกับหลักจริยธรรมอย่างไร?",
                 options = new[]
                 {
@@ -304,6 +315,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "QT1", category = QuizCategory.Reactor, speaker = "VESTA",
+                topicTitle = "เชื้อเพลิงคู่ D–T",
                 question = "เราเพิ่งป้อนทริเทียมเข้าเตาคู่กับดิวเทอเรียม ทำไมต้องใช้เชื้อเพลิง \"คู่ D–T\" ถึงจะดันเตาถึงจุดติดเต็มร้อย?",
                 options = new[]
                 {
@@ -320,6 +332,7 @@ namespace NuclearReMind.EditorTools
             new QuizDef
             {
                 id = "QT2", category = QuizCategory.Reactor, speaker = "VESTA",
+                topicTitle = "การเพาะทริเทียม",
                 question = "ทริเทียมแทบไม่มีในธรรมชาติ แล้วเตาฟิวชันจริงจะเอาทริเทียมมาจากไหนได้อย่างยั่งยืน?",
                 options = new[]
                 {
@@ -338,6 +351,7 @@ namespace NuclearReMind.EditorTools
             public string id;
             public QuizCategory category;
             public string speaker;
+            public string topicTitle;   // หัวข้อสั้น โชว์มุมซ้ายบนของ popup ควิซ
             public string question;
             public string[] options;
             public int correctIndex;

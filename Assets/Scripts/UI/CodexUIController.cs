@@ -46,8 +46,17 @@ namespace NuclearReMind
         public Text detailFooter;          // "อ่านครั้งแรก +2 Knowledge"
         public Image detailIllustration;
 
+        [Header("Skin sprites (สกินโลหะ — ผูกโดย CodexSetup)")]
+        public Sprite plateSprite;         // พื้นแถวรายการ (แผ่นโลหะ)
+        public Sprite iconAtom;
+        public Sprite iconDroplet;
+        public Sprite iconShield;
+        public Sprite iconPlant;
+        public Sprite iconLock;
+
         private bool _filterActive;                 // false = ทั้งหมด
         private QuizCategory _filter = QuizCategory.Reactor;
+        private string _selectedId;                 // entry ที่กำลังเปิดดู (ไฮไลต์ในลิสต์)
         private readonly List<GameObject> _spawnedButtons = new List<GameObject>();
 
         private void Awake()
@@ -137,24 +146,26 @@ namespace NuclearReMind
                 total++;
                 if (mgr.IsUnlocked(e.entryId)) unlocked++;
             }
-            progressText.text = $"ปลดแล้ว {unlocked} / {total}";
+            progressText.text = $"ปลดแล้ว {unlocked} / {total}   ·   บันทึกถาวรข้ามรอบ";
         }
 
         private void RefreshTabColors()
         {
-            SetTabColor(tabAll, !_filterActive, new Color(0.55f, 0.60f, 0.66f));
-            SetTabColor(tabReactor, _filterActive && _filter == QuizCategory.Reactor, CategoryColor(QuizCategory.Reactor));
-            SetTabColor(tabMedical, _filterActive && _filter == QuizCategory.Medical, CategoryColor(QuizCategory.Medical));
-            SetTabColor(tabAgriculture, _filterActive && _filter == QuizCategory.Agriculture, CategoryColor(QuizCategory.Agriculture));
-            SetTabColor(tabEthics, _filterActive && _filter == QuizCategory.Ethics, CategoryColor(QuizCategory.Ethics));
+            SetTab(tabAll, !_filterActive);
+            SetTab(tabReactor, _filterActive && _filter == QuizCategory.Reactor);
+            SetTab(tabMedical, _filterActive && _filter == QuizCategory.Medical);
+            SetTab(tabAgriculture, _filterActive && _filter == QuizCategory.Agriculture);
+            SetTab(tabEthics, _filterActive && _filter == QuizCategory.Ethics);
         }
 
-        private static void SetTabColor(Button tab, bool active, Color accent)
+        // แท็บโลหะ (ข้อความ baked): เลือก = สว่างเต็ม + ขอบเรืองฟ้า (Outline) · ไม่เลือก = หรี่ลง
+        private static void SetTab(Button tab, bool active)
         {
             if (tab == null) return;
             var img = tab.GetComponent<Image>();
-            if (img != null)
-                img.color = active ? accent : new Color(0.13f, 0.14f, 0.18f, 1f);
+            if (img != null) img.color = active ? Color.white : new Color(0.62f, 0.60f, 0.58f, 1f);
+            var ol = tab.GetComponent<Outline>();
+            if (ol != null) ol.enabled = active;
         }
 
         private void RefreshList()
@@ -177,13 +188,25 @@ namespace NuclearReMind
                 go.SetActive(true);
                 _spawnedButtons.Add(go);
 
-                var label = go.GetComponentInChildren<Text>();
+                // ไอคอนซ้าย (glyph) — ปลดแล้ว = ไอคอนหมวด · ล็อก = แม่กุญแจ
+                var icon = FindImage(go, "Icon");
+                if (icon != null)
+                {
+                    icon.sprite = unlocked ? SpriteForIcon(entry.iconName) : iconLock;
+                    icon.enabled = icon.sprite != null;
+                }
+
+                // ข้อความ — ปลดแล้ว = ชื่ออังกฤษ (ตาม mockup) · ล็อก = "? ? ?" ไม่เผยชื่อ (§6.2)
+                var label = FindText(go, "Label");
                 if (label != null)
                 {
-                    // ล็อก = "? ? ?" ไม่เผยชื่อ (สเปก §6.2) · ปลดแล้ว = ไอคอน + ชื่อ
-                    label.text = unlocked ? $"{IconGlyph(entry.iconName)}  {entry.title}" : "?  ? ? ?";
-                    label.color = unlocked ? Color.white : new Color(0.5f, 0.53f, 0.58f);
+                    label.text = unlocked ? entry.titleEn : "? ? ?";
+                    label.color = unlocked ? Color.white : new Color(0.55f, 0.58f, 0.63f);
                 }
+
+                // ไฮไลต์เรืองฟ้า (ขอบ Outline) บนแถวที่กำลังเปิดดู
+                var outline = go.GetComponent<Outline>();
+                if (outline != null) outline.enabled = unlocked && entry.entryId == _selectedId;
 
                 var btn = go.GetComponent<Button>();
                 if (btn != null)
@@ -195,17 +218,35 @@ namespace NuclearReMind
             }
         }
 
+        private static Image FindImage(GameObject go, string child)
+        {
+            var t = go.transform.Find(child);
+            return t != null ? t.GetComponent<Image>() : null;
+        }
+
+        private static Text FindText(GameObject go, string child)
+        {
+            var t = go.transform.Find(child);
+            return t != null ? t.GetComponent<Text>() : null;
+        }
+
         /// <summary>แสดงรายละเอียด entry ที่ปลดแล้ว (สเปก §6.2)</summary>
         public void ShowEntry(CodexEntry entry)
         {
             if (entry == null) return;
+            _selectedId = entry.entryId;
             var col = CategoryColor(entry.category);
 
             if (detailPill != null) detailPill.color = col;
             if (detailPillLabel != null) detailPillLabel.text = CategoryLabel(entry.category);
             if (detailUnlockFrom != null) detailUnlockFrom.text = string.IsNullOrEmpty(entry.unlockedFrom) ? "" : $"ปลดจาก {entry.unlockedFrom}";
-            if (detailTitle != null) { detailTitle.text = $"{IconGlyph(entry.iconName)}  {entry.title}"; detailTitle.color = Color.white; }
-            if (detailTitleEn != null) detailTitleEn.text = entry.titleEn;
+            // หัวข้อแบบ mockup: "Nuclear Fusion – ฟิวชันคืออะไร" (อังกฤษ – ไทย)
+            if (detailTitle != null)
+            {
+                detailTitle.text = string.IsNullOrEmpty(entry.titleEn) ? entry.title : $"{entry.titleEn} – {entry.title}";
+                detailTitle.color = Color.white;
+            }
+            if (detailTitleEn != null) detailTitleEn.text = "";
             if (detailContent != null) detailContent.text = entry.content;
             if (detailFooter != null) detailFooter.text = "อ่านครั้งแรก +2 Knowledge · บันทึกถาวรข้ามรอบเล่น";
 
@@ -214,6 +255,8 @@ namespace NuclearReMind
                 detailIllustration.sprite = entry.illustration;
                 detailIllustration.gameObject.SetActive(entry.illustration != null);
             }
+
+            RefreshList(); // อัปเดตไฮไลต์แถวที่เลือก
         }
 
         // entry ล็อก: กดแล้วโชว์ hint ว่าปลดได้จากไหน (สเปกแนะนำแบบ hint — ไม่ใช่กดไม่ได้)
@@ -252,21 +295,17 @@ namespace NuclearReMind
             _ => "",
         };
 
-        // iconName (สเปก §6.3 สไตล์ Tabler) → สัญลักษณ์ BMP ที่ legacy Text วาดได้จริง
-        // (emoji นอก BMP เช่น 💧🔒 วาดไม่ได้ — บทเรียนใน CodexSetup) · ทีมส่ง sprite มาค่อยสลับ
-        private static string IconGlyph(string iconName) => iconName switch
+        // iconName → สไปรต์ไอคอนจริง (ทีมส่งมา 4 แบบ: atom/droplet/shield/plant)
+        // iconName ที่ยังไม่มี art (flame/magnet/stethoscope/meat) fallback เป็น atom ไปก่อน
+        private Sprite SpriteForIcon(string iconName) => iconName switch
         {
-            "droplet" => "◆",
-            "flame" => "▲",
-            "magnet" => "Ω",
-            "atom" => "⊙",
-            "atom-2" => "⊕",
-            "stethoscope" => "✚",
-            "shield" => "▣",
-            "seeding" => "✿",
-            "meat" => "♨",
-            "leaf" => "♣",
-            _ => "●",
+            "droplet" => iconDroplet,
+            "shield" => iconShield,
+            "seeding" => iconPlant,
+            "leaf" => iconPlant,
+            "atom" => iconAtom,
+            "atom-2" => iconAtom,
+            _ => iconAtom, // flame/magnet/stethoscope/meat — ยังไม่มีไอคอนแยก
         };
     }
 }

@@ -88,6 +88,7 @@ namespace NuclearReMind
         // ===== Codex =====
         public event Action<CodexEntry> OnCodexEntryUnlocked;
         public event Action<CodexEntry> OnCodexUnlockFailed; // RP ไม่พอ
+        public event Action<string> OnCodexUnlockRequested;  // Quiz (ตอบถูก) → CodexManager ปลดล็อกด้วย entryId (ไม่เรียก manager ตรง)
 
         // ===== Quiz / Knowledge (V4 §16 — เฟส 1) =====
         public event Action<float> OnKnowledgeChanged;        // (knowledge 0–100) — สำหรับ HUD/tier
@@ -154,6 +155,7 @@ namespace NuclearReMind
         public event Action<DialogueLine[]> OnStoryDialogueShown;   // StoryDirector → Dialogue UI (บทสนทนาหลายตัวละคร v8.5)
         public event Action OnStoryCardDismissed;                   // Card UI / Dialogue UI → StoryDirector (ปิดการ์ด/จบบท → เดินลำดับต่อ)
         public event Action<RecordCardSO> OnRecordArchived;         // StoryDirector → RecordsPanel (บันทึกเข้าแผงย้อนอ่าน)
+        public event Action<RecordCardSO> OnRecordArchiveRequested; // RecordCardUI → StoryDirector (กดปุ่ม "เก็บเข้าแผง Record")
 
         private void Awake()
         {
@@ -239,6 +241,7 @@ namespace NuclearReMind
         // ===== Codex =====
         public void RaiseCodexEntryUnlocked(CodexEntry entry) => OnCodexEntryUnlocked?.Invoke(entry);
         public void RaiseCodexUnlockFailed(CodexEntry entry) => OnCodexUnlockFailed?.Invoke(entry);
+        public void RaiseCodexUnlockRequested(string entryId) => OnCodexUnlockRequested?.Invoke(entryId);
 
         // ===== Quiz / Knowledge =====
         public void RaiseKnowledgeChanged(float knowledge) => OnKnowledgeChanged?.Invoke(knowledge);
@@ -305,5 +308,6 @@ namespace NuclearReMind
         public void RaiseStoryDialogueShown(DialogueLine[] lines) => OnStoryDialogueShown?.Invoke(lines);
         public void RaiseStoryCardDismissed() => OnStoryCardDismissed?.Invoke();
         public void RaiseRecordArchived(RecordCardSO record) => OnRecordArchived?.Invoke(record);
+        public void RaiseRecordArchiveRequested(RecordCardSO record) => OnRecordArchiveRequested?.Invoke(record);
     }
 }

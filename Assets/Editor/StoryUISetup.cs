@@ -67,47 +67,93 @@ namespace NuclearReMind.EditorTools
         // ─────────────────────────────────────────────
         private static void SetupCardUI(Transform canvas, Font font)
         {
+            // สกินไม้/โลหะ (StoryUI) — null-safe: ยังไม่ import → fallback สีทึบ
+            Sprite Skin(string n) => AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/Resources/StoryUI/{n}.png");
+            var frameWood = Skin("frame_wood");
+            var btnMetal  = Skin("btn_metal");
+            var smear     = Skin("smear");
+
+            var gold  = new Color(0.93f, 0.84f, 0.58f);
+            var cream = new Color(0.92f, 0.88f, 0.80f);
+            var ink   = new Color(0.20f, 0.13f, 0.08f);
+            var divCol = new Color(0.24f, 0.17f, 0.10f, 1f);
+
+            const float DW = 780f, DH = 640f, pad = 68f;
+
             // overlay มืดเต็มจอ — บังคลิกข้างหลังระหว่างอ่านการ์ด
             var overlay = CreatePanel("StoryCardPanel", canvas);
             Stretch(overlay);
             overlay.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.72f);
 
+            // แผงไม้ 9-slice
             var dialog = CreatePanel("StoryCardDialog", overlay.transform);
-            Center(dialog, new Vector2(720, 520));
-            dialog.AddComponent<Image>().color = new Color(0.10f, 0.11f, 0.14f, 0.97f);
+            Center(dialog, new Vector2(DW, DH));
+            var dImg = dialog.AddComponent<Image>();
+            if (frameWood != null) { dImg.sprite = frameWood; dImg.type = Image.Type.Sliced; dImg.color = Color.white; }
+            else dImg.color = new Color(0.30f, 0.21f, 0.13f, 0.99f);
 
-            // แถบสีหมวด (บนสุด) — CardUIController เปลี่ยนสีตามชนิดการ์ด
+            // รอยแปรงเข้มหลังหัวเรื่อง (redaction look)
+            Image Smear(string name, float yFromTop, float w, float h)
+            {
+                var go = CreatePanel(name, dialog.transform);
+                var img = go.AddComponent<Image>();
+                if (smear != null) { img.sprite = smear; img.color = Color.white; } else img.color = new Color(0.10f, 0.08f, 0.07f, 0.9f);
+                var r = go.GetComponent<RectTransform>();
+                r.anchorMin = r.anchorMax = new Vector2(0.5f, 1f); r.pivot = new Vector2(0.5f, 1f);
+                r.anchoredPosition = new Vector2(0, -yFromTop); r.sizeDelta = new Vector2(w, h);
+                return img;
+            }
+            // เส้นคั่นบาง ๆ
+            void Divider(float yFromTop)
+            {
+                var go = CreatePanel("Divider", dialog.transform);
+                go.AddComponent<Image>().color = divCol;
+                var r = go.GetComponent<RectTransform>();
+                r.anchorMin = r.anchorMax = new Vector2(0.5f, 1f); r.pivot = new Vector2(0.5f, 1f);
+                r.anchoredPosition = new Vector2(0, -yFromTop); r.sizeDelta = new Vector2(DW - 2 * pad, 3);
+            }
+
+            Smear("TitleSmear", 62, DW - 2 * pad - 10, 56);
+            var title = CreateText("CardTitle", dialog.transform, font, "หัวเรื่อง", 32, TextAnchor.MiddleCenter);
+            AnchorTop(title, 60, new Vector2(DW - 2 * pad, 52));
+            title.fontStyle = FontStyle.Bold;
+            title.color = gold;
+
+            Smear("KickerSmear", 128, 360, 40);
+            var kicker = CreateText("CardKicker", dialog.transform, font, "บันทึกกู้คืน", 21, TextAnchor.MiddleCenter);
+            AnchorTop(kicker, 126, new Vector2(DW - 2 * pad, 30));
+            kicker.fontStyle = FontStyle.Bold;
+            kicker.color = cream;
+
+            // แถบสีหมวด (เส้นบาง) — CardUIController เปลี่ยนสีตามชนิดการ์ด
             var barGO = CreatePanel("CategoryBar", dialog.transform);
             var barRect = barGO.GetComponent<RectTransform>();
-            barRect.anchorMin = new Vector2(0f, 1f);
-            barRect.anchorMax = new Vector2(1f, 1f);
+            barRect.anchorMin = barRect.anchorMax = new Vector2(0.5f, 1f);
             barRect.pivot = new Vector2(0.5f, 1f);
-            barRect.anchoredPosition = Vector2.zero;
-            barRect.sizeDelta = new Vector2(0, 10);
+            barRect.anchoredPosition = new Vector2(0, -170);
+            barRect.sizeDelta = new Vector2(DW - 2 * pad, 6);
             var bar = barGO.AddComponent<Image>();
-            bar.color = new Color(0.2f, 0.5f, 0.85f);
+            bar.color = new Color(0.85f, 0.65f, 0.25f);
 
-            var kicker = CreateText("CardKicker", dialog.transform, font, "บันทึกกู้คืน", 17, TextAnchor.UpperLeft);
-            AnchorTop(kicker, 22, new Vector2(660, 24));
-            kicker.fontStyle = FontStyle.Bold;
-            kicker.color = new Color(0.6f, 0.85f, 1f);
-
-            var title = CreateText("CardTitle", dialog.transform, font, "หัวเรื่อง", 24, TextAnchor.UpperLeft);
-            AnchorTop(title, 50, new Vector2(660, 36));
-            title.fontStyle = FontStyle.Bold;
-
-            var body = CreateText("CardBody", dialog.transform, font, "", 18, TextAnchor.UpperLeft);
-            AnchorTop(body, 96, new Vector2(660, 330));
-            body.color = new Color(0.9f, 0.92f, 0.85f);
-            body.lineSpacing = 1.3f;
+            var body = CreateText("CardBody", dialog.transform, font, "", 24, TextAnchor.UpperLeft);
+            AnchorTop(body, 196, new Vector2(DW - 2 * pad - 6, 300));
+            body.color = ink;
+            body.lineSpacing = 1.35f;
             body.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-            var dismissBtn = CreateButton("CardDismissButton", dialog.transform, font, "รับทราบ", 18, new Vector2(320, 48));
+            Divider(DH - 118);
+
+            var dismissBtn = CreateButton("CardDismissButton", dialog.transform, font, "รับทราบ", 26, new Vector2(300, 58));
+            var dBtnImg = dismissBtn.GetComponent<Image>();
+            if (btnMetal != null) { dBtnImg.sprite = btnMetal; dBtnImg.type = Image.Type.Sliced; dBtnImg.color = Color.white; }
+            else dBtnImg.color = new Color(0.18f, 0.16f, 0.14f, 1f);
+            var dLabel = dismissBtn.GetComponentInChildren<Text>();
+            if (dLabel != null) dLabel.color = gold;
             var dRect = dismissBtn.GetComponent<RectTransform>();
             dRect.anchorMin = new Vector2(0.5f, 0f);
             dRect.anchorMax = new Vector2(0.5f, 0f);
             dRect.pivot = new Vector2(0.5f, 0f);
-            dRect.anchoredPosition = new Vector2(0, 24);
+            dRect.anchoredPosition = new Vector2(0, 30);
 
             overlay.SetActive(false);
 
@@ -128,6 +174,14 @@ namespace NuclearReMind.EditorTools
         // ─────────────────────────────────────────────
         private static void SetupDialogueUI(Transform canvas, Font font)
         {
+            // โหลดอาร์ต (import โดย Setup Dialogue Art) — null-safe: ไม่มี → fallback สีทึบ/placeholder
+            Sprite Load(string p) => AssetDatabase.LoadAssetAtPath<Sprite>(p);
+            string KovaPath(string n) => $"Assets/Sprites/Characters/Kova/kova_{n}.png";
+            string AurenPath(string n) => $"Assets/Sprites/Characters/Auren/auren_{n}.png";
+            string MiraPath(string n) => $"Assets/Sprites/Characters/Mira/mira_{n}.png";
+            string DornPath(string n) => $"Assets/Sprites/Characters/Dorn/dorn_{n}.png";
+            string FramePath(string n) => $"Assets/Resources/DialogueUI/frame_{n}.png";
+
             // overlay หรี่จอ + คลุมคลิกทั้งจอ (คลิกที่ไหนก็ไปบรรทัดถัดไป)
             var overlay = CreatePanel("StoryDialoguePanel", canvas);
             Stretch(overlay);
@@ -137,54 +191,89 @@ namespace NuclearReMind.EditorTools
             advBtn.targetGraphic = ovImg;
             advBtn.transition = Selectable.Transition.None; // คลิกแล้วไม่ tint แผงหรี่
 
-            // portrait ซ้าย (มุมล่างซ้าย) — placeholder สี + อักษรย่อ
-            var (leftPortrait, leftInitial) = CreatePortrait("DialoguePortraitLeft", overlay.transform, font, true);
-            // portrait ขวา (มุมล่างขวา)
-            var (rightPortrait, rightInitial) = CreatePortrait("DialoguePortraitRight", overlay.transform, font, false);
+            // ── Kova (ขวาเสมอ) — ภาพจริงครึ่งตัวตามอารมณ์ · preserveAspect · คลิกทะลุไป advanceButton ──
+            var kovaGO = CreatePanel("DialoguePortraitKova", overlay.transform);
+            var kovaImg = kovaGO.AddComponent<Image>();
+            kovaImg.preserveAspect = true;
+            kovaImg.raycastTarget = false;
+            var kovaSprite = Load(KovaPath("neutral"));
+            if (kovaSprite != null) kovaImg.sprite = kovaSprite;
+            else kovaImg.color = new Color(0.30f, 0.70f, 0.95f); // fallback สีวิศวกร
+            var kRect = kovaGO.GetComponent<RectTransform>();
+            kRect.anchorMin = kRect.anchorMax = new Vector2(1f, 0f);
+            kRect.pivot = new Vector2(1f, 0f);
+            kRect.anchoredPosition = new Vector2(-16f, 0f);
+            kRect.sizeDelta = new Vector2(480, 560); // preserveAspect → ท่ากว้าง (เชื่อม/พิมพ์เขียว) ไม่ล้นทับกรอบยาว
 
-            // บอลลูนคำพูด (ล่างกลาง ระหว่าง portrait สองฝั่ง)
+            // ── Auren = เสียงในใจ (ซ้าย) — ภาพจริงตามอารมณ์ · โฟกัสทีละคน (controller โชว์เฉพาะคนพูด) ──
+            var aurenGO = CreatePanel("DialoguePortraitAuren", overlay.transform);
+            var aurenImg = aurenGO.AddComponent<Image>();
+            aurenImg.preserveAspect = true;
+            aurenImg.raycastTarget = false;
+            var aurenSprite = Load(AurenPath("thinking"));
+            if (aurenSprite != null) aurenImg.sprite = aurenSprite;
+            else aurenImg.color = new Color(0.72f, 0.68f, 0.85f); // fallback สีเสียงในใจ
+            var aRect = aurenGO.GetComponent<RectTransform>();
+            aRect.anchorMin = aRect.anchorMax = new Vector2(0f, 0f);
+            aRect.pivot = new Vector2(0f, 0f);
+            aRect.anchoredPosition = new Vector2(16f, 0f);
+            aRect.sizeDelta = new Vector2(480, 560);
+            aurenGO.SetActive(false); // controller เปิดเมื่อ Auren พูด
+
+            // ── กล่องบทพูด (กรอบ 9 · controller ย้ายซ้าย/ขวาตามคนพูด + ปรับกว้างตามความยาว) ──
             var box = CreatePanel("DialogueBox", overlay.transform);
             var boxRect = box.GetComponent<RectTransform>();
-            boxRect.anchorMin = new Vector2(0f, 0f);
-            boxRect.anchorMax = new Vector2(1f, 0f);
-            boxRect.pivot = new Vector2(0.5f, 0f);
-            boxRect.offsetMin = new Vector2(470, 40);   // เว้นระยะ portrait ซ้าย
-            boxRect.offsetMax = new Vector2(-470, 300);  // เว้นระยะ portrait ขวา · สูง 260
-            box.AddComponent<Image>().color = new Color(0.08f, 0.09f, 0.13f, 0.95f);
+            boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0f);
+            boxRect.pivot = new Vector2(0f, 0f);
+            boxRect.anchoredPosition = new Vector2(48f, 56f);
+            boxRect.sizeDelta = new Vector2(900, 240);
+            var boxImg = box.AddComponent<Image>();
+            boxImg.raycastTarget = false;
+            var frameMed = Load(FramePath("medium"));
+            if (frameMed != null) { boxImg.sprite = frameMed; boxImg.type = Image.Type.Simple; boxImg.color = Color.white; }
+            else boxImg.color = new Color(0.08f, 0.09f, 0.13f, 0.95f);
 
-            // แถบชื่อผู้พูด (มุมบนของบอลลูน — เปลี่ยนสีตามคน)
+            // แถบชื่อผู้พูด — อยู่ "ในกรอบ" (ใต้ขอบบน · เปลี่ยนสีตามคน)
             var plateGO = CreatePanel("DialogueNamePlate", box.transform);
             var plateRect = plateGO.GetComponent<RectTransform>();
-            plateRect.anchorMin = new Vector2(0f, 1f);
-            plateRect.anchorMax = new Vector2(1f, 1f);
-            plateRect.pivot = new Vector2(0.5f, 1f);
-            plateRect.anchoredPosition = new Vector2(0f, 6f);
-            plateRect.sizeDelta = new Vector2(-24, 44);
+            plateRect.anchorMin = plateRect.anchorMax = new Vector2(0f, 1f);
+            plateRect.pivot = new Vector2(0f, 1f);
+            plateRect.anchoredPosition = new Vector2(52f, -34f); // ในกรอบ (ค่าลบ = เลื่อนลงจากขอบบน)
+            plateRect.sizeDelta = new Vector2(200, 40);
             var plate = plateGO.AddComponent<Image>();
+            plate.raycastTarget = false;
             plate.color = new Color(0.3f, 0.7f, 0.95f);
 
-            var nameText = CreateText("DialogueName", plateGO.transform, font, "Kova", 22, TextAnchor.MiddleLeft);
+            var nameText = CreateText("DialogueName", plateGO.transform, font, "Kova", 21, TextAnchor.MiddleLeft);
             var nameRect = nameText.GetComponent<RectTransform>();
             nameRect.anchorMin = Vector2.zero; nameRect.anchorMax = Vector2.one;
-            nameRect.offsetMin = new Vector2(16, 0); nameRect.offsetMax = new Vector2(-16, 0);
+            nameRect.offsetMin = new Vector2(16, 0); nameRect.offsetMax = new Vector2(-10, 0);
             nameText.fontStyle = FontStyle.Bold;
+            nameText.raycastTarget = false;
             nameText.color = new Color(0.06f, 0.07f, 0.10f); // ตัวอักษรเข้มบนแถบสีสด
 
-            var body = CreateText("DialogueBody", box.transform, font, "", 22, TextAnchor.UpperLeft);
+            // ข้อความ — best-fit ให้พอดีในกรอบเสมอ (ห้ามล้นออกนอกกรอบ) · เว้นที่ด้านบนให้แถบชื่อ
+            var body = CreateText("DialogueBody", box.transform, font, "", 24, TextAnchor.UpperLeft);
             var bodyRect = body.GetComponent<RectTransform>();
             bodyRect.anchorMin = Vector2.zero; bodyRect.anchorMax = Vector2.one;
-            bodyRect.offsetMin = new Vector2(24, 44); bodyRect.offsetMax = new Vector2(-24, -58);
+            bodyRect.offsetMin = new Vector2(58, 46); bodyRect.offsetMax = new Vector2(-58, -86);
             body.color = new Color(0.93f, 0.94f, 0.88f);
-            body.lineSpacing = 1.3f;
+            body.lineSpacing = 1.2f;
+            body.raycastTarget = false;
             body.horizontalOverflow = HorizontalWrapMode.Wrap;
+            body.verticalOverflow = VerticalWrapMode.Truncate; // best-fit คุมขนาด → ไม่ล้น
+            body.resizeTextForBestFit = true;                  // ★ ย่อ/ขยายอักษรให้พอดีกรอบ
+            body.resizeTextMinSize = 14;
+            body.resizeTextMaxSize = 26;
 
             var hint = CreateText("DialogueHint", box.transform, font, "▼ คลิกเพื่อไปต่อ", 15, TextAnchor.LowerRight);
             var hintRect = hint.GetComponent<RectTransform>();
             hintRect.anchorMin = new Vector2(1f, 0f); hintRect.anchorMax = new Vector2(1f, 0f);
             hintRect.pivot = new Vector2(1f, 0f);
-            hintRect.anchoredPosition = new Vector2(-16, 10);
-            hintRect.sizeDelta = new Vector2(240, 22);
-            hint.color = new Color(0.7f, 0.72f, 0.8f, 0.8f);
+            hintRect.anchoredPosition = new Vector2(-46, 20);
+            hintRect.sizeDelta = new Vector2(220, 22);
+            hint.raycastTarget = false;
+            hint.color = new Color(0.75f, 0.72f, 0.62f, 0.85f);
 
             overlay.SetActive(false);
 
@@ -192,39 +281,73 @@ namespace NuclearReMind.EditorTools
             var dlg = dlgGO.GetComponent<DialogueUIController>() ?? dlgGO.AddComponent<DialogueUIController>();
             dlg.overlayPanel = overlay;
             dlg.advanceButton = advBtn;
-            dlg.leftPortrait = leftPortrait;
-            dlg.leftInitial = leftInitial;
-            dlg.rightPortrait = rightPortrait;
-            dlg.rightInitial = rightInitial;
+            dlg.leftPortrait = aurenImg;   // Auren (เสียงในใจ) ฝั่งซ้าย
+            dlg.leftInitial = null;
+            dlg.rightPortrait = kovaImg;   // Kova ฝั่งขวา
             dlg.dialogBox = box;
             dlg.namePlate = plate;
             dlg.nameText = nameText;
             dlg.bodyText = body;
             dlg.hintText = hint;
+            dlg.frameShort  = Load(FramePath("short"));
+            dlg.frameMedium = frameMed;
+            dlg.frameLong   = Load(FramePath("long"));
+            // Kova 9 อารมณ์ (index ตาม enum Emotion 0..8)
+            dlg.kovaEmotionSprites = new Sprite[]
+            {
+                Load(KovaPath("neutral")), Load(KovaPath("happy")),   Load(KovaPath("worried")),
+                Load(KovaPath("serious")), Load(KovaPath("explain")), Load(KovaPath("excited")),
+                Load(KovaPath("welding")), Load(KovaPath("sad")),     Load(KovaPath("proud")),
+            };
+            // Auren 6 อารมณ์ วางตาม index enum (ช่องที่ Auren ไม่มี = ภาพใกล้เคียง/null → Pick fallback)
+            dlg.aurenEmotionSprites = new Sprite[]
+            {
+                Load(AurenPath("thinking")),   // 0 Neutral → คิด (สงบ)
+                Load(AurenPath("happy")),      // 1 Happy
+                Load(AurenPath("worried")),    // 2 Worried
+                null,                          // 3 Serious
+                null,                          // 4 Explain
+                Load(AurenPath("excited")),    // 5 Excited
+                null,                          // 6 Welding
+                Load(AurenPath("worried")),    // 7 Sad → หน้ากังวล
+                Load(AurenPath("determined")), // 8 Proud → มุ่งมั่น
+                Load(AurenPath("thinking")),   // 9 Thinking
+                Load(AurenPath("surprised")),  // 10 Surprised
+                Load(AurenPath("determined")), // 11 Determined
+            };
+            // Mira 6 อารมณ์ (หมอ · ซ้าย)
+            dlg.miraEmotionSprites = new Sprite[]
+            {
+                Load(MiraPath("serious")),     // 0 Neutral → กอดอก (สงบ)
+                Load(MiraPath("happy")),       // 1 Happy
+                Load(MiraPath("serious")),     // 2 Worried
+                Load(MiraPath("serious")),     // 3 Serious
+                Load(MiraPath("explain")),     // 4 Explain
+                Load(MiraPath("happy")),       // 5 Excited
+                null,                          // 6 Welding
+                Load(MiraPath("serious")),     // 7 Sad
+                Load(MiraPath("determined")),  // 8 Proud
+                Load(MiraPath("thinking")),    // 9 Thinking
+                Load(MiraPath("surprised")),   // 10 Surprised
+                Load(MiraPath("determined")),  // 11 Determined
+            };
+            // Dorn 5 อารมณ์ (ชาวสวน · ซ้าย)
+            dlg.dornEmotionSprites = new Sprite[]
+            {
+                Load(DornPath("neutral")),     // 0 Neutral
+                Load(DornPath("happy")),       // 1 Happy
+                Load(DornPath("serious")),     // 2 Worried
+                Load(DornPath("serious")),     // 3 Serious
+                Load(DornPath("neutral")),     // 4 Explain
+                Load(DornPath("happy")),       // 5 Excited
+                null,                          // 6 Welding
+                Load(DornPath("serious")),     // 7 Sad
+                Load(DornPath("proud")),       // 8 Proud → อุ้มตะกร้า (พอใจ)
+                Load(DornPath("thinking")),    // 9 Thinking
+                Load(DornPath("thinking")),    // 10 Surprised → กังขา (ใกล้สุด)
+                Load(DornPath("serious")),     // 11 Determined
+            };
             EditorUtility.SetDirty(dlg);
-        }
-
-        // portrait placeholder: กล่องสี (ตั้งค่าตอน runtime) + อักษรย่อกลาง · ยึดมุมล่างซ้าย/ขวา
-        private static (Image, Text) CreatePortrait(string name, Transform parent, Font font, bool left)
-        {
-            var go = CreatePanel(name, parent);
-            var rect = go.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(left ? 0f : 1f, 0f);
-            rect.anchorMax = new Vector2(left ? 0f : 1f, 0f);
-            rect.pivot = new Vector2(left ? 0f : 1f, 0f);
-            rect.anchoredPosition = new Vector2(left ? 40f : -40f, 40f);
-            rect.sizeDelta = new Vector2(400, 620);
-            var img = go.AddComponent<Image>();
-            img.color = new Color(0.3f, 0.7f, 0.95f);
-
-            var initial = CreateText(name + "Initial", go.transform, font, "?", 200, TextAnchor.MiddleCenter);
-            var iRect = initial.GetComponent<RectTransform>();
-            iRect.anchorMin = Vector2.zero; iRect.anchorMax = Vector2.one;
-            iRect.offsetMin = Vector2.zero; iRect.offsetMax = Vector2.zero;
-            initial.fontStyle = FontStyle.Bold;
-            initial.color = Color.white;
-
-            return (img, initial);
         }
 
         // ─────────────────────────────────────────────

@@ -45,6 +45,11 @@ namespace NuclearReMind.EditorTools
                 esGO.AddComponent<StandaloneInputModule>();
             }
 
+            // idempotent — ลบของเดิมก่อนสร้างใหม่ (รันเมนูซ้ำไม่ทับซ้อน)
+            RemoveChild(canvasGO.transform, "TooltipPanel");
+            RemoveChild(canvasGO.transform, "DilemmaPopupPanel");
+            RemoveChild(canvasGO.transform, "DilemmaPopupController");
+
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             SetupTooltip(canvasGO.transform, tooltip, font);
@@ -88,7 +93,15 @@ namespace NuclearReMind.EditorTools
 
         private static void SetupDilemmaPopup(Transform canvasTransform, Font font)
         {
-            // ===== Full-screen overlay =====
+            // สกินโลหะสนิม (frame_metal 9-slice มีหมุด/แผ่นมุมในตัว) + แผ่นอินเซ็ต + ปุ่มโลหะ — fallback สีถ้าไม่มีไฟล์
+            var frameMetal = LoadUISkin("Assets/Resources/CodexUI/frame_metal.png");
+            var plateInset = LoadUISkin("Assets/Resources/StoryUI/plate_inset.png");
+            var btnMetal   = LoadUISkin("Assets/Resources/StoryUI/btn_metal.png");
+
+            Color gold  = new Color(0.94f, 0.77f, 0.29f);
+            Color light = new Color(0.90f, 0.90f, 0.86f);
+
+            // ===== overlay เต็มจอ (บังคลิกทะลุ) =====
             var overlay = CreatePanel("DilemmaPopupPanel", canvasTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var overlayRect = overlay.GetComponent<RectTransform>();
             overlayRect.anchorMin = Vector2.zero;
@@ -96,44 +109,60 @@ namespace NuclearReMind.EditorTools
             overlayRect.offsetMin = Vector2.zero;
             overlayRect.offsetMax = Vector2.zero;
             var overlayImage = overlay.AddComponent<Image>();
-            overlayImage.color = new Color(0f, 0f, 0f, 0.6f);
+            overlayImage.color = new Color(0f, 0f, 0f, 0.72f);
 
-            // ===== Dialog box (center) =====
-            var dialog = CreatePanel("DialogBox", overlay.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(700, 320));
+            // ===== Dialog กรอบโลหะ (กลางจอ) =====
+            const float DW = 940f, DH = 600f, P = 30f;
+            var dialog = CreatePanel("DialogBox", overlay.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(DW, DH));
             var dialogImage = dialog.AddComponent<Image>();
-            dialogImage.color = new Color(0.12f, 0.12f, 0.12f, 0.95f);
+            if (frameMetal != null) { dialogImage.sprite = frameMetal; dialogImage.type = Image.Type.Sliced; dialogImage.color = Color.white; }
+            else dialogImage.color = new Color(0.10f, 0.11f, 0.14f, 0.98f);
+            var dlgT = dialog.transform;
 
-            // Scenario text (top)
-            var scenarioText = CreateText("ScenarioText", dialog.transform, font, "Dilemma scenario text", 20, new Vector2(660, 180), TextAnchor.UpperLeft);
-            var scenarioRect = scenarioText.GetComponent<RectTransform>();
-            scenarioRect.anchorMin = new Vector2(0.5f, 1f);
-            scenarioRect.anchorMax = new Vector2(0.5f, 1f);
-            scenarioRect.pivot = new Vector2(0.5f, 1f);
-            scenarioRect.anchoredPosition = new Vector2(0, -20);
+            float leftW = 540f, colGap = 22f;
+            float rightX = P + leftW + colGap;
+            float rightW = DW - rightX - P;
+            float confirmH = 58f;
+            float contentBottom = DH - P - confirmH - 16f;
 
-            // Choice A button (bottom-left) — V4 §10: 3 ทาง A/B/C
-            var choiceAButton = CreateButton("ChoiceAButton", dialog.transform, font, "Choice A", new Color(0.2f, 0.5f, 0.8f), new Vector2(230, 60));
-            var choiceARect = choiceAButton.GetComponent<RectTransform>();
-            choiceARect.anchorMin = new Vector2(0f, 0f);
-            choiceARect.anchorMax = new Vector2(0f, 0f);
-            choiceARect.pivot = new Vector2(0f, 0f);
-            choiceARect.anchoredPosition = new Vector2(20, 20);
+            // --- คอลัมน์ซ้าย: กล่องหัวเรื่อง (ไฮไลต์ขอบเหลือง) ---
+            float titleH = 66f;
+            var titlePlate = MetalPlate("TitlePlate", dlgT, plateInset, P, P, leftW, titleH);
+            var titleOutline = titlePlate.gameObject.AddComponent<Outline>();
+            titleOutline.effectColor = gold;
+            titleOutline.effectDistance = new Vector2(3f, -3f);
+            var titleText = CreateText("TitleText", titlePlate.transform, font, "วิกฤต", 30, new Vector2(leftW, titleH), TextAnchor.MiddleLeft);
+            FillParentText(titleText, 16f);
+            titleText.fontStyle = FontStyle.Bold;
+            titleText.color = gold;
+            titleText.resizeTextForBestFit = true; titleText.resizeTextMinSize = 16; titleText.resizeTextMaxSize = 32;
 
-            // Choice B button (bottom-center)
-            var choiceBButton = CreateButton("ChoiceBButton", dialog.transform, font, "Choice B", new Color(0.5f, 0.45f, 0.2f), new Vector2(230, 60));
-            var choiceBRect = choiceBButton.GetComponent<RectTransform>();
-            choiceBRect.anchorMin = new Vector2(0.5f, 0f);
-            choiceBRect.anchorMax = new Vector2(0.5f, 0f);
-            choiceBRect.pivot = new Vector2(0.5f, 0f);
-            choiceBRect.anchoredPosition = new Vector2(0, 20);
+            // --- เส้นคั่น ---
+            float divY = P + titleH + 12f;
+            var divider = new GameObject("Divider", typeof(RectTransform));
+            divider.transform.SetParent(dlgT, false);
+            var divImg = divider.AddComponent<Image>();
+            divImg.color = new Color(gold.r, gold.g, gold.b, 0.55f);
+            PlaceTL(divImg.rectTransform, P, divY, leftW, 3f);
 
-            // Choice C button (bottom-right) — ซ่อนเองถ้า dilemma ไม่มี choice C (controller จัดการ)
-            var choiceCButton = CreateButton("ChoiceCButton", dialog.transform, font, "Choice C", new Color(0.8f, 0.4f, 0.2f), new Vector2(230, 60));
-            var choiceCRect = choiceCButton.GetComponent<RectTransform>();
-            choiceCRect.anchorMin = new Vector2(1f, 0f);
-            choiceCRect.anchorMax = new Vector2(1f, 0f);
-            choiceCRect.pivot = new Vector2(1f, 0f);
-            choiceCRect.anchoredPosition = new Vector2(-20, 20);
+            // --- กล่องคำอธิบาย ---
+            float descY = divY + 12f;
+            float descH = contentBottom - descY;
+            var descPlate = MetalPlate("DescriptionPlate", dlgT, plateInset, P, descY, leftW, descH);
+            var scenarioText = CreateText("ScenarioText", descPlate.transform, font, "คำอธิบายวิกฤต …", 20, new Vector2(leftW, descH), TextAnchor.UpperLeft);
+            FillParentText(scenarioText, 18f);
+            scenarioText.color = light;
+            scenarioText.resizeTextForBestFit = true; scenarioText.resizeTextMinSize = 14; scenarioText.resizeTextMaxSize = 22;
+
+            // --- คอลัมน์ขวา: ปุ่มเลือก 3 อันเรียงตั้ง A/B/C เต็มความกว้างคอลัมน์ ---
+            float choiceH = 96f, choiceGap = 14f;
+            var (aBtn, aTxt) = MakeChoice("ChoiceAButton", dlgT, font, plateInset, 'A', rightX, P + 0 * (choiceH + choiceGap), rightW, choiceH, light);
+            var (bBtn, bTxt) = MakeChoice("ChoiceBButton", dlgT, font, plateInset, 'B', rightX, P + 1 * (choiceH + choiceGap), rightW, choiceH, light);
+            var (cBtn, cTxt) = MakeChoice("ChoiceCButton", dlgT, font, plateInset, 'C', rightX, P + 2 * (choiceH + choiceGap), rightW, choiceH, light);
+
+            // --- ปุ่มยืนยัน (ล่างเต็มกว้าง) ---
+            var confirmGO = MakeMetalButton("ConfirmButton", dlgT, font, btnMetal != null ? btnMetal : plateInset, "ยืนยัน", gold, P, DH - P - confirmH, DW - 2 * P, confirmH);
+            var confirmBtn = confirmGO.GetComponent<Button>();
 
             overlay.SetActive(false);
 
@@ -143,19 +172,130 @@ namespace NuclearReMind.EditorTools
             var controller = controllerGO.AddComponent<DilemmaPopupController>();
 
             controller.popupPanel = overlay;
+            controller.titleText = titleText;
             controller.scenarioText = scenarioText;
-            controller.choiceAText = choiceAButton.GetComponentInChildren<Text>();
-            controller.choiceBText = choiceBButton.GetComponentInChildren<Text>();
-            controller.choiceCText = choiceCButton.GetComponentInChildren<Text>();
-            controller.choiceAButton = choiceAButton.GetComponent<Button>();
-            controller.choiceBButton = choiceBButton.GetComponent<Button>();
-            controller.choiceCButton = choiceCButton.GetComponent<Button>();
+            controller.choiceAText = aTxt;
+            controller.choiceBText = bTxt;
+            controller.choiceCText = cTxt;
+            controller.choiceAButton = aBtn;
+            controller.choiceBButton = bBtn;
+            controller.choiceCButton = cBtn;
+            controller.confirmButton = confirmBtn;
 
-            UnityEventTools.AddPersistentListener(controller.choiceAButton.onClick, new UnityAction(controller.ChooseA));
-            UnityEventTools.AddPersistentListener(controller.choiceBButton.onClick, new UnityAction(controller.ChooseB));
-            UnityEventTools.AddPersistentListener(controller.choiceCButton.onClick, new UnityAction(controller.ChooseC));
+            // แตะ A/B/C = เลือก (ไฮไลต์) · ยืนยัน = commit — ผูก persistent listener
+            UnityEventTools.AddPersistentListener(aBtn.onClick, new UnityAction(controller.SelectA));
+            UnityEventTools.AddPersistentListener(bBtn.onClick, new UnityAction(controller.SelectB));
+            UnityEventTools.AddPersistentListener(cBtn.onClick, new UnityAction(controller.SelectC));
+            UnityEventTools.AddPersistentListener(confirmBtn.onClick, new UnityAction(controller.Confirm));
 
             EditorUtility.SetDirty(controller);
+        }
+
+        private static Sprite LoadUISkin(string assetPath) => AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+
+        private static void RemoveChild(Transform parent, string childName)
+        {
+            var existing = parent.Find(childName);
+            if (existing != null) Object.DestroyImmediate(existing.gameObject);
+        }
+
+        // วางลูกโดยยึดมุมซ้าย-บนของ parent (x ไปขวา · y ลงล่าง) — อ่าน layout กรอบง่าย
+        private static RectTransform PlaceTL(RectTransform rt, float x, float y, float w, float h)
+        {
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(x, -y);
+            rt.sizeDelta = new Vector2(w, h);
+            return rt;
+        }
+
+        // แผ่นโลหะ (plate_inset 9-slice · tint ขาว = โชว์สีจริง) — fallback สีเข้มถ้าไม่มีสไปรต์
+        private static Image MetalPlate(string name, Transform parent, Sprite plate, float x, float y, float w, float h)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var img = go.AddComponent<Image>();
+            if (plate != null) { img.sprite = plate; img.type = Image.Type.Sliced; img.color = Color.white; }
+            else img.color = new Color(0.12f, 0.13f, 0.17f, 0.98f);
+            PlaceTL(img.rectTransform, x, y, w, h);
+            return img;
+        }
+
+        // ยืด Text ให้เต็ม parent + padding (word-wrap ในกล่อง ไม่ล้นกรอบ)
+        private static void FillParentText(Text t, float padding)
+        {
+            var rt = t.rectTransform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = new Vector2(padding, padding);
+            rt.offsetMax = new Vector2(-padding, -padding);
+        }
+
+        // ปุ่มตัวเลือก A/B/C — แผ่นโลหะ + ชิปตัวอักษร + ป้าย + Outline เรืองขอบ (ปิดไว้ · controller เปิดตอนเลือก)
+        private static (Button btn, Text label) MakeChoice(string name, Transform parent, Font font, Sprite plate, char letter, float x, float y, float w, float h, Color labelColor)
+        {
+            var img = MetalPlate(name, parent, plate, x, y, w, h);
+            var btn = img.gameObject.AddComponent<Button>();
+            btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.ColorTint;
+            var cb = btn.colors;
+            cb.highlightedColor = new Color(0.85f, 0.85f, 0.85f);
+            cb.pressedColor = new Color(0.70f, 0.70f, 0.70f);
+            cb.fadeDuration = 0.08f;
+            btn.colors = cb;
+
+            var outline = img.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.95f, 0.80f, 0.30f);
+            outline.effectDistance = new Vector2(3f, -3f);
+            outline.enabled = false;
+
+            // ชิปตัวอักษร A/B/C (ซ้าย · จัตุรัสกลางแนวตั้ง)
+            float chip = h - 24f;
+            var chipGO = new GameObject("Chip", typeof(RectTransform));
+            chipGO.transform.SetParent(img.transform, false);
+            var chipImg = chipGO.AddComponent<Image>();
+            chipImg.color = new Color(0.20f, 0.47f, 0.80f, 1f);
+            PlaceTL(chipImg.rectTransform, 12f, 12f, chip, chip);
+            var chipTxt = CreateText("ChipText", chipGO.transform, font, letter.ToString(), 30, new Vector2(chip, chip), TextAnchor.MiddleCenter);
+            FillParentText(chipTxt, 0f);
+            chipTxt.fontStyle = FontStyle.Bold;
+            chipTxt.color = Color.white;
+
+            // ป้ายตัวเลือก (ขวาของชิป · word-wrap + best-fit)
+            var label = CreateText(name + "Text", img.transform, font, "ตัวเลือก", 19, new Vector2(w, h), TextAnchor.MiddleLeft);
+            var lrt = label.rectTransform;
+            lrt.anchorMin = Vector2.zero;
+            lrt.anchorMax = Vector2.one;
+            lrt.pivot = new Vector2(0.5f, 0.5f);
+            lrt.offsetMin = new Vector2(12f + chip + 12f, 10f);
+            lrt.offsetMax = new Vector2(-12f, -10f);
+            label.color = labelColor;
+            label.resizeTextForBestFit = true; label.resizeTextMinSize = 12; label.resizeTextMaxSize = 20;
+
+            return (btn, label);
+        }
+
+        // ปุ่มโลหะป้ายกลาง (ใช้กับปุ่มยืนยัน) — มี disabledColor ให้ดูหรี่ตอนยังเลือกไม่ครบ
+        private static GameObject MakeMetalButton(string name, Transform parent, Font font, Sprite plate, string label, Color labelColor, float x, float y, float w, float h)
+        {
+            var img = MetalPlate(name, parent, plate, x, y, w, h);
+            var btn = img.gameObject.AddComponent<Button>();
+            btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.ColorTint;
+            var cb = btn.colors;
+            cb.highlightedColor = new Color(0.85f, 0.85f, 0.85f);
+            cb.pressedColor = new Color(0.70f, 0.70f, 0.70f);
+            cb.disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.6f);
+            cb.fadeDuration = 0.08f;
+            btn.colors = cb;
+
+            var t = CreateText(name + "Text", img.transform, font, label, 26, new Vector2(w, h), TextAnchor.MiddleCenter);
+            FillParentText(t, 6f);
+            t.fontStyle = FontStyle.Bold;
+            t.color = labelColor;
+            return img.gameObject;
         }
 
         private static GameObject CreatePanel(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 anchoredPos, Vector2 size)

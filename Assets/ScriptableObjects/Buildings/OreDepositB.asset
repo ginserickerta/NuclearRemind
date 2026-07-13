@@ -32,7 +32,7 @@ MonoBehaviour:
     (Rn-222) \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E2D\u0E19\u0E38\u0E20\u0E32\u0E04\u0E41\u0E2D\u0E25\u0E1F\u0E32\u0E17\u0E33\u0E25\u0E32\u0E22\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E22\u0E37\u0E48\u0E2D\u0E1B\u0E2D\u0E14"
   sprite: {fileID: 21300000, guid: 0f1e2d3c4b5a6978879605b4c3d2e1f0, type: 3}
   levelSprites: []
-  spriteOffset: {x: 0, y: -0.2}
+  spriteOffset: {x: 0, y: -0.6}
   spriteScale: 1.7
   animationFrames: []
   animationFps: 6

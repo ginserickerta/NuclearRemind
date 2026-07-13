@@ -17,9 +17,14 @@ namespace NuclearReMind
         public Image categoryBar; // แถบสีหัวข้อ — เปลี่ยนสีตามหมวดควิซ (§17)
 
         [Header("Texts")]
+        public Text topicText;     // หัวข้อสั้นมุมซ้ายบน (quiz.topicTitle) — ว่างใช้ speaker
         public Text speakerText;   // "VESTA" / "Dr. Auren Vasek"
         public Text questionText;
         public Text explainText;   // คำอธิบายความรู้ — โชว์หลังตอบ (ถูกหรือผิดก็อันเดียวกัน)
+
+        [Header("Codex reward footer")]
+        public GameObject codexFooter;  // แถบ footer (ไอคอน + ป้าย + ชื่อ) — ซ่อนถ้าควิซนี้ไม่ปลด Codex
+        public Text codexRewardText;    // ชื่อ Codex ที่จะปลด (สีฟ้า) เช่น "Plasma Confinement"
 
         [Header("Options (3)")]
         public Button[] optionButtons; // 3 ปุ่มตัวเลือก
@@ -34,10 +39,16 @@ namespace NuclearReMind
         private static readonly Color ColCorrect  = new Color(0.35f, 0.75f, 0.40f); // ข้อถูก (เขียว)
         private static readonly Color ColWrong    = new Color(0.80f, 0.35f, 0.35f); // ข้อที่เลือกผิด (แดง)
 
+        // สี Outline เรืองขอบ (อ่านชัดบนแผ่นโลหะเข้ม — tint สี image คูณแล้วจมมองไม่เห็น)
+        private static readonly Color GlowSelected = new Color(0.95f, 0.80f, 0.30f); // เลือกไว้ (เหลือง)
+        private static readonly Color GlowCorrect  = new Color(0.35f, 0.85f, 0.45f); // ถูก (เขียว)
+        private static readonly Color GlowWrong    = new Color(0.90f, 0.35f, 0.35f); // ผิด (แดง)
+
         private QuizQuestionSO _activeQuiz;
         private int _selectedIndex = -1;     // index ตามตำแหน่งบนจอ (แปลงกลับเป็น index จริงตอน submit)
         private bool _revealed;              // เฉลยแล้ว — กันเปลี่ยนคำตอบ
         private Color[] _baseColors;         // สีปุ่มเดิม (ไว้รีเซ็ตตอนถามข้อใหม่)
+        private Outline[] _optionOutlines;   // เรืองขอบปุ่มตัวเลือก (เลือก/ถูก/ผิด) — cache ตอน Start
         private int[] _displayToOriginal;    // ตำแหน่งบนจอ → index จริงใน quiz.options (สับใหม่ทุกข้อ กันจำตำแหน่งข้อถูก)
 
         private void OnEnable()
@@ -57,11 +68,14 @@ namespace NuclearReMind
             if (optionButtons != null)
             {
                 _baseColors = new Color[optionButtons.Length];
+                _optionOutlines = new Outline[optionButtons.Length];
                 for (int i = 0; i < optionButtons.Length; i++)
                 {
                     var btn = optionButtons[i];
                     if (btn == null) continue;
                     if (btn.image != null) _baseColors[i] = btn.image.color;
+                    _optionOutlines[i] = btn.GetComponent<Outline>(); // setup ใส่ Outline ไว้ (ปิดอยู่)
+                    if (_optionOutlines[i] != null) _optionOutlines[i].enabled = false;
                     int index = i; // capture ต่อ iteration
                     btn.onClick.RemoveAllListeners();
                     btn.onClick.AddListener(() => SelectOption(index));
@@ -79,8 +93,15 @@ namespace NuclearReMind
 
             if (popupPanel != null) popupPanel.SetActive(true);
             if (categoryBar != null) categoryBar.color = ColorFor(quiz.category);
+            if (topicText != null)
+                topicText.text = string.IsNullOrEmpty(quiz.topicTitle) ? quiz.speaker : quiz.topicTitle;
             if (speakerText != null) speakerText.text = quiz.speaker;
             if (questionText != null) questionText.text = quiz.question;
+
+            // footer "ปลดล็อก Codex : …" — โชว์ชื่อ entry จาก codexUnlockId (ไม่มี = ซ่อนแถบ)
+            string rewardName = ResolveCodexName(quiz.codexUnlockId);
+            if (codexRewardText != null) codexRewardText.text = rewardName;
+            if (codexFooter != null) codexFooter.SetActive(!string.IsNullOrEmpty(rewardName));
 
             // สับตำแหน่งตัวเลือก (V4 §12) — ข้อถูกไม่อยู่ตำแหน่งเดิมทุกครั้งที่เด้ง
             int optionCount = quiz.options != null ? quiz.options.Length : 0;
@@ -99,6 +120,8 @@ namespace NuclearReMind
                         btn.interactable = true;
                         if (btn.image != null && _baseColors != null && i < _baseColors.Length)
                             btn.image.color = _baseColors[i];
+                        if (_optionOutlines != null && i < _optionOutlines.Length && _optionOutlines[i] != null)
+                            _optionOutlines[i].enabled = false;
                     }
                     if (optionTexts != null && i < optionTexts.Length && optionTexts[i] != null)
                         optionTexts[i].text = hasOption ? quiz.options[_displayToOriginal[i]] : "";
@@ -124,16 +147,18 @@ namespace NuclearReMind
             if (_revealed || _activeQuiz == null) return;
             _selectedIndex = index;
 
-            // ไฮไลต์ข้อที่เลือก (เหลือง) — ข้ออื่นกลับเป็นสีเดิม
+            // ไฮไลต์ข้อที่เลือก — เรืองขอบเหลือง (Outline) + tint อ่อน · ข้ออื่นกลับสภาพเดิม
             if (optionButtons != null)
             {
                 for (int i = 0; i < optionButtons.Length; i++)
                 {
                     var btn = optionButtons[i];
-                    if (btn == null || btn.image == null) continue;
-                    btn.image.color = (i == index)
-                        ? ColSelected
-                        : (_baseColors != null && i < _baseColors.Length ? _baseColors[i] : btn.image.color);
+                    if (btn == null) continue;
+                    if (btn.image != null)
+                        btn.image.color = (i == index)
+                            ? ColSelected
+                            : (_baseColors != null && i < _baseColors.Length ? _baseColors[i] : btn.image.color);
+                    SetOutline(i, i == index, GlowSelected);
                 }
             }
 
@@ -157,9 +182,10 @@ namespace NuclearReMind
                     var btn = optionButtons[i];
                     if (btn == null) continue;
                     btn.interactable = false;
-                    if (btn.image == null) continue;
-                    if (i == correct) btn.image.color = ColCorrect;
-                    else if (i == _selectedIndex) btn.image.color = ColWrong;
+                    // เรืองขอบ: ถูก=เขียว · ข้อที่เลือกผิด=แดง · ที่เหลือดับ
+                    if (i == correct) { SetOutline(i, true, GlowCorrect); if (btn.image != null) btn.image.color = ColCorrect; }
+                    else if (i == _selectedIndex) { SetOutline(i, true, GlowWrong); if (btn.image != null) btn.image.color = ColWrong; }
+                    else SetOutline(i, false, GlowSelected);
                 }
             }
 
@@ -204,6 +230,25 @@ namespace NuclearReMind
                 (indices[i], indices[j]) = (indices[j], indices[i]);
             }
             return indices;
+        }
+
+        // เปิด/ปิดเรืองขอบปุ่มตัวเลือก index (setup ใส่ Outline component ไว้แล้ว)
+        private void SetOutline(int index, bool on, Color color)
+        {
+            if (_optionOutlines == null || index < 0 || index >= _optionOutlines.Length) return;
+            var o = _optionOutlines[index];
+            if (o == null) return;
+            o.effectColor = color;
+            o.enabled = on;
+        }
+
+        // แปลง codexUnlockId → ชื่อที่แสดง (อังกฤษก่อน ไม่งั้นไทย) จาก CodexManager (query .Instance อ่านอย่างเดียว)
+        // คืน "" ถ้าควิซนี้ไม่ปลด Codex หรือหา entry ไม่พบ → footer จะถูกซ่อน
+        private static string ResolveCodexName(string codexId)
+        {
+            if (string.IsNullOrEmpty(codexId) || CodexManager.Instance == null) return "";
+            if (!CodexManager.Instance.AllEntries.TryGetValue(codexId, out var entry) || entry == null) return "";
+            return !string.IsNullOrEmpty(entry.titleEn) ? entry.titleEn : entry.title;
         }
 
         private static Color ColorFor(QuizCategory category)

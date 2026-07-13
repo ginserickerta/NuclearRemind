@@ -123,7 +123,11 @@ namespace NuclearReMind
             // เดิมใช้กึ่งกลาง footprint → อาคาร 3×3 สไปรต์ใหญ่ซ้อนกันแล้วลำดับหน้า-หลังสลับ (บั๊กที่ผู้ใช้เจอ)
             int sx = Mathf.Max(1, data.size.x);
             int sy = Mathf.Max(1, data.size.y);
-            int baseSort = GridManager.SortOrder(position.x + (sx - 1), position.y + (sy - 1));
+            // ประเภทตัดสินตอนซ้อน depth เดียวกัน: Core Tower > Building > Ore (Player=worker อยู่ WorkerView)
+            var tier = data.isCoreTowerPart ? GridManager.SortTier.CoreTower
+                     : data.isOreNode       ? GridManager.SortTier.Ore
+                     :                         GridManager.SortTier.Building;
+            int baseSort = GridManager.SortOrder(position.x + (sx - 1), position.y + (sy - 1), tier);
 
             // เลือก sprite ตามระดับปัจจุบัน (โหลดเซฟ/วางใหม่ = L1) — มี levelSprites จึงสลับตาม, ไม่งั้นใช้ sprite เดี่ยว
             int level = BuildingRegistry.Instance != null ? BuildingRegistry.Instance.GetLevel(position) : 1;

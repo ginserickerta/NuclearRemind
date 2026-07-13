@@ -101,6 +101,7 @@ namespace NuclearReMind
             EventManager.Instance.OnWorkerAssignmentChanged += HandleWorkerAssignmentChanged;
             EventManager.Instance.OnCoilsChanged += HandleCoilsChanged;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
+            EventManager.Instance.OnRecordArchiveRequested += ArchiveRecord; // ปุ่ม "เก็บเข้าแผง Record" (RecordCardUI)
         }
 
         private void OnDisable()
@@ -117,6 +118,7 @@ namespace NuclearReMind
             EventManager.Instance.OnWorkerAssignmentChanged -= HandleWorkerAssignmentChanged;
             EventManager.Instance.OnCoilsChanged -= HandleCoilsChanged;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+            EventManager.Instance.OnRecordArchiveRequested -= ArchiveRecord;
         }
 
         // ═════════════════ Trigger detection ═════════════════
@@ -306,9 +308,12 @@ namespace NuclearReMind
                 case Step.Record:
                     if (_activeBeat.record != null)
                     {
-                        ArchiveRecord(_activeBeat.record);
-                        ShowCard(() => EventManager.Instance.RaiseStoryRecordShown(_activeBeat.record),
-                                 $"📼 กู้คืนบันทึก: {_activeBeat.record.archiveTitle}");
+                        var rec = _activeBeat.record;
+                        // mockup v2: ไม่ archive อัตโนมัติ — ผู้เล่นเลือกปุ่ม "เก็บเข้าแผง Record" บนการ์ด (RecordCardUI)
+                        ShowCard(() => EventManager.Instance.RaiseStoryRecordShown(rec),
+                                 $"📼 กู้คืนบันทึก: {rec.archiveTitle}");
+                        // ไม่มี Card UI (toast/เทสต์) → ไม่มีปุ่มให้กด → archive อัตโนมัติกันบันทึกหาย (พฤติกรรมเดิมในโหมด degrade)
+                        if (!CardUIAvailable) ArchiveRecord(rec);
                         return;
                     }
                     Advance(Step.Info);
