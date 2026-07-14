@@ -40,6 +40,27 @@ namespace NuclearReMind.EditorTools
             Debug.Log("[CodexSetup] ✅ Codex 11 entry (สเปก v8) + UI ใหม่พร้อม — กด Save Scene (Ctrl+S)");
         }
 
+        /// <summary>
+        /// เมนูแยก: build/รีเฟรช "เฉพาะหน้า Codex UI" (สกินโลหะใหม่) โดยไม่แตะ entry/manager/ลบของเก่า
+        /// ใช้ตอนอยากรีสไตล์แผงอย่างเดียว — ต่างจาก "Setup Codex System" ที่ setup ครบทั้งระบบ
+        /// (CodexManager ต้องมีในซีนอยู่แล้ว = เคยรัน Setup Codex System มาก่อน)
+        /// </summary>
+        [MenuItem("NuclearReMind/UI/Rebuild Codex UI (skin)")]
+        public static void RebuildCodexUIOnly()
+        {
+            if (EditorSceneManager.GetActiveScene().path != ScenePath)
+                EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+
+            if (GameObject.Find("CodexManager") == null)
+                Debug.LogWarning("[CodexSetup] ไม่พบ CodexManager ในซีน — รัน 'Setup Codex System' ก่อน 1 ครั้ง " +
+                                 "(เมนูนี้ build เฉพาะหน้า UI · ตัวข้อมูล/entry มาจาก CodexManager)");
+
+            SetupCodexUI();
+
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            Debug.Log("[CodexSetup] ✅ rebuild เฉพาะหน้า Codex UI (สกินใหม่) แล้ว — กด Save Scene (Ctrl+S)");
+        }
+
         // ─────────────────────────────────────────────
         //  1. สร้าง / อัปเดต CodexEntry assets ทั้ง 11
         // ─────────────────────────────────────────────
@@ -189,8 +210,13 @@ namespace NuclearReMind.EditorTools
                 new Vector2(-28, -22), new Vector2(72, 72));
             TopRight(closeBtn.GetComponent<RectTransform>());
             var closeImg = EnsureImage(closeBtn.gameObject);
-            closeImg.sprite = null; closeImg.type = Image.Type.Simple;
-            closeImg.color = new Color(0.16f, 0.13f, 0.11f, 1f);
+            var closeSprite = LoadSkin("close_x");
+            if (closeSprite != null)
+            {
+                closeImg.sprite = closeSprite; closeImg.type = Image.Type.Simple; closeImg.color = Color.white;
+                var cl = closeBtn.GetComponentInChildren<Text>(); if (cl != null) cl.text = ""; // ใช้สไปรต์ปุ่มปิดแทน ✕
+            }
+            else { closeImg.sprite = null; closeImg.type = Image.Type.Simple; closeImg.color = new Color(0.16f, 0.13f, 0.11f, 1f); }
             ui.closeButton = closeBtn; // wire runtime ใน CodexUIController.WireTabs
 
             // ── Tabs (5 แท็บโลหะ ข้อความ baked · เลือก = ขอบเรืองฟ้า) ──
@@ -312,11 +338,26 @@ namespace NuclearReMind.EditorTools
                 fimg.sprite = null; fimg.type = Image.Type.Simple;
                 fimg.color = new Color(0.11f, 0.095f, 0.08f, 0.96f);
             }
+
+            // ไอคอนหนังสือหน้า footer (ซ้าย) — โชว์เมื่อมีสไปรต์ footer_book
+            var footerBook = LoadSkin("footer_book");
+            float footerTextLeft = 20f;
+            if (footerBook != null)
+            {
+                var bookGO = CreateOrGet("FooterBook", footerBar.transform);
+                var brt = bookGO.GetComponent<RectTransform>();
+                brt.anchorMin = brt.anchorMax = new Vector2(0f, 0.5f); brt.pivot = new Vector2(0f, 0.5f);
+                brt.anchoredPosition = new Vector2(18, 0); brt.sizeDelta = new Vector2(34, 34);
+                var bimg = EnsureImage(bookGO);
+                bimg.sprite = footerBook; bimg.type = Image.Type.Simple; bimg.color = Color.white;
+                bimg.preserveAspect = true; bimg.raycastTarget = false;
+                footerTextLeft = 62f; // เว้นที่ให้ไอคอน
+            }
             ui.detailFooter = CreateText("DetailFooter", footerBar.transform, font, "", 18,
                 Vector2.zero, Vector2.zero, TextAnchor.MiddleLeft);
             {
                 var rect = ui.detailFooter.rectTransform;
-                Stretch(rect); rect.offsetMin = new Vector2(20, 0); rect.offsetMax = new Vector2(-20, 0);
+                Stretch(rect); rect.offsetMin = new Vector2(footerTextLeft, 0); rect.offsetMax = new Vector2(-20, 0);
             }
             ui.detailFooter.color = new Color(1f, 0.82f, 0.35f);
             ui.detailFooter.fontStyle = FontStyle.Bold;

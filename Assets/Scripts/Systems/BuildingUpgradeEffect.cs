@@ -52,8 +52,6 @@ namespace NuclearReMind
             Transform tf = transform;
             Vector3 baseScale = tf.localScale;
             Vector3 basePos = tf.position;
-            int baseSort = _sr != null ? _sr.sortingOrder : 0;
-            string layer = _sr != null ? _sr.sortingLayerName : "Default";
 
             // 1) กระแทก: สั่นแนวนอนหน่วงลง (ให้รู้สึกโดนทุบ — แทน NPC)
             float t = 0f;
@@ -67,11 +65,11 @@ namespace NuclearReMind
             }
             tf.position = basePos;
 
-            // 2) ฝุ่นระเบิด + flash ขาว (สปอว์นเหนือตัวอาคารเล็กน้อย)
-            SpawnDustBurst(basePos, baseScale, layer, baseSort + 5);
-            SpawnFlash(basePos, baseScale, layer, baseSort + 6);
+            // 2) (เอาเอฟเฟกต์ควัน/ฝุ่น+flash ออกตามคำขอ — เหลือ สั่น→สลับสไปรต์→เด้ง)
+            //    ถ้าอยากเปิดกลับ: เรียก SpawnDustBurst(basePos, baseScale, layer, baseSort + 5);
+            //    และ SpawnFlash(basePos, baseScale, layer, baseSort + 6); ตรงนี้
 
-            // 3) รอฝุ่นทึบสุดแล้วสลับ sprite (คนดูไม่เห็นรอยต่อ)
+            // 3) หน่วงเล็กน้อยแล้วสลับ sprite เป็นเลเวลใหม่
             yield return WaitUnscaled(DustPeakDelay);
             if (_sr != null && _newSprite != null) _sr.sprite = _newSprite;
 

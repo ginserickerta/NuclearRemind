@@ -19,6 +19,12 @@ namespace NuclearReMind
         [Header("Testing - Building Hotbar (กด 1-9 เพื่อเลือกอาคาร)")]
         public BuildingData[] buildingHotbar;
 
+        [Header("Zone B (เขตรังสีสูง — ห้ามวางอาคาร)")]
+        [Tooltip("คอลัมน์แรกของ Zone B — วางอาคารในคอลัมน์ ≥ ค่านี้ไม่ได้ · Awake จะ sync จาก ZoneBarrierRenderer.barrierColumn ให้ตรงกับรั้วที่เห็นอัตโนมัติ")]
+        [SerializeField] private int zoneBBarrierColumn = 36;
+        [Tooltip("ปิด = อนุญาตวางใน Zone B ได้ (เผื่อดีไซน์เปลี่ยน)")]
+        [SerializeField] private bool blockZoneBPlacement = true;
+
         private static readonly KeyCode[] HotbarKeys =
         {
             KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4,
@@ -48,6 +54,10 @@ namespace NuclearReMind
                 return;
             }
             Instance = this;
+
+            // sync ขอบ Zone B ให้ตรงกับรั้วที่ผู้เล่นเห็น (ถ้ามี ZoneBarrierRenderer ในซีน) — Awake เท่านั้น (ไม่ใช่ Update)
+            var barrier = FindFirstObjectByType<ZoneBarrierRenderer>();
+            if (barrier != null) zoneBBarrierColumn = barrier.barrierColumn;
 
             if (ghostRenderer != null)
                 ghostRenderer.gameObject.SetActive(false);
@@ -214,10 +224,24 @@ namespace NuclearReMind
                     Cell cell = GridManager.Instance.GetCell(origin.x + dx, origin.y + dy);
                     if (cell == null || cell.isOccupied)
                         return false;
+                    if (IsInZoneB(origin.x + dx)) // เขตรังสีสูง — ห้ามวาง
+                        return false;
                 }
             }
 
             return true;
+        }
+
+        /// <summary>คอลัมน์นี้อยู่ใน Zone B (เขตรังสีสูง ฝั่ง NE ของรั้ว) ไหม — วางอาคารไม่ได้</summary>
+        private bool IsInZoneB(int col) => blockZoneBPlacement && col >= zoneBBarrierColumn;
+
+        /// <summary>footprint ที่ origin แตะ Zone B ไหม (ใช้แจ้งเหตุผลตอนวางไม่ได้)</summary>
+        private bool FootprintTouchesZoneB(Vector2Int origin)
+        {
+            if (!blockZoneBPlacement || selectedBuilding == null) return false;
+            for (int dx = 0; dx < selectedBuilding.size.x; dx++)
+                if (IsInZoneB(origin.x + dx)) return true;
+            return false;
         }
 
         /// <summary>คลังปัจจุบันพอจ่ายค่าสร้างไหม (ตัวเลขเดียวกับที่ ResourceManager หักตอนวาง)</summary>
@@ -257,6 +281,8 @@ namespace NuclearReMind
 
             if (!IsPlacementValid(currentCell))
             {
+                if (FootprintTouchesZoneB(currentCell))
+                    EventManager.Instance.RaiseNotice("วางอาคารในเขตรังสีสูง (Zone B) ไม่ได้");
                 Debug.Log("[PlacementController] ตำแหน่งนี้วางอาคารไม่ได้");
                 return;
             }

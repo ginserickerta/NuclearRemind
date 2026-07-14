@@ -29,6 +29,9 @@ MonoBehaviour:
   spriteScale: 1.7
   animationFrames: []
   animationFps: 6.06
+  overrideBaseCollider: 0
+  baseColliderSize: {x: 0, y: 0}
+  baseColliderOffset: {x: 0, y: 0}
   size: {x: 1, y: 1}
   buildingType: 11
   ironCost: 0
@@ -58,8 +61,8 @@ MonoBehaviour:
   powerRange: 0
   isPowerRelay: 0
   isOreNode: 1
-  oreQuotaMin: 15
-  oreQuotaMax: 35
+  oreQuotaMin: 30
+  oreQuotaMax: 60
   oreTritiumMin: 0
   oreTritiumMax: 0
   oreExposurePerWorkerDay: 0

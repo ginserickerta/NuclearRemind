@@ -30,6 +30,9 @@ MonoBehaviour:
   spriteScale: 1.2
   animationFrames: []
   animationFps: 6
+  overrideBaseCollider: 0
+  baseColliderSize: {x: 0, y: 0}
+  baseColliderOffset: {x: 0, y: 0}
   size: {x: 3, y: 3}
   buildingType: 4
   ironCost: 40

@@ -38,10 +38,16 @@ namespace NuclearReMind
             if (CodexUIController.Instance != null) CodexUIController.Instance.Toggle();
         }
 
-        /// <summary>บันทึกเกม (ปุ่ม บันทึก · คีย์ F5) — ยิงผ่าน EventManager</summary>
+        /// <summary>บันทึกเกม (คีย์ F5) — ยิงผ่าน EventManager</summary>
         public void RequestSave()
         {
             if (EventManager.Instance != null) EventManager.Instance.RaiseSaveRequested();
+        }
+
+        /// <summary>เปิด/ปิดแผงบันทึกที่กู้คืน (Records · ปุ่ม บันทึก บนแถบข้าง)</summary>
+        public void ToggleRecords()
+        {
+            if (RecordsPanelController.Instance != null) RecordsPanelController.Instance.Toggle();
         }
     }
 }

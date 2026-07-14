@@ -31,12 +31,15 @@ MonoBehaviour:
   spriteScale: 1.5
   animationFrames: []
   animationFps: 6
+  overrideBaseCollider: 0
+  baseColliderSize: {x: 0, y: 0}
+  baseColliderOffset: {x: 0, y: 0}
   size: {x: 2, y: 2}
   buildingType: 12
   ironCost: 100
   energyCost: 150
   workerRequired: 2
-  workersPerLevel: 
+  workersPerLevel: 020000000300000004000000
   unlockPhase: 3
   buildTicks: 8
   foodProduction: 0

@@ -60,7 +60,8 @@ namespace NuclearReMind.EditorTools
             // สไปรต์ป้ายยาวใหม่ (icon+ข้อความ baked) สัดส่วน ~3.9:1 → ปุ่มกว้าง 210 × สูง ~54 (ตั้งตามสัดส่วนป้ายจริงต่อใบ)
             // anchored ซ้ายล่าง (x,y=ขอบล่าง) + sizeDelta (w,h) · preserveAspect เต็มกล่องเพราะ rect ตรงสัดส่วน
             // เรียงจากล่างขึ้นบน (gap 12): บันทึก → Codex → คีย์ลัด → ไอเทม (ไอเทมบนสุด) — ปรับตำแหน่งต่อได้ด้วย Rect tool
-            var save      = MakeSpriteButton(bar.transform, "SideBtn_Save",      "side_save",      new Vector2(19f, 100f), new Vector2(210f, 54f));
+            // ปุ่ม "บันทึก" = เปิดแผง Records (บันทึกที่กู้คืน) · เซฟเกมยังใช้ F5 (ยิง RaiseSaveRequested)
+            var records   = MakeSpriteButton(bar.transform, "SideBtn_Records",   "side_save",      new Vector2(19f, 100f), new Vector2(210f, 54f));
             var codex     = MakeSpriteButton(bar.transform, "SideBtn_Codex",     "side_codex",     new Vector2(19f, 166f), new Vector2(210f, 53f));
             var hotkey    = MakeSpriteButton(bar.transform, "SideBtn_Hotkey",    "side_hotkey",    new Vector2(19f, 231f), new Vector2(210f, 54f));
             var inventory = MakeSpriteButton(bar.transform, "SideBtn_Inventory", "side_inventory", new Vector2(19f, 297f), new Vector2(210f, 55f));
@@ -68,7 +69,7 @@ namespace NuclearReMind.EditorTools
             if (inventory != null) UnityEventTools.AddPersistentListener(inventory.onClick, new UnityAction(hudMenu.ToggleInventory));
             if (hotkey != null) UnityEventTools.AddPersistentListener(hotkey.onClick, new UnityAction(hudMenu.ToggleHotkeyHelp));
             if (codex != null) UnityEventTools.AddPersistentListener(codex.onClick, new UnityAction(hudMenu.ToggleCodex));
-            if (save != null) UnityEventTools.AddPersistentListener(save.onClick, new UnityAction(hudMenu.RequestSave));
+            if (records != null) UnityEventTools.AddPersistentListener(records.onClick, new UnityAction(hudMenu.ToggleRecords));
 
             EditorUtility.SetDirty(bar);
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
