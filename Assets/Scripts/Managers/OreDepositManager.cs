@@ -51,6 +51,9 @@ namespace NuclearReMind
         [Tooltip("พาเลตต์สี 4 โซน + ไล่เฟด A→B + มืดนอกกริด (คุมสีต่อ tile ผ่าน IsoGroundPainter.ColorForTile)")]
         public GroundPalette groundPalette = GroundPalette.Default;
 
+        [Tooltip("สีเฉพาะช่อง (col,row) ที่ทาเองด้วย Tile Color Painter — GridSpriteFiller ทาทับ gradient ตอน 'Fill Grids' จึงไม่หายเมื่อ re-fill")]
+        public List<TileColorOverride> tileColorOverrides = new List<TileColorOverride>();
+
         // เติมพาเลตต์ default ให้ instance เก่าที่เพิ่งมี field นี้ (Unity ไม่รัน initializer ตอน deserialize → struct เป็นศูนย์)
         private void OnValidate()
         {

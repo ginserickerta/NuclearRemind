@@ -30,6 +30,18 @@ namespace NuclearReMind
     }
 
     /// <summary>
+    /// สีทับเฉพาะช่อง (col,row) ที่ทาเองด้วย Tile Color Painter — เก็บบน OreDepositManager
+    /// GridSpriteFiller ทาทับสี gradient ตอน 'Fill Grids' → แก้ทีละช่องไม่หายเมื่อ re-fill
+    /// </summary>
+    [System.Serializable]
+    public struct TileColorOverride
+    {
+        public Vector2Int cell;
+        public Color color;
+        public TileColorOverride(Vector2Int cell, Color color) { this.cell = cell; this.color = color; }
+    }
+
+    /// <summary>
     /// เลือกไทล์พื้นต่อช่อง (col,row) แบบ "พื้นเนียนใบเดียว + โรย variety" ตามโซน (V4 §5) —
     /// pure ล้วน ไม่มี scene/asset ให้เทสต์ตรวจได้ (GridSpriteFiller เรียกใช้ตอนระบาย Ground)
     ///

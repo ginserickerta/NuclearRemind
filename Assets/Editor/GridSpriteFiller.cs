@@ -98,7 +98,8 @@ namespace NuclearReMind.Editor
                 var (gMargin, gPal) = ReadGroundConfig();
                 var groundGrass = flatGrass.Count > 0 ? flatGrass : blockGrass;
                 var groundDirt = flatDirt.Count > 0 ? flatDirt : blockDirt;
-                int g = FillZonedSprites(GroundObjectName, groundGrass, groundDirt, columns, rows, border, gMargin, gPal);
+                var overrides = ReadTileColorOverrides();
+                int g = FillZonedSprites(GroundObjectName, groundGrass, groundDirt, columns, rows, border, gMargin, gPal, overrides);
                 if (g < 0) return (-1, 0);
                 // fog: ไทล์แบนใบเดียวถ้ามี (สะอาดใต้หมอก) ไม่งั้นไทล์แบน/บล็อกตัวแรกในชุด
                 TileBase fogTile = grassA
@@ -218,7 +219,8 @@ namespace NuclearReMind.Editor
         //   นอกกริด (apron margin): ดินล้วน + คูณ outsideDarken ไล่เนียนที่ขอบ (SetColor) — นอก cell กริด = วาง building ไม่ได้
         // ★ Hash(col,row) deterministic → ลาย/โซนคงที่ทุก re-fill (ไม่ใช้ Random)
         private static int FillZonedSprites(string objectName, List<TileBase> grass, List<TileBase> dirt,
-                                            int columns, int rows, int border, int margin, NuclearReMind.GroundPalette pal)
+                                            int columns, int rows, int border, int margin, NuclearReMind.GroundPalette pal,
+                                            Dictionary<Vector2Int, Color> overrides = null)
         {
             Tilemap map = FindTilemap(objectName);
             if (map == null) return -1;
@@ -233,6 +235,9 @@ namespace NuclearReMind.Editor
             map.ClearAllTiles();
 
             int m = Mathf.Max(0, margin);
+            // 0 = พื้นเรียบใบฐานล้วน (กันจุดก้อนหิน/พิกเซลอ่อนในไทล์ variety เด้งเป็นจุดขาว — ผู้ใช้ขอ "ไม่รกตา")
+            // เพิ่มเป็น 5–8 ถ้าอยากได้ดินรอยแตก/หญ้าหนากระจายบ้าง
+            const int varietyPct = 0;
             int count = 0, inner = 0, grassCells = 0;
             for (int x = -m; x < columns + m; x++)
                 for (int y = -m; y < rows + m; y++)
@@ -243,14 +248,24 @@ namespace NuclearReMind.Editor
                     var zone = zoneA ? grassList : dirtList;   // apron (outside) = ดิน (รกร้าง)
 
                     var pos = new Vector3Int(x, y, 0);
-                    map.SetTile(pos, zone[NuclearReMind.IsoGroundPainter.VarietyPick(x, y, zone.Count)]);
+                    // ฐาน = ไทล์เรียบใบแรก (zone[0]) · โรย variety เฉพาะ varietyPct% ของช่อง (0 = เรียบล้วน ไม่มีจุดเด้ง)
+                    int vi = 0;
+                    if (zone.Count > 1 && NuclearReMind.IsoGroundPainter.Hash(x, y) % 100 < varietyPct)
+                        vi = 1 + NuclearReMind.IsoGroundPainter.VarietyPick(x, y, zone.Count - 1);
+                    map.SetTile(pos, zone[vi]);
                     map.SetTileFlags(pos, TileFlags.None);      // ปลดล็อกสี ให้ SetColor มีผล
-                    if (outside)
+
+                    // ★ override สีต่อช่อง (Tile Color Painter) ทาทับ gradient/darken — แก้ทีละช่องไม่หายเมื่อ re-fill
+                    if (overrides != null && overrides.TryGetValue(new Vector2Int(x, y), out var ovr))
+                        map.SetColor(pos, ovr);
+                    else if (outside)
                     {
                         float f = NuclearReMind.IsoGroundPainter.OutsideDarken(x, y, columns, rows, pal);
                         map.SetColor(pos, new Color(f, f, f, 1f));
                     }
-                    else { map.SetColor(pos, Color.white); inner++; if (zoneA) grassCells++; }
+                    else map.SetColor(pos, Color.white);
+
+                    if (!outside) { inner++; if (zoneA) grassCells++; }
                     count++;
                 }
 
@@ -272,6 +287,17 @@ namespace NuclearReMind.Editor
                 return (Mathf.Max(0, ore.apronMargin), pal);
             }
             return (FallbackApronMargin, NuclearReMind.GroundPalette.Default);
+        }
+
+        // override สีต่อช่อง (เขียนโดย Tile Color Painter · เก็บบน OreDepositManager) → dict (col,row)→สี
+        // ช่องซ้ำ = ใบหลังทับใบหน้า (painter อัปเดต in-place อยู่แล้ว จึงไม่ค่อยซ้ำ)
+        private static Dictionary<Vector2Int, Color> ReadTileColorOverrides()
+        {
+            var dict = new Dictionary<Vector2Int, Color>();
+            var ore = Object.FindFirstObjectByType<NuclearReMind.OreDepositManager>();
+            if (ore == null || ore.tileColorOverrides == null) return dict;
+            foreach (var o in ore.tileColorOverrides) dict[o.cell] = o.color;
+            return dict;
         }
 
         // ชุดสำรองเมื่อโซนที่ต้องการว่าง — ไล่จากแบนโซนนั้น → บล็อกโซนนั้น → อีกโซน
