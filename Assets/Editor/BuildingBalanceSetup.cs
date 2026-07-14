@@ -25,14 +25,12 @@ namespace NuclearReMind.Editor
         {
             int n = ApplyCore();
             EditorUtility.DisplayDialog("V4 §6 Building Balance",
-                $"อัปเดต {n} อาคารตามตาราง V4 §6 (ค่า L1):\n\n" +
-                "  • Power Plant : +60⚡ / 1 คน / ไม่มี upkeep / สร้าง ⛏40\n" +
-                "  • Water Plant : +50💧 / 1 คน / upkeep 10⚡ / สร้าง ⛏30\n" +
-                "  • Food Plant  : +40🌿 / 1 คน / upkeep 8⚡+15💧 / สร้าง ⛏30\n" +
-                "  • Mine        : +30⛏ / 2 คน (ถอดจาก hotbar แล้ว — เหล็กมาจากแหล่งแร่ A/B)\n" +
-                "  • Research Lab: ⛏80+⚡120 / 2 วิศวกร / upkeep 20⚡ / Knowledge 2/วัน\n" +
-                "  • Shelter (Habitat) : เพดานประชากร +10/+30/+70 / สร้าง ⛏60+⚡100\n\n" +
-                "ค่าอัประดับ: Iron ×ระดับ + Energy ×ระดับ (ตึกผลิต ⛏40+⚡150, Mine ⚡120, Shelter ⛏120+⚡200)\n\n" +
+                $"อัปเดต {n} อาคาร + สมดุลใหม่:\n\n" +
+                "  ★ เพดานคนงานต่อระดับ (แก้บั๊กค้างที่ 1): โรงไฟ/น้ำ/อาหาร 1·2·3 · เหมือง/แล็บ/รพ. 2·3·4\n" +
+                "  ★ แร่โซน A หาง่ายขึ้น: โควตา 15–35 → 30–60/โหนด + จำนวนโหนด 5 → 7\n" +
+                "  ★ ถอด 'ที่หลบภัยรังสี' ออกจาก hotbar (สร้างไม่ได้แล้ว)\n\n" +
+                "  • Power Plant : +60⚡ / สร้าง ⛏40 · Water : +50💧 · Food : +40🌿\n" +
+                "  • Research Lab: 2 วิศวกร / Knowledge 2/วัน · Shelter (Habitat) : เพดานปชก. +10/+30/+70\n\n" +
                 "อย่าลืม Save Scene + Save Project (Ctrl+S)", "OK");
         }
 
@@ -53,6 +51,7 @@ namespace NuclearReMind.Editor
             {
                 b.energyProduction = 60f;
                 b.workerRequired = 1;
+                b.workersPerLevel = new[] { 1, 2, 3 }; // เพดานคน L1/L2/L3 — อัประดับ → ใส่คนได้มากขึ้น (แก้บั๊กค้างที่ 1)
                 b.energyConsumption = 0f;
                 b.waterConsumption = 0f;
                 b.ironCost = 40;
@@ -65,6 +64,7 @@ namespace NuclearReMind.Editor
             {
                 b.waterProduction = 50f;
                 b.workerRequired = 1;
+                b.workersPerLevel = new[] { 1, 2, 3 };
                 b.energyConsumption = 10f;
                 b.waterConsumption = 0f;
                 b.ironCost = 30;
@@ -77,12 +77,21 @@ namespace NuclearReMind.Editor
             {
                 b.foodProduction = 40f;
                 b.workerRequired = 1;
+                b.workersPerLevel = new[] { 1, 2, 3 };
                 b.requiredClass = WorkerClass.Farmer; // ฟาร์มใช้เกษตรกร (เริ่มเกมมี 2 คน — bootstrap)
                 b.energyConsumption = 8f;
                 b.waterConsumption = 15f;
                 b.ironCost = 30;
                 b.upgradeIronCost = 40;
                 b.upgradeEnergyCost = 150;
+            });
+
+            // Hospital (แพทย์): เพดานคน L1/L2/L3 = 2/3/4 — อัประดับรับคนงานเพิ่ม
+            n += SetBuilding("Hospital", b =>
+            {
+                b.workerRequired = 2;
+                b.workersPerLevel = new[] { 2, 3, 4 };
+                b.requiredClass = WorkerClass.Medic;
             });
 
             // ── Research Lab (§6 อาคารวิจัย): มากับแมพ Day 1 หลังเดียว (วางเอง/วางซ้ำไม่ได้ — ถอดจาก hotbar) ──
@@ -94,6 +103,7 @@ namespace NuclearReMind.Editor
                 b.ironCost = 0;
                 b.energyCost = 0;
                 b.workerRequired = 2;
+                b.workersPerLevel = new[] { 2, 3, 4 }; // เพดานวิศวกร L1/L2/L3
                 b.requiredClass = WorkerClass.Engineer;
                 b.energyConsumption = 20f;
                 b.waterConsumption = 0f;
@@ -106,8 +116,11 @@ namespace NuclearReMind.Editor
                                 "ต้องมีวิศวกรประจำ 2 คนจึงเดินเครื่อง";
             });
 
-            // ── RadiationShelter: ปลดเฟส 2 (ก่อนยุครังสีหนัก) — ค่าอื่นคง asset เดิม ──
-            n += SetBuilding("RadiationShelter", b => { b.unlockPhase = 2; });
+            // ── RadiationShelter: ถอดออกจากเกม (ผู้ใช้สั่งลบ) — ถอดจาก hotbar ใน WireSceneReferences ──
+            //   (คง asset ไว้กันเซฟเก่า/registry อ้างถึงพัง · แค่ผู้เล่นสร้างไม่ได้แล้ว)
+
+            // #1 ต้นเกมแร่เหล็กหายาก — เพิ่มโควตาแหล่งแร่โซน A (ปลอดภัย) ~เท่าตัว: 15–35 → 30–60 /โหนด/วัน
+            n += SetBuilding("OreDepositA", b => { b.oreQuotaMin = 30f; b.oreQuotaMax = 60f; });
 
             // ── ตึกผลิตพื้นฐาน + Shelter: เฟส 1 (วางได้วันแรก) — เซ็ตชัดกัน asset ค้างค่าอื่น ──
             SetBuilding("PowerPlant", b => { b.unlockPhase = 1; });
@@ -121,6 +134,7 @@ namespace NuclearReMind.Editor
             {
                 b.ironProduction = 30f;
                 b.workerRequired = 2;
+                b.workersPerLevel = new[] { 2, 3, 4 }; // เพดานคน L1/L2/L3
                 b.energyConsumption = 12f;
                 b.waterConsumption = 0f;
                 b.ironCost = 20;
@@ -190,6 +204,7 @@ namespace NuclearReMind.Editor
             var conduit = AssetDatabase.LoadAssetAtPath<BuildingData>(Dir + "PowerConduit.asset");
             var coreTower = AssetDatabase.LoadAssetAtPath<BuildingData>(Dir + "CoreTower.asset");
             var lab = AssetDatabase.LoadAssetAtPath<BuildingData>(Dir + "Laboratory.asset");
+            var radShelter = AssetDatabase.LoadAssetAtPath<BuildingData>(Dir + "RadiationShelter.asset");
 
             var placement = Object.FindFirstObjectByType<PlacementController>();
             if (placement != null)
@@ -201,10 +216,11 @@ namespace NuclearReMind.Editor
                 changed |= RemoveIfPresent(ref placement.buildingHotbar, conduit);
                 changed |= RemoveIfPresent(ref placement.buildingHotbar, coreTower);
                 changed |= RemoveIfPresent(ref placement.buildingHotbar, lab);
+                changed |= RemoveIfPresent(ref placement.buildingHotbar, radShelter); // #3 ลบตึกที่หลบภัยรังสี
                 if (changed)
                 {
                     EditorUtility.SetDirty(placement);
-                    Debug.Log($"[BuildingBalanceSetup] hotbar = {placement.buildingHotbar.Length} ช่อง (Mine+Conduit+CoreTower+Lab ถอด)");
+                    Debug.Log($"[BuildingBalanceSetup] hotbar = {placement.buildingHotbar.Length} ช่อง (Mine+Conduit+CoreTower+Lab+RadShelter ถอด)");
                 }
 
                 // BuildingSelectionUI.buildings เป็น array แยก (serialize คนละก้อน) — sync ให้ตรง hotbar เสมอ
@@ -221,6 +237,15 @@ namespace NuclearReMind.Editor
             {
                 EditorUtility.SetDirty(registry);
                 Debug.Log("[BuildingBalanceSetup] เพิ่ม Mine เข้า BuildingRegistry.allBuildingData");
+            }
+
+            // #1 ต้นเกมแร่หายาก — เพิ่มจำนวนแหล่งแร่โซน A (หาง่ายขึ้น) 5 → 7 โหนด
+            var ore = Object.FindFirstObjectByType<NuclearReMind.OreDepositManager>();
+            if (ore != null && ore.zoneACount < 7)
+            {
+                ore.zoneACount = 7;
+                EditorUtility.SetDirty(ore);
+                Debug.Log("[BuildingBalanceSetup] OreDepositManager.zoneACount = 7 (แร่โซน A หาง่ายขึ้น)");
             }
 
             EnsurePrePlacedCoreTower(coreTower);

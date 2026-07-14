@@ -146,10 +146,13 @@ namespace NuclearReMind
         public int EffectiveCap(Vector2Int cell, BuildingData data)
         {
             if (data == null) return 0;
-            int cap = Mathf.Max(0, data.workerRequired);
+            // เพดานตาม "ระดับปัจจุบัน" (WorkersForLevel ผ่าน registry) — อัปเกรดแล้วรับคนได้มากขึ้น
+            // เดิมใช้ data.workerRequired (ค่า L1 คงที่) → เพดานค้างที่ L1 ทุกระดับ (บั๊กที่ผู้ใช้เจอ)
+            var reg = BuildingRegistry.Instance;
+            int cap = reg != null ? reg.WorkersRequired(cell) : Mathf.Max(0, data.workerRequired);
             var construction = ConstructionController.Instance;
             if (construction != null && construction.IsUnderConstruction(cell))
-                cap = Mathf.Max(cap, 1);
+                cap = Mathf.Max(cap, 1); // ระหว่างสร้าง: รับผู้สร้างได้ ≥1 แม้ตอนเดินเครื่องไม่ใช้คน (Habitat)
             return cap;
         }
 

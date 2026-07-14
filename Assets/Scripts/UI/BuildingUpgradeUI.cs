@@ -308,10 +308,16 @@ namespace NuclearReMind
                     _prodValTxt.color = (assigned == 0 && required > 0) ? CWarn : CAccent;
                 }
             }
+            // เพดานคนที่ใส่ได้ = EffectiveCap (ตามระดับ + ระหว่างสร้างรับผู้สร้าง ≥1) — แหล่งความจริงเดียวกับตอนกด +
+            // เดิม gate ด้วย required (=WorkersForLevel) → Habitat (workerRequired 0) ใส่ผู้สร้างไม่ได้ระหว่างสร้าง (บั๊ก #4)
+            int workerCap = WorkerAssignmentManager.Instance != null
+                ? WorkerAssignmentManager.Instance.EffectiveCap(_currentCell, data) : required;
             if (_workerValTxt != null)
-                _workerValTxt.text = required > 0 ? $"{assigned} / {required} คน" : "ไม่ต้องใช้";
-            if (_workerMinus != null) _workerMinus.interactable = required > 0 && assigned > 0;
-            if (_workerPlus  != null) _workerPlus.interactable  = required > 0 && assigned < required && idle > 0;
+                _workerValTxt.text = workerCap > 0
+                    ? $"{assigned} / {workerCap} คน" + (building && required <= 0 ? " (ผู้สร้าง)" : "")
+                    : "ไม่ต้องใช้";
+            if (_workerMinus != null) _workerMinus.interactable = assigned > 0;
+            if (_workerPlus  != null) _workerPlus.interactable  = assigned < workerCap && idle > 0;
 
             // โรงน้ำ §4: บรรทัดสกัดดิวเทอเรียม (กินน้ำ) — เฉพาะอาคารที่มี deuteriumProduction
             if (_extractRow != null)
