@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace NuclearReMind
 {
@@ -30,6 +31,7 @@ namespace NuclearReMind
         private BuildingData selectedBuilding;
         private Vector2Int currentCell;
         private bool isPlacing;
+        private bool _dragMode;   // true = เข้าโหมดวางจากการลากช่อง hotbar (drop=วาง แทนคลิกซ้าย)
 
         /// <summary>กำลังอยู่โหมดวางอาคาร (read-only — PauseMenuController ใช้เช็คก่อนเปิดเมนูจาก ESC)</summary>
         public bool IsPlacing => isPlacing;
@@ -54,6 +56,8 @@ namespace NuclearReMind
         private void OnEnable()
         {
             EventManager.Instance.OnBuildingSelectRequested += BeginPlacement;
+            EventManager.Instance.OnBuildingDragStarted     += BeginDragPlacement;
+            EventManager.Instance.OnBuildingDragDropped     += EndDragPlacement;
             EventManager.Instance.OnDemolishModeToggled     += HandleDemolishModeToggled;
         }
 
@@ -61,6 +65,8 @@ namespace NuclearReMind
         {
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnBuildingSelectRequested -= BeginPlacement;
+            EventManager.Instance.OnBuildingDragStarted     -= BeginDragPlacement;
+            EventManager.Instance.OnBuildingDragDropped     -= EndDragPlacement;
             EventManager.Instance.OnDemolishModeToggled     -= HandleDemolishModeToggled;
         }
 
@@ -83,14 +89,25 @@ namespace NuclearReMind
 
             UpdateGhost();
 
-            if (Input.GetMouseButtonDown(0))
-                ConfirmPlace();
-            else if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape)) // §15: ยกเลิก = คลิกขวา หรือ Esc
+            // ยกเลิกด้วยคลิกขวา/Esc ได้ทั้งสองโหมด
+            if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape)) // §15: ยกเลิก = คลิกขวา หรือ Esc
             {
                 if (Input.GetKeyDown(KeyCode.Escape))
                     LastEscCancelFrame = Time.frameCount;
                 CancelPlacement();
+                return;
             }
+
+            // โหมด drag: วาง/ยกเลิกเมื่อปล่อยเมาส์ (ปกติ HotbarSlotDrag.OnEndDrag เรียก EndDragPlacement
+            // อยู่แล้ว — อันนี้เป็น backstop เผื่อลำดับ update ต่างกัน · EndDragPlacement เป็น idempotent)
+            if (_dragMode)
+            {
+                if (Input.GetMouseButtonUp(0))
+                    EndDragPlacement();
+            }
+            // โหมดคลิก: คลิกซ้ายเพื่อยืนยันวาง
+            else if (Input.GetMouseButtonDown(0))
+                ConfirmPlace();
         }
 
         /// <summary>
@@ -112,7 +129,12 @@ namespace NuclearReMind
         /// เริ่มโหมดวางอาคารด้วยข้อมูลอาคารที่เลือก
         /// ทรัพยากรไม่พอ / CORE TOWER มีอยู่แล้ว → ไม่เข้าโหมดวาง (ปุ่ม HUD หรี่อยู่แล้ว แต่ hotkey ยังกดได้)
         /// </summary>
-        public void BeginPlacement(BuildingData buildingData)
+        public void BeginPlacement(BuildingData buildingData) => StartPlacement(buildingData, false);
+
+        /// <summary>เริ่มวางแบบ drag (ลากจากช่อง hotbar) — วาง/ยกเลิกเมื่อปล่อยเมาส์ ไม่ต้องคลิกซ้ำ</summary>
+        public void BeginDragPlacement(BuildingData buildingData) => StartPlacement(buildingData, true);
+
+        private void StartPlacement(BuildingData buildingData, bool dragMode)
         {
             if (buildingData == null) return;
 
@@ -139,6 +161,7 @@ namespace NuclearReMind
 
             selectedBuilding = buildingData;
             isPlacing = true;
+            _dragMode = dragMode;
 
             // §15: เข้าโหมดวาง → หยุดนาฬิกาวัน (ghost ยังเลื่อนได้ เพราะไม่แตะ timeScale)
             TimeManager.Instance?.Pause(PauseReason.Placement);
@@ -263,6 +286,22 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// จบการลาก (ปล่อยเมาส์) — วางถ้าตำแหน่งใช้ได้และไม่ได้ปล่อยบน UI, ไม่งั้นยกเลิก
+        /// </summary>
+        public void EndDragPlacement()
+        {
+            if (!isPlacing || !_dragMode) return;
+
+            // ปล่อยเมาส์เหนือ UI (เช่น ลากกลับมาปล่อยบน hotbar) = ยกเลิก
+            bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+
+            if (!overUI && IsPlacementValid(currentCell))
+                ConfirmPlace();
+            else
+                CancelPlacement();
+        }
+
+        /// <summary>
         /// ยกเลิกการวางอาคาร
         /// </summary>
         public void CancelPlacement()
@@ -278,6 +317,7 @@ namespace NuclearReMind
         private void EndPlacement()
         {
             isPlacing = false;
+            _dragMode = false;
             selectedBuilding = null;
 
             if (ghostRenderer != null)

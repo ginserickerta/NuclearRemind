@@ -10,7 +10,7 @@ namespace NuclearReMind
     /// interaction ปกติชิ้นเดียวของระบบเนื้อเรื่อง — เกมไม่ชี้ว่า ELARA VANE อยู่ในรายชื่อ
     /// เสียงในใจ (innerVoiceOnFirstOpen) โชว์เป็น Notice ครั้งเดียวตอนเปิดครั้งแรกของรอบเล่น
     /// </summary>
-    public class MemorialPanelController : MonoBehaviour
+    public class MemorialPanelController : MonoBehaviour, GameUIStack.IPanel
     {
         public static MemorialPanelController Instance { get; private set; }
 
@@ -94,7 +94,8 @@ namespace NuclearReMind
 
         public void Open()
         {
-            if (panel != null) panel.SetActive(true);
+            if (panel != null) { UIPopIn.Ensure(panel); panel.SetActive(true); }
+            GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)
             if (memorialData == null) return;
 
             if (headerText != null) headerText.text = memorialData.headerTH;
@@ -111,6 +112,12 @@ namespace NuclearReMind
         public void Close()
         {
             if (panel != null) panel.SetActive(false);
+            GameUIStack.Pop(this);
         }
+
+        // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
+        bool GameUIStack.IPanel.ClosableByEscape => true;
+        void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(panel);
+        void GameUIStack.IPanel.CloseFromStack() => Close();
     }
 }

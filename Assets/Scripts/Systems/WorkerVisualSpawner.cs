@@ -262,6 +262,11 @@ namespace NuclearReMind
             return grid.IsoToWorldF(col, row);
         }
 
+        // ===== เงาใต้เท้าคนงาน (ellipse นุ่ม · ยึดตัวละครกับพื้น ไม่ให้ดูลอย) =====
+        private const float WorkerShadowAlpha       = 0.28f; // ความเข้มเงา
+        private const float WorkerShadowWidthFactor = 0.60f; // ความกว้างเงาเทียบความกว้างสไปรต์
+        private static Sprite _ellipseShadow;
+
         private void SpawnWorker(WorkerClass cls, List<WorkerView> list)
         {
             var go = new GameObject($"{cls}_{list.Count}");
@@ -269,7 +274,52 @@ namespace NuclearReMind
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = SpriteForClass(cls);
             sr.sortingLayerName = WorkerSortingLayer;
-            list.Add(go.AddComponent<WorkerView>());
+
+            var shadow = CreateShadow(go, sr);       // เงาใต้เท้า (child แยก SpriteRenderer)
+            var view = go.AddComponent<WorkerView>();
+            view.SetShadow(shadow);                  // WorkerView คุม sortingOrder เงาให้อยู่ใต้ตัวทุกเฟรม
+            list.Add(view);
+        }
+
+        // เงา ellipse ใต้เท้า — วางที่ปลายล่างสุดของสไปรต์ (bounds.min.y · pivot ตัวละคร = กึ่งกลาง)
+        private static SpriteRenderer CreateShadow(GameObject parent, SpriteRenderer body)
+        {
+            var shadow = new GameObject("Shadow");
+            shadow.transform.SetParent(parent.transform, false);
+
+            float feetY = body.sprite != null ? body.sprite.bounds.min.y : 0f;
+            float bodyW = body.sprite != null ? body.sprite.bounds.size.x : 0.5f;
+            shadow.transform.localPosition = new Vector3(0f, feetY + 0.02f, 0f);
+            float w = bodyW * WorkerShadowWidthFactor;
+            shadow.transform.localScale = new Vector3(w, w * 0.5f, 1f); // ellipse 2:1
+
+            var sr = shadow.AddComponent<SpriteRenderer>();
+            sr.sprite = GetEllipseShadow();
+            sr.color = new Color(0f, 0f, 0f, WorkerShadowAlpha);
+            sr.sortingLayerName = WorkerSortingLayer;
+            return sr;
+        }
+
+        // sprite เงา: ellipse alpha ไล่จากกลาง (1) ออกขอบ (0) — สร้างครั้งเดียว cache ไว้ (pivot กึ่งกลาง)
+        private static Sprite GetEllipseShadow()
+        {
+            if (_ellipseShadow != null) return _ellipseShadow;
+
+            const int w = 128, h = 64;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color[w * h];
+            float cx = w * 0.5f, cy = h * 0.5f;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    float dx = (x - cx) / cx, dy = (y - cy) / cy;
+                    float a = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy));
+                    px[y * w + x] = new Color(0f, 0f, 0f, a * a); // soft falloff
+                }
+            tex.SetPixels(px);
+            tex.Apply();
+            _ellipseShadow = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), w);
+            return _ellipseShadow;
         }
 
         // เอาคนว่าง (idle) ออกก่อนเสมอ — กันทุบคนที่ยังประจำอาคารอยู่จนเกิดช่องว่างกลาง slot ของ cell นั้น

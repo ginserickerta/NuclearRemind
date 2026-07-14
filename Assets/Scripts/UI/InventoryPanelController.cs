@@ -13,7 +13,7 @@ namespace NuclearReMind
     /// อ่านสถานะแบบ read-only query จาก InventoryManager/ResourceManager (แพทเทิร์นเดิม)
     /// แถวสร้างจาก rowTemplate ที่ InventorySetup เตรียมไว้ (แนว entryButtonPrefab ของ CodexUIController)
     /// </summary>
-    public class InventoryPanelController : MonoBehaviour
+    public class InventoryPanelController : MonoBehaviour, GameUIStack.IPanel
     {
         public static InventoryPanelController Instance { get; private set; }
 
@@ -91,18 +91,27 @@ namespace NuclearReMind
         {
             if (panel == null) return;
             bool nowOpen = !panel.activeSelf;
+            if (nowOpen) UIPopIn.Ensure(panel);
             panel.SetActive(nowOpen);
             if (nowOpen)
             {
+                GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)
                 BuildRowsIfNeeded();
                 RefreshAll();
             }
+            else GameUIStack.Pop(this);
         }
 
         public void Close()
         {
             if (panel != null) panel.SetActive(false);
+            GameUIStack.Pop(this);
         }
+
+        // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
+        bool GameUIStack.IPanel.ClosableByEscape => true;
+        void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(panel);
+        void GameUIStack.IPanel.CloseFromStack() => Close();
 
         // ───────────────────────── rows ─────────────────────────
 

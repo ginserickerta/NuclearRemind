@@ -56,6 +56,10 @@ namespace NuclearReMind
             if (demolition != null && (demolition.IsDemolishing || demolition.LastEscCancelFrame == Time.frameCount))
                 return;
 
+            // §UI: มี Game UI เปิดอยู่ (Core/Building/Lab/Codex/Inventory/Memorial/Records/Help/ควิซ/วิกฤต) →
+            // Esc ปิด "ตัวบนสุด" (แผงปิดได้) หรือเงียบ (แผงบังคับ) — ไม่เปิด Pause · Pause เปิดได้เฉพาะตอน scene ว่าง
+            if (GameUIStack.HandleEscape()) return;
+
             if (_isOpen) Resume();
             else Open();
         }
@@ -63,7 +67,7 @@ namespace NuclearReMind
         private void Open()
         {
             _isOpen = true;
-            if (pausePanel != null) pausePanel.SetActive(true);
+            if (pausePanel != null) { UIPopIn.Ensure(pausePanel); pausePanel.SetActive(true); }
             GameManager.Instance?.SetSpeed(0f); // → Paused (timeScale 0, คง GameSpeed)
         }
 

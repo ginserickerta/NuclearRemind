@@ -26,11 +26,14 @@ namespace NuclearReMind.EditorTools
 
         private enum Action { Paint, Erase }
         private enum Brush { Single, Rectangle }
+        private enum Style { Solid, Checkerboard, Gradient }
+        private enum GradientDir { Horizontal, Vertical, DiagonalNE, DiagonalNW }
 
         private bool _painting;
         private Action _action = Action.Paint;
         private Brush _brush = Brush.Single;
-        private bool _checker;                                          // Solid / Checkerboard
+        private Style _style = Style.Solid;                             // Solid / Checkerboard / Gradient
+        private GradientDir _gradDir = GradientDir.Horizontal;         // ทิศไล่สีของ Gradient
         private Color _colorA = new Color(0.478f, 0.549f, 0.306f, 1f);  // #7A8C4E
         private Color _colorB = new Color(0.431f, 0.478f, 0.278f, 1f);  // #6E7A47
 
@@ -61,15 +64,29 @@ namespace NuclearReMind.EditorTools
 
             using (new EditorGUI.DisabledScope(_action == Action.Erase))
             {
-                _checker = EditorGUILayout.Toggle("หมากรุก (สลับ A/B)", _checker);
-                _colorA = EditorGUILayout.ColorField(_checker ? "สี A (คู่)" : "สี", _colorA);
-                if (_checker) _colorB = EditorGUILayout.ColorField("สี B (คี่)", _colorB);
+                _style = (Style)EditorGUILayout.EnumPopup("สไตล์สี", _style);
+                _colorA = EditorGUILayout.ColorField(
+                    _style == Style.Checkerboard ? "สี A (คู่)" :
+                    _style == Style.Gradient ? "สี A (เริ่ม)" : "สี", _colorA);
+                if (_style != Style.Solid)
+                    _colorB = EditorGUILayout.ColorField(
+                        _style == Style.Gradient ? "สี B (จบ)" : "สี B (คี่)", _colorB);
+                if (_style == Style.Gradient)
+                    _gradDir = (GradientDir)EditorGUILayout.EnumPopup("ทิศไล่สี", _gradDir);
 
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.LabelField("ลัด:", GUILayout.Width(30));
                 if (GUILayout.Button("A=#7A8C4E")) _colorA = Hex(0x7A8C4E);
                 if (GUILayout.Button("B=#6E7A47")) _colorB = Hex(0x6E7A47);
                 EditorGUILayout.EndHorizontal();
+
+                if (_style == Style.Gradient)
+                {
+                    EditorGUILayout.HelpBox("Gradient: หัวแปรง Rectangle = ไล่สีในกรอบที่ลาก · หรือปุ่มด้านล่าง = ไล่ทั้งพื้น (กริด)", MessageType.None);
+                    using (new EditorGUI.DisabledScope(Ore() == null || Ground() == null))
+                        if (GUILayout.Button("ไล่สี Gradient ทั้งพื้น (auto)"))
+                            ApplyGradientWholeGround();
+                }
             }
 
             EditorGUILayout.Space();
@@ -127,7 +144,9 @@ namespace NuclearReMind.EditorTools
 
             Undo.RecordObject(ore, "Paint Tile Color");
             Undo.RegisterCompleteObjectUndo(tm, "Paint Tile Color");
-            PaintOne(tm, ore, pos);
+            // หัวแปรงเดี่ยว: gradient อ้างอิงทั้งกริด (แต้มให้กลมกลืนกับ gradient รวม) · solid/checker ไม่สนขอบเขต
+            GridBounds(out int gx0, out int gy0, out int gx1, out int gy1);
+            PaintOne(tm, ore, pos, gx0, gy0, gx1, gy1);
             Commit(ore);
         }
 
@@ -146,14 +165,15 @@ namespace NuclearReMind.EditorTools
                 for (int y = y0; y <= y1; y++)
                 {
                     var pos = new Vector3Int(x, y, 0);
-                    if (tm.HasTile(pos)) { PaintOne(tm, ore, pos); n++; }
+                    if (tm.HasTile(pos)) { PaintOne(tm, ore, pos, x0, y0, x1, y1); n++; }
                 }
             Commit(ore);
-            Debug.Log($"[TileColorPainter] เติม {n} ช่อง ({x0},{y0})–({x1},{y1}) · {(_action == Action.Erase ? "ลบ" : _checker ? "หมากรุก A/B" : "สีเดียว")}");
+            Debug.Log($"[TileColorPainter] เติม {n} ช่อง ({x0},{y0})–({x1},{y1}) · {(_action == Action.Erase ? "ลบ" : _style.ToString())}");
         }
 
         // ทา 1 ช่อง (SetColor สด + อัปเดต override list) ตาม action/style ปัจจุบัน
-        private void PaintOne(Tilemap tm, NuclearReMind.OreDepositManager ore, Vector3Int pos)
+        private void PaintOne(Tilemap tm, NuclearReMind.OreDepositManager ore, Vector3Int pos,
+                              int x0, int y0, int x1, int y1)
         {
             var cell = new Vector2Int(pos.x, pos.y);
             tm.SetTileFlags(pos, TileFlags.None);
@@ -164,15 +184,49 @@ namespace NuclearReMind.EditorTools
             }
             else
             {
-                Color c = ColorFor(pos.x, pos.y);
+                Color c = ColorAt(pos.x, pos.y, x0, y0, x1, y1);
                 UpsertOverride(ore, cell, c);
                 tm.SetColor(pos, c);
             }
         }
 
-        // สีของช่องตามสไตล์ — หมากรุก: (col+row) คู่ = A · คี่ = B (ตรงกับ ColorForTile)
-        private Color ColorFor(int x, int y)
-            => (_checker && ((x + y) & 1) == 1) ? _colorB : _colorA;
+        // สีของช่องตามสไตล์ (x0..y1 = ขอบเขตอ้างอิงของ Gradient — กรอบที่ลาก/ทั้งกริด)
+        //   Solid = A · Checkerboard: (col+row) คู่=A คี่=B · Gradient = Lerp(A,B) ตามทิศ
+        private Color ColorAt(int x, int y, int x0, int y0, int x1, int y1)
+        {
+            switch (_style)
+            {
+                case Style.Checkerboard: return ((x + y) & 1) == 1 ? _colorB : _colorA;
+                case Style.Gradient:     return GradientColor(x, y, x0, y0, x1, y1);
+                default:                 return _colorA;
+            }
+        }
+
+        // ไล่สี A→B ตามทิศที่เลือก · t = ตำแหน่งช่องเทียบขอบเขต (0 ต้นทาง → 1 ปลายทาง)
+        private Color GradientColor(int x, int y, int x0, int y0, int x1, int y1)
+        {
+            float t;
+            switch (_gradDir)
+            {
+                case GradientDir.Vertical:   t = Frac(y,     y0,      y1);      break;
+                case GradientDir.DiagonalNE: t = Frac(x + y, x0 + y0, x1 + y1); break; // ทแยงตามความลึก iso
+                case GradientDir.DiagonalNW: t = Frac(x - y, x0 - y1, x1 - y0); break;
+                default:                     t = Frac(x,     x0,      x1);      break; // Horizontal
+            }
+            return Color.Lerp(_colorA, _colorB, t);
+        }
+
+        private static float Frac(float v, float lo, float hi)
+            => Mathf.Approximately(hi, lo) ? 0f : Mathf.Clamp01((v - lo) / (hi - lo));
+
+        // ขอบเขตกริดเล่นจริง (0..cols-1, 0..rows-1) — ใช้เป็นช่วง gradient ของหัวแปรงเดี่ยว/ปุ่มทั้งพื้น
+        private static void GridBounds(out int x0, out int y0, out int x1, out int y1)
+        {
+            var grid = Object.FindFirstObjectByType<GridManager>();
+            int cols = grid != null ? grid.columns : 43;
+            int rows = grid != null ? grid.rows : 43;
+            x0 = 0; y0 = 0; x1 = cols - 1; y1 = rows - 1;
+        }
 
         private void Commit(NuclearReMind.OreDepositManager ore)
         {
@@ -190,6 +244,26 @@ namespace NuclearReMind.EditorTools
             EditorUtility.SetDirty(ore);
             NuclearReMind.Editor.GridSpriteFiller.FillFromMenu(); // ระบายพื้นใหม่คืน gradient
             Repaint();
+        }
+
+        // ปุ่ม auto: ไล่สี Gradient A→B ทั้งกริด (0..cols-1, 0..rows-1) ทีเดียว ตามทิศที่เลือก
+        private void ApplyGradientWholeGround()
+        {
+            var tm = Ground(); var ore = Ore();
+            if (tm == null || ore == null) return;
+
+            GridBounds(out int x0, out int y0, out int x1, out int y1);
+            Undo.RecordObject(ore, "Gradient Whole Ground");
+            Undo.RegisterCompleteObjectUndo(tm, "Gradient Whole Ground");
+            int n = 0;
+            for (int x = x0; x <= x1; x++)
+                for (int y = y0; y <= y1; y++)
+                {
+                    var pos = new Vector3Int(x, y, 0);
+                    if (tm.HasTile(pos)) { PaintOne(tm, ore, pos, x0, y0, x1, y1); n++; }
+                }
+            Commit(ore);
+            Debug.Log($"[TileColorPainter] ไล่สี Gradient ทั้งพื้น {n} ช่อง · ทิศ {_gradDir}");
         }
 
         // ── scene helpers ──
@@ -223,7 +297,7 @@ namespace NuclearReMind.EditorTools
                     {
                         var pos = new Vector3Int(x, y, 0);
                         if (!tm.HasTile(pos)) continue;
-                        Handles.color = _action == Action.Erase ? Color.white : ColorFor(x, y);
+                        Handles.color = _action == Action.Erase ? Color.white : ColorAt(x, y, x0, y0, x1, y1);
                         Handles.DrawSolidDisc(tm.GetCellCenterWorld(pos), Vector3.forward, rWorld);
                     }
             }

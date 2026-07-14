@@ -29,7 +29,7 @@ MonoBehaviour:
   spriteScale: 1.8
   animationFrames: []
   animationFps: 6
-  size: {x: 1, y: 1}
+  size: {x: 2, y: 2}
   buildingType: 6
   ironCost: 0
   energyCost: 0

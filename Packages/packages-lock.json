@@ -17,6 +17,13 @@
       },
       "hash": "11836003a5e2ffcb7715ecec7e1fbb9d9cdb5bb8"
     },
+    "com.phengine.thaitextcare": {
+      "version": "https://github.com/phanphantz/ThaiTextCare-for-Unity.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "665cd820a39976b964af238cc1e6a780fc10c88a"
+    },
     "com.unity.2d.animation": {
       "version": "13.0.2",
       "depth": 0,

@@ -144,13 +144,20 @@ namespace NuclearReMind.EditorTools
             hud.towerProgressBar = CreateSlider("TowerProgressBar", towerPanel.transform, new Color(1f, 0.4f, 0.2f), new Vector2(0, -30), new Vector2(320, 20));
 
             // ===== Population panel (top-right) =====
-            var popPanel = CreatePanel("PopulationPanel", canvasGO.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -20), new Vector2(260, 230));
+            var popPanel = CreatePanel("PopulationPanel", canvasGO.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -20), new Vector2(260, 340));
             var popLayout = popPanel.AddComponent<VerticalLayoutGroup>();
             popLayout.spacing = 6f;
             popLayout.childControlHeight = false;
             popLayout.childForceExpandHeight = false;
 
-            hud.populationText = CreateTextRow("PopulationText", popPanel.transform, font, "ประชากร 10/10  ·  W6 E2 M0 F2");
+            // ประชากรแยกตามคลาส — icon เรียงบนลงล่าง: รวม → worker → engineer → medic → farmer (แทนตัวอักษร W/E/M/F เดิม)
+            foreach (var f in new[] { "PopTotal", "PopWorker", "PopEngineer", "PopMedic", "PopFarmer" })
+                EnsureIconImported(f);
+            hud.popTotalText    = CreateTextRow("PopTotalRow",    popPanel.transform, font, "10/10", LoadIcon("PopTotal"));
+            hud.popWorkerText   = CreateTextRow("PopWorkerRow",   popPanel.transform, font, "6",     LoadIcon("PopWorker"));
+            hud.popEngineerText = CreateTextRow("PopEngineerRow", popPanel.transform, font, "2",     LoadIcon("PopEngineer"));
+            hud.popMedicText    = CreateTextRow("PopMedicRow",    popPanel.transform, font, "0",     LoadIcon("PopMedic"));
+            hud.popFarmerText   = CreateTextRow("PopFarmerRow",   popPanel.transform, font, "2",     LoadIcon("PopFarmer"));
             hud.hopeText = CreateTextRow("HopeText", popPanel.transform, font, "Hope: 100");
             hud.hopeBar = CreateSliderRow("HopeBar", popPanel.transform, new Color(0.3f, 0.85f, 1f));
 
@@ -300,8 +307,11 @@ namespace NuclearReMind.EditorTools
             // ===== Day 1 Tutorial checklist (GDD §3) — พาเนลมุมซ้าย ไม่บล็อกการเล่น =====
             // ตำแหน่ง y=107 = ที่ผู้ใช้จัดเอง (อ่านจากซีน 13 ก.ค.) · เดิม y=0 (กึ่งกลางซ้าย)
             var tutPanel = CreatePanel("TutorialChecklistPanel", canvasGO.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20, 107), new Vector2(340, 190));
+            EnsureIconImported("TutorialBg");
             var tutBg = tutPanel.AddComponent<Image>();
-            tutBg.color = Palette.PanelBg;
+            var tutBgSprite = LoadIcon("TutorialBg");
+            if (tutBgSprite != null) { tutBg.sprite = tutBgSprite; tutBg.type = Image.Type.Simple; tutBg.color = Color.white; }
+            else tutBg.color = Palette.PanelBg; // fallback สีเดิมถ้าโหลด sprite ไม่ได้
             var tutTitle = CreateText("TutTitle", tutPanel.transform, font, "ภารกิจ Day 1 — สอนเล่น", 16, new Vector2(0, 78), new Vector2(320, 24), TextAnchor.MiddleCenter);
             tutTitle.color = Palette.Accent; tutTitle.fontStyle = FontStyle.Bold;
             var tTask1 = CreateText("TutTask1", tutPanel.transform, font, "⬜ เดินโรงงานพื้นฐาน 3 โรง  0/3", 13, new Vector2(8, 46), new Vector2(320, 22), TextAnchor.MiddleLeft);
@@ -309,8 +319,11 @@ namespace NuclearReMind.EditorTools
             var tTask3 = CreateText("TutTask3", tutPanel.transform, font, "⬜ จัดคนงานเข้าประจำอาคาร", 13, new Vector2(8, -6), new Vector2(320, 22), TextAnchor.MiddleLeft);
 
             var tStartBtn = CreateButton("TutStartButton", tutPanel.transform, font, "ทำภารกิจให้ครบ (0/3)", new Vector2(0, -58), new Vector2(300, 40));
-            tStartBtn.image.color = Palette.Accent;
-            tStartBtn.transition = Selectable.Transition.ColorTint; // ล็อกอยู่ → หรี่จนทำครบ
+            EnsureIconImported("TutorialButton");
+            var tutBtnSprite = LoadIcon("TutorialButton");
+            if (tutBtnSprite != null) { tStartBtn.image.sprite = tutBtnSprite; tStartBtn.image.type = Image.Type.Simple; tStartBtn.image.color = Color.white; }
+            else tStartBtn.image.color = Palette.Accent; // fallback สีเดิม
+            tStartBtn.transition = Selectable.Transition.ColorTint; // ล็อกอยู่ → หรี่จนทำครบ (base ขาว × normal ขาว = sprite จริง · disabled × เทา = หรี่)
             var tCb = tStartBtn.colors;
             tCb.normalColor = Color.white;
             tCb.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.7f);
@@ -620,7 +633,7 @@ namespace NuclearReMind.EditorTools
             rect.sizeDelta = size;
         }
 
-        private static Font LoadFont()
+        internal static Font LoadFont()
         {
             // ลอง Kanit ก่อน — ถ้าไม่มีค่อย fallback เป็น built-in
             var kanit = AssetDatabase.LoadAssetAtPath<Font>("Assets/Resources/Fonts/Kanit-Regular.ttf");
@@ -705,7 +718,7 @@ namespace NuclearReMind.EditorTools
             };
         }
 
-        private static Text CreateTextRow(string name, Transform parent, Font font, string content, Sprite icon = null)
+        internal static Text CreateTextRow(string name, Transform parent, Font font, string content, Sprite icon = null)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -747,9 +760,24 @@ namespace NuclearReMind.EditorTools
             if (label != null) label.text = "";
         }
 
+        // ให้แน่ใจว่า PNG ไอคอน (Assets/Sprites/Icons/<fileName>.png) ถูก import เป็น Sprite ก่อนโหลด
+        // (PNG ที่เพิ่งก็อปเข้ามาอาจ import เป็น Default → LoadAssetAtPath<Sprite> คืน null → ไอคอนไม่ขึ้น)
+        internal static void EnsureIconImported(string fileName)
+        {
+            string path = "Assets/Sprites/Icons/" + fileName + ".png";
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) return;                                   // ยังไม่มีไฟล์ในโปรเจกต์
+            if (importer.textureType == TextureImporterType.Sprite) return; // ตั้งเป็น Sprite แล้ว
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
+        }
+
         // โหลด icon อาร์ตจริงจาก Assets/Sprites/Icons/<fileName>.png
         // ไม่พบ → placeholder (ถ้าระบุ) → null (CreateResourceBar จะ fallback เป็น emoji/text)
-        private static Sprite LoadIcon(string fileName, string placeholderName = null)
+        internal static Sprite LoadIcon(string fileName, string placeholderName = null)
         {
             var s = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Icons/" + fileName + ".png");
             if (s != null) return s;

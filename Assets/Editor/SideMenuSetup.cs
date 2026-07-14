@@ -57,13 +57,13 @@ namespace NuclearReMind.EditorTools
             barRect.sizeDelta = Vector2.zero;
             var hudMenu = bar.AddComponent<HudMenuButtons>();
 
-            // ตำแหน่ง/ขนาด = ที่ผู้ใช้จัดเอง (อ่านจากซีน Gamescene 13 ก.ค. · multi-select ย่อด้วย Rect tool)
-            // anchored ซ้ายล่าง (x,y) + sizeDelta (w,h) · ปุ่มถูกย่อไม่ล็อกสัดส่วน (preserveAspect ยังจัดสไปรต์กลางในกล่อง)
-            // เรียงจากล่างขึ้นบน: บันทึก → Codex → คีย์ลัด → ไอเทม (ไอเทมบนสุด)
-            var save      = MakeSpriteButton(bar.transform, "SideBtn_Save",      "side_save",      new Vector2(19f, 98.64f),  new Vector2(107.15f, 75.07f));
-            var codex     = MakeSpriteButton(bar.transform, "SideBtn_Codex",     "side_codex",     new Vector2(19f, 177.41f), new Vector2(107.15f, 82.20f));
-            var hotkey    = MakeSpriteButton(bar.transform, "SideBtn_Hotkey",    "side_hotkey",    new Vector2(19f, 263.30f), new Vector2(107.15f, 77.19f));
-            var inventory = MakeSpriteButton(bar.transform, "SideBtn_Inventory", "side_inventory", new Vector2(19f, 344.19f), new Vector2(107.15f, 102.77f));
+            // สไปรต์ป้ายยาวใหม่ (icon+ข้อความ baked) สัดส่วน ~3.9:1 → ปุ่มกว้าง 210 × สูง ~54 (ตั้งตามสัดส่วนป้ายจริงต่อใบ)
+            // anchored ซ้ายล่าง (x,y=ขอบล่าง) + sizeDelta (w,h) · preserveAspect เต็มกล่องเพราะ rect ตรงสัดส่วน
+            // เรียงจากล่างขึ้นบน (gap 12): บันทึก → Codex → คีย์ลัด → ไอเทม (ไอเทมบนสุด) — ปรับตำแหน่งต่อได้ด้วย Rect tool
+            var save      = MakeSpriteButton(bar.transform, "SideBtn_Save",      "side_save",      new Vector2(19f, 100f), new Vector2(210f, 54f));
+            var codex     = MakeSpriteButton(bar.transform, "SideBtn_Codex",     "side_codex",     new Vector2(19f, 166f), new Vector2(210f, 53f));
+            var hotkey    = MakeSpriteButton(bar.transform, "SideBtn_Hotkey",    "side_hotkey",    new Vector2(19f, 231f), new Vector2(210f, 54f));
+            var inventory = MakeSpriteButton(bar.transform, "SideBtn_Inventory", "side_inventory", new Vector2(19f, 297f), new Vector2(210f, 55f));
 
             if (inventory != null) UnityEventTools.AddPersistentListener(inventory.onClick, new UnityAction(hudMenu.ToggleInventory));
             if (hotkey != null) UnityEventTools.AddPersistentListener(hotkey.onClick, new UnityAction(hudMenu.ToggleHotkeyHelp));

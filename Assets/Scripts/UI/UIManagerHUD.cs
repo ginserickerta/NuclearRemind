@@ -59,7 +59,14 @@ namespace NuclearReMind
         [Header("Population / Morale (Hope)")]
         public Slider hopeBar;
         public Text hopeText;
-        public Text populationText;
+        public Text populationText; // legacy บรรทัดเดียว (คงไว้กัน wire เดิมพัง — ไม่สร้างแล้ว ใช้แถว icon ด้านล่างแทน)
+
+        [Header("Population rows (icon ต่อคลาส — wire โดย HUDCanvasSetup) เรียง รวม/worker/engineer/medic/farmer")]
+        public Text popTotalText;     // ประชากรรวม  total/shelterCap
+        public Text popWorkerText;    // worker (+ ว่าง N)
+        public Text popEngineerText;  // engineer
+        public Text popMedicText;     // medic
+        public Text popFarmerText;    // farmer
         public Button trainEngineerButton; // ฝึก Worker → Engineer (V4 §5)
         public Button trainMedicButton;    // ฝึก Worker → Medic
         public Button trainFarmerButton;   // ฝึก Worker → Farmer
@@ -317,9 +324,21 @@ namespace NuclearReMind
 
         private void RefreshPopulationText()
         {
-            if (populationText == null) return;
-            string idlePart = _idleWorkers >= 0 ? $"  ·  ว่าง {_idleWorkers}" : "";
-            populationText.text = $"ประชากร {_lastPop.total}/{_lastPop.shelterCap}  ·  W{_lastPop.workers} E{_lastPop.engineers} M{_lastPop.medics} F{_lastPop.farmers}{idlePart}";
+            // legacy บรรทัดเดียว (เผื่อยัง wire อยู่บางซีน — ปกติ null หลังรัน Setup HUD ใหม่)
+            if (populationText != null)
+            {
+                string idlePart = _idleWorkers >= 0 ? $"  ·  ว่าง {_idleWorkers}" : "";
+                populationText.text = $"ประชากร {_lastPop.total}/{_lastPop.shelterCap}  ·  W{_lastPop.workers} E{_lastPop.engineers} M{_lastPop.medics} F{_lastPop.farmers}{idlePart}";
+            }
+
+            // แถว icon ต่อคลาส (เรียงบนลงล่าง: รวม → worker → engineer → medic → farmer)
+            if (popTotalText != null)  popTotalText.text  = $"{_lastPop.total}/{_lastPop.shelterCap}";
+            if (popWorkerText != null) popWorkerText.text = _idleWorkers >= 0
+                                                              ? $"{_lastPop.workers}  ·  ว่าง {_idleWorkers}"
+                                                              : $"{_lastPop.workers}";
+            if (popEngineerText != null) popEngineerText.text = $"{_lastPop.engineers}";
+            if (popMedicText != null)    popMedicText.text    = $"{_lastPop.medics}";
+            if (popFarmerText != null)   popFarmerText.text   = $"{_lastPop.farmers}";
         }
 
         // Knowledge 0–100 + ป้าย tier (Novice/Aware/Skilled/Expert) — อ่าน tier จาก ResourceManager (config-style query)

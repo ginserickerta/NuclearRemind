@@ -28,7 +28,7 @@ MonoBehaviour:
   spriteOffset: {x: 0, y: -0.6}
   spriteScale: 1.7
   animationFrames: []
-  animationFps: 6
+  animationFps: 6.06
   size: {x: 1, y: 1}
   buildingType: 11
   ironCost: 0

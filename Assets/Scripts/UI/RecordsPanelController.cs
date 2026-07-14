@@ -10,7 +10,7 @@ namespace NuclearReMind
     /// เปิด/ปิดด้วยปุ่ม "บันทึก" บน StoryCanvas · ปุ่มรายการสร้างจาก template ลูกของ list
     /// (reuse ปุ่มเดิมแทน Destroy — เรียกได้ทั้ง PlayMode และ EditMode test)
     /// </summary>
-    public class RecordsPanelController : MonoBehaviour
+    public class RecordsPanelController : MonoBehaviour, GameUIStack.IPanel
     {
         public static RecordsPanelController Instance { get; private set; }
 
@@ -62,8 +62,19 @@ namespace NuclearReMind
         {
             if (recordsPanel == null) return;
             bool nowOpen = !recordsPanel.activeSelf;
+            if (nowOpen) UIPopIn.Ensure(recordsPanel);
             recordsPanel.SetActive(nowOpen);
-            if (nowOpen) RefreshList();
+            if (nowOpen) { GameUIStack.Push(this); RefreshList(); } // ขึ้นบนสุด + ลงทะเบียน
+            else GameUIStack.Pop(this);
+        }
+
+        // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
+        bool GameUIStack.IPanel.ClosableByEscape => true;
+        void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(recordsPanel);
+        void GameUIStack.IPanel.CloseFromStack()
+        {
+            if (recordsPanel != null) recordsPanel.SetActive(false);
+            GameUIStack.Pop(this);
         }
 
         private void HandleRecordArchived(RecordCardSO record)

@@ -6,7 +6,7 @@ namespace NuclearReMind
     /// หน้าต่างสรุปคีย์ลัด — เปิด/ปิดด้วยปุ่ม "คีย์ลัด" ใน HUD หรือแป้น F1
     /// เป็น panel อ่านอย่างเดียว ไม่หยุดเวลา (เปิดดูระหว่างเล่นได้ — ใช้ unscaled input จึงกดได้แม้ pause)
     /// </summary>
-    public class HotkeyHelpController : MonoBehaviour
+    public class HotkeyHelpController : MonoBehaviour, GameUIStack.IPanel
     {
         [Header("Wiring (ผูกโดย Setup HUD Canvas)")]
         public GameObject helpPanel;
@@ -27,9 +27,19 @@ namespace NuclearReMind
         {
             if (helpPanel == null) return;
             bool show = !helpPanel.activeSelf;
+            if (show) UIPopIn.Ensure(helpPanel);
             helpPanel.SetActive(show);
-            // เปิด → ดันไปบนสุดของ Canvas กันแผงอื่น (Codex ฯลฯ ที่สร้างทีหลัง) วาดทับ
-            if (show) helpPanel.transform.SetAsLastSibling();
+            if (show) GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)
+            else GameUIStack.Pop(this);
+        }
+
+        // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
+        bool GameUIStack.IPanel.ClosableByEscape => true;
+        void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(helpPanel);
+        void GameUIStack.IPanel.CloseFromStack()
+        {
+            if (helpPanel != null) helpPanel.SetActive(false);
+            GameUIStack.Pop(this);
         }
     }
 }

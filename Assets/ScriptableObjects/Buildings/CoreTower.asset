@@ -24,13 +24,16 @@ MonoBehaviour:
   sprite: {fileID: -2482487138559973084, guid: 020f1f6d2715c8e42a2ab8484d273ae0, type: 3}
   levelSprites: []
   spriteOffset: {x: 0, y: -1}
-  spriteScale: 0.8
+  spriteScale: 1
   animationFrames:
   - {fileID: -2482487138559973084, guid: 020f1f6d2715c8e42a2ab8484d273ae0, type: 3}
   - {fileID: -1298929559089461131, guid: 020f1f6d2715c8e42a2ab8484d273ae0, type: 3}
   - {fileID: 165204097388825707, guid: 020f1f6d2715c8e42a2ab8484d273ae0, type: 3}
   - {fileID: -475516504622547031, guid: 020f1f6d2715c8e42a2ab8484d273ae0, type: 3}
   animationFps: 6
+  overrideBaseCollider: 1
+  baseColliderSize: {x: 2.5, y: 1.3285714}
+  baseColliderOffset: {x: 0, y: 0.6642857}
   size: {x: 3, y: 3}
   buildingType: 7
   ironCost: 0

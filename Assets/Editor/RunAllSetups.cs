@@ -74,6 +74,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Fix 2D Lighting (Light All Sorting Layers)", // กัน sprite รันไทม์เรนเดอร์ดำ (Sprite-Lit-Default)
             "NuclearReMind/Lighting Mood (Warm Key + Cool Fill)", // มู้ดแสงอุ่น+เย็น (ต้องหลัง Fix 2D Lighting)
             "NuclearReMind/Fix Colors (สี sprite สดขึ้น)",        // post-processing color grade (ต้องหลัง Lighting Mood)
+            "NuclearReMind/Setup Rendering (Bloom + Reactor Glow)", // Bloom + Vignette + แสงเตาปฏิกรณ์ (ต้องหลัง Fix Colors — ใช้ profile/light ที่ตั้งแล้ว)
             "NuclearReMind/Apply UI Scale (Font Size)", // ขยาย UI/ตัวอักษรทั้งเกม (ต้องหลังทุกขั้นที่สร้าง Canvas)
             "NuclearReMind/Apply Kanit Font (Scene + Prefabs)",
         };

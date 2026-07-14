@@ -10,7 +10,7 @@ namespace NuclearReMind
     /// สีหัวข้อตาม QuizCategory · เมื่อกดปิดจึง QuizManager.SubmitAnswer เพื่อให้คะแนน/ปลด Codex/คิวข้อต่อไป
     /// (เลียนโครงจาก DilemmaPopupController — ไม่ใช้ Update/Time.deltaTime เพราะระหว่างควิซ timeScale=0)
     /// </summary>
-    public class QuizPopupController : MonoBehaviour
+    public class QuizPopupController : MonoBehaviour, GameUIStack.IPanel
     {
         [Header("Panel")]
         public GameObject popupPanel;
@@ -91,7 +91,8 @@ namespace NuclearReMind
             _selectedIndex = -1;
             _revealed = false;
 
-            if (popupPanel != null) popupPanel.SetActive(true);
+            if (popupPanel != null) { UIPopIn.Ensure(popupPanel); popupPanel.SetActive(true); }
+            GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause · Esc เงียบ = ตอบบังคับ)
             if (categoryBar != null) categoryBar.color = ColorFor(quiz.category);
             if (topicText != null)
                 topicText.text = string.IsNullOrEmpty(quiz.topicTitle) ? quiz.speaker : quiz.topicTitle;
@@ -211,10 +212,16 @@ namespace NuclearReMind
             _selectedIndex = -1;
             _revealed = false;
 
-            // ซ่อน panel ก่อน — ถ้ามีข้อต่อไปในคิว SubmitAnswer จะ raise OnQuizShown เปิด panel ใหม่เอง
+            // ซ่อน panel ก่อน — ถ้ามีข้อต่อไปในคิว SubmitAnswer จะ raise OnQuizShown เปิด panel ใหม่ (Push ซ้ำ) เอง
             if (popupPanel != null) popupPanel.SetActive(false);
+            GameUIStack.Pop(this);
             QuizManager.Instance.SubmitAnswer(answer);
         }
+
+        // ── GameUIStack (แผงบังคับ: Esc เงียบ ปิดเองไม่ได้ · บล็อก Pause · กติกากลางใน PauseMenuController) ──
+        bool GameUIStack.IPanel.ClosableByEscape => false;
+        void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(popupPanel);
+        void GameUIStack.IPanel.CloseFromStack() { } // ไม่ถูกเรียก (ClosableByEscape=false — ต้องตอบก่อน)
 
         /// <summary>
         /// สร้าง permutation 0..count-1 แบบ Fisher–Yates สำหรับสับตำแหน่งตัวเลือก

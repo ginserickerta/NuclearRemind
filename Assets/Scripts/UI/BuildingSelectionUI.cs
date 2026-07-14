@@ -29,6 +29,35 @@ namespace NuclearReMind
         public Text toggleLabel;
         private bool _collapsed;
 
+        [Header("Hotbar หน้าตา (ปรับได้ใน Inspector — เห็นผลรอบ Play ถัดไป)")]
+        [Tooltip("ขนาดช่องอาคาร (กว้าง×สูง px)")]
+        public Vector2 slotSize = new Vector2(90f, 110f);
+        [Tooltip("ฟอนต์ hotbar (ว่าง = Kanit)")]
+        public Font hotbarFont;
+        [Tooltip("กรอบไอคอนในช่อง (anchor 0-1): min=ล่างซ้าย, max=บนขวา — ยิ่งห่างยิ่งไอคอนโต")]
+        public Vector2 iconAnchorMin = new Vector2(0.1f, 0.35f);
+        public Vector2 iconAnchorMax = new Vector2(0.9f, 0.90f);
+        [Space(4)]
+        [Tooltip("ชื่ออาคาร")] public int nameFontSize = 12;
+        public Color nameColor = Color.white;
+        [Tooltip("ราคา")] public int costFontSize = 11;
+        public Color costColor = new Color(1f, 0.85f, 0.3f);
+        [Tooltip("เลขคีย์ลัดมุมช่อง")] public int keyFontSize = 13;
+        [Tooltip("ป้ายล็อกเฟส 🔒")] public int lockFontSize = 13;
+        public Color lockColor = new Color(1f, 0.85f, 0.3f);
+
+        [Header("Slot template (แก้ layout ช่องด้วยตา — ว่าง = สร้างสดตามฟิลด์ข้างบน)")]
+        [Tooltip("object ต้นแบบช่อง (inactive) ที่ code จะ clone แทนการสร้างสด\n" +
+                 "สร้างด้วยเมนู NuclearReMind → UI → Bake Hotbar Slot Template แล้วแก้ layout/สี/ฟอนต์ใน Scene ได้เลย\n" +
+                 "ต้องมีลูกชื่อ: Icon(Image), NameLabel, CostLabel, KeyLabel, LockLabel + root มี Image+Button")]
+        public GameObject slotTemplate;
+
+        [Header("Demolish template (แก้ปุ่มทุบด้วยตา — ว่าง = สร้างสด/ใช้ hammerIcon)")]
+        [Tooltip("object ต้นแบบปุ่มทุบ (inactive) ที่ code จะ clone แทนการสร้างสด\n" +
+                 "สร้างด้วยเมนู NuclearReMind → UI → Bake Demolish Button Template แล้วแก้ layout/ไอคอน/สีใน Scene ได้เลย\n" +
+                 "ต้องมีลูกชื่อ: Icon(Image) และ/หรือ IconEmoji(Text) + root มี Image+Button")]
+        public GameObject demolishTemplate;
+
         // state
         private Button[] _buttons;
         private Image[]  _buttonImages;
@@ -137,45 +166,63 @@ namespace NuclearReMind
             return f != null ? f : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         }
 
+        // ฟอนต์ที่ใช้จริง — hotbarFont ถ้าตั้งไว้ ไม่งั้น Kanit
+        private Font ResolveFont() => hotbarFont != null ? hotbarFont : LoadKanitFont();
+
         private void BuildDemolishButton()
         {
-            var font = LoadKanitFont();
+            // มี template → clone (แก้ layout/ไอคอนด้วยตาใน object นั้น) · ไม่มี → สร้างสด
+            GameObject slot = demolishTemplate != null
+                ? Instantiate(demolishTemplate, buttonContainer)
+                : BuildDemolishStructure(buttonContainer, "Slot_Demolish");
+            slot.name = "Slot_Demolish";
+            slot.SetActive(true);
+            WireDemolish(slot);
+        }
 
-            var slot = new GameObject("Slot_Demolish", typeof(RectTransform));
-            slot.transform.SetParent(buttonContainer, false);
-            slot.GetComponent<RectTransform>().sizeDelta = new Vector2(90f, 110f);
+        /// <summary>
+        /// สร้าง "โครงปุ่มทุบ" (bg+ปุ่ม, Icon(Image), IconEmoji(Text 🔨), Label, SubLabel)
+        /// ใช้ทั้ง runtime (ไม่มี template) และเมนู Bake Demolish Button Template
+        /// ไม่ผูก listener/เลือกไอคอน (WireDemolish ทำ) เพื่อให้ template คุม layout/ไอคอนเองได้
+        /// </summary>
+        public GameObject BuildDemolishStructure(Transform parent, string name)
+        {
+            var font = ResolveFont();
 
-            _demolishImage = slot.AddComponent<Image>();
-            _demolishImage.color = ColDemolish;
+            var slot = new GameObject(name, typeof(RectTransform));
+            slot.transform.SetParent(parent, false);
+            slot.GetComponent<RectTransform>().sizeDelta = slotSize;
+
+            var bg = slot.AddComponent<Image>();
+            bg.color = ColDemolish;
 
             var btn = slot.AddComponent<Button>();
-            btn.targetGraphic = _demolishImage;
+            btn.targetGraphic = bg;
             var colors = btn.colors;
             colors.highlightedColor = new Color(0.6f, 0.2f, 0.2f, 1f);
             colors.pressedColor     = new Color(0.9f, 0.1f, 0.1f, 1f);
             btn.colors = colors;
 
-            // ไอคอนค้อน — sprite จริงถ้ามี ไม่งั้น emoji 🔨
-            if (hammerIcon != null)
-            {
-                var iconGO = new GameObject("Icon", typeof(RectTransform));
-                iconGO.transform.SetParent(slot.transform, false);
-                var ir = iconGO.GetComponent<RectTransform>();
-                ir.anchorMin = new Vector2(0.25f, 0.32f);
-                ir.anchorMax = new Vector2(0.75f, 0.88f);
-                ir.offsetMin = Vector2.zero; ir.offsetMax = Vector2.zero;
-                var img = iconGO.AddComponent<Image>();
-                img.sprite = hammerIcon;
-                img.preserveAspect = true;
-                img.raycastTarget = false;
-            }
-            else
-            {
-                MakeText("Icon", slot.transform, font, "🔨", 30,
-                    new Vector2(0, 20), new Vector2(0, 48), TextAnchor.MiddleCenter)
-                    .GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.3f);
-            }
-            MakeText("Label",   slot.transform, font, "ทุบอาคาร", 11,
+            // Icon(Image) — สร้างเสมอ (WireDemolish ใส่ hammerIcon/เปิด-ปิดทีหลัง) · ลาก sprite เองใน Scene ได้
+            var iconGO = new GameObject("Icon", typeof(RectTransform));
+            iconGO.transform.SetParent(slot.transform, false);
+            var ir = iconGO.GetComponent<RectTransform>();
+            ir.anchorMin = iconAnchorMin;
+            ir.anchorMax = iconAnchorMax;
+            ir.offsetMin = Vector2.zero; ir.offsetMax = Vector2.zero;
+            var iconImg = iconGO.AddComponent<Image>();
+            iconImg.sprite = hammerIcon;
+            iconImg.enabled = hammerIcon != null;
+            iconImg.preserveAspect = true;
+            iconImg.raycastTarget = false;
+
+            // IconEmoji(Text 🔨) — fallback เมื่อไม่มี sprite
+            var emoji = MakeText("IconEmoji", slot.transform, font, "🔨", 30,
+                new Vector2(0, 20), new Vector2(0, 48), TextAnchor.MiddleCenter);
+            emoji.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.3f);
+            emoji.gameObject.SetActive(hammerIcon == null);
+
+            MakeText("Label", slot.transform, font, "ทุบอาคาร", 11,
                 new Vector2(0, 24), new Vector2(0, 20), TextAnchor.LowerCenter)
                 .GetComponent<RectTransform>().anchorMin = new Vector2(0, 0);
             var subLbl = MakeText("SubLabel", slot.transform, font, "คลิกขวายกเลิก", 9,
@@ -184,17 +231,56 @@ namespace NuclearReMind
             subLbl.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0);
             subLbl.GetComponent<RectTransform>().anchorMax = new Vector2(1, 0);
 
-            btn.onClick.AddListener(ToggleDemolish);
+            return slot;
+        }
+
+        /// <summary>ผูกปุ่ม + เลือกไอคอน (hammerIcon override) ให้ปุ่มทุบ — ใช้ทั้ง clone จาก template และโครงสด</summary>
+        private void WireDemolish(GameObject slot)
+        {
+            _demolishImage = slot.GetComponent<Image>();
+            if (_demolishImage != null) _demolishImage.color = ColDemolish;
+
+            // hammerIcon (Inspector) override รูปใน template · ไม่มี = คงรูป/emoji ที่ template ตั้งไว้
+            if (hammerIcon != null)
+            {
+                var iconImg = FindDeep(slot.transform, "Icon")?.GetComponent<Image>();
+                if (iconImg != null) { iconImg.sprite = hammerIcon; iconImg.enabled = true; }
+                var emoji = FindDeep(slot.transform, "IconEmoji");
+                if (emoji != null) emoji.gameObject.SetActive(false);
+            }
+
+            var btn = slot.GetComponent<Button>();
+            if (btn != null)
+            {
+                btn.targetGraphic = _demolishImage;
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(ToggleDemolish);
+            }
         }
 
         private GameObject CreateSlot(int index, BuildingData data)
         {
-            var font = LoadKanitFont();
+            // มี template → clone (แก้ layout ด้วยตาใน object นั้น) · ไม่มี → สร้างสดตามฟิลด์
+            GameObject slot = slotTemplate != null
+                ? Instantiate(slotTemplate, buttonContainer)
+                : BuildSlotStructure(buttonContainer, $"Slot_{index + 1}");
+            slot.name = $"Slot_{index + 1}";
+            slot.SetActive(true);
+            PopulateSlot(slot, index, data);
+            return slot;
+        }
 
-            // Slot container
-            var slot = new GameObject($"Slot_{index + 1}", typeof(RectTransform));
-            slot.transform.SetParent(buttonContainer, false);
-            slot.GetComponent<RectTransform>().sizeDelta = new Vector2(90f, 110f);
+        /// <summary>
+        /// สร้าง "โครงช่อง" (bg+ปุ่ม, Icon, NameLabel, CostLabel, KeyLabel, LockLabel) ตามสไตล์ฟิลด์ Inspector
+        /// ใช้ทั้ง runtime (ไม่มี template) และเมนู Bake Hotbar Slot Template · ไม่ใส่ข้อมูลอาคาร (PopulateSlot ทำ)
+        /// </summary>
+        public GameObject BuildSlotStructure(Transform parent, string name)
+        {
+            var font = ResolveFont();
+
+            var slot = new GameObject(name, typeof(RectTransform));
+            slot.transform.SetParent(parent, false);
+            slot.GetComponent<RectTransform>().sizeDelta = slotSize;
 
             var bg = slot.AddComponent<Image>();
             bg.color = ColNormal;
@@ -206,60 +292,96 @@ namespace NuclearReMind
             colors.pressedColor     = new Color(0.1f, 0.3f, 0.6f, 1f);
             btn.colors = colors;
 
-            // Hotkey label (มุมบนซ้าย)
-            var keyLbl = MakeText("KeyLabel", slot.transform, font, $"{index + 1}", 13,
+            var keyLbl = MakeText("KeyLabel", slot.transform, font, "1", keyFontSize,
                 new Vector2(4, -4), new Vector2(20, 18), TextAnchor.UpperLeft);
             keyLbl.color = new Color(0.7f, 0.7f, 0.7f);
 
-            // Building icon — ใช้ไอคอนกรอบ Build Menu ถ้ามี ไม่งั้น fallback เป็น sprite อาคารบนแมพ
-            var slotIcon = (menuIcons != null && index < menuIcons.Length && menuIcons[index] != null)
-                ? menuIcons[index] : data.sprite;
-            if (slotIcon != null)
-            {
-                var iconGO = new GameObject("Icon", typeof(RectTransform));
-                iconGO.transform.SetParent(slot.transform, false);
-                var iconRect = iconGO.GetComponent<RectTransform>();
-                iconRect.anchorMin = new Vector2(0.1f, 0.35f);
-                iconRect.anchorMax = new Vector2(0.9f, 0.90f);
-                iconRect.offsetMin = Vector2.zero;
-                iconRect.offsetMax = Vector2.zero;
-                var iconImg = iconGO.AddComponent<Image>();
-                iconImg.sprite = slotIcon;
-                iconImg.preserveAspect = true;
-            }
+            // Icon — สร้างเสมอ (PopulateSlot ใส่ sprite/เปิด-ปิดทีหลัง)
+            var iconGO = new GameObject("Icon", typeof(RectTransform));
+            iconGO.transform.SetParent(slot.transform, false);
+            var iconRect = iconGO.GetComponent<RectTransform>();
+            iconRect.anchorMin = iconAnchorMin;
+            iconRect.anchorMax = iconAnchorMax;
+            iconRect.offsetMin = Vector2.zero;
+            iconRect.offsetMax = Vector2.zero;
+            var iconImg = iconGO.AddComponent<Image>();
+            iconImg.preserveAspect = true;
+            iconImg.raycastTarget = false;
 
-            // Building name
-            var nameLbl = MakeText("NameLabel", slot.transform, font, data.buildingName, 12,
+            var nameLbl = MakeText("NameLabel", slot.transform, font, "ชื่ออาคาร", nameFontSize,
                 new Vector2(0, 24), new Vector2(0, 20), TextAnchor.LowerCenter);
             nameLbl.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0);
             nameLbl.GetComponent<RectTransform>().anchorMax = new Vector2(1, 0);
-            nameLbl.color = Color.white;
+            nameLbl.color = nameColor;
             nameLbl.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-            // Cost label
-            string costStr = BuildCostString(data);
-            var costLbl = MakeText("CostLabel", slot.transform, font, costStr, 11,
+            var costLbl = MakeText("CostLabel", slot.transform, font, "", costFontSize,
                 new Vector2(0, 6), new Vector2(0, 18), TextAnchor.LowerCenter);
             costLbl.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0);
             costLbl.GetComponent<RectTransform>().anchorMax = new Vector2(1, 0);
-            costLbl.color = new Color(1f, 0.85f, 0.3f);
+            costLbl.color = costColor;
 
-            // ป้ายล็อกเฟส (GDD §6) — ทับกลางช่อง โชว์เมื่อยังไม่ถึงเฟส (RefreshButtonColors คุม)
-            var lockLbl = MakeText("LockLabel", slot.transform, font, $"🔒 เฟส {data.unlockPhase}", 13,
+            var lockLbl = MakeText("LockLabel", slot.transform, font, "🔒 เฟส 1", lockFontSize,
                 new Vector2(0, 0), new Vector2(0, 24), TextAnchor.MiddleCenter);
             var lockRect = lockLbl.GetComponent<RectTransform>();
             lockRect.anchorMin = new Vector2(0, 0.35f);
             lockRect.anchorMax = new Vector2(1, 0.65f);
-            lockLbl.color = new Color(1f, 0.85f, 0.3f);
+            lockLbl.color = lockColor;
             lockLbl.fontStyle = FontStyle.Bold;
             lockLbl.gameObject.SetActive(false);
-            _lockLabels[index] = lockLbl;
-
-            // Click listener
-            var captured = data;
-            btn.onClick.AddListener(() => EventManager.Instance.RaiseBuildingSelectRequested(captured));
 
             return slot;
+        }
+
+        /// <summary>ใส่ข้อมูล/ผูกปุ่มลงช่อง (ทั้ง clone จาก template และโครงสร้างสด) — ไม่แตะ font/สี/layout (ให้ template คุมเอง)</summary>
+        private void PopulateSlot(GameObject slot, int index, BuildingData data)
+        {
+            var slotIcon = (menuIcons != null && index < menuIcons.Length && menuIcons[index] != null)
+                ? menuIcons[index] : data.sprite;
+            var iconImg = FindDeep(slot.transform, "Icon")?.GetComponent<Image>();
+            if (iconImg != null) { iconImg.sprite = slotIcon; iconImg.enabled = slotIcon != null; }
+
+            var nameTxt = FindDeep(slot.transform, "NameLabel")?.GetComponent<Text>();
+            if (nameTxt != null) nameTxt.text = data.buildingName;
+
+            var costTxt = FindDeep(slot.transform, "CostLabel")?.GetComponent<Text>();
+            if (costTxt != null) costTxt.text = BuildCostString(data);
+
+            var keyTxt = FindDeep(slot.transform, "KeyLabel")?.GetComponent<Text>();
+            if (keyTxt != null) keyTxt.text = $"{index + 1}";
+
+            var lockTxt = FindDeep(slot.transform, "LockLabel")?.GetComponent<Text>();
+            if (lockTxt != null)
+            {
+                lockTxt.text = $"🔒 เฟส {data.unlockPhase}";
+                lockTxt.gameObject.SetActive(false); // RefreshButtonColors คุมการโชว์
+                _lockLabels[index] = lockTxt;
+            }
+
+            var btn = slot.GetComponent<Button>();
+            if (btn != null)
+            {
+                var captured = data;
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(() => EventManager.Instance.RaiseBuildingSelectRequested(captured));
+            }
+
+            // drag & drop: ลากช่องไปวางบน grid ได้ (แตะสั้น ๆ ยังคลิกเลือกได้เหมือนเดิม)
+            var drag = slot.GetComponent<HotbarSlotDrag>();
+            if (drag == null) drag = slot.AddComponent<HotbarSlotDrag>();
+            drag.data = data;
+        }
+
+        // หา child ตามชื่อแบบลึก (รองรับ template ที่ผู้ใช้จัด nested)
+        private static Transform FindDeep(Transform root, string name)
+        {
+            if (root.name == name) return root;
+            for (int i = 0; i < root.childCount; i++)
+            {
+                var r = FindDeep(root.GetChild(i), name);
+                if (r != null) return r;
+            }
+            return null;
         }
 
         // ─────────────────────────────────────────

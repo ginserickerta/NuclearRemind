@@ -14,7 +14,7 @@ namespace NuclearReMind
     /// ไม่มีผู้บรรยาย (VESTA ถูกตัดตาม v8) · ไม่มีการซื้อด้วย RP — ปลดจากควิซเท่านั้น
     /// UI สร้าง edit-time โดย CodexSetup — คลาสนี้แค่เติมข้อมูล/กรอง
     /// </summary>
-    public class CodexUIController : MonoBehaviour
+    public class CodexUIController : MonoBehaviour, GameUIStack.IPanel
     {
         public static CodexUIController Instance { get; private set; }
 
@@ -90,7 +90,7 @@ namespace NuclearReMind
         {
             if (codexPanel == null) return;
             if (Input.GetKeyDown(toggleKey)) Toggle();
-            else if (codexPanel.activeSelf && Input.GetKeyDown(KeyCode.Escape)) Toggle();
+            // Esc จัดการรวมที่ GameUIStack (ผ่าน PauseMenuController) — ไม่เช็คเองแล้ว
         }
 
         private void WireTabs()
@@ -115,8 +115,19 @@ namespace NuclearReMind
         {
             if (codexPanel == null) return;
             bool show = !codexPanel.activeSelf;
+            if (show) UIPopIn.Ensure(codexPanel);
             codexPanel.SetActive(show);
-            if (show) RefreshAll();
+            if (show) { GameUIStack.Push(this); RefreshAll(); } // ขึ้นบนสุด + ลงทะเบียน
+            else GameUIStack.Pop(this);
+        }
+
+        // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
+        bool GameUIStack.IPanel.ClosableByEscape => true;
+        void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(codexPanel);
+        void GameUIStack.IPanel.CloseFromStack()
+        {
+            if (codexPanel != null) codexPanel.SetActive(false);
+            GameUIStack.Pop(this);
         }
 
         private void SetFilter(QuizCategory? category)

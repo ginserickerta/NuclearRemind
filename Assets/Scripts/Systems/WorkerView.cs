@@ -64,8 +64,12 @@ namespace NuclearReMind
         private float _pauseTimer;
         private float _seekTimer;
         private SpriteRenderer _sr;
+        private SpriteRenderer _shadow; // เงาใต้เท้า (child) — ตามลำดับความลึกใต้ตัวเสมอ
 
         private void Awake() => _sr = GetComponent<SpriteRenderer>();
+
+        /// <summary>ผูกเงาใต้เท้า (สร้างโดย WorkerVisualSpawner) — จะถูกจัด sortingOrder ให้อยู่ใต้ตัวทุกครั้งที่คนงานขยับ</summary>
+        public void SetShadow(SpriteRenderer shadow) => _shadow = shadow;
 
         private void OnEnable() => _active.Add(this);
         private void OnDisable() => _active.Remove(this);
@@ -216,7 +220,12 @@ namespace NuclearReMind
             if (_sr == null || GridManager.Instance == null) return;
             var iso = GridManager.Instance.WorldToIso(transform.position);
             // Player(unit) = ชั้นล่างสุดตอนซ้อน depth เดียวกัน (อาคาร/แร่/tower ที่ depth เท่ากันวาดทับ)
-            _sr.sortingOrder = GridManager.SortOrder(iso.x, iso.y, GridManager.SortTier.Unit);
+            int orderVal = GridManager.SortOrder(iso.x, iso.y, GridManager.SortTier.Unit);
+            // เดินอยู่หน้า/ทับ "ส่วนล่าง (ฐาน)" ของอาคาร → ยกเหนืออาคารนั้น (ไม่ให้อาคารบังตัว worker)
+            if (BuildingDepthSort.TryGetRaiseOrder(_sr.bounds, transform.position.y, out int raise) && raise > orderVal)
+                orderVal = raise;
+            _sr.sortingOrder = orderVal;
+            if (_shadow != null) _shadow.sortingOrder = orderVal - 1; // เงาอยู่ใต้ตัวคนงานเสมอ
         }
     }
 }

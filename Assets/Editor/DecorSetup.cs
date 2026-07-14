@@ -54,6 +54,28 @@ namespace NuclearReMind.EditorTools
                 Debug.Log($"[DecorSetup] ✅ นำเข้า {sprites.Count} สไปรต์ + wire DecorSpawner (apron {spawner.apronMargin}, density {spawner.densityPercent}%)");
         }
 
+        /// <summary>ลบ DecorSpawner (auto โรยของประดับ Zone C) ออกจากซีน — ไว้วางเองด้วย DecorPiece แทน</summary>
+        [MenuItem("NuclearReMind/Remove Decor Spawner (Zone C auto)")]
+        public static void RemoveSpawner()
+        {
+            var scene = EditorSceneManager.GetActiveScene();
+            if (scene.path != ScenePath)
+                scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+
+            var go = GameObject.Find("DecorSpawner");
+            if (go == null)
+            {
+                EditorUtility.DisplayDialog("Remove Decor Spawner",
+                    "ไม่พบ DecorSpawner ในซีน — ไม่มี auto decor ให้ลบอยู่แล้ว (วางเองได้เลย)", "OK");
+                return;
+            }
+
+            Undo.DestroyObjectImmediate(go);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log("[DecorSetup] ลบ DecorSpawner (auto decor Zone C) แล้ว — วางของประดับเองได้เลย (แนบ DecorPiece)");
+        }
+
         private static void EnsureFolder()
         {
             if (AssetDatabase.IsValidFolder(DecorFolder)) return;

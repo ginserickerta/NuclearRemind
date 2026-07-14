@@ -14,7 +14,7 @@ namespace NuclearReMind
     /// สร้าง runtime ทั้งแผง (idiom CoreTowerPanelUI) — Laboratory ถูก exclude จาก BuildingUpgradeUI
     /// จึงรวมปุ่มจัดคน/อัปเกรดไว้ที่นี่ · สั่งงานทุกอย่างผ่าน EventManager (ห้ามเรียก manager ตรง)
     /// </summary>
-    public class LabPanelUI : MonoBehaviour
+    public class LabPanelUI : MonoBehaviour, GameUIStack.IPanel
     {
         static readonly Color CBackdrop = new Color(0f, 0f, 0f, 0.55f);
         static readonly Color CPanel    = new Color(0.075f, 0.09f, 0.11f, 0.96f);
@@ -107,7 +107,7 @@ namespace NuclearReMind
         {
             bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
             if (Input.GetMouseButtonDown(0) && !overUI && !_shown && ClickedLab()) Open();
-            if (_shown && Input.GetKeyDown(KeyCode.Escape)) Hide();
+            // Esc จัดการรวมที่ GameUIStack (ผ่าน PauseMenuController) — ไม่เช็คเองแล้ว
         }
 
         // คลิกโดน "ตัวสไปรต์" ของโรงวิจัย (raycast Collider2D) — เดิมเช็ก footprint ต้องเล็งฐาน
@@ -130,7 +130,8 @@ namespace NuclearReMind
         private void Open()
         {
             _shown = true;
-            if (_backdrop != null) { _backdrop.SetActive(true); _backdrop.transform.SetAsLastSibling(); }
+            if (_backdrop != null) { UIPopIn.Ensure(_backdrop); _backdrop.SetActive(true); }
+            GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)
             TimeManager.Instance?.Pause(PauseReason.LabPopup); // §15: เวลาหยุดตอนเปิด popup
             Refresh();
             var pop = _root != null ? _root.GetComponent<UIClickPop>() : null;
@@ -141,8 +142,14 @@ namespace NuclearReMind
         {
             _shown = false;
             if (_backdrop != null) _backdrop.SetActive(false);
+            GameUIStack.Pop(this);
             TimeManager.Instance?.Resume(PauseReason.LabPopup);
         }
+
+        // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
+        bool GameUIStack.IPanel.ClosableByEscape => true;
+        void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(_backdrop);
+        void GameUIStack.IPanel.CloseFromStack() => Hide();
 
         // ═══════════════ POPULATE ═══════════════
         private void Refresh()

@@ -97,6 +97,8 @@ namespace NuclearReMind
 
         // ===== Building Selection (UI → PlacementController) =====
         public event Action<BuildingData> OnBuildingSelectRequested; // UI กด → PlacementController เริ่มวาง
+        public event Action<BuildingData> OnBuildingDragStarted;     // ลากช่อง hotbar → เริ่มวางแบบ drag (drop=วาง)
+        public event Action OnBuildingDragDropped;                   // ปล่อยเมาส์จบ drag → วาง/ยกเลิกตามตำแหน่ง
 
         // ===== Game Tick =====
         public event Action OnGameTick; // raised by ResourceManager ทุก tickInterval
@@ -250,6 +252,8 @@ namespace NuclearReMind
 
         // ===== Building Selection =====
         public void RaiseBuildingSelectRequested(BuildingData data) => OnBuildingSelectRequested?.Invoke(data);
+        public void RaiseBuildingDragStarted(BuildingData data) => OnBuildingDragStarted?.Invoke(data);
+        public void RaiseBuildingDragDropped() => OnBuildingDragDropped?.Invoke();
 
         // ===== Game Tick =====
         public void RaiseGameTick() => OnGameTick?.Invoke();

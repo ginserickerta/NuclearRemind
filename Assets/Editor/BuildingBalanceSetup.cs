@@ -90,6 +90,7 @@ namespace NuclearReMind.Editor
             // cost 0 = จำเป็น: PrePlacedBuilding ยิง OnBuildingPlaced → ResourceManager หักตามราคา (เหมือน CORE TOWER)
             n += SetBuilding("Laboratory", b =>
             {
+                b.size = new Vector2Int(2, 2); // footprint 2×2 (สไปรต์ใหญ่ ≈ 2 ช่อง — PrePlacedBuilding จอง 4 ช่อง)
                 b.ironCost = 0;
                 b.energyCost = 0;
                 b.workerRequired = 2;

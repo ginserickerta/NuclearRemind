@@ -14,13 +14,19 @@ namespace NuclearReMind
         [Header("Parent transform สำหรับอาคารที่วางแล้ว (Buildings sorting layer)")]
         public Transform buildingsParent;
 
+        [Header("Depth Sort (แยกส่วนบน/ฐาน — แก้อาคาร iso ซ้อนผิดลำดับ · rule ใน BuildingDepthSort)")]
+        [Tooltip("สัดส่วนความสูงจากล่างที่ถือเป็น 'ฐาน' (ที่เหลือ = 'ส่วนบน' ที่ยกลอยเหนืออาคารที่บัง)")]
+        [Range(0.1f, 0.6f)] public float depthBaseFraction = 0.3f;
+
         private readonly Dictionary<Vector2Int, GameObject> _spawnedVisuals = new Dictionary<Vector2Int, GameObject>();
 
-        // ===== Drop shadow (เพิ่มมิติบน light theme — ไม่ใช้ URP/Light2D) =====
-        private const float ShadowWidth   = 1.0f;   // กว้างเงาเทียบ 1 tile
-        private const float ShadowAlpha   = 0.38f;  // ความเข้มเงา (คูณกับ gradient ใน sprite) — เข้มพอให้เห็นบนพื้นสว่าง
-        private const float ShadowYOffset = -0.18f; // เลื่อนลงไปที่ฐานอาคาร ให้เงาโผล่พ้นตัวอาคาร
-        private static Sprite _shadowSprite;
+        // ===== Silhouette drop shadow (รูปทรงเงา = รูปสไปรต์อาคารเอง · ไม่ใช้ URP/Light2D) =====
+        // ใช้สไปรต์ของตัวอาคารเองมาทำเงา: ทำดำ + พลิกลง (flip) + หุบเตี้ย → เงาทอดพาดพื้นด้านหน้า
+        // เข้ากับ pivot ฐานล่างกลางของสไปรต์อาคาร (alignment 7, spritePivot y=0)
+        private const float ShadowAlpha     = 0.30f; // ความเข้มเงา (สไปรต์ดำล้วน · โปร่งพอไม่ทึบ)
+        private const float ShadowSquash    = 0.42f; // สัดส่วนความสูงเงาเทียบตัวจริง (พลิกลง)
+        private const float MaxShadowHeight = 1.5f;   // world units — คุมไม่ให้อาคารสูง (core tower) ทอดเงายาวเกินจริง
+        private const float ShadowYOffset   = -0.02f; // ทุบลงนิดให้ฐานเงาจมพื้น ไม่ลอยพ้นฐานอาคาร
 
         private void OnEnable()
         {
@@ -42,6 +48,7 @@ namespace NuclearReMind
         private void HandleBuildingPlaced(Cell cell, BuildingData data)
         {
             SpawnVisual(new Vector2Int(cell.col, cell.row), data);
+            BuildingDepthSort.RecomputeAll(); // จัดลำดับส่วนบน/ฐานใหม่หลังมีอาคารเพิ่ม
         }
 
         private void HandleBuildingRemoved(Vector2Int position)
@@ -49,8 +56,13 @@ namespace NuclearReMind
             if (!_spawnedVisuals.TryGetValue(position, out var go))
                 return;
 
+            // ปิด depth-sort ก่อนทำลาย → หลุด registry ทันที ไม่ค้างใน RecomputeAll เฟรมนี้
+            var depth = go != null ? go.GetComponent<BuildingDepthSort>() : null;
+            if (depth != null) depth.enabled = false;
+
             DestroyVisual(go);
             _spawnedVisuals.Remove(position);
+            BuildingDepthSort.RecomputeAll();
         }
 
         // อัปเกรดระดับ → สลับ sprite ตัวอาคารเป็นภาพของระดับใหม่ (L1/L2/L3) ถ้า asset มี levelSprites
@@ -72,6 +84,15 @@ namespace NuclearReMind
                 BuildingUpgradeEffect.Play(go, sr, newSprite);
             else
                 sr.sprite = newSprite;
+
+            // เงา silhouette ต้องเปลี่ยนรูปตามสไปรต์เลเวลใหม่ด้วย (ไม่งั้นเงายังเป็นทรงเลเวลเดิม)
+            var shadowTf = go.transform.Find("Shadow");
+            if (shadowTf != null)
+                ConfigureShadow(shadowTf.GetComponent<SpriteRenderer>(), newSprite);
+
+            // สร้างแถบบน/ฐานใหม่ตามสไปรต์เลเวลใหม่ แล้วจัดลำดับใหม่
+            go.GetComponent<BuildingDepthSort>()?.Rebuild(newSprite, depthBaseFraction);
+            BuildingDepthSort.RecomputeAll();
         }
 
         /// <summary>
@@ -93,6 +114,8 @@ namespace NuclearReMind
                 if (data != null)
                     SpawnVisual(save.placedBuildings[i], data);
             }
+
+            BuildingDepthSort.RecomputeAll(); // จัดลำดับครั้งเดียวหลัง spawn ครบ
         }
 
         /// <summary>
@@ -144,7 +167,10 @@ namespace NuclearReMind
             if (data.animationFrames != null && data.animationFrames.Length >= 2)
                 go.AddComponent<SpriteFrameAnimator>().Play(data.animationFrames, data.animationFps);
 
-            AddShadow(go, position, data, baseSort);
+            AddShadow(go, spriteRenderer.sprite, baseSort);
+
+            // แยก "ส่วนบน/ส่วนฐาน" + collider 2 โซน (depth-sort · main sprite เต็มใบไม่ถูกแตะ)
+            go.AddComponent<BuildingDepthSort>().Setup(spriteRenderer, baseSort, BuildingsSortingLayer, depthBaseFraction, data);
 
             _spawnedVisuals[position] = go;
         }
@@ -163,51 +189,32 @@ namespace NuclearReMind
             target.data = data;
         }
 
-        // เงา ellipse นุ่ม ๆ ใต้อาคาร — child แยกจาก SpriteRenderer ตัวแม่
-        private void AddShadow(GameObject parent, Vector2Int position, BuildingData data, int baseSort)
+        // เงา silhouette = รูปสไปรต์อาคารเอง — child แยกจาก SpriteRenderer ตัวแม่
+        private void AddShadow(GameObject parent, Sprite sprite, int baseSort)
         {
+            if (sprite == null) return;
             var shadow = new GameObject("Shadow");
             shadow.transform.SetParent(parent.transform, false);
-            shadow.transform.localPosition = new Vector3(0f, ShadowYOffset, 0f);
-
-            // ขยายเงาตาม footprint อาคาร (size = จำนวน tile กว้าง×ลึก)
-            int footprint = Mathf.Max(1, data.size.x) + Mathf.Max(1, data.size.y);
-            float scale = ShadowWidth * footprint * 0.5f;
-            shadow.transform.localScale = new Vector3(scale, scale, 1f);
 
             var sr = shadow.AddComponent<SpriteRenderer>();
-            sr.sprite = GetShadowSprite();
-            sr.color = new Color(0f, 0f, 0f, ShadowAlpha);
             sr.sortingLayerName = BuildingsSortingLayer;
-            sr.sortingOrder = baseSort - 1; // ใต้ตัวอาคาร เหนือพื้น
+            sr.sortingOrder = baseSort - 1; // ใต้ตัวอาคาร เหนือพื้น (front building ที่ order สูงกว่าบังเงาได้ตามธรรมชาติ)
+            ConfigureShadow(sr, sprite);
         }
 
-        // sprite เงา: ellipse 2:1 ที่ alpha ไล่จากกลาง (1) ออกขอบ (0) — สร้างครั้งเดียว cache ไว้
-        private static Sprite GetShadowSprite()
+        // ทำสไปรต์ให้เป็น "เงาทอดพื้น": ดำล้วน + พลิกลง (scaleY ลบ) + หุบเตี้ย
+        // pivot ฐานล่างกลาง → ฐานเงาติดฐานอาคาร แล้วทอดลงด้านหน้า (ล่างจอ = ใกล้ผู้ชม) เหมือนแสงส่องจากบน
+        // คุมความสูงสูงสุดด้วย MaxShadowHeight เพื่อไม่ให้อาคารสูง (core tower) ทอดเงายาวเวอร์
+        private static void ConfigureShadow(SpriteRenderer sr, Sprite sprite)
         {
-            if (_shadowSprite != null) return _shadowSprite;
+            if (sr == null || sprite == null) return;
+            sr.sprite = sprite;
+            sr.color = new Color(0f, 0f, 0f, ShadowAlpha);
 
-            const int w = 128, h = 64;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
-            var px = new Color[w * h];
-            float cx = w * 0.5f, cy = h * 0.5f;
-
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    float dx = (x - cx) / cx;
-                    float dy = (y - cy) / cy;
-                    float d = Mathf.Sqrt(dx * dx + dy * dy); // 0 กลาง → 1 ขอบ
-                    float a = Mathf.Clamp01(1f - d);
-                    px[y * w + x] = new Color(0f, 0f, 0f, a * a); // soft falloff
-                }
-            }
-
-            tex.SetPixels(px);
-            tex.Apply();
-            _shadowSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), w);
-            return _shadowSprite;
+            float spriteH = sprite.bounds.size.y; // world units (คิด pivot+ppu แล้ว · ยังไม่คูณ transform scale)
+            float squash = spriteH > 0.001f ? Mathf.Min(ShadowSquash, MaxShadowHeight / spriteH) : ShadowSquash;
+            sr.transform.localPosition = new Vector3(0f, ShadowYOffset, 0f);
+            sr.transform.localScale    = new Vector3(1f, -squash, 1f); // ลบ = พลิกลง · หุบตาม squash
         }
     }
 }

@@ -16,7 +16,7 @@ namespace NuclearReMind
     /// แท็บหมวด: ทั้งหมด / ทรัพยากร / เชื้อเพลิง / อาหาร / การแพทย์ / เกษตร
     /// อ่านสถานะ read-only (ResourceManager/InventoryManager) · สั่งทิ้งผ่าน event OnDiscardItemRequested
     /// </summary>
-    public class InventoryGridUI : MonoBehaviour
+    public class InventoryGridUI : MonoBehaviour, GameUIStack.IPanel
     {
         // ── theme (เหล็ก-ทองแดงอุตสาหกรรม เข้มอุ่น — ตามภาพ) ──
         static readonly Color CBackdrop = new Color(0f, 0f, 0f, 0.80f);
@@ -124,7 +124,7 @@ namespace NuclearReMind
         private void Update()
         {
             if (Input.GetKeyDown(toggleKey)) Toggle();
-            if (_shown && Input.GetKeyDown(KeyCode.Escape)) Hide();
+            // Esc จัดการรวมที่ GameUIStack (ผ่าน PauseMenuController) — ไม่เช็คเองแล้ว
         }
 
         private void HandleChanged()               { if (_shown) Refresh(); }
@@ -136,7 +136,8 @@ namespace NuclearReMind
         private void Open()
         {
             _shown = true;
-            if (_backdrop != null) { _backdrop.SetActive(true); _backdrop.transform.SetAsLastSibling(); }
+            if (_backdrop != null) { UIPopIn.Ensure(_backdrop); _backdrop.SetActive(true); }
+            GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)
             Refresh();
         }
 
@@ -144,7 +145,13 @@ namespace NuclearReMind
         {
             _shown = false;
             if (_backdrop != null) _backdrop.SetActive(false);
+            GameUIStack.Pop(this);
         }
+
+        // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
+        bool GameUIStack.IPanel.ClosableByEscape => true;
+        void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(_backdrop);
+        void GameUIStack.IPanel.CloseFromStack() => Hide();
 
         // ═══════════════════════════ data ═══════════════════════════
         private void RebuildEntries()

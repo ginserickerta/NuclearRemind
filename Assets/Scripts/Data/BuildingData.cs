@@ -41,6 +41,15 @@ namespace NuclearReMind
         [Tooltip("ความเร็วอนิเมชัน (เฟรม/วินาที) — ใช้เมื่อมี animationFrames เท่านั้น")]
         public float animationFps = 6f;
 
+        [Header("Depth-sort base collider (override)")]
+        [Tooltip("ใช้กล่องฐานที่กำหนดเองแทนการคำนวณอัตโนมัติ (depthBaseFraction ที่ BuildingVisualSpawner)\n" +
+                 "worker ที่เดินทับ 'โซนฐาน' นี้ + อยู่หน้า จะวาดเหนืออาคาร · ปรับด้วยเมนู NuclearReMind → Tools → Base Collider Editor (ลาก handle ใน Scene)")]
+        public bool overrideBaseCollider = false;
+        [Tooltip("ขนาดกล่องฐาน (world units, สเกลสไปรต์ปกติ = local ของสไปรต์) — ใช้เมื่อ overrideBaseCollider = true")]
+        public Vector2 baseColliderSize = Vector2.zero;
+        [Tooltip("ตำแหน่งกึ่งกลางกล่องฐาน เทียบ pivot สไปรต์ (world units) — ใช้เมื่อ overrideBaseCollider = true")]
+        public Vector2 baseColliderOffset = Vector2.zero;
+
         [Header("Grid")]
         public Vector2Int size = Vector2Int.one;
 

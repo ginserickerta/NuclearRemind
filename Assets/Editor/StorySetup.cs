@@ -236,7 +236,8 @@ namespace NuclearReMind.EditorTools
             building.description = "อนุสรณ์ทีมสร้างหอคอยทั้ง 6 คน — คลิกที่ตัวอาคารเพื่อเปิดแผงรายชื่อ";
             building.nuclearKnowledge = "Veltara Core Project คือทีมที่จุดเตาฟิวชันครั้งแรกเมื่อปี 2157 " +
                                         "ความผิดพลาดของพวกเขาไม่ใช่วิทยาศาสตร์ แต่คือการเดินเครื่องเกินขีดที่ระบบหล่อเย็นรับไหว";
-            building.size = new Vector2Int(2, 2);
+            building.size = new Vector2Int(3, 3);
+            building.spriteScale = 0.7f; // สไปรต์ 64px ให้เล็กลงใกล้เคียงอาคารทั่วไป (เดิม -20 = invalid → fallback 1.0 ใหญ่ไป)
             building.buildingType = BuildingType.Memorial;
             building.ironCost = 0;
             building.energyCost = 0;

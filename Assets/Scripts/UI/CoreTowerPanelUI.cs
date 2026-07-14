@@ -17,7 +17,7 @@ namespace NuclearReMind
     /// ตรรกะ/ค่าทั้งหมดคงเดิม: อ่านจาก OnTowerProgressChanged/OnResourceChanged + CoreTowerManager.Instance (query อย่างเดียว)
     /// ค่าที่แสดง: สมบูรณ์/CORE% = corePercent · ความร้อน = coreHeat/HeatMeltdown · เชื้อเพลิง/วิศวกร/หล่อเย็นผ่าน Adjust
     /// </summary>
-    public class CoreTowerPanelUI : MonoBehaviour
+    public class CoreTowerPanelUI : MonoBehaviour, GameUIStack.IPanel
     {
         const string SpriteDir = "CoreTowerUI/";
 
@@ -50,9 +50,21 @@ namespace NuclearReMind
         {
             if (FindFirstObjectByType<CoreTowerPanelUI>() != null) return;
             var canvas = FindBestCanvas();
-            var go = new GameObject("CoreTowerPanelUI (auto)");
+            // authored prefab (แก้ layout ด้วยตาใน Editor) วางที่ Resources/CoreTowerUI/CoreTowerPanel
+            // มี → instantiate (ref ครบ ไม่ build ใหม่) · ไม่มี → สร้างสด fallback เหมือนเดิม
+            var prefab = Resources.Load<GameObject>(SpriteDir + "CoreTowerPanel");
+            GameObject go;
+            if (prefab != null)
+            {
+                go = Instantiate(prefab);
+                go.name = "CoreTowerPanelUI";
+            }
+            else
+            {
+                go = new GameObject("CoreTowerPanelUI (auto)");
+                go.AddComponent<CoreTowerPanelUI>();
+            }
             if (canvas != null) go.transform.SetParent(canvas.transform, false);
-            go.AddComponent<CoreTowerPanelUI>();
         }
 
         private static Canvas FindBestCanvas()
@@ -68,18 +80,21 @@ namespace NuclearReMind
             return fallback;
         }
 
-        // built refs
-        private GameObject _backdrop, _root;
-        private UIClickPop _rootPop;
-        private Text _dayTxt, _integrityTxt, _statHeatTxt, _coreGaugeTxt, _heatGaugeTxt;
-        private Text _deutTxt, _tritTxt, _engTxt, _coolPowerTxt, _coolWaterTxt;
-        private RectTransform _coreFill, _heatFill;
-        private Image _heatFillImg;
-        private ModeBtn[] _modes;
-        private Button _confirmBtn, _scramBtn, _addCoolBtn;
-        private Button _deutMinus, _deutPlus, _engMinus, _engPlus, _tritMinus, _tritPlus;
+        // built refs — [SerializeField] เพื่อให้ bake เก็บลง prefab (runtime instantiate มา ref ครบ ไม่ต้อง build ใหม่)
+        [SerializeField] private GameObject _backdrop, _root;
+        [SerializeField] private UIClickPop _rootPop;
+        [SerializeField] private Image _sheen;
+        [SerializeField] private Text _dayTxt, _integrityTxt, _statHeatTxt, _coreGaugeTxt, _heatGaugeTxt;
+        [SerializeField] private Text _deutTxt, _tritTxt, _engTxt, _coolPowerTxt, _coolWaterTxt;
+        [SerializeField] private RectTransform _coreFill, _heatFill;
+        [SerializeField] private Image _heatFillImg;
+        [SerializeField] private ModeBtn[] _modes;
+        [SerializeField] private Button _confirmBtn, _scramBtn, _addCoolBtn, _closeBtn;
+        [SerializeField] private Button _deutMinus, _deutPlus, _engMinus, _engPlus, _tritMinus, _tritPlus;
 
-        private class ModeBtn { public Button btn; public Image img; public int mode; }
+        private bool _authoring; // true = กำลัง bake เป็น prefab → parent ใต้ตัวเอง (ไม่ใช่ canvas)
+
+        [System.Serializable] private class ModeBtn { public Button btn; public Image img; public int mode; }
 
         private void Awake() => _font = LoadFont();
 
@@ -100,7 +115,8 @@ namespace NuclearReMind
 
         private void Start()
         {
-            BuildPanel();
+            if (_root != null) PostBuildSetup();   // authored prefab: ref ครบแล้ว → แค่ผูก listener + จัด scale + คืน sheen
+            else BuildPanel();                     // fallback: สร้างสดทั้งแผง (ของเดิม)
             Hide();
         }
 
@@ -108,7 +124,7 @@ namespace NuclearReMind
         {
             bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
             if (Input.GetMouseButtonDown(0) && !overUI && !_shown && ClickedCoreTower()) Open();
-            if (_shown && Input.GetKeyDown(KeyCode.Escape)) Hide();
+            // Esc จัดการรวมที่ GameUIStack (ผ่าน PauseMenuController) — ไม่เช็คเองแล้ว
         }
 
         // คลิกโดน "ตัวสไปรต์" ของ CORE TOWER (raycast Collider2D จาก BuildingVisualSpawner) —
@@ -130,7 +146,8 @@ namespace NuclearReMind
         private void Open()
         {
             _shown = true;
-            if (_backdrop != null) { _backdrop.SetActive(true); _backdrop.transform.SetAsLastSibling(); }
+            if (_backdrop != null) _backdrop.SetActive(true);
+            GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)
             var ct = CoreTowerManager.Instance;
             _pendingMode = ct != null ? Mathf.Clamp(ct.Current.overclockMode, 0, 3) : CoreTowerManager.ModeNormal;
             Refresh();
@@ -141,7 +158,13 @@ namespace NuclearReMind
         {
             _shown = false;
             if (_backdrop != null) _backdrop.SetActive(false);
+            GameUIStack.Pop(this);
         }
+
+        // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
+        bool GameUIStack.IPanel.ClosableByEscape => true;
+        void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(_backdrop);
+        void GameUIStack.IPanel.CloseFromStack() => Hide();
 
         private void HandleTowerProgress(TowerData _)    { if (_shown) Refresh(); }
         private void HandleModeChanged(int mode)         { _pendingMode = mode; if (_shown) Refresh(); }
@@ -223,7 +246,8 @@ namespace NuclearReMind
         {
             var canvas = GetComponentInParent<Canvas>();
             if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
-            Transform parent = canvas != null ? canvas.transform : transform;
+            // bake (authored) → parent ใต้ตัวเอง (prefab เก็บ subtree ได้) · runtime สร้างสด → ใต้ canvas เหมือนเดิม
+            Transform parent = _authoring ? transform : (canvas != null ? canvas.transform : transform);
 
             _backdrop = Panel("CoreTowerBackdrop", parent, CBackdrop);
             Stretch(_backdrop.GetComponent<RectTransform>());
@@ -251,6 +275,7 @@ namespace NuclearReMind
             srt.sizeDelta = new Vector2(-12f, panelSize.y * 0.46f);  // x: inset 6 ต่อข้าง · y: สูง 46% ของการ์ด
             srt.anchoredPosition = new Vector2(0f, -6f);
             sheen.color = new Color(CGlassSheen.r, CGlassSheen.g, CGlassSheen.b, 0.11f);
+            _sheen = sheen; // เก็บไว้คืน sprite ตอน runtime (procedural texture ไม่ถูก serialize ลง prefab)
 
             // ย่อทั้งแผงให้พอดีจอ (แผง portrait สูงเกินจอ 16:9) — ตั้ง scale ก่อนแนบ pop เพื่อให้ base ถูก
             var canvasRT = canvas != null ? canvas.GetComponent<RectTransform>() : null;
@@ -267,8 +292,8 @@ namespace NuclearReMind
             var title = SpriteImg("title", 250, 44, 500, deriveH: false, boxH: 96);
             title.raycastTarget = false;
             _dayTxt = Label("Day", 500, 150, 26, CGold, TextAnchor.MiddleCenter, FontStyle.Bold, 400);
-            var close = SpriteButtonBox("btn_close", panelSize.x - 118, 36, 78, 78);
-            close.onClick.AddListener(Hide); Pop(close);
+            _closeBtn = SpriteButtonBox("btn_close", panelSize.x - 118, 36, 78, 78);
+            _closeBtn.onClick.AddListener(Hide); Pop(_closeBtn);
 
             // ===== STAT ROW =====
             // % ฝังในรูปที่ x 0.60–0.68, กลาง y 0.715 (วัดจาก pixel) → เลขชิดขวาจบที่ 0.58 แนวเดียวกับ %
@@ -334,6 +359,55 @@ namespace NuclearReMind
             _addCoolBtn = SpriteButtonBox("btn_addcool", 40, by, bw, bh); _addCoolBtn.onClick.AddListener(() => Adjust(ReactorAllocation.CoolingWater, 20)); Pop(_addCoolBtn);
             _scramBtn   = SpriteButtonBox("btn_scram",   40 + bw + 20, by, bw, bh); _scramBtn.onClick.AddListener(DoScram); Pop(_scramBtn);
             _confirmBtn = SpriteButtonBox("btn_confirm", 40 + (bw + 20)*2, by, bw, bh); _confirmBtn.onClick.AddListener(ConfirmMode); Pop(_confirmBtn);
+        }
+
+        // ═══════════════════════════ AUTHORED PREFAB (instantiate แทน build) ═══════════════════════════
+        // เรียกจาก editor baker เท่านั้น: build ทั้งแผงใต้ตัวเอง (ไม่พึ่ง canvas) → SaveAsPrefabAsset เก็บ subtree + ref ได้
+        public void BuildForBake()
+        {
+            _authoring = true;
+            _font = LoadFont();
+            BuildPanel();
+        }
+
+        // authored prefab: หลัง instantiate — จัด scale พอดีจอ + คืน sheen sprite (procedural ไม่ถูก serialize) + ผูก listener ใหม่
+        private void PostBuildSetup()
+        {
+            if (_font == null) _font = LoadFont();
+            ApplyFitScale(GetComponentInParent<Canvas>());
+            if (_sheen != null) _sheen.sprite = TopSheenSprite();
+            if (_rootPop != null) _rootPop.playOnClick = false;
+            HookListeners();
+        }
+
+        private void ApplyFitScale(Canvas canvas)
+        {
+            var canvasRT = canvas != null ? canvas.GetComponent<RectTransform>() : null;
+            float ch = canvasRT != null ? canvasRT.rect.height : 0f;
+            float fit = ch > 1f ? Mathf.Min(1f, ch * 0.94f / panelSize.y) : 1f;
+            if (_root != null) _root.transform.localScale = Vector3.one * fit;
+        }
+
+        // ผูก onClick ใหม่ — listener ที่ AddListener ในโค้ดไม่ถูก serialize ลง prefab จึงต้องผูกซ้ำเมื่อ instantiate
+        private void HookListeners()
+        {
+            if (_backdrop != null) { var b = _backdrop.GetComponent<Button>(); if (b != null) b.onClick.AddListener(Hide); }
+            if (_closeBtn != null) _closeBtn.onClick.AddListener(Hide);
+            if (_modes != null)
+                foreach (var m in _modes)
+                {
+                    if (m == null || m.btn == null) continue;
+                    int mode = m.mode; m.btn.onClick.AddListener(() => SelectMode(mode));
+                }
+            if (_deutMinus  != null) _deutMinus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, -5));
+            if (_deutPlus   != null) _deutPlus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, 5));
+            if (_tritMinus  != null) _tritMinus.onClick.AddListener(() => Adjust(ReactorAllocation.Tritium, -5));
+            if (_tritPlus   != null) _tritPlus.onClick.AddListener(() => Adjust(ReactorAllocation.Tritium, 5));
+            if (_engMinus   != null) _engMinus.onClick.AddListener(() => Adjust(ReactorAllocation.CoolingEngineer, -1));
+            if (_engPlus    != null) _engPlus.onClick.AddListener(() => Adjust(ReactorAllocation.CoolingEngineer, 1));
+            if (_addCoolBtn != null) _addCoolBtn.onClick.AddListener(() => Adjust(ReactorAllocation.CoolingWater, 20));
+            if (_scramBtn   != null) _scramBtn.onClick.AddListener(DoScram);
+            if (_confirmBtn != null) _confirmBtn.onClick.AddListener(ConfirmMode);
         }
 
         // ─────────── element builders ───────────

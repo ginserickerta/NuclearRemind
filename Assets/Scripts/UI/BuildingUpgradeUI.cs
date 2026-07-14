@@ -12,7 +12,7 @@ namespace NuclearReMind
     /// UI ทั้งหมดสร้างเองตอนรันไทม์ (ไม่ต้อง wire ใน editor) · ยิงคำสั่งผ่าน EventManager · อ่านสถานะ read-only
     /// hover อาคาร = ป้ายชื่อเล็ก ๆ · คลิก = เปิดแผง · ปิดด้วย Esc / ✕ / คลิกพื้นว่าง / คลิกอาคารเดิมซ้ำ
     /// </summary>
-    public class BuildingUpgradeUI : MonoBehaviour
+    public class BuildingUpgradeUI : MonoBehaviour, GameUIStack.IPanel
     {
         public static BuildingUpgradeUI Instance { get; private set; }
 
@@ -62,6 +62,8 @@ namespace NuclearReMind
         private GameObject _reqRow, _lvBox;
         private Text _reqTitleTxt, _reqEnergyTxt, _reqIronTxt, _reqWorkerTxt, _reqTimeTxt, _warnTxt;
         private Button _upgradeBtn; private Text _upgradeBtnTxt;
+        private Button _closeBtn;
+        private bool _authoring; // true = กำลัง bake เป็น prefab → parent ใต้ตัวเอง (ไม่ใช่ canvas)
 
         // hover nameplate
         private GameObject _nameplate; private RectTransform _nameplateRect; private Text _nameplateText;
@@ -109,7 +111,22 @@ namespace NuclearReMind
         private void Start()
         {
             if (panel != null) panel.SetActive(false); // ซ่อนแผงเก่าจาก HUDCanvasSetup ทิ้ง
-            BuildPanel();
+
+            // authored prefab (แก้ layout ด้วยตาใน Editor) วางที่ Resources/BuildingUI/BuildingStatusPanel
+            // มี → instantiate + bind ref จาก BuildingPanelRefs · ไม่มี/เพี้ยน → สร้างสด fallback เหมือนเดิม
+            var prefab = Resources.Load<GameObject>("BuildingUI/BuildingStatusPanel");
+            if (prefab != null)
+            {
+                var canvas = GetComponentInParent<Canvas>();
+                if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
+                var inst = Instantiate(prefab);
+                if (canvas != null) inst.transform.SetParent(canvas.transform, false);
+                var refs = inst.GetComponent<BuildingPanelRefs>();
+                if (refs != null) { BindFromRefs(refs); HookListeners(); }
+                else { Destroy(inst); BuildPanel(); }
+            }
+            else BuildPanel();
+
             Hide();
         }
 
@@ -122,14 +139,17 @@ namespace NuclearReMind
 
             bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 
-            Vector2Int hoverOrigin = default; BuildingData hoverData = null; bool hovering = false;
-            if (!overUI && BuildingRegistry.Instance.TryGetBuildingAt(
-                    InputManager.Instance.GetMouseGridPosition(), out hoverOrigin, out hoverData))
-                hovering = !IsExcluded(hoverData);
+            // ตรวจอาคารใต้เมาส์ (footprint) แยก 2 ระดับ:
+            //   overBuilding = มีอาคารใด ๆ อยู่ใต้เมาส์ → ใช้โชว์ "ป้ายชื่อ hover" ทุกอาคาร (รวม Core Tower/Memorial/Lab)
+            //   openable     = อาคารทั่วไปที่เปิดแผงนี้ได้ (Core/Memorial/Lab ถูก exclude เพราะมีแผงเฉพาะของตัวเอง)
+            Vector2Int hoverOrigin = default; BuildingData hoverData = null;
+            bool overBuilding = !overUI && BuildingRegistry.Instance.TryGetBuildingAt(
+                    InputManager.Instance.GetMouseGridPosition(), out hoverOrigin, out hoverData) && hoverData != null;
+            bool openable = overBuilding && !IsExcluded(hoverData);
 
             if (Input.GetMouseButtonDown(0) && !overUI)
             {
-                if (hovering)
+                if (openable)
                 {
                     if (_shown && hoverOrigin == _currentCell) Hide();
                     else OpenAt(hoverOrigin);
@@ -137,7 +157,7 @@ namespace NuclearReMind
                 else if (_shown) Hide();
             }
 
-            if (_shown && Input.GetKeyDown(KeyCode.Escape)) Hide();
+            // Esc จัดการรวมที่ GameUIStack (ผ่าน PauseMenuController) — ไม่เช็คเองแล้ว
             if (_shown && Input.GetKeyDown(KeyCode.Q)) EventManager.Instance.RaiseWorkerAssignRequested(_currentCell, -1);
             else if (_shown && Input.GetKeyDown(KeyCode.E)) EventManager.Instance.RaiseWorkerAssignRequested(_currentCell, +1);
 
@@ -150,7 +170,8 @@ namespace NuclearReMind
                     || (ConstructionController.Instance != null && ConstructionController.Instance.IsUnderConstruction(_currentCell))))
                 Refresh();
 
-            if (hovering && !(_shown && hoverOrigin == _currentCell)) ShowNameplate(hoverData.buildingName);
+            // ป้ายชื่อ hover — โชว์ทุกอาคาร (รวม Core Tower/Memorial/Lab) ยกเว้นตอนแผงนี้เปิดค้างที่อาคารเดิม
+            if (overBuilding && !(_shown && hoverOrigin == _currentCell)) ShowNameplate(hoverData.buildingName);
             else HideNameplate();
         }
 
@@ -158,7 +179,8 @@ namespace NuclearReMind
         {
             _currentCell = origin;
             _shown = true;
-            if (_backdrop != null) _backdrop.SetActive(true); // backdrop เป็นแม่ของ _root → เปิดทั้งชุด
+            if (_backdrop != null) { UIPopIn.Ensure(_backdrop); _backdrop.SetActive(true); } // backdrop เป็นแม่ของ _root → เปิดทั้งชุด
+            GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)
             Refresh();
         }
 
@@ -166,7 +188,13 @@ namespace NuclearReMind
         {
             _shown = false;
             if (_backdrop != null) _backdrop.SetActive(false); // ปิดทั้งชุด (ไม่งั้น backdrop บังคลิกทั้งจอ)
+            GameUIStack.Pop(this);
         }
+
+        // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
+        bool GameUIStack.IPanel.ClosableByEscape => true;
+        void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(_backdrop);
+        void GameUIStack.IPanel.CloseFromStack() => Hide();
 
         // Laboratory มีป๊อปอัพเฉพาะ (LabPanelUI — ฝึก/วิจัย/จัดคน/อัปเกรดครบในนั้น) — exclude กันเปิดซ้อน
         // แบบเดียวกับ CoreTower (CoreTowerPanelUI) และ Memorial (MemorialPanelController)
@@ -421,7 +449,9 @@ namespace NuclearReMind
         private void BuildPanel()
         {
             var canvas = panel != null ? panel.GetComponentInParent<Canvas>() : GetComponentInParent<Canvas>();
-            Transform parent = canvas != null ? canvas.transform : (panel != null ? panel.transform.parent : transform);
+            // bake (authored) → parent ใต้ตัวเอง (prefab เก็บ subtree ได้) · runtime สร้างสด → ใต้ canvas เหมือนเดิม
+            Transform parent = _authoring ? transform
+                             : (canvas != null ? canvas.transform : (panel != null ? panel.transform.parent : transform));
 
             // backdrop มืดโปร่งเต็มจอ (กันคลิกทะลุ + โฟกัส)
             _backdrop = Panel("BuildingStatusBackdrop", parent, CBackdrop);
@@ -458,9 +488,9 @@ namespace NuclearReMind
             _hintTxt = Txt("HdrHint", _root.transform, "", 15, CAccent, TextAnchor.UpperLeft);
             SetRect(_hintTxt.rectTransform, new Vector2(0,1),new Vector2(0,1),new Vector2(0,1), new Vector2(pad+58, -pad-66), new Vector2(560,22));
 
-            var close = Btn("CloseBtn", _root.transform, "✕", 26, CClose);
-            SetRect(((RectTransform)close.transform), new Vector2(1,1),new Vector2(1,1),new Vector2(1,1), new Vector2(-pad, -pad), new Vector2(52,52));
-            close.onClick.AddListener(Hide);
+            _closeBtn = Btn("CloseBtn", _root.transform, "✕", 26, CClose);
+            SetRect(((RectTransform)_closeBtn.transform), new Vector2(1,1),new Vector2(1,1),new Vector2(1,1), new Vector2(-pad, -pad), new Vector2(52,52));
+            _closeBtn.onClick.AddListener(Hide);
 
             // ===== BODY (สไปรต์ | ข้อมูล | ระดับปัจจุบัน) =====
             float bodyTop = -110f, bodyH = 300f;
@@ -567,6 +597,75 @@ namespace NuclearReMind
             _upgradeBtn = upBtnGo; _upgradeBtnTxt = upBtnGo.GetComponentInChildren<Text>();
             SetRect((RectTransform)upBtnGo.transform, new Vector2(1,0.5f),new Vector2(1,0.5f),new Vector2(1,0.5f), new Vector2(-20,0), new Vector2(240,84));
             upBtnGo.onClick.AddListener(OnUpgrade);
+        }
+
+        // ═══════════════════════════ AUTHORED PREFAB (instantiate แทน build) ═══════════════════════════
+        // เรียกจาก editor baker: build แผงใต้ตัวเอง แล้ว copy ref ลง BuildingPanelRefs (component logic ถูกลบตอน bake เหลือแค่ visual+refs)
+        public void BuildForBake()
+        {
+            _authoring = true;
+            _font = LoadFont();
+            BuildPanel();
+        }
+
+        // bake → เก็บ ref ทุกชิ้นลงตัวถือ (holder อยู่บน prefab · runtime อ่านกลับ)
+        public void CopyRefsTo(BuildingPanelRefs r)
+        {
+            r.root = _root; r.backdrop = _backdrop;
+            r.iconImg = _iconImg; r.spriteImg = _spriteImg;
+            r.nameTxt = _nameTxt; r.headLvTxt = _headLvTxt; r.descTxt = _descTxt; r.hintTxt = _hintTxt;
+            r.prodLabelTxt = _prodLabelTxt; r.prodValTxt = _prodValTxt; r.workerValTxt = _workerValTxt;
+            r.bigLvTxt = _bigLvTxt; r.maxLvTxt = _maxLvTxt; r.extractTxt = _extractTxt; r.extractRow = _extractRow;
+            r.workerMinus = _workerMinus; r.workerPlus = _workerPlus; r.upTitleTxt = _upTitleTxt; r.closeBtn = _closeBtn;
+            r.reqRow = _reqRow; r.lvBox = _lvBox;
+            r.reqTitleTxt = _reqTitleTxt; r.reqEnergyTxt = _reqEnergyTxt; r.reqIronTxt = _reqIronTxt;
+            r.reqWorkerTxt = _reqWorkerTxt; r.reqTimeTxt = _reqTimeTxt; r.warnTxt = _warnTxt;
+            r.upgradeBtn = _upgradeBtn; r.upgradeBtnTxt = _upgradeBtnTxt;
+            if (_cards != null)
+            {
+                r.cards = new BuildingPanelRefs.CardRef[_cards.Length];
+                for (int i = 0; i < _cards.Length; i++)
+                    r.cards[i] = new BuildingPanelRefs.CardRef {
+                        root = _cards[i].root, frame = _cards[i].frame, lv = _cards[i].lv,
+                        sprite = _cards[i].sprite, output = _cards[i].output, status = _cards[i].status };
+            }
+        }
+
+        // runtime → อ่าน ref จาก holder (prefab instance) เข้าฟิลด์ของ component logic ในซีน
+        private void BindFromRefs(BuildingPanelRefs r)
+        {
+            _root = r.root; _backdrop = r.backdrop;
+            _rootRect = _root != null ? _root.GetComponent<RectTransform>() : null;
+            _iconImg = r.iconImg; _spriteImg = r.spriteImg;
+            _nameTxt = r.nameTxt; _headLvTxt = r.headLvTxt; _descTxt = r.descTxt; _hintTxt = r.hintTxt;
+            _prodLabelTxt = r.prodLabelTxt; _prodValTxt = r.prodValTxt; _workerValTxt = r.workerValTxt;
+            _bigLvTxt = r.bigLvTxt; _maxLvTxt = r.maxLvTxt; _extractTxt = r.extractTxt; _extractRow = r.extractRow;
+            _workerMinus = r.workerMinus; _workerPlus = r.workerPlus; _upTitleTxt = r.upTitleTxt; _closeBtn = r.closeBtn;
+            _reqRow = r.reqRow; _lvBox = r.lvBox;
+            _reqTitleTxt = r.reqTitleTxt; _reqEnergyTxt = r.reqEnergyTxt; _reqIronTxt = r.reqIronTxt;
+            _reqWorkerTxt = r.reqWorkerTxt; _reqTimeTxt = r.reqTimeTxt; _warnTxt = r.warnTxt;
+            _upgradeBtn = r.upgradeBtn; _upgradeBtnTxt = r.upgradeBtnTxt;
+            if (r.cards != null)
+            {
+                _cards = new LevelCard[r.cards.Length];
+                for (int i = 0; i < r.cards.Length; i++)
+                {
+                    var cr = r.cards[i];
+                    _cards[i] = new LevelCard { root = cr.root, frame = cr.frame, lv = cr.lv,
+                                                sprite = cr.sprite, output = cr.output, status = cr.status };
+                }
+            }
+            else _cards = new LevelCard[0];
+        }
+
+        // ผูก onClick ใหม่ — listener ที่ AddListener ในโค้ดไม่ถูก serialize ลง prefab จึงต้องผูกซ้ำเมื่อ instantiate
+        private void HookListeners()
+        {
+            if (_backdrop != null) { var b = _backdrop.GetComponent<Button>(); if (b != null) b.onClick.AddListener(Hide); }
+            if (_closeBtn != null) _closeBtn.onClick.AddListener(Hide);
+            if (_workerMinus != null) _workerMinus.onClick.AddListener(OnMinus);
+            if (_workerPlus  != null) _workerPlus.onClick.AddListener(OnPlus);
+            if (_upgradeBtn  != null) _upgradeBtn.onClick.AddListener(OnUpgrade);
         }
 
         // cost item (ไอคอน+ป้าย ด้านบน · ค่า ด้านล่าง) คืน Text ของ "ค่า"

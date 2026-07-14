@@ -99,7 +99,7 @@ namespace NuclearReMind
         {
             SetTask(task1Text, FactoriesDone, $"เดินโรงงานพื้นฐาน 3 โรง (ไฟ/น้ำ/อาหาร)  {_factoryCats.Count}/3");
             SetTask(task2Text, _shelterDone, "ขยาย Shelter เพิ่มเพดานประชากร");
-            SetTask(task3Text, _assignDone, "จัดคนงานเข้าประจำอาคาร (ชี้อาคาร → ปุ่ม + หรือแป้น E)");
+            SetTask(task3Text, _assignDone, "จัดคนงานเข้าประจำอาคาร");
 
             if (startButton != null) startButton.interactable = AllComplete;
             if (startLabel != null)

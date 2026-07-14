@@ -83,6 +83,7 @@ namespace NuclearReMind.EditorTools
 
             int w = tex.width, h = tex.height;
             var src = tex.GetPixels32();
+            RemoveSpeckles(src, w, h);               // ลบจุดขาวเดี่ยวที่ฝังมาในอาร์ตต้นฉบับ IsoNature
             var dst = new Color32[src.Length];      // เริ่มจากโปร่งใสหมด (a = 0)
 
             float cx = (w - 1) / 2f;
@@ -143,6 +144,40 @@ namespace NuclearReMind.EditorTools
                 EditorUtility.SetDirty(darkTile);
             }
             return true;
+        }
+
+        // จุดขาว (speckle) ในพื้น = พิกเซล near-white เดี่ยว ๆ ที่ฝังมาในอาร์ต IsoNature ต้นฉบับ
+        // ดินสีน้ำตาล/หินเทาไม่มีทางสว่างถึง SpeckleThreshold ทั้ง 3 ช่อง → ถือว่าเป็น noise ให้ลบ
+        // ลบด้วยการแทนเป็นค่าเฉลี่ยเพื่อนบ้าน 8 ทิศที่ "ไม่ขาว" (คืนสีดินรอบ ๆ) · จุดขาวเป็นก้อนใหญ่จะไม่โดนแตะ
+        private const byte SpeckleThreshold = 235;
+
+        private static bool IsNearWhite(Color32 c)
+            => c.r >= SpeckleThreshold && c.g >= SpeckleThreshold && c.b >= SpeckleThreshold;
+
+        private static void RemoveSpeckles(Color32[] px, int w, int h)
+        {
+            var snap = (Color32[])px.Clone();        // อ่านจาก snapshot กันจุดขาวลามไปเพื่อนบ้านระหว่างวน
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int idx = y * w + x;
+                    var c = snap[idx];
+                    if (c.a == 0 || !IsNearWhite(c)) continue;
+
+                    int r = 0, g = 0, b = 0, n = 0;
+                    for (int dy = -1; dy <= 1; dy++)
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            if (dx == 0 && dy == 0) continue;
+                            int nx = x + dx, ny = y + dy;
+                            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+                            var nc = snap[ny * w + nx];
+                            if (nc.a == 0 || IsNearWhite(nc)) continue; // ข้ามโปร่งใส + จุดขาวอื่น
+                            r += nc.r; g += nc.g; b += nc.b; n++;
+                        }
+                    if (n == 0) continue;            // ไม่มีเพื่อนบ้านดิน (ก้อนขาวใหญ่ = ตั้งใจ) → ไม่แตะ
+                    px[idx] = new Color32((byte)(r / n), (byte)(g / n), (byte)(b / n), c.a);
+                }
         }
 
         private static void ConfigureSprite(string path)

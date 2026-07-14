@@ -13,7 +13,7 @@ namespace NuclearReMind
     /// ปุ่ม C ซ่อนอัตโนมัติถ้า dilemma ไม่มี choiceCText (รองรับ dilemma 2 ทางแบบเดิม)
     /// (เลียนโครง select-then-confirm จาก QuizPopupController — ไม่ใช้ Update/Time.deltaTime เพราะระหว่างวิกฤต timeScale=0)
     /// </summary>
-    public class DilemmaPopupController : MonoBehaviour
+    public class DilemmaPopupController : MonoBehaviour, GameUIStack.IPanel
     {
         [Header("Panel")]
         public GameObject popupPanel;
@@ -79,7 +79,8 @@ namespace NuclearReMind
             _activeDilemma = dilemma;
             _selectedIndex = -1;
 
-            if (popupPanel != null) popupPanel.SetActive(true);
+            if (popupPanel != null) { UIPopIn.Ensure(popupPanel); popupPanel.SetActive(true); }
+            GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause · Esc เงียบ = ต้องเลือก+ยืนยัน)
             if (titleText != null)
                 titleText.text = string.IsNullOrEmpty(dilemma.title) ? fallbackTitle : dilemma.title;
             if (scenarioText != null) scenarioText.text = dilemma.scenarioText;
@@ -152,8 +153,14 @@ namespace NuclearReMind
             _selectedIndex = -1;
 
             if (popupPanel != null) popupPanel.SetActive(false);
+            GameUIStack.Pop(this);
             EventManager.Instance.RaiseDilemmaResolved(dilemma, choiceIndex);
         }
+
+        // ── GameUIStack (แผงบังคับ: Esc เงียบ ปิดเองไม่ได้ · บล็อก Pause · กติกากลางใน PauseMenuController) ──
+        bool GameUIStack.IPanel.ClosableByEscape => false;
+        void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(popupPanel);
+        void GameUIStack.IPanel.CloseFromStack() { } // ไม่ถูกเรียก (ClosableByEscape=false — ต้องเลือก+ยืนยัน)
 
         // เปิด/ปิดเรืองขอบปุ่มตัวเลือก index (setup ใส่ Outline component ไว้แล้ว ปิดอยู่)
         private void SetOutline(int index, bool on, Color color)
