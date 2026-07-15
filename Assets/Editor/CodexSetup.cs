@@ -182,6 +182,15 @@ namespace NuclearReMind.EditorTools
                 rect.sizeDelta = new Vector2(PW, PH);
                 rect.localScale = new Vector3(0.9f, 0.9f, 1f);
                 SetSkin(panel, frame, sliced: true);
+
+                // ── layer บนสุดเสมอ: bake Canvas + overrideSorting (เหนือ HUD=0/Story=60/Quiz=70/Pause=100) ──
+                // runtime GameUIStack.RaiseToTop จะ reuse Canvas นี้แล้วดัน order สูงขึ้นอีกตอนเปิด — ที่นี่ตั้ง default บนสุด
+                var pcv = panel.GetComponent<Canvas>() ?? panel.AddComponent<Canvas>();
+                pcv.overrideSorting = true;
+                pcv.sortingOrder = 200;
+                if (panel.GetComponent<GraphicRaycaster>() == null) panel.AddComponent<GraphicRaycaster>();
+                panel.transform.SetAsLastSibling(); // เผื่อ Canvas อื่น sortingOrder เท่ากัน → sibling ท้ายสุด = บน
+
                 panel.SetActive(false);
             }
             ui.codexPanel = panel;

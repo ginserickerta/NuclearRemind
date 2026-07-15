@@ -56,17 +56,18 @@ namespace NuclearReMind
             if (_camera == null) _camera = Camera.main;
             if (_camera == null) return;
 
-            // คลิกโดน "ตัวสไปรต์" อนุสรณ์ (raycast Collider2D) — เดิมเช็ก footprint ต้องเล็งฐาน
-            Vector3 world = _camera.ScreenToWorldPoint(Input.mousePosition);
-            foreach (var h in Physics2D.OverlapPointAll((Vector2)world))
-            {
-                var t = h.GetComponent<BuildingClickTarget>();
-                if (t != null && t.data != null && t.data.buildingType == BuildingType.Memorial)
-                {
-                    Open();
-                    return;
-                }
-            }
+            // ★ grid footprint ก่อน — ทางเดียวกับ hover nameplate ที่พิสูจน์แล้วว่าทำงานบน WebGL
+            var im = InputManager.Instance;
+            var reg = BuildingRegistry.Instance;
+            if (im != null && reg != null
+                && reg.TryGetBuildingAt(im.GetMouseGridPosition(), out _, out var data) && data != null
+                && data.buildingType == BuildingType.Memorial)
+            { Open(); return; }
+
+            // สำรอง: คลิกตัวสไปรต์สูงเหนือ footprint (bounds เรขาคณิตล้วน ไม่พึ่ง Physics2D)
+            Vector2 world = _camera.ScreenToWorldPoint(Input.mousePosition);
+            if (BuildingClickTarget.PickAt(world, t => t.data.buildingType == BuildingType.Memorial) != null)
+                Open();
         }
 
         /// <summary>เปิดแผงถ้า cell อยู่บน footprint ของตึกอนุสรณ์ (query registry แบบ read-only)</summary>

@@ -131,16 +131,18 @@ namespace NuclearReMind
         // เดิมเช็ก footprint cell ใต้เมาส์ ทำให้ต้องเล็งฐาน (สไปรต์สูงในมุม iso แมพไปช่องว่างด้านบน)
         private bool ClickedCoreTower()
         {
-            if (InputManager.Instance == null) return false;
-            var hits = Physics2D.OverlapPointAll((Vector2)InputManager.Instance.GetMouseWorldPosition());
-            foreach (var h in hits)
-            {
-                var t = h.GetComponent<BuildingClickTarget>();
-                if (t != null && t.data != null
-                    && (t.data.buildingType == BuildingType.CoreTower || t.data.isCoreTowerPart))
-                    return true;
-            }
-            return false;
+            var im = InputManager.Instance;
+            var reg = BuildingRegistry.Instance;
+            if (im == null || reg == null) return false;
+
+            // ★ grid footprint ก่อน — ทางเดียวกับ hover nameplate ที่พิสูจน์แล้วว่าทำงานบน WebGL
+            if (reg.TryGetBuildingAt(im.GetMouseGridPosition(), out _, out var data) && data != null
+                && (data.buildingType == BuildingType.CoreTower || data.isCoreTowerPart))
+                return true;
+
+            // สำรอง: คลิกตัวสไปรต์สูงเหนือ footprint (bounds เรขาคณิตล้วน ไม่พึ่ง Physics2D)
+            return BuildingClickTarget.PickAt(im.GetMouseWorldPosition(),
+                t => t.data.buildingType == BuildingType.CoreTower || t.data.isCoreTowerPart) != null;
         }
 
         private void Open()

@@ -16,6 +16,9 @@ namespace NuclearReMind
         [Tooltip("คลิปพื้นหลัง — เว้นว่างได้ (จะไปหยิบจาก VideoPlayer ในซีนเอง)")]
         [SerializeField] private VideoClip clip;
 
+        [Tooltip("ชื่อไฟล์วิดีโอใน StreamingAssets ที่ใช้บน WebGL (VideoClip เล่นบน WebGL ไม่ได้ — ต้องสตรีมจากไฟล์จริง)")]
+        [SerializeField] private string webglFileName = "menu.mp4";
+
         [SerializeField] private int renderWidth = 1280;
         [SerializeField] private int renderHeight = 720;
 
@@ -23,9 +26,13 @@ namespace NuclearReMind
 
         private void Start()
         {
-            // 1) หา clip: ช่องนี้ก่อน → ไม่มีก็ไปหยิบจาก VideoPlayer ในซีน
+            // WebGL: VideoPlayer เล่นผ่าน <video> ของเบราว์เซอร์ → รองรับเฉพาะ URL จริง
+            //        VideoClip ที่ฝังในบิลด์เล่นไม่ได้ (จอดำ) → ต้องชี้ไปไฟล์ใน StreamingAssets
+            bool webgl = Application.platform == RuntimePlatform.WebGLPlayer;
+
+            // 1) หา clip (ใช้บน platform อื่น) — บน WebGL ไม่จำเป็นถ้ามี webglFileName
             var chosen = clip != null ? clip : FindClipInScene();
-            if (chosen == null)
+            if (chosen == null && !webgl)
             {
                 Debug.LogError("[MenuVideoBackground] ไม่พบ VideoClip — ลาก clip ใส่ช่อง Clip ของคอมโพเนนต์นี้");
                 return;
@@ -41,13 +48,21 @@ namespace NuclearReMind
 
             // 4) VideoPlayer ใหม่ (คุมเองทั้งหมด)
             var vp = gameObject.AddComponent<VideoPlayer>();
-            vp.source = VideoSource.VideoClip;
-            vp.clip = chosen;
+            if (webgl)
+            {
+                vp.source = VideoSource.Url; // เบราว์เซอร์ fetch ไฟล์จริงจาก StreamingAssets
+                vp.url = System.IO.Path.Combine(Application.streamingAssetsPath, webglFileName);
+            }
+            else
+            {
+                vp.source = VideoSource.VideoClip;
+                vp.clip = chosen;
+            }
             vp.renderMode = VideoRenderMode.RenderTexture;
             vp.targetTexture = _rt;
             vp.isLooping = true;
             vp.playOnAwake = false;
-            vp.audioOutputMode = VideoAudioOutputMode.None;
+            vp.audioOutputMode = VideoAudioOutputMode.None; // เงียบ → เบราว์เซอร์อนุญาต autoplay
             vp.aspectRatio = VideoAspectRatio.Stretch;
             vp.waitForFirstFrame = true;
 
@@ -75,7 +90,7 @@ namespace NuclearReMind
             vp.prepareCompleted += _ => vp.Play();
             vp.Prepare();
 
-            Debug.Log("[MenuVideoBackground] ต่อท่อครบ กำลังเตรียมคลิป: " + chosen.name);
+            Debug.Log("[MenuVideoBackground] ต่อท่อครบ กำลังเตรียม: " + (webgl ? vp.url : chosen.name));
         }
 
         private static VideoClip FindClipInScene()

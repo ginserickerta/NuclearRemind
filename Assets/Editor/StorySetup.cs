@@ -698,11 +698,8 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
                 Debug.LogWarning("[StorySetup] ไม่พบ MemorialPanelController — รัน Setup Story UI ก่อน (แผงอนุสรณ์จะไม่มีข้อมูล)");
             }
 
-            // ตึกอนุสรณ์ pre-placed ข้างขวา CORE TOWER (ทาวเวอร์ 3×3 กลางกริด — เว้น 1 ช่อง)
-            var grid = Object.FindFirstObjectByType<GridManager>();
-            int columns = grid != null ? grid.columns : 43;
-            int rows    = grid != null ? grid.rows    : 43;
-            var origin = new Vector2Int(columns / 2 + 4, rows / 2 - 1);
+            // ตึกอนุสรณ์ pre-placed — ตำแหน่งที่ผู้ใช้กำหนด (17,14) · เดิมสูตร (columns/2+4, rows/2-1) = (25,20)
+            var origin = new Vector2Int(17, 14);
 
             var go = GameObject.Find("PrePlacedMemorial") ?? new GameObject("PrePlacedMemorial");
             var pre = go.GetComponent<PrePlacedBuilding>() ?? go.AddComponent<PrePlacedBuilding>();

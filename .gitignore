@@ -43,3 +43,6 @@ crashlytics-build.properties
 
 # Unity AI Assistant generated package
 /ProjectSettings/Packages/com.unity.ai.assistant/
+
+# WebGL upload zips
+*.zip

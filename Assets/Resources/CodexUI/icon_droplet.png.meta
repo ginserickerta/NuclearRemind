@@ -1,25 +1,10 @@
 fileFormatVersion: 2
-guid: c88c69e29af6891449a7cdffa4c2fd34
+guid: 069a5834470d1094a8a7f09a2171730a
 TextureImporter:
   internalIDToNameTable:
   - first:
       213: 5654301198701430809
     second: icon_droplet_0
-  - first:
-      213: -8858448227945607134
-    second: icon_droplet_1
-  - first:
-      213: 883865063330898242
-    second: icon_droplet_2
-  - first:
-      213: 2814571889324421203
-    second: icon_droplet_3
-  - first:
-      213: 653197657307558890
-    second: icon_droplet_4
-  - first:
-      213: -3911268127952853570
-    second: icon_droplet_5
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -131,10 +116,10 @@ TextureImporter:
       name: icon_droplet_0
       rect:
         serializedVersion: 2
-        x: 16
-        y: 153
-        width: 10
-        height: 8
+        x: 0
+        y: 0
+        width: 1600
+        height: 1600
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -145,116 +130,6 @@ TextureImporter:
       bones: []
       spriteID: 9180aa18bfc187e40800000000000000
       internalID: 5654301198701430809
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: icon_droplet_1
-      rect:
-        serializedVersion: 2
-        x: 22
-        y: 111
-        width: 24
-        height: 43
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 2201d105548701580800000000000000
-      internalID: -8858448227945607134
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: icon_droplet_2
-      rect:
-        serializedVersion: 2
-        x: 15
-        y: 10
-        width: 35
-        height: 39
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 2416739979e144c00800000000000000
-      internalID: 883865063330898242
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: icon_droplet_3
-      rect:
-        serializedVersion: 2
-        x: 86
-        y: 32
-        width: 68
-        height: 102
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 3507bf9983e5f0720800000000000000
-      internalID: 2814571889324421203
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: icon_droplet_4
-      rect:
-        serializedVersion: 2
-        x: 37
-        y: 18
-        width: 7
-        height: 7
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: ae33febfecf901900800000000000000
-      internalID: 653197657307558890
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: icon_droplet_5
-      rect:
-        serializedVersion: 2
-        x: 56
-        y: 6
-        width: 8
-        height: 8
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: eb520144c5268b9c0800000000000000
-      internalID: -3911268127952853570
       vertices: []
       indices: 
       edges: []
@@ -274,11 +149,6 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       icon_droplet_0: 5654301198701430809
-      icon_droplet_1: -8858448227945607134
-      icon_droplet_2: 883865063330898242
-      icon_droplet_3: 2814571889324421203
-      icon_droplet_4: 653197657307558890
-      icon_droplet_5: -3911268127952853570
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
