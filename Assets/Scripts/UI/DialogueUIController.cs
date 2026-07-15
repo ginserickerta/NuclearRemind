@@ -189,7 +189,12 @@ namespace NuclearReMind
         // วางกรอบ "ข้างๆ ตัวละคร" (เว้นคอลัมน์ portrait ~CharColumn) แล้วงอกกว้างออกไปด้านนอก
         //   ตัวละครซ้าย (Auren/Mira/Dorn) → กรอบอยู่ด้านขวาของตัวละคร
         //   Kova (ขวา) → กรอบอยู่ด้านซ้ายของตัวละคร
-        private const float CharColumn = 500f; // กว้างคอลัมน์ portrait + เว้นระยะ
+        [Header("ตำแหน่งกล่องบทพูด (ปรับใน Inspector — เห็นผลรอบบทถัดไป)")]
+        [Tooltip("ระยะจากขอบจอถึงกล่อง (px) — ยิ่งน้อย กล่องยิ่งชิดตัวละคร · ใช้ทั้งฝั่งซ้าย(Auren)/ขวา(Kova)")]
+        [SerializeField] private float charColumn = 300f;
+        [Tooltip("ระยะกล่องจากขอบล่าง (px)")]
+        [SerializeField] private float boxBottom = 56f;
+
         private void SetBoxSide(bool leftSpeaker)
         {
             if (dialogBox == null) return;
@@ -197,12 +202,12 @@ namespace NuclearReMind
             if (leftSpeaker)
             {
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0f); // งอกขวาจากคอลัมน์ซ้าย
-                rt.anchoredPosition = new Vector2(CharColumn, 56f);
+                rt.anchoredPosition = new Vector2(charColumn, boxBottom);
             }
             else
             {
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0f); // งอกซ้ายจากคอลัมน์ขวา
-                rt.anchoredPosition = new Vector2(-CharColumn, 56f);
+                rt.anchoredPosition = new Vector2(-charColumn, boxBottom);
             }
         }
 

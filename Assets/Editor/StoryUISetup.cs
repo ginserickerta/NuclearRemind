@@ -205,75 +205,110 @@ namespace NuclearReMind.EditorTools
             kRect.anchoredPosition = new Vector2(-16f, 0f);
             kRect.sizeDelta = new Vector2(480, 560); // preserveAspect → ท่ากว้าง (เชื่อม/พิมพ์เขียว) ไม่ล้นทับกรอบยาว
 
-            // ── Auren = เสียงในใจ (ซ้าย) — ภาพจริงตามอารมณ์ · โฟกัสทีละคน (controller โชว์เฉพาะคนพูด) ──
-            var aurenGO = CreatePanel("DialoguePortraitAuren", overlay.transform);
-            var aurenImg = aurenGO.AddComponent<Image>();
-            aurenImg.preserveAspect = true;
-            aurenImg.raycastTarget = false;
-            var aurenSprite = Load(AurenPath("thinking"));
-            if (aurenSprite != null) aurenImg.sprite = aurenSprite;
-            else aurenImg.color = new Color(0.72f, 0.68f, 0.85f); // fallback สีเสียงในใจ
-            var aRect = aurenGO.GetComponent<RectTransform>();
-            aRect.anchorMin = aRect.anchorMax = new Vector2(0f, 0f);
-            aRect.pivot = new Vector2(0f, 0f);
-            aRect.anchoredPosition = new Vector2(16f, 0f);
-            aRect.sizeDelta = new Vector2(480, 560);
-            aurenGO.SetActive(false); // controller เปิดเมื่อ Auren พูด
-
-            // ── กล่องบทพูด (กรอบ 9 · controller ย้ายซ้าย/ขวาตามคนพูด + ปรับกว้างตามความยาว) ──
-            var box = CreatePanel("DialogueBox", overlay.transform);
-            var boxRect = box.GetComponent<RectTransform>();
-            boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0f);
-            boxRect.pivot = new Vector2(0f, 0f);
-            boxRect.anchoredPosition = new Vector2(48f, 56f);
-            boxRect.sizeDelta = new Vector2(900, 240);
-            var boxImg = box.AddComponent<Image>();
-            boxImg.raycastTarget = false;
+            // ── ฝั่งซ้าย (Auren portrait + กล่องบทพูด) — ใช้ prefab ถ้ามี (แก้ด้วยตา ไม่หายตอน re-run) ไม่งั้นสร้างสด ──
+            // controller คุม sprite ตามอารมณ์/สีแถบ/กรอบตามความยาว เอง · prefab คุม ตำแหน่ง/ขนาด/anchor/โครง
+            Image aurenImg = null;
+            GameObject box = null;
+            Image plate = null;
+            Text nameText = null, body = null, hint = null;
             var frameMed = Load(FramePath("medium"));
-            if (frameMed != null) { boxImg.sprite = frameMed; boxImg.type = Image.Type.Simple; boxImg.color = Color.white; }
-            else boxImg.color = new Color(0.08f, 0.09f, 0.13f, 0.95f);
 
-            // แถบชื่อผู้พูด — อยู่ "ในกรอบ" (ใต้ขอบบน · เปลี่ยนสีตามคน)
-            var plateGO = CreatePanel("DialogueNamePlate", box.transform);
-            var plateRect = plateGO.GetComponent<RectTransform>();
-            plateRect.anchorMin = plateRect.anchorMax = new Vector2(0f, 1f);
-            plateRect.pivot = new Vector2(0f, 1f);
-            plateRect.anchoredPosition = new Vector2(52f, -34f); // ในกรอบ (ค่าลบ = เลื่อนลงจากขอบบน)
-            plateRect.sizeDelta = new Vector2(200, 40);
-            var plate = plateGO.AddComponent<Image>();
-            plate.raycastTarget = false;
-            plate.color = new Color(0.3f, 0.7f, 0.95f);
+            var leftPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DialogueAurenPortraitBaker.PrefabPath);
+            if (leftPrefab != null)
+            {
+                var inst = (GameObject)PrefabUtility.InstantiatePrefab(leftPrefab, overlay.transform);
 
-            var nameText = CreateText("DialogueName", plateGO.transform, font, "Kova", 21, TextAnchor.MiddleLeft);
-            var nameRect = nameText.GetComponent<RectTransform>();
-            nameRect.anchorMin = Vector2.zero; nameRect.anchorMax = Vector2.one;
-            nameRect.offsetMin = new Vector2(16, 0); nameRect.offsetMax = new Vector2(-10, 0);
-            nameText.fontStyle = FontStyle.Bold;
-            nameText.raycastTarget = false;
-            nameText.color = new Color(0.06f, 0.07f, 0.10f); // ตัวอักษรเข้มบนแถบสีสด
+                var portraitTf = FindDeep(inst.transform, "DialoguePortraitAuren");
+                aurenImg = portraitTf != null ? portraitTf.GetComponent<Image>() : inst.GetComponentInChildren<Image>(true);
+                if (aurenImg != null) aurenImg.gameObject.SetActive(false); // controller เปิดเมื่อ Auren พูด
 
-            // ข้อความ — best-fit ให้พอดีในกรอบเสมอ (ห้ามล้นออกนอกกรอบ) · เว้นที่ด้านบนให้แถบชื่อ
-            var body = CreateText("DialogueBody", box.transform, font, "", 24, TextAnchor.UpperLeft);
-            var bodyRect = body.GetComponent<RectTransform>();
-            bodyRect.anchorMin = Vector2.zero; bodyRect.anchorMax = Vector2.one;
-            bodyRect.offsetMin = new Vector2(58, 46); bodyRect.offsetMax = new Vector2(-58, -86);
-            body.color = new Color(0.93f, 0.94f, 0.88f);
-            body.lineSpacing = 1.2f;
-            body.raycastTarget = false;
-            body.horizontalOverflow = HorizontalWrapMode.Wrap;
-            body.verticalOverflow = VerticalWrapMode.Truncate; // best-fit คุมขนาด → ไม่ล้น
-            body.resizeTextForBestFit = true;                  // ★ ย่อ/ขยายอักษรให้พอดีกรอบ
-            body.resizeTextMinSize = 14;
-            body.resizeTextMaxSize = 26;
+                var boxTf = FindDeep(inst.transform, "DialogueBox");
+                if (boxTf != null)
+                {
+                    box = boxTf.gameObject;
+                    plate    = FindDeep(boxTf, "DialogueNamePlate")?.GetComponent<Image>();
+                    nameText = FindDeep(boxTf, "DialogueName")?.GetComponent<Text>();
+                    body     = FindDeep(boxTf, "DialogueBody")?.GetComponent<Text>();
+                    hint     = FindDeep(boxTf, "DialogueHint")?.GetComponent<Text>();
+                    var bi = box.GetComponent<Image>();
+                    if (bi != null && bi.sprite == null && frameMed != null)
+                    { bi.sprite = frameMed; bi.type = Image.Type.Simple; bi.color = Color.white; }
+                }
+            }
 
-            var hint = CreateText("DialogueHint", box.transform, font, "▼ คลิกเพื่อไปต่อ", 15, TextAnchor.LowerRight);
-            var hintRect = hint.GetComponent<RectTransform>();
-            hintRect.anchorMin = new Vector2(1f, 0f); hintRect.anchorMax = new Vector2(1f, 0f);
-            hintRect.pivot = new Vector2(1f, 0f);
-            hintRect.anchoredPosition = new Vector2(-46, 20);
-            hintRect.sizeDelta = new Vector2(220, 22);
-            hint.raycastTarget = false;
-            hint.color = new Color(0.75f, 0.72f, 0.62f, 0.85f);
+            if (aurenImg == null) // ไม่มี prefab (หรือ prefab ไม่มี portrait) → สร้าง portrait สด
+            {
+                var aurenGO = CreatePanel("DialoguePortraitAuren", overlay.transform);
+                aurenImg = aurenGO.AddComponent<Image>();
+                aurenImg.preserveAspect = true;
+                aurenImg.raycastTarget = false;
+                var aurenSprite = Load(AurenPath("thinking"));
+                if (aurenSprite != null) aurenImg.sprite = aurenSprite;
+                else aurenImg.color = new Color(0.72f, 0.68f, 0.85f); // fallback สีเสียงในใจ
+                var aRect = aurenGO.GetComponent<RectTransform>();
+                aRect.anchorMin = aRect.anchorMax = new Vector2(0f, 0f);
+                aRect.pivot = new Vector2(0f, 0f);
+                aRect.anchoredPosition = new Vector2(16f, 0f);
+                aRect.sizeDelta = new Vector2(480, 560);
+                aurenGO.SetActive(false); // controller เปิดเมื่อ Auren พูด
+            }
+
+            // ── กล่องบทพูด (สร้างสด ถ้า prefab ไม่ได้ให้มา) · controller ย้ายซ้าย/ขวา + ปรับกว้างตามความยาว ──
+            if (box == null)
+            {
+                box = CreatePanel("DialogueBox", overlay.transform);
+                var boxRect = box.GetComponent<RectTransform>();
+                boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0f);
+                boxRect.pivot = new Vector2(0f, 0f);
+                boxRect.anchoredPosition = new Vector2(48f, 56f);
+                boxRect.sizeDelta = new Vector2(900, 240);
+                var boxImg = box.AddComponent<Image>();
+                boxImg.raycastTarget = false;
+                if (frameMed != null) { boxImg.sprite = frameMed; boxImg.type = Image.Type.Simple; boxImg.color = Color.white; }
+                else boxImg.color = new Color(0.08f, 0.09f, 0.13f, 0.95f);
+
+                // แถบชื่อผู้พูด — อยู่ "ในกรอบ" (ใต้ขอบบน · เปลี่ยนสีตามคน)
+                var plateGO = CreatePanel("DialogueNamePlate", box.transform);
+                var plateRect = plateGO.GetComponent<RectTransform>();
+                plateRect.anchorMin = plateRect.anchorMax = new Vector2(0f, 1f);
+                plateRect.pivot = new Vector2(0f, 1f);
+                plateRect.anchoredPosition = new Vector2(52f, -34f);
+                plateRect.sizeDelta = new Vector2(200, 40);
+                plate = plateGO.AddComponent<Image>();
+                plate.raycastTarget = false;
+                plate.color = new Color(0.3f, 0.7f, 0.95f);
+
+                nameText = CreateText("DialogueName", plateGO.transform, font, "Kova", 21, TextAnchor.MiddleLeft);
+                var nameRect = nameText.GetComponent<RectTransform>();
+                nameRect.anchorMin = Vector2.zero; nameRect.anchorMax = Vector2.one;
+                nameRect.offsetMin = new Vector2(16, 0); nameRect.offsetMax = new Vector2(-10, 0);
+                nameText.fontStyle = FontStyle.Bold;
+                nameText.raycastTarget = false;
+                nameText.color = new Color(0.06f, 0.07f, 0.10f);
+
+                // ข้อความ — best-fit ให้พอดีในกรอบเสมอ · เว้นที่ด้านบนให้แถบชื่อ
+                body = CreateText("DialogueBody", box.transform, font, "", 24, TextAnchor.UpperLeft);
+                var bodyRect = body.GetComponent<RectTransform>();
+                bodyRect.anchorMin = Vector2.zero; bodyRect.anchorMax = Vector2.one;
+                bodyRect.offsetMin = new Vector2(58, 46); bodyRect.offsetMax = new Vector2(-58, -86);
+                body.color = new Color(0.93f, 0.94f, 0.88f);
+                body.lineSpacing = 1.2f;
+                body.raycastTarget = false;
+                body.horizontalOverflow = HorizontalWrapMode.Wrap;
+                body.verticalOverflow = VerticalWrapMode.Truncate;
+                body.resizeTextForBestFit = true;
+                body.resizeTextMinSize = 14;
+                body.resizeTextMaxSize = 26;
+
+                hint = CreateText("DialogueHint", box.transform, font, "▼ คลิกเพื่อไปต่อ", 15, TextAnchor.LowerRight);
+                var hintRect = hint.GetComponent<RectTransform>();
+                hintRect.anchorMin = new Vector2(1f, 0f); hintRect.anchorMax = new Vector2(1f, 0f);
+                hintRect.pivot = new Vector2(1f, 0f);
+                hintRect.anchoredPosition = new Vector2(-46, 20);
+                hintRect.sizeDelta = new Vector2(220, 22);
+                hint.raycastTarget = false;
+                hint.color = new Color(0.75f, 0.72f, 0.62f, 0.85f);
+            }
 
             overlay.SetActive(false);
 
@@ -507,6 +542,19 @@ namespace NuclearReMind.EditorTools
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
             return go;
+        }
+
+        // หา child ตามชื่อแบบลึก (ใช้ค้น ref จาก prefab ฝั่งซ้ายบทสนทนา)
+        private static Transform FindDeep(Transform root, string name)
+        {
+            if (root == null) return null;
+            if (root.name == name) return root;
+            for (int i = 0; i < root.childCount; i++)
+            {
+                var r = FindDeep(root.GetChild(i), name);
+                if (r != null) return r;
+            }
+            return null;
         }
 
         private static void Stretch(GameObject go)
