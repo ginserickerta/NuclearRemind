@@ -45,6 +45,11 @@ namespace NuclearReMind
         private Text _header;
         private readonly Dictionary<string, Text> _countTexts = new Dictionary<string, Text>();
 
+        // ★ v6.3 cutover (slice 5 Reactor): Zone B row — the tritium breeder (GDD §22, Method B).
+        //   Locked states are SHOWN (🔒 + what unlocks them — rule #6 spirit), never hidden.
+        private Text _zoneLabel, _zoneInfo, _zoneCount;
+        private Button _zoneMinus, _zonePlus, _zoneOpenBtn;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoSpawnHook()
         {
@@ -141,6 +146,25 @@ namespace NuclearReMind
 
             if (dir > 0)
             {
+                // §22: Zone B takes only workers with radiation < zoneb_send_rad_max, lowest first
+                if (job == WorkerJobs.ZoneB)
+                {
+                    var zb = ZoneBController.Instance;
+                    if (zb == null || !zb.IsOpen) return;
+                    Worker pick = null;
+                    float radMax = GameConfigSO.Instance.zoneBSendRadMax;
+                    foreach (var w in wm.GetWorkers(WorkerJobs.Idle))
+                    {
+                        if (!w.alive || w.resting || w.strikeDaysLeft != 0) continue;
+                        if (w.radiation >= radMax) continue;
+                        if (pick == null || w.radiation < pick.radiation) pick = w;
+                    }
+                    if (pick != null) wm.AssignJob(pick, WorkerJobs.ZoneB);
+                    else EventManager.Instance.RaiseNotice($"ไม่มีคนว่างที่รังสีต่ำพอ (ต้อง < {radMax:0}) จะส่งเข้า Zone B");
+                    Refresh();
+                    return;
+                }
+
                 foreach (var w in wm.GetWorkers(WorkerJobs.Idle))
                     if (w.alive && !w.resting && w.strikeDaysLeft == 0) { wm.AssignJob(w, job); break; }
             }
@@ -149,6 +173,31 @@ namespace NuclearReMind
                 var inJob = wm.GetWorkers(job);
                 if (inJob.Count > 0) wm.AssignJob(inJob[0], WorkerJobs.Idle);
             }
+            Refresh();
+        }
+
+        // ★ Open Zone B (GDD §6/§7): needs the tritium note + Phase 4 · costs Iron 150 + Power 200
+        //   (no free choices — rule #5). ZoneBController.Open() flips storm pressure & production on.
+        private void OpenZoneB()
+        {
+            var zb = ZoneBController.Instance;
+            var cfg = GameConfigSO.Instance;
+            if (zb == null || zb.IsOpen) return;
+            if (!KnowledgeDB.Instance.HasNote("tritium") || !PhaseManager.IsPhaseUnlocked(4)) return;
+
+            var rm = ResourceManager.Instance;
+            if (rm != null)
+            {
+                if (rm.Current.iron < cfg.zoneBBuildIron || rm.Current.energy < cfg.zoneBBuildPower)
+                {
+                    EventManager.Instance.RaiseNotice(
+                        $"ทรัพยากรไม่พอ — Zone B ต้องใช้เหล็ก {cfg.zoneBBuildIron:0} + พลังงาน {cfg.zoneBBuildPower:0}");
+                    return;
+                }
+                EventManager.Instance.RaiseResourceDelta(ResourceType.Iron, -cfg.zoneBBuildIron);
+                EventManager.Instance.RaiseResourceDelta(ResourceType.Energy, -cfg.zoneBBuildPower);
+            }
+            zb.Open();
             Refresh();
         }
 
@@ -168,6 +217,48 @@ namespace NuclearReMind
                 int n = wm != null ? wm.GetWorkers(kv.Key).Count : 0;
                 kv.Value.text = n.ToString();
             }
+            RefreshZoneB(wm);
+        }
+
+        // Zone B row states: 🔒 no note → 🔒 phase < 4 → "open" button → live staffing row.
+        private void RefreshZoneB(WorkerManager wm)
+        {
+            if (_zoneLabel == null) return;
+            var zb = ZoneBController.Instance;
+            var cfg = GameConfigSO.Instance;
+            bool hasNote = KnowledgeDB.Instance.HasNote("tritium");
+            bool phaseOk = PhaseManager.IsPhaseUnlocked(4);
+            bool open = zb != null && zb.IsOpen;
+            bool canStaff = open && wm != null;
+
+            if (_zoneCount != null)
+            {
+                _zoneCount.gameObject.SetActive(canStaff);
+                _zoneCount.text = (wm != null ? wm.GetWorkers(WorkerJobs.ZoneB).Count : 0).ToString();
+            }
+            if (_zoneMinus != null) _zoneMinus.gameObject.SetActive(canStaff);
+            if (_zonePlus != null) _zonePlus.gameObject.SetActive(canStaff);
+            if (_zoneOpenBtn != null) _zoneOpenBtn.gameObject.SetActive(!open && hasNote && phaseOk && zb != null);
+
+            if (!hasNote)
+                _zoneLabel.text = "☢ Zone B — 🔒 ต้องวิจัย Note 'tritium'";
+            else if (!phaseOk)
+                _zoneLabel.text = "☢ Zone B — 🔒 ปลดที่ Phase 4 (CORE ≥ 80)";
+            else
+                _zoneLabel.text = "☢ Zone B (Tritium)";
+
+            if (_zoneInfo != null)
+            {
+                if (open)
+                {
+                    float rate = MasteryRegistry.Instance.ZoneBTritiumPerDay();
+                    _zoneInfo.text = $"คลัง Tritium {zb.TritiumStock:0.0} · ผลิต {rate:0.0}/วัน (คน ≥ {cfg.zoneBMinStaff}) · รังสี +{cfg.radZoneB:0}/วัน";
+                }
+                else
+                {
+                    _zoneInfo.text = $"สร้าง: เหล็ก {cfg.zoneBBuildIron:0} + พลังงาน {cfg.zoneBBuildPower:0}";
+                }
+            }
         }
 
         // ═══════════════ BUILD ═══════════════
@@ -183,7 +274,7 @@ namespace NuclearReMind
             var rt = _root.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(620f, 560f);
+            rt.sizeDelta = new Vector2(620f, 640f); // ★ slice 5: +1 Zone B row (taller, 2-line)
             var outline = _root.AddComponent<Outline>();
             outline.effectColor = CBorder; outline.effectDistance = new Vector2(2f, -2f);
 
@@ -207,6 +298,37 @@ namespace NuclearReMind
             vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
 
             foreach (var (job, label) in Jobs) BuildJobRow(list.transform, job, label);
+            BuildZoneBRow(list.transform); // ★ slice 5: Zone B — locked states shown, never hidden
+        }
+
+        // Zone B row (GDD §22): 2-line row — label + info line; right side is either the "open"
+        // button (pay Iron+Power once) or the −/count/+ staffing controls once open.
+        private void BuildZoneBRow(Transform parent)
+        {
+            var row = NewUI("Row_zoneb", parent, new Color(0.35f, 0.75f, 0.55f, 0.06f));
+            var le = row.AddComponent<LayoutElement>(); le.minHeight = 74f; le.preferredHeight = 74f;
+
+            _zoneLabel = MakeText("Name", row.transform, "☢ Zone B", 20, CText, TextAnchor.UpperLeft);
+            Anchor(_zoneLabel.gameObject, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(12f, 8f), new Vector2(-220f, -8f));
+
+            _zoneInfo = MakeText("Info", row.transform, "", 14, CMuted, TextAnchor.LowerLeft);
+            Anchor(_zoneInfo.gameObject, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(12f, 6f), new Vector2(-220f, 28f));
+
+            _zoneOpenBtn = MakeButton("Open", row.transform, "เปิด Zone B", new Color(0.16f, 0.32f, 0.24f, 1f), OpenZoneB);
+            var ort = _zoneOpenBtn.GetComponent<RectTransform>();
+            ort.anchorMin = ort.anchorMax = new Vector2(1f, 0.5f); ort.pivot = new Vector2(1f, 0.5f);
+            ort.anchoredPosition = new Vector2(-12f, 0f); ort.sizeDelta = new Vector2(180f, 48f);
+
+            _zoneMinus = MakeButton("Minus", row.transform, "−", CMinus, () => Move(WorkerJobs.ZoneB, -1));
+            PlaceRight(_zoneMinus, -140f, 44f);
+
+            _zoneCount = MakeText("Count", row.transform, "0", 22, CGold, TextAnchor.MiddleCenter);
+            var crt2 = _zoneCount.GetComponent<RectTransform>();
+            crt2.anchorMin = crt2.anchorMax = new Vector2(1f, 0.5f); crt2.pivot = new Vector2(1f, 0.5f);
+            crt2.anchoredPosition = new Vector2(-90f, 0f); crt2.sizeDelta = new Vector2(44f, 44f);
+
+            _zonePlus = MakeButton("Plus", row.transform, "+", CPlus, () => Move(WorkerJobs.ZoneB, +1));
+            PlaceRight(_zonePlus, -12f, 44f);
         }
 
         private void BuildJobRow(Transform parent, string job, string label)

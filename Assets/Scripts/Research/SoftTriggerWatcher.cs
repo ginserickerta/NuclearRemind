@@ -76,11 +76,22 @@ namespace NuclearReMind
                 s.food = rm.Current.food;
             }
 
-            var ct = CoreTowerManager.Instance;
-            if (ct != null)
+            // ★ v6.3 cutover (slice 5): the live reactor is the source of truth; legacy manager is a
+            //   facade fallback for the pre-cutover path only.
+            var reactor = ReactorController.Instance;
+            if (reactor != null)
             {
-                s.core = ct.Current.corePercent;
-                s.heat = ct.Current.coreHeat;
+                s.core = reactor.Core;
+                s.heat = reactor.Heat;
+            }
+            else
+            {
+                var ct = CoreTowerManager.Instance;
+                if (ct != null)
+                {
+                    s.core = ct.Current.corePercent;
+                    s.heat = ct.Current.coreHeat;
+                }
             }
 
             var wm = WorkerManager.Instance;

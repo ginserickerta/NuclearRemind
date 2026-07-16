@@ -21,6 +21,48 @@ namespace NuclearReMind
     {
         public static ReactorController Instance { get; private set; }
 
+        // ★ v6.3 cutover (slice 5 Reactor): auto-spawn the whole reactor cluster into the live game
+        //   (was F9-playtest-only). Spawn order = OnDayEnded subscription order (multicast delegates fire
+        //   in subscribe order): Storm → ZoneB → Reactor → Sensor → Ending, so each day the reactor reads
+        //   today's storm/tritium and EndingSystem judges the fully-settled state. Once Instance exists,
+        //   CoreTowerManager flips to facade mode (legacy sim off, HUD mirrors v6.3 CORE/HEAT).
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoSpawnHook()
+        {
+            AutoSpawn();
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
+            => AutoSpawn();
+
+        private static void AutoSpawn()
+        {
+            try
+            {
+                if (EventManager.Instance == null) return; // no core yet (MainMenu) — a later sceneLoaded retries
+                Ensure<StormSystem>("StormSystem (auto)");
+                Ensure<ZoneBController>("ZoneBController (auto)");
+                Ensure<ReactorController>("ReactorController (auto)");
+                Ensure<SensorArray>("SensorArray (auto)");
+                Ensure<EndingSystem>("EndingSystem (auto)");
+                // Push the initial CORE/HEAT to the HUD mirror (CoreTowerManager facade) right away.
+                if (Instance != null)
+                    EventManager.Instance.RaiseReactorStateChanged(Instance.Core, Instance.Heat);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[ReactorController] AutoSpawn ล้มเหลว — {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+            }
+        }
+
+        private static void Ensure<T>(string name) where T : Component
+        {
+            if (FindFirstObjectByType<T>() != null) return;
+            new GameObject(name).AddComponent<T>();
+        }
+
         private GameConfigSO _cfg;
 
         public float Core { get; set; }               // settable: save/load restore + tests

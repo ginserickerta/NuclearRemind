@@ -75,14 +75,18 @@ namespace NuclearReMind
             EventManager.Instance.OnGameOver -= HandleGameOver;
         }
 
-        // จบเกม → บันทึกคลังความรู้ถาวร (§9) · True/Normal = ชนะ (Victory ตั้งแล้ว) · ที่เหลือ = แพ้
+        // จบเกม → บันทึกคลังความรู้ถาวร (§9) · True/Normal = ชนะ · ที่เหลือ = แพ้
+        // ★ v6.3 cutover (slice 5): EndingSystem raises win types straight from the daily check
+        //   (core ≥ 100 ends the run immediately — bug #15), so Victory must be set HERE too;
+        //   legacy paths (HandleTowerComplete/EvaluateFinalEnding) already set it before raising → no-op.
         void HandleGameOver(GameEndType endType)
         {
             CaptureMetaProgress();
 
-            if (endType == GameEndType.TrueEnding || endType == GameEndType.NormalEnding) return;
             if (CurrentState == GameState.GameOver || CurrentState == GameState.Victory) return;
-            SetState(GameState.GameOver);
+            SetState(endType == GameEndType.TrueEnding || endType == GameEndType.NormalEnding
+                ? GameState.Victory
+                : GameState.GameOver);
         }
 
         void Start()
@@ -156,7 +160,11 @@ namespace NuclearReMind
             EventManager.Instance.RaiseDayProduction(finished);
             EventManager.Instance.RaiseDayEnded(finished);
 
-            // ครบ 30 วัน → ประเมินฉากจบด้วยค่า Q (V4 §14)
+            // ★ v6.3 cutover (slice 5): EndingSystem may end the run INSIDE OnDayEnded (win/lose are
+            //   checked daily, not on D30 — bug #15). Ended → don't start another day.
+            if (CurrentState == GameState.GameOver || CurrentState == GameState.Victory) return;
+
+            // ครบ 30 วัน → ประเมินฉากจบด้วยค่า Q (V4 §14 — legacy fallback เมื่อไม่มี EndingSystem)
             if (finished >= MaxDay) { EvaluateFinalEnding(); return; }
 
             BeginDay(finished + 1);

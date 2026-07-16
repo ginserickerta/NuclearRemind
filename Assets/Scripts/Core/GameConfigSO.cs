@@ -240,6 +240,8 @@ namespace NuclearReMind
         public float zoneBSendRadMax = 30f;        // only send workers with radiation < 30 (ascending)
         public float boostTritiumCost = 9f;        // reactor draw while boosting (Sprint 6 consumes)
         public float idleTritiumCost = 6f;         // reactor draw while idling
+        public float zoneBBuildIron = 150f;        // GDD §6 buildings table: Zone B = Iron 150 + P 200
+        public float zoneBBuildPower = 200f;       //   (unlocked by the tritium note · Phase 4 gate §7)
 
         // ─────────────────────────────────────────
         //  [LOCK] DATA RECOVERY (CONFIG.md 🔒 — GDD §24 / STORY.md)

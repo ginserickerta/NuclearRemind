@@ -96,8 +96,38 @@ namespace NuclearReMind
         private bool _modeLocked;    // ล็อกโหมดตอนเข้าเฟส Live (V4 §3) — เปลี่ยนโหมดได้เฉพาะ Planning
         private float _simmedFrac;   // สัดส่วนของวันที่เดินเตาแบบเรียลไทม์ไปแล้ว (0..1) — จบวัน reconcile เศษที่เหลือ
 
+        // ★ v6.3 cutover (slice 5 Reactor): when ReactorController is live this manager becomes a thin
+        //   facade (CUTOVER_PLAN §2 shim) — the legacy simulation stops entirely and TowerData mirrors
+        //   v6.3 CORE/HEAT, so every legacy consumer (CoreTowerUI, CoreTowerPanelUI, UIManagerHUD,
+        //   SaveManager, SoftTriggerWatcher, story hooks) keeps working on v6.3 numbers. Delete this
+        //   whole class once the HUD is migrated to a native v6.3 reactor panel (cleanup phase).
+        private static bool V63Live => ReactorController.Instance != null;
+
         /// <summary>Q Factor = CORE% / 100 (§8: CORE% 100 = Q 1.0 = Breakeven) — ใช้ตัดสิน ending (เฟส 7)</summary>
-        public float Q => Current.corePercent / 100f;
+        public float Q => V63Live ? ReactorController.Instance.Core / 100f : Current.corePercent / 100f;
+
+        /// <summary>
+        /// v6.3 mirror: rebuild TowerData from ReactorController and re-raise OnTowerProgressChanged so
+        /// legacy HUD/save stay in sync. isUnlocked is always true (v6.3 has no Day-11 unlock — rule #1);
+        /// overclockMode collapses to Normal/Boost (v6.3 has only base 1.05 / boost 3.0).
+        /// </summary>
+        private void MirrorV63()
+        {
+            var r = ReactorController.Instance;
+            if (r == null) return;
+            var t = Current;
+            t.corePercent = r.Core;
+            t.coreHeat = r.Heat;
+            t.currentPhase = PhaseFor(r.Core);   // legacy HUD naming (Cold/Plasma/Ignition @50/80)
+            t.overclockMode = r.IsBoosting ? ModeBoost : ModeNormal;
+            t.heatCap = HeatMeltdown;
+            t.isUnlocked = true;
+            t.scramCooldown = r.ScramCooldown;
+            Current = t;
+            EventManager.Instance.RaiseTowerProgressChanged(Current);
+        }
+
+        private void HandleV63ReactorState(float core, float heat) => MirrorV63();
 
         /// <summary>จำนวนวันที่เตาถูกบังคับ Idle ที่เหลือ (วิกฤต 2·B) — read-only</summary>
         public int ForcedIdleDaysRemaining => _forcedIdleDays;
@@ -125,6 +155,7 @@ namespace NuclearReMind
             EventManager.Instance.OnInstallPoloidalRequested += InstallPoloidal;
             EventManager.Instance.OnItemUsed               += HandleItemUsed;
             EventManager.Instance.OnResearchCompleted      += HandleResearchCompleted;
+            EventManager.Instance.OnReactorStateChanged    += HandleV63ReactorState; // ★ v6.3 facade mirror
         }
 
         private void OnDisable()
@@ -141,6 +172,7 @@ namespace NuclearReMind
             EventManager.Instance.OnInstallPoloidalRequested -= InstallPoloidal;
             EventManager.Instance.OnItemUsed               -= HandleItemUsed;
             EventManager.Instance.OnResearchCompleted      -= HandleResearchCompleted;
+            EventManager.Instance.OnReactorStateChanged    -= HandleV63ReactorState;
         }
 
         /// <summary>
@@ -155,6 +187,7 @@ namespace NuclearReMind
 
         private void Start()
         {
+            if (V63Live) { MirrorV63(); return; } // ★ v6.3 facade: HUD starts on v6.3 numbers
             EventManager.Instance.RaiseTowerProgressChanged(Current);
         }
 
@@ -162,6 +195,8 @@ namespace NuclearReMind
 
         private void HandleDayStarted(int day, bool timed)
         {
+            if (V63Live) { MirrorV63(); return; } // ★ v6.3: no Day-11 unlock, no allocation — mirror only
+
             _simmedFrac = 0f; // เริ่มวันใหม่ → รีเซ็ตความคืบเรียลไทม์ (เดินใหม่ทั้งวัน)
 
             if (Current.isUnlocked)
@@ -225,6 +260,7 @@ namespace NuclearReMind
         // (เทส/Day 1 ที่ไม่มี tick → _simmedFrac=0 → เดินเต็มวัน frac=1 = พฤติกรรมเดิมเป๊ะ)
         private void HandleDayEnded(int day)
         {
+            if (V63Live) return; // ★ v6.3: ReactorController ticks itself on OnDayEnded — legacy sim off
             if (_ended || !Current.isUnlocked) return;
             if (!HasActiveCoreTowerPart()) return; // ต้องสร้าง CORE TOWER ก่อนถึงจะเดินเครื่อง
 
@@ -237,6 +273,7 @@ namespace NuclearReMind
         // → หลอด CORE% ไต่ต่อเนื่องไม่ต้องรอข้ามวัน · เศษที่เหลือ reconcile ตอน HandleDayEnded
         private void HandleGameTick()
         {
+            if (V63Live) return; // ★ v6.3: production is batch end-of-day (§2) — no realtime reactor
             if (_ended || !Current.isUnlocked) return;
 
             var gm = GameManager.Instance;
@@ -413,6 +450,13 @@ namespace NuclearReMind
         /// </summary>
         public void Scram()
         {
+            // ★ v6.3 facade: forward to ReactorController (§8 — HEAT −40, CORE −10, water −30, hope −3)
+            if (V63Live)
+            {
+                if (ReactorController.Instance.Scram()) MirrorV63();
+                return;
+            }
+
             if (_ended || !Current.isUnlocked) return;
             if (Current.scramCooldown > 0) return;
             if (Current.coreHeat < scramHeatThreshold) return;
@@ -437,7 +481,15 @@ namespace NuclearReMind
         /// </summary>
         public void ReduceHeat(float amount)
         {
-            if (amount <= 0f || !Current.isUnlocked) return;
+            if (amount <= 0f) return;
+            if (V63Live) // ★ v6.3 facade: crisis/item heat relief lands on the real reactor
+            {
+                var r = ReactorController.Instance;
+                r.Heat = Mathf.Max(0f, r.Heat - amount);
+                MirrorV63();
+                return;
+            }
+            if (!Current.isUnlocked) return;
             var t = Current;
             t.coreHeat = Mathf.Max(0f, t.coreHeat - amount);
             Current = t;
@@ -450,7 +502,15 @@ namespace NuclearReMind
         /// </summary>
         public void ReduceCore(float amount)
         {
-            if (amount <= 0f || !Current.isUnlocked) return;
+            if (amount <= 0f) return;
+            if (V63Live) // ★ v6.3 facade
+            {
+                var r = ReactorController.Instance;
+                r.Core = Mathf.Max(0f, r.Core - amount);
+                MirrorV63();
+                return;
+            }
+            if (!Current.isUnlocked) return;
             var t = Current;
             t.corePercent = Mathf.Max(0f, t.corePercent - amount);
             Current = t;
@@ -466,6 +526,18 @@ namespace NuclearReMind
         public void SetOverclockMode(int mode)
         {
             if (_modeLocked) return; // ล็อกช่วง Live — รอ Planning วันถัดไป (V4 §3)
+
+            // ★ v6.3 facade: only two real modes (base 1.05 / boost 3.0) — Idle/Normal → base,
+            //   Boost/Overdrive → boost. Selectable from Day 1 (no unlock gate — rule #1).
+            if (V63Live)
+            {
+                int norm = mode >= ModeBoost ? ModeBoost : ModeNormal;
+                ReactorController.Instance.SetBoosting(norm == ModeBoost);
+                EventManager.Instance.RaiseOverclockModeChanged(norm);
+                MirrorV63();
+                return;
+            }
+
             if (!Current.isUnlocked) return; // ยังไม่ปลดล็อกเตา
 
             var t = Current;
@@ -501,6 +573,7 @@ namespace NuclearReMind
 
         private void HandleAllocationAdjust(ReactorAllocation kind, int delta)
         {
+            if (V63Live) return; // ★ v6.3: no per-turn allocation — cooling reads the shared water pool (§26)
             if (!Current.isUnlocked) return; // เตายังไม่ปลดล็อก (ก่อน Day 11) → จัดสรรไม่ได้
             var rm = ResourceManager.Instance;
             switch (kind)
@@ -542,6 +615,23 @@ namespace NuclearReMind
         /// <summary>ติดตั้ง/อัป Toroidal Coils (+1 ระดับหล่อเย็น ×10, cap 3) — จ่ายเหล็ก 50 + พลังงาน 80 (§5)</summary>
         public void UpgradeToroidal()
         {
+            // ★ v6.3 facade (§6): coil needs the confinement note · cost = iron only (CONFIG.md table)
+            if (V63Live)
+            {
+                var r = ReactorController.Instance;
+                if (!KnowledgeDB.Instance.HasNote("confinement"))
+                {
+                    EventManager.Instance.RaiseNotice("ต้องวิจัย Note 'confinement' ก่อนติดตั้ง Toroidal Coil");
+                    return;
+                }
+                if (r.ToroidalLv >= GameConfigSO.Instance.toroidalCoolMaxLv) return;
+                if (!SpendIronEnergy(toroidalIronCost, 0)) return;
+                r.InstallToroidal();
+                EventManager.Instance.RaiseCoilsChanged(r.ToroidalLv, r.PoloidalLv > 0);
+                MirrorV63();
+                return;
+            }
+
             if (coolingTowerLevel >= MaxToroidalLevel) return;
             if (!SpendIronEnergy(toroidalIronCost, toroidalEnergyCost)) return;
             coolingTowerLevel++;
@@ -553,6 +643,23 @@ namespace NuclearReMind
         /// <summary>ติดตั้ง Poloidal Coils (เปิดเทอม engineers×4 + กัน micro-damage) — เหล็ก 60 + พลังงาน 100 ครั้งเดียว (§5)</summary>
         public void InstallPoloidal()
         {
+            // ★ v6.3 facade (§6): Poloidal Coil per level (poloidalDamp +6/Lv) — needs confinement note
+            if (V63Live)
+            {
+                var r = ReactorController.Instance;
+                if (!KnowledgeDB.Instance.HasNote("confinement"))
+                {
+                    EventManager.Instance.RaiseNotice("ต้องวิจัย Note 'confinement' ก่อนติดตั้ง Poloidal Coil");
+                    return;
+                }
+                if (r.PoloidalLv >= GameConfigSO.Instance.toroidalCoolMaxLv) return;
+                if (!SpendIronEnergy(poloidalIronCost, 0)) return;
+                r.InstallPoloidal();
+                EventManager.Instance.RaiseCoilsChanged(r.ToroidalLv, r.PoloidalLv > 0);
+                MirrorV63();
+                return;
+            }
+
             if (hasPoloidalCoils) return;
             if (!SpendIronEnergy(poloidalIronCost, poloidalEnergyCost)) return;
             hasPoloidalCoils = true;
@@ -592,6 +699,17 @@ namespace NuclearReMind
 
         private void HandleSaveLoaded(SaveData save)
         {
+            // ★ v6.3 facade: push saved CORE/HEAT into the live reactor (TowerData is just the mirror).
+            //   Legacy pre-unlock saves have corePercent 0 → fall back to startCore (save-compat rule).
+            if (V63Live)
+            {
+                var r = ReactorController.Instance;
+                r.Core = save.tower.corePercent > 0f ? save.tower.corePercent : GameConfigSO.Instance.startCore;
+                r.Heat = Mathf.Max(0f, save.tower.coreHeat);
+                MirrorV63();
+                return;
+            }
+
             Current = save.tower;
             _ended = Current.corePercent >= WinPercent || Current.coreHeat >= HeatMeltdown;
             _simmedFrac = 0f;
@@ -606,6 +724,7 @@ namespace NuclearReMind
         /// <summary>[DEBUG] ปลดล็อกเตาทันที (ข้ามเงื่อนไข Day 11) — ตั้ง CORE = 30%, HEAT = 0</summary>
         public void DebugUnlockNow()
         {
+            if (V63Live) { MirrorV63(); return; } // ★ v6.3: always unlocked — just refresh the mirror
             var t = Current;
             if (!t.isUnlocked)
             {
@@ -625,6 +744,12 @@ namespace NuclearReMind
         /// <summary>[DEBUG] ตั้งค่า CORE% ตรง ๆ (ปลดล็อกอัตโนมัติถ้ายัง) — ไม่ trigger ชนะ/แพ้เอง</summary>
         public void DebugSetCore(float percent)
         {
+            if (V63Live) // ★ v6.3: write through to the live reactor
+            {
+                ReactorController.Instance.Core = Mathf.Clamp(percent, 0f, GameConfigSO.Instance.coreWin);
+                MirrorV63();
+                return;
+            }
             if (!Current.isUnlocked) DebugUnlockNow();
             var t = Current;
             t.corePercent = Mathf.Clamp(percent, 0f, WinPercent);
@@ -637,6 +762,12 @@ namespace NuclearReMind
         /// <summary>[DEBUG] ตั้งค่า HEAT ตรง ๆ — ไม่ trigger meltdown เอง (ตั้ง ≥100 แล้วข้ามวันเพื่อทดสอบ meltdown)</summary>
         public void DebugSetHeat(float heat)
         {
+            if (V63Live) // ★ v6.3: write through to the live reactor
+            {
+                ReactorController.Instance.Heat = Mathf.Max(0f, heat);
+                MirrorV63();
+                return;
+            }
             if (!Current.isUnlocked) DebugUnlockNow();
             var t = Current;
             t.coreHeat = Mathf.Max(0f, heat);

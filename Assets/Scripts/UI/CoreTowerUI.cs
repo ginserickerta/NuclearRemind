@@ -83,7 +83,9 @@ namespace NuclearReMind
             }
 
             // Phase 1 ล็อกโหมด (เลือกได้เฉพาะ Phase 2–3) ; ก่อนปลดล็อกปิดหมด
-            bool overclockable = d.isUnlocked && d.currentPhase >= 2;
+            // ★ v6.3 cutover (slice 5): reactor live → mode selectable from Day 1 (sim playstyles
+            //   boost early — gating boost until CORE 50 breaks the validated balance)
+            bool overclockable = d.isUnlocked && (ReactorController.Instance != null || d.currentPhase >= 2);
             SetInteractable(idleButton, overclockable);
             SetInteractable(normalButton, overclockable);
             SetInteractable(boostButton, overclockable);
