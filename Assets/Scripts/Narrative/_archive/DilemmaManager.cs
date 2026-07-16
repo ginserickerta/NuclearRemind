@@ -4,6 +4,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// ⚠ ARCHIVED (2026-07-17, v6.3 cutover) — ระบบ dilemma เก่า: ควิซบังคับหลัง resolve (ขัดกฎ 4),
+    /// Hope +5 ฟรี + เขียน Hope ตรง (ขัดกฎ 5/8), ระบบ Aethon/Keran (ไม่มีใน v6.3), ForceIdle (วิกฤต 2·B ถูกลบ §13)
+    /// แทนที่ด้วย CardManager (§25) · ถูกปิดตอนรันโดย LegacyNarrativeSilencer · เก็บ compile ไว้เพื่อ SaveData/tests
+    ///
     /// ตรวจ trigger condition ของ DilemmaData (phase_n_complete, day-end conditions, hope)
     /// แสดง dilemma ผ่าน OnDilemmaTriggered แล้วรอ Popup UI raise OnDilemmaResolved
     /// เพื่อนำผลของ choice ไปปรับ Resource/Hope/ความสัมพันธ์ผ่าน event

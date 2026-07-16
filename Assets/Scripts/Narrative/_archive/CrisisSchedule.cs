@@ -1,6 +1,10 @@
 namespace NuclearReMind
 {
     /// <summary>
+    /// ⚠ ARCHIVED (2026-07-17, v6.3 cutover) — ตารางวิกฤตผูกวัน (Day 17/20/24/25) ขัด GDD v6.3 กฎข้อ 1
+    /// (ห้าม day-based trigger) · แทนที่ด้วย CardTriggers (state-only) + StormSystem (pressure gauge §23)
+    /// เก็บ compile ไว้เพื่อ EditMode tests เดิม — ห้ามใช้อ้างอิงในระบบใหม่
+    ///
     /// ★ ตารางวิกฤต — แหล่งความจริงเดียวของ "เงื่อนไข + วันที่วิกฤตเด้ง" (GDD v4.0 §10 + Victory Loop §14)
     ///
     /// GDD §14 กำหนดจังหวะมาตรฐานไว้: Day 17 พลาสมา · Day 20 โรครังสี · Day 24 เสบียงเน่า · Day 25 พายุ

@@ -6,6 +6,10 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// ⚠ ARCHIVED (2026-07-17, v6.3 cutover) — ตัวสร้างวิกฤต 3 ใบระบบเก่า (Day 17/20/24 + Aethon/Keran
+    /// + PET/SPECT + ForceIdle ที่ v6.3 ตัดทิ้ง §13) · แทนที่ด้วย CrisisCardsSetup (การ์ด 8 ใบ ตาม CARDS.md)
+    /// ห้ามรันซ้ำ — จะสร้าง DilemmaData เก่ากลับมา
+    ///
     /// Block C — สร้าง 3 crisis DilemmaData assets (เนื้อหา Story Guide §4 — เฟส 4 story content)
     /// รันผ่านเมนู NuclearReMind / Setup Crisis Dilemmas
     ///
@@ -30,7 +34,7 @@ namespace NuclearReMind.EditorTools
             "Crisis_FoodAftermath",
         };
 
-        [MenuItem("NuclearReMind/Setup Crisis Dilemmas")]
+        [MenuItem("NuclearReMind/Legacy (archived)/Setup Crisis Dilemmas")]
         public static void SetupAll()
         {
             System.IO.Directory.CreateDirectory(Folder);

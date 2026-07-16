@@ -4,6 +4,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// ⚠ ARCHIVED (2026-07-17, v6.3 cutover) — story beat pipeline เก่า: OnDay/OnStormApproach ผูกปฏิทิน
+    /// (ขัดกฎ 1), InfoCard ก่อนวิจัย (ขัดกฎ 2 + §0.1), ควิซบังคับท้าย beat (ขัดกฎ 4), Records ปลดตามหมุดหมาย
+    /// (v6.3 ใช้ DataRecovery.progress §24) · ถูกปิดตอนรันโดย LegacyNarrativeSilencer · เก็บ compile ไว้เพื่อ SaveData/tests
+    ///
     /// ตัวคุมลำดับเนื้อเรื่อง (Story Guide §1/§3) — ฟัง event ของเมือง → เช็ค trigger → เล่น StoryBeat
     /// ลำดับบังคับใน beat: record → infoCard → crisis(Choice/Outcome) → afterText → quiz (ห้ามสลับ)
     /// - แต่ละ beat ยิงครั้งเดียวต่อรอบเล่น (จำลง SaveData.firedStoryBeats)

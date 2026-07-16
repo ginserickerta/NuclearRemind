@@ -6,6 +6,11 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// ⚠ ARCHIVED (2026-07-17, v6.3 cutover) — ตัวสร้างบทเนื้อเรื่องเก่า (StoryBeat/InfoCard/Dilemma):
+    /// วิกฤตผูกวันผ่าน CrisisSchedule, InfoCard "หอเตากลางเมือง"/"เชื้อเพลิงที่ซ่อนในน้ำ" ที่ GDD v6.3 §0.1
+    /// สั่งลบ, บท "Day 11" ที่ไม่มีในระบบใหม่ · แทนที่ด้วย CrisisCardsSetup + DataRecordsSetup + BarksSetup
+    /// ห้ามรันซ้ำ — จะ wire บทเก่ากลับเข้า StoryDirector ที่ถูกปิดไปแล้ว
+    ///
     /// เฟส 4 — สร้างเนื้อหาเนื้อเรื่องทั้งหมดจาก Story Guide §4 (ข้อความไทย verbatim ห้ามแปล)
     /// รันผ่านเมนู NuclearReMind / Setup Story Content (หลัง Setup Story UI — ต้องมี StoryDirector ในซีน)
     ///
@@ -32,7 +37,7 @@ namespace NuclearReMind.EditorTools
         private const string BuildingFolder = "Assets/ScriptableObjects/Buildings";
         private const string ScenePath      = "Assets/Scenes/Gamescene.unity";
 
-        [MenuItem("NuclearReMind/Setup Story Content")]
+        [MenuItem("NuclearReMind/Legacy (archived)/Setup Story Content")]
         public static void SetupAll()
         {
             System.IO.Directory.CreateDirectory(StoryFolder);
