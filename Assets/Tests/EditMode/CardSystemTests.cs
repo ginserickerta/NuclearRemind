@@ -99,10 +99,19 @@ namespace NuclearReMind.Tests
         [Test]
         public void LockedRow_IsVisibleWithLockAndNote_NeverHidden()
         {
+            // Pin the catalog in-memory: KnowledgeDB lazily loads Resources/ResearchNotes otherwise,
+            // so with content assets present the row shows the note's Thai title (correct per rule #6)
+            // — assert against a stub note's title instead of the raw id to stay deterministic.
+            var note = ScriptableObject.CreateInstance<ResearchNoteSO>();
+            note.noteId = "confinement";
+            note.title = "ขังพลาสมาด้วยสนามแม่เหล็ก";
+            _spawned.Add(note);
+            KnowledgeDB.Instance.RegisterNotes(new[] { note });
+
             var opt = Opt("ฉีดสารหล่อเย็นฉุกเฉิน", "confinement", 0f);
             string row = CrisisCardPanel.OptionRow(2, opt, KnowledgeDB.Instance);
             StringAssert.Contains("🔒", row, "ต้องโชว์แม่กุญแจ");
-            StringAssert.Contains("confinement", row, "ต้องบอกว่าต้องวิจัยอะไร (ห้ามซ่อน)");
+            StringAssert.Contains(note.title, row, "ต้องบอกว่าต้องวิจัยอะไร (ห้ามซ่อน)");
             Assert.IsTrue(CrisisCardPanel.IsRowLocked(opt, KnowledgeDB.Instance));
 
             KnowledgeDB.Instance.CompleteNote("confinement");

@@ -46,6 +46,13 @@ namespace NuclearReMind
                 Ensure<ZoneBController>("ZoneBController (auto)");
                 Ensure<ReactorController>("ReactorController (auto)");
                 Ensure<SensorArray>("SensorArray (auto)");
+                // ★ slice 6: remaining Sprint-5 systems — narrators/decryption run on the settled day
+                //   state but BEFORE EndingSystem judges it (Ending stays last in the OnDayEnded chain).
+                Ensure<DataRecovery>("DataRecovery (auto)");
+                Ensure<BarkManager>("BarkManager (auto)");
+                Ensure<InnerVoiceDirector>("InnerVoiceDirector (auto)");
+                Ensure<RadSuitManager>("RadSuitManager (auto)");
+                Ensure<RecordFlowBridge>("RecordFlowBridge (auto)");
                 Ensure<EndingSystem>("EndingSystem (auto)");
                 // Push the initial CORE/HEAT to the HUD mirror (CoreTowerManager facade) right away.
                 if (Instance != null)

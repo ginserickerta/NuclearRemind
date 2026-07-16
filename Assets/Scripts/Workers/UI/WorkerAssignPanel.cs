@@ -50,6 +50,11 @@ namespace NuclearReMind
         private Text _zoneLabel, _zoneInfo, _zoneCount;
         private Button _zoneMinus, _zonePlus, _zoneOpenBtn;
 
+        // ★ slice 6: Rad Suit row — the Death-Spiral brake (rad ×0.4 in Zone B, CONFIG 🔒 RADIATION)
+        private Text _suitLabel;
+        private Button _suitCraftBtn;
+        private Text _suitCraftLabel;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoSpawnHook()
         {
@@ -218,6 +223,44 @@ namespace NuclearReMind
                 kv.Value.text = n.ToString();
             }
             RefreshZoneB(wm);
+            RefreshRadSuit(wm);
+        }
+
+        // Rad Suit row states: 🔒 needs nuclear_medicine → craftable (labMat 30, up to 5).
+        private void RefreshRadSuit(WorkerManager wm)
+        {
+            if (_suitLabel == null) return;
+            var rs = RadSuitManager.Instance;
+            var cfg = GameConfigSO.Instance;
+            bool hasNote = KnowledgeDB.Instance.HasNote("nuclear_medicine");
+
+            if (rs == null)
+            {
+                _suitLabel.text = "🥼 Rad Suit — ระบบยังไม่พร้อม";
+                if (_suitCraftBtn != null) _suitCraftBtn.gameObject.SetActive(false);
+                return;
+            }
+
+            if (!hasNote)
+            {
+                _suitLabel.text = "🥼 Rad Suit — 🔒 ต้องวิจัย Note 'nuclear_medicine'";
+                if (_suitCraftBtn != null) _suitCraftBtn.gameObject.SetActive(false);
+                return;
+            }
+
+            int inZone = wm != null ? wm.GetWorkers(WorkerJobs.ZoneB).Count : 0;
+            int worn = Mathf.Min(rs.SuitsMade, inZone);
+            _suitLabel.text = $"🥼 Rad Suit · มี {rs.SuitsMade}/{cfg.suitTargetCount} · สวมใน Zone B {worn} คน (รังสี ×{cfg.radSuitMult:0.0#})";
+
+            if (_suitCraftBtn != null)
+            {
+                _suitCraftBtn.gameObject.SetActive(true);
+                _suitCraftBtn.interactable = rs.CanCraft;
+                if (_suitCraftLabel != null)
+                    _suitCraftLabel.text = rs.SuitsMade >= cfg.suitTargetCount
+                        ? "ครบเป้าแล้ว"
+                        : $"คราฟต์ (labMat {cfg.suitCostLabMat})";
+            }
         }
 
         // Zone B row states: 🔒 no note → 🔒 phase < 4 → "open" button → live staffing row.
@@ -274,7 +317,7 @@ namespace NuclearReMind
             var rt = _root.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(620f, 640f); // ★ slice 5: +1 Zone B row (taller, 2-line)
+            rt.sizeDelta = new Vector2(620f, 700f); // ★ slice 5/6: + Zone B row (2-line) + Rad Suit row
             var outline = _root.AddComponent<Outline>();
             outline.effectColor = CBorder; outline.effectDistance = new Vector2(2f, -2f);
 
@@ -298,7 +341,35 @@ namespace NuclearReMind
             vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
 
             foreach (var (job, label) in Jobs) BuildJobRow(list.transform, job, label);
-            BuildZoneBRow(list.transform); // ★ slice 5: Zone B — locked states shown, never hidden
+            BuildZoneBRow(list.transform);   // ★ slice 5: Zone B — locked states shown, never hidden
+            BuildRadSuitRow(list.transform); // ★ slice 6: craft Rad Suits (labMat 30 · target 5)
+        }
+
+        // Rad Suit row: label (state + count) + craft button. Locked state SHOWN with 🔒 (rule #6 spirit).
+        private void BuildRadSuitRow(Transform parent)
+        {
+            var row = NewUI("Row_radsuit", parent, new Color(0.75f, 0.65f, 0.35f, 0.06f));
+            var le = row.AddComponent<LayoutElement>(); le.minHeight = 54f; le.preferredHeight = 54f;
+
+            _suitLabel = MakeText("Name", row.transform, "🥼 Rad Suit", 18, CText, TextAnchor.MiddleLeft);
+            Anchor(_suitLabel.gameObject, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(12f, 0f), new Vector2(-220f, 0f));
+
+            _suitCraftBtn = MakeButton("Craft", row.transform, "คราฟต์", new Color(0.30f, 0.27f, 0.14f, 1f), CraftSuit);
+            var srt = _suitCraftBtn.GetComponent<RectTransform>();
+            srt.anchorMin = srt.anchorMax = new Vector2(1f, 0.5f); srt.pivot = new Vector2(1f, 0.5f);
+            srt.anchoredPosition = new Vector2(-12f, 0f); srt.sizeDelta = new Vector2(200f, 44f);
+            _suitCraftLabel = _suitCraftBtn.GetComponentInChildren<Text>();
+            if (_suitCraftLabel != null) _suitCraftLabel.fontSize = 17;
+        }
+
+        private void CraftSuit()
+        {
+            var rs = RadSuitManager.Instance;
+            if (rs == null) return;
+            if (!rs.CraftSuit())
+                EventManager.Instance.RaiseNotice(
+                    $"คราฟต์ไม่ได้ — ต้องมี labMat ≥ {GameConfigSO.Instance.suitCostLabMat} และยังไม่ครบเป้า {GameConfigSO.Instance.suitTargetCount} ชุด");
+            Refresh();
         }
 
         // Zone B row (GDD §22): 2-line row — label + info line; right side is either the "open"

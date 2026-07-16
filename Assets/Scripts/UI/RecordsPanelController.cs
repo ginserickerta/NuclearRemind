@@ -46,12 +46,14 @@ namespace NuclearReMind
         private void OnEnable()
         {
             EventManager.Instance.OnRecordArchived += HandleRecordArchived;
+            EventManager.Instance.OnRecordRecovered += HandleRecordArchived; // ★ v6.3: refresh on recovery too
         }
 
         private void OnDisable()
         {
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnRecordArchived -= HandleRecordArchived;
+            EventManager.Instance.OnRecordRecovered -= HandleRecordArchived;
         }
 
         private void Start()
@@ -106,9 +108,22 @@ namespace NuclearReMind
         {
             if (entryListParent == null || entryButtonTemplate == null) return;
 
-            var director = StoryDirector.Instance;
-            IReadOnlyList<RecordCardSO> records = director != null ? director.ArchivedRecords : null;
-            IReadOnlyList<int> days = director != null ? director.ArchivedRecordDays : null;
+            // ★ v6.3 cutover (slice 6 Records): DataRecovery is the live source — every recovered log
+            //   is listed (oldest→newest, same ordering the reversal below expects). Legacy
+            //   StoryDirector path stays as the pre-cutover fallback.
+            IReadOnlyList<RecordCardSO> records;
+            IReadOnlyList<int> days;
+            if (DataRecovery.Instance != null)
+            {
+                records = new List<RecordCardSO>(DataRecovery.Instance.Recovered);
+                days = null; // recovery day not tracked yet (SaveData slice) — day suffix omitted
+            }
+            else
+            {
+                var director = StoryDirector.Instance;
+                records = director != null ? director.ArchivedRecords : null;
+                days = director != null ? director.ArchivedRecordDays : null;
+            }
             int count = records != null ? records.Count : 0;
 
             // เพิ่มปุ่มให้พอ (reuse ของเดิม — ไม่ Destroy ทุกรอบแบบ Codex)
