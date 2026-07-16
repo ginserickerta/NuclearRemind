@@ -71,8 +71,15 @@ namespace NuclearReMind
 
         private static void AutoSpawnUnsafe()
         {
+            // ★ v6.3 cutover (slice 1): legacy 3-project research is replaced by v6.3 ResearchLab + KnowledgeDB.
+            //   This manager no longer spawns → its 3 consumers (CoreTowerManager / CrisisEffectManager /
+            //   SaveManager) already null-guard ResearchManager.Instance and degrade gracefully. Class kept
+            //   compiled only until the legacy cluster is bulk-deleted at cutover cleanup.
+            return;
+#pragma warning disable CS0162 // unreachable — intentional dormant stub during cutover
             if (FindFirstObjectByType<ResearchManager>() != null) return;
             new GameObject("ResearchManager (auto)").AddComponent<ResearchManager>();
+#pragma warning restore CS0162
         }
 
         private void Awake()

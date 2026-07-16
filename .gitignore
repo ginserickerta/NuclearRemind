@@ -51,3 +51,6 @@ crashlytics-build.properties
 /Builds/
 obj/
 Assets/Resources/PerformanceTestRun*.json*
+compile_*.log
+test_*.log
+results_*.xml

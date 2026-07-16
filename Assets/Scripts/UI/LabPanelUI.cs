@@ -76,11 +76,17 @@ namespace NuclearReMind
 
         private static void AutoSpawnUnsafe()
         {
+            // ★ v6.3 cutover (slice 1): the live in-game research UI is now ResearchQueuePanel (drives the
+            //   v6.3 ResearchLab note-queue). This legacy 3-project panel is retired from the scene — kept
+            //   compiled only until the legacy cluster is bulk-deleted at cutover cleanup.
+            return;
+#pragma warning disable CS0162 // unreachable — intentional dormant stub during cutover
             if (FindFirstObjectByType<LabPanelUI>() != null) return;
             var canvas = FindBestCanvas();
             var go = new GameObject("LabPanelUI (auto)");
             if (canvas != null) go.transform.SetParent(canvas.transform, false);
             go.AddComponent<LabPanelUI>();
+#pragma warning restore CS0162
         }
 
         private static Canvas FindBestCanvas()

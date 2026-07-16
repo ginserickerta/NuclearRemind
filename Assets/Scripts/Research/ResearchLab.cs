@@ -26,6 +26,34 @@ namespace NuclearReMind
     {
         public static ResearchLab Instance { get; private set; }
 
+        // ★ v6.3 cutover (slice 1): auto-spawn into the live game (was F9-playtest-only before). AfterSceneLoad
+        //   fires once at the app's first scene; the instance there is destroyed on LoadScene(Gamescene) →
+        //   re-spawn on every sceneLoaded (same pattern as LabPanelUI/ResearchManager).
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoSpawnHook()
+        {
+            AutoSpawn();
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
+            => AutoSpawn();
+
+        private static void AutoSpawn()
+        {
+            try
+            {
+                if (EventManager.Instance == null) return; // no core yet (MainMenu) — a later sceneLoaded retries
+                if (FindFirstObjectByType<ResearchLab>() != null) return;
+                new GameObject("ResearchLab (auto)").AddComponent<ResearchLab>();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[ResearchLab] AutoSpawn ล้มเหลว — {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+            }
+        }
+
         /// <summary>Active research job — progress in "effective days" (GDD §19 OnDayEnd).</summary>
         public class ResearchJob
         {
