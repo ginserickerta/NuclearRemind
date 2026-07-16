@@ -45,6 +45,35 @@ namespace NuclearReMind
     {
         public static WorkerManager Instance { get; private set; }
 
+        // ★ v6.3 cutover (slice 2 Workers): auto-spawn into the live game (was F9-playtest-only). Presence
+        //   flips the existing guards in PopulationManager (hope/pop-growth) + ResourceManager (per-person
+        //   consumption) so the v6.3 per-worker systems take over. AfterSceneLoad fires once at the app's
+        //   first scene; re-spawn on every sceneLoaded (same pattern as ResearchLab/LabPanelUI).
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoSpawnHook()
+        {
+            AutoSpawn();
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
+            => AutoSpawn();
+
+        private static void AutoSpawn()
+        {
+            try
+            {
+                if (EventManager.Instance == null) return; // no core yet (MainMenu) — a later sceneLoaded retries
+                if (FindFirstObjectByType<WorkerManager>() != null) return;
+                new GameObject("WorkerManager (auto)").AddComponent<WorkerManager>();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[WorkerManager] AutoSpawn ล้มเหลว — {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+            }
+        }
+
         private static readonly string[] NamePool =
         {
             "อาริน", "เมษ", "วิน", "ปราง", "คีต", "ลดา", "ธาร", "มุก",

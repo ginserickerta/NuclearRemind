@@ -261,6 +261,29 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// v6.3 job-based production (GDD §6/§1 + CONFIG yields): food/water/iron/power = Σ efficiency of each
+        /// job × per-worker yield (rule #7 — efficiency-weighted, never headcount). Consumption is handled
+        /// per-worker by WorkerManager (feeding + water) and upkeep by the reactor / Zone B systems, so this
+        /// returns production only. Balance is CONFIG/play-test tuned (no per-building upkeep modelled here).
+        /// </summary>
+        private ResourceData ComputeV63ProductionDelta(float dayFraction)
+        {
+            var wm = WorkerManager.Instance;
+            var cfg = GameConfigSO.Instance;
+            var delta = new ResourceData();
+            if (wm == null || cfg == null) return delta;
+
+            float foodYield = CrisisEffectManager.Instance != null ? CrisisEffectManager.Instance.FoodYieldMultiplier : 1f;
+            float farmMastery = MasteryRegistry.Instance != null ? MasteryRegistry.Instance.FarmYieldMult() : 1f;
+
+            delta.food   += wm.SumEfficiency(WorkerJobs.Farm)  * cfg.foodPerFarmWorker   * foodYield * farmMastery * dayFraction;
+            delta.water  += wm.SumEfficiency(WorkerJobs.Water) * cfg.waterPerWaterWorker * dayFraction;
+            delta.iron   += wm.SumEfficiency(WorkerJobs.Mine)  * cfg.ironPerMineWorker   * dayFraction;
+            delta.energy += wm.SumEfficiency(WorkerJobs.Power) * cfg.powerPerPowerWorker * dayFraction;
+            return delta;
+        }
+
+        /// <summary>
         /// เดลตาสุทธิ (ผลิต − ค่าเดินระบบ) ของทุกอาคาร — ไม่แตะ Current ไม่ clamp
         /// dayFraction: 1 = เต็มวัน · tickInterval/dayLength = ต่อ tick
         /// gate ค่าเดินระบบใช้ running energy/water แบบเดียวกับลูป batch เดิม → ผลลัพธ์ที่ dayFraction=1 ตรงเป๊ะ
@@ -268,6 +291,11 @@ namespace NuclearReMind
         /// </summary>
         private ResourceData ComputeProductionDelta(float dayFraction)
         {
+            // ★ v6.3 cutover (slice 2 Workers): job-based production (GDD §6 / rule #7 — Σ efficiency, NOT
+            //   headcount). When WorkerManager is live it owns worker state; production comes from jobs, not
+            //   per-building cell assignment. Legacy per-building loop below stays for the pre-cutover path.
+            if (WorkerManager.Instance != null) return ComputeV63ProductionDelta(dayFraction);
+
             var delta = new ResourceData();
             float runE = Current.energy; // สะท้อนลูปเดิมที่ลด/เพิ่ม c.energy ระหว่างวน (มีผลต่อ gate อาคารถัดไป)
             float runW = Current.water;
