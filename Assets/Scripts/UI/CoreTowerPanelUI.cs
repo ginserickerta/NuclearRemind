@@ -45,8 +45,35 @@ namespace NuclearReMind
         private bool _shown;
         private int _pendingMode = CoreTowerManager.ModeNormal;
 
+        // ★ AfterSceneLoad ยิงครั้งเดียว "หลังซีนแรกของแอป" เท่านั้น — build จริงเริ่มที่ MainMenu (index 0)
+        //   แผงที่ spawn ในเมนูถูกทำลายตอน LoadScene(Gamescene) → ในเกมไม่มีแผงเลย = คลิก CORE TOWER แล้ว
+        //   แผงไม่ขึ้น "เฉพาะ build/WebGL" (Editor กด Play ที่ Gamescene ตรง ๆ ซีนแรก = Gamescene เลยไม่เจอ)
+        //   แก้: spawn ซ้ำทุกครั้งที่โหลดซีน (guard กันสร้างซ้ำอยู่ใน AutoSpawn · -= ก่อน += กัน subscribe ซ้ำ
+        //   ตอน Enter Play Mode แบบไม่ reload domain)
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoSpawnHook()
+        {
+            AutoSpawn();
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
+            => AutoSpawn();
+
         private static void AutoSpawn()
+        {
+            // ★ WebGL build ตั้ง webGLExceptionSupport = "Explicitly Thrown Exceptions Only" — exception ที่
+            //   runtime โยนเอง (NullReferenceException ฯลฯ) จะทำให้โค้ดหยุดเงียบ ไม่มี error ขึ้น console เลย
+            //   (ต่างจาก Editor/.exe ที่เห็น error ปกติ) ครอบ try/catch ทั้งก้อนแล้ว log เองตรง ๆ กัน "เงียบ" แบบนี้อีก
+            try { AutoSpawnUnsafe(); }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[CoreTowerPanelUI] AutoSpawn ล้มเหลว (จับได้ ไม่งั้นจะเงียบสนิทบน WebGL) — {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+            }
+        }
+
+        private static void AutoSpawnUnsafe()
         {
             if (FindFirstObjectByType<CoreTowerPanelUI>() != null) return;
             var canvas = FindBestCanvas();
@@ -65,6 +92,8 @@ namespace NuclearReMind
                 go.AddComponent<CoreTowerPanelUI>();
             }
             if (canvas != null) go.transform.SetParent(canvas.transform, false);
+            Debug.Log($"[CoreTowerPanelUI] AutoSpawn — scene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}, " +
+                      $"prefab={(prefab != null ? "authored" : "fallback-build")}, canvas={(canvas != null ? canvas.name : "NONE")}");
         }
 
         private static Canvas FindBestCanvas()
@@ -149,15 +178,21 @@ namespace NuclearReMind
             // ★ grid footprint ก่อน — ทางเดียวกับ hover nameplate ที่พิสูจน์แล้วว่าทำงานบน WebGL
             if (reg.TryGetBuildingAt(im.GetMouseGridPosition(), out _, out var data) && data != null
                 && (data.buildingType == BuildingType.CoreTower || data.isCoreTowerPart))
+            {
+                Debug.Log("[CoreTowerPanelUI] คลิกโดน CORE TOWER (footprint cell)");
                 return true;
+            }
 
             // สำรอง: คลิกตัวสไปรต์สูงเหนือ footprint (bounds เรขาคณิตล้วน ไม่พึ่ง Physics2D)
-            return BuildingClickTarget.PickAt(im.GetMouseWorldPosition(),
+            bool hitSprite = BuildingClickTarget.PickAt(im.GetMouseWorldPosition(),
                 t => t.data.buildingType == BuildingType.CoreTower || t.data.isCoreTowerPart) != null;
+            if (hitSprite) Debug.Log("[CoreTowerPanelUI] คลิกโดน CORE TOWER (sprite bounds)");
+            return hitSprite;
         }
 
         private void Open()
         {
+            Debug.Log("[CoreTowerPanelUI] Open() — กำลังเปิดแผง");
             _shown = true;
             if (_backdrop != null) { UIPopIn.Ensure(_backdrop); _backdrop.SetActive(true); } // เปิดแบบ Windows 11 (scale+fade)
             GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)

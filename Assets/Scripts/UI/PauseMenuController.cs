@@ -96,7 +96,7 @@ namespace NuclearReMind
         {
             _isOpen = false;
             Time.timeScale = 1f;
-            SceneManager.LoadScene(mainMenuSceneName);
+            SceneFader.FadeToScene(mainMenuSceneName); // เฟดจอดำ → โหลด → เฟดสว่าง
         }
 
         /// <summary>ออกจากเกม (ใน editor = หยุด Play)</summary>

@@ -95,6 +95,15 @@ namespace NuclearReMind
         public event Action<float> OnKnowledgeChanged;        // (knowledge 0–100) — สำหรับ HUD/tier
         public event Action<QuizQuestionSO> OnQuizShown;      // QuizManager → QuizPopupController
         public event Action<string, bool> OnQuizAnswered;     // (quizId, correct) — ตอบเสร็จแล้ว
+        public event Action<string> OnMasteryEarned;          // v6.3 §21: MasteryRegistry → Codex/HUD (quizId ตอบถูกครั้งแรก)
+        public event Action<CrisisCardSO> OnCrisisCardShown;  // v6.3 §25: CardManager → CrisisCardPanel (การ์ดโผล่)
+        public event Action<string, int> OnCrisisCardResolved;// v6.3 §25: CardManager → effects/UI (cardId, optionIndex ที่เลือก)
+        public event Action OnZoneBOpened;                    // v6.3 §22: ZoneBController → UI/bark (เปิด Zone B)
+        public event Action<float> OnZoneBTritiumProduced;    // v6.3 §22: ZoneBController → reactor/UI (tritium/วัน)
+        public event Action<RecordCardSO> OnRecordRecovered;  // v6.3 §24: DataRecovery → Records popup (กู้ record สำเร็จ)
+        public event Action<BarkSO> OnBarkFired;              // v6.3 BARKS: BarkManager → HUD (พูด 1 บรรทัด)
+        public event Action<float, float> OnReactorStateChanged; // v6.3 §26: ReactorController → UI (core, heat)
+        public event Action OnStormTriggered;                 // v6.3 §23: StormSystem → reactor/bark/UI (พายุมาแล้ว)
 
         // ===== Building Selection (UI → PlacementController) =====
         public event Action<BuildingData> OnBuildingSelectRequested; // UI กด → PlacementController เริ่มวาง
@@ -137,6 +146,12 @@ namespace NuclearReMind
         // ===== Research (ResearchLab_Spec — โครงการวิจัย 3 อันของห้องวิจัย · ResearchManager) =====
         public event Action<string> OnResearchRequested; // UI → ResearchManager (projectId: seeds/isotope/core_tower)
         public event Action<string> OnResearchCompleted; // ResearchManager → CoreTower(gate)/CrisisEffect(ผลผลิต)/UI
+
+        // ===== Research Queue v6.3 (GDD §19 — ResearchLab/KnowledgeDB · คนละระบบกับ 2 อันบน) =====
+        public event Action<string> OnLeadUnlocked;          // KnowledgeDB → UI/bark (leadId — ปลดครั้งเดียวตลอดเกม)
+        public event Action<string> OnResearchNoteStarted;   // ResearchLab → UI (noteId — จ่ายค่าวิจัยแล้ว)
+        public event Action<string> OnResearchNoteCompleted; // ResearchLab → NoteCardPopup (knowledgeBody + บท NPC — ห้ามผ่าน BarkManager)
+        public event Action OnResearchLabRepaired;           // ResearchLab → UI (ซาก → ใช้งานได้)
 
         // ===== Pre-placed (ตึกที่มากับแมพ เช่น CORE TOWER กลางเมือง — สร้างเสร็จทันที ไม่เข้าคิวก่อสร้าง) =====
         public event Action<Vector2Int> OnConstructionCompleteRequested;
@@ -251,6 +266,15 @@ namespace NuclearReMind
         public void RaiseKnowledgeChanged(float knowledge) => OnKnowledgeChanged?.Invoke(knowledge);
         public void RaiseQuizShown(QuizQuestionSO quiz) => OnQuizShown?.Invoke(quiz);
         public void RaiseQuizAnswered(string quizId, bool correct) => OnQuizAnswered?.Invoke(quizId, correct);
+        public void RaiseMasteryEarned(string quizId) => OnMasteryEarned?.Invoke(quizId);
+        public void RaiseCrisisCardShown(CrisisCardSO card) => OnCrisisCardShown?.Invoke(card);
+        public void RaiseCrisisCardResolved(string cardId, int optionIndex) => OnCrisisCardResolved?.Invoke(cardId, optionIndex);
+        public void RaiseZoneBOpened() => OnZoneBOpened?.Invoke();
+        public void RaiseZoneBTritiumProduced(float amount) => OnZoneBTritiumProduced?.Invoke(amount);
+        public void RaiseRecordRecovered(RecordCardSO record) => OnRecordRecovered?.Invoke(record);
+        public void RaiseBarkFired(BarkSO bark) => OnBarkFired?.Invoke(bark);
+        public void RaiseReactorStateChanged(float core, float heat) => OnReactorStateChanged?.Invoke(core, heat);
+        public void RaiseStormTriggered() => OnStormTriggered?.Invoke();
 
         // ===== Building Selection =====
         public void RaiseBuildingSelectRequested(BuildingData data) => OnBuildingSelectRequested?.Invoke(data);
@@ -293,6 +317,12 @@ namespace NuclearReMind
         // ===== Research =====
         public void RaiseResearchRequested(string projectId) => OnResearchRequested?.Invoke(projectId);
         public void RaiseResearchCompleted(string projectId) => OnResearchCompleted?.Invoke(projectId);
+
+        // ===== Research Queue v6.3 =====
+        public void RaiseLeadUnlocked(string leadId) => OnLeadUnlocked?.Invoke(leadId);
+        public void RaiseResearchNoteStarted(string noteId) => OnResearchNoteStarted?.Invoke(noteId);
+        public void RaiseResearchNoteCompleted(string noteId) => OnResearchNoteCompleted?.Invoke(noteId);
+        public void RaiseResearchLabRepaired() => OnResearchLabRepaired?.Invoke();
 
         // ===== Pre-placed =====
         public void RaiseConstructionCompleteRequested(Vector2Int cell) => OnConstructionCompleteRequested?.Invoke(cell);

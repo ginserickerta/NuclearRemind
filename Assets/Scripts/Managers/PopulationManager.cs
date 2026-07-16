@@ -117,7 +117,11 @@ namespace NuclearReMind
 
         private void Start()
         {
-            EventManager.Instance.RaiseMoraleChanged(Current.hope);
+            // v6.3: when WorkerManager is active, HopeLedger is the sole owner of Hope — do NOT
+            // broadcast the legacy hope field (100), or it races WorkerManager's ledger value (70)
+            // and the HUD can latch the wrong number. Population count broadcast still stands.
+            if (WorkerManager.Instance == null)
+                EventManager.Instance.RaiseMoraleChanged(Current.hope);
             EventManager.Instance.RaisePopulationChanged(Current);
         }
 
@@ -321,6 +325,10 @@ namespace NuclearReMind
         {
             if (day <= 1) return; // Day 1 tutorial ไม่คิด
 
+            // v6.3 (Sprint 1): WorkerManager active → Hope เป็นของ HopeLedger + คนเป็น per-worker state
+            // ระบบขวัญ/เติมประชากรเดิมทั้งก้อนต้องหลบ ไม่งั้นคำนวณ Hope ซ้อนสองระบบ
+            if (WorkerManager.Instance != null) return;
+
             var pop = Current;
 
             // 1) ขวัญกำลังใจ (ตาราง Hope deltas §18): อาหารขาด −10/วัน · ฟื้น +2/วัน เมื่อมี Medic และไม่ขาดของ
@@ -368,6 +376,14 @@ namespace NuclearReMind
 
         private void HandleMoraleDelta(float hopeDelta)
         {
+            // v6.3 (Sprint 1): Hope ห้ามเขียนตรง — ส่งเข้า HopeLedger แทน (กติกาข้อ 8)
+            // dilemma/decree เดิมที่ยิง OnMoraleDelta จะเข้าบัญชีเป็น card.* รอสรุปจบวัน
+            if (WorkerManager.Instance != null)
+            {
+                WorkerManager.Instance.Hope.Report("card.legacy", "ผลจากทางเลือก", hopeDelta, HopeCategory.Card);
+                return;
+            }
+
             var pop = Current;
             pop.hope += hopeDelta;
             ApplyAndBroadcast(pop);
@@ -392,7 +408,9 @@ namespace NuclearReMind
         {
             Current = save.population;
             _gameOverRaised = false;
-            EventManager.Instance.RaiseMoraleChanged(Current.hope);
+            // v6.3: same as Start — don't fight HopeLedger for the morale broadcast when active
+            if (WorkerManager.Instance == null)
+                EventManager.Instance.RaiseMoraleChanged(Current.hope);
             EventManager.Instance.RaisePopulationChanged(Current);
         }
 

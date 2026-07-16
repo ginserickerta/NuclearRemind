@@ -216,6 +216,8 @@ namespace NuclearReMind
         {
             if (!CanAfford(selectedBuilding) || IsUniqueAlreadyPlaced(selectedBuilding))
                 return false;
+            if (!IsResearchUnlocked(selectedBuilding)) // v6.3 §19: ต้องวิจัย note ก่อน (บั๊ก #11 gate)
+                return false;
 
             for (int dx = 0; dx < selectedBuilding.size.x; dx++)
             {
@@ -242,6 +244,16 @@ namespace NuclearReMind
             for (int dx = 0; dx < selectedBuilding.size.x; dx++)
                 if (IsInZoneB(origin.x + dx)) return true;
             return false;
+        }
+
+        /// <summary>
+        /// อาคารที่ต้องวิจัยก่อน (v6.3 §19) — ยังไม่วิจัย note = วางไม่ได้ (ghost แดง)
+        /// "" = อาคารพื้นฐาน ไม่ผูกวิจัย · ไม่มี KnowledgeDB (test/scene เก่า) → ไม่บล็อก
+        /// </summary>
+        private static bool IsResearchUnlocked(BuildingData data)
+        {
+            // single gate — same method the Sprint 2 acceptance test asserts on (KnowledgeDB.IsBuildingUnlocked)
+            return KnowledgeDB.Instance.IsBuildingUnlocked(data);
         }
 
         /// <summary>คลังปัจจุบันพอจ่ายค่าสร้างไหม (ตัวเลขเดียวกับที่ ResourceManager หักตอนวาง)</summary>
@@ -283,6 +295,11 @@ namespace NuclearReMind
             {
                 if (FootprintTouchesZoneB(currentCell))
                     EventManager.Instance.RaiseNotice("วางอาคารในเขตรังสีสูง (Zone B) ไม่ได้");
+                else if (!IsResearchUnlocked(selectedBuilding))
+                {
+                    var note = KnowledgeDB.Instance.GetNote(selectedBuilding.requiredNoteId);
+                    EventManager.Instance.RaiseNotice($"ต้องวิจัย \"{(note != null ? note.title : selectedBuilding.requiredNoteId)}\" ก่อนถึงจะสร้างได้");
+                }
                 Debug.Log("[PlacementController] ตำแหน่งนี้วางอาคารไม่ได้");
                 return;
             }

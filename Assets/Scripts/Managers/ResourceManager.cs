@@ -30,6 +30,7 @@ namespace NuclearReMind
         public float maxDeuterium = 9999f;
         public float maxTritium = 9999f;
         public float maxKnowledge = 100f;
+        public float maxLabMat = 9999f;      // v6.3: labMat (+5/วัน · คราฟต์ Rad Suit 30/ชุด)
 
         [Header("Tick (ใช้เฉพาะงานก่อสร้าง — production เป็น batch จบวัน)")]
         public float tickInterval = 5f;
@@ -101,6 +102,7 @@ namespace NuclearReMind
             {
                 energy = startEnergy, water = startWater, food = startFood, iron = startIron,
                 deuterium = 0f, tritium = 0f, knowledge = 0f,
+                labMat = GameConfigSO.Instance.startLabMat, // v6.3: เริ่ม 100 (CONFIG.md)
             };
         }
 
@@ -219,6 +221,9 @@ namespace NuclearReMind
                     break;
                 case ResourceType.Knowledge:
                     c.knowledge = Mathf.Clamp(c.knowledge + amount, 0f, maxKnowledge);
+                    break;
+                case ResourceType.LabMat:
+                    c.labMat = Mathf.Clamp(c.labMat + amount, 0f, maxLabMat);
                     break;
             }
 
@@ -361,6 +366,7 @@ namespace NuclearReMind
             c.deuterium = Mathf.Clamp(c.deuterium + delta.deuterium, 0f, maxDeuterium);
             c.tritium   = Mathf.Clamp(c.tritium   + delta.tritium,   0f, maxTritium);
             c.knowledge = Mathf.Clamp(c.knowledge + delta.knowledge, 0f, maxKnowledge);
+            c.labMat    = Mathf.Clamp(c.labMat    + delta.labMat,    0f, maxLabMat);
             Current = c;
 
             EventManager.Instance.RaiseResourceChanged(Current);
@@ -373,6 +379,7 @@ namespace NuclearReMind
             energy = a.energy + b.energy, water = a.water + b.water, food = a.food + b.food,
             iron = a.iron + b.iron, deuterium = a.deuterium + b.deuterium,
             tritium = a.tritium + b.tritium, knowledge = a.knowledge + b.knowledge,
+            labMat = a.labMat + b.labMat,
         };
 
         private static ResourceData Subtract(ResourceData a, ResourceData b) => new ResourceData
@@ -380,6 +387,7 @@ namespace NuclearReMind
             energy = a.energy - b.energy, water = a.water - b.water, food = a.food - b.food,
             iron = a.iron - b.iron, deuterium = a.deuterium - b.deuterium,
             tritium = a.tritium - b.tritium, knowledge = a.knowledge - b.knowledge,
+            labMat = a.labMat - b.labMat,
         };
 
         /// <summary>
@@ -391,6 +399,10 @@ namespace NuclearReMind
         /// <summary>เดลตาบริโภค Food/Water = −(2/คน × ประชากร) × dayFraction — ไม่แตะ Current ไม่ clamp</summary>
         private ResourceData ComputeConsumptionDelta(float dayFraction)
         {
+            // v6.3 (Sprint 1): WorkerManager active → per-worker feeding (หิวสุดกินก่อน 1/คน/วัน §17)
+            // + water pop×1 หักที่ WorkerManager.HandleDayEnded แล้ว — ห้ามหักซ้ำที่นี่
+            if (WorkerManager.Instance != null) return new ResourceData();
+
             int population = PopulationManager.Instance != null
                 ? PopulationManager.Instance.Current.total
                 : 0;

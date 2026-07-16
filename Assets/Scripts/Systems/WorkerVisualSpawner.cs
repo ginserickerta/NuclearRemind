@@ -84,9 +84,26 @@ namespace NuclearReMind
         private void HandlePopulationChanged(PopulationData pop) => RebuildLayout(snap: false);
         private void HandleSaveLoaded(SaveData save) => RebuildLayout(snap: true);
 
+        // v6.3: WorkerManager active → WorkerAvatarSpawner owns worker visuals (per-worker identity +
+        // health badges). Legacy class/count sprites must stand down or they double up.
+        private bool _retiredForWorkerManager;
+
+        /// <summary>Despawn all legacy worker sprites — called by WorkerAvatarSpawner on takeover.</summary>
+        public void ClearAllVisuals()
+        {
+            foreach (var kv in _byClass)
+                foreach (var w in kv.Value)
+                    if (w != null) DestroyVisual(w.gameObject);
+            _byClass.Clear();
+            _freeIdleSlots.Clear();
+            _idleSlotWatermark = 0;
+            _retiredForWorkerManager = true;
+        }
+
         // ปรับจำนวน sprite = จำนวนคนต่อคลาส แล้ว reconcile เฉพาะ cell ที่ต้องการคนเปลี่ยนจริง (ดู doc หัวไฟล์)
         private void RebuildLayout(bool snap)
         {
+            if (_retiredForWorkerManager || WorkerManager.Instance != null) return;
             if (GridManager.Instance == null || workerSprite == null) return;
 
             var assign = WorkerAssignmentManager.Instance;

@@ -45,8 +45,31 @@ namespace NuclearReMind
         public bool CoreUnlockDone { get; private set; }
 
         // สร้างตัวเองอัตโนมัติหลังโหลดซีน (precedent: CoreTowerPanelUI.AutoSpawn) — ไม่ต้อง wire ซีน
+        // ★ AfterSceneLoad ยิงครั้งเดียวที่ซีนแรกของแอป (build = MainMenu) — ตัวที่ spawn ในเมนูถูกทำลาย
+        //   ตอน LoadScene(Gamescene) → ต้อง spawn ซ้ำทุก sceneLoaded (ดูคำอธิบายเต็มที่ CoreTowerPanelUI)
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoSpawnHook()
+        {
+            AutoSpawn();
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
+            => AutoSpawn();
+
+        // ★ WebGL build: webGLExceptionSupport ตั้งจับเฉพาะ throw ตรง ๆ — exception จาก runtime เอง (เช่น
+        //   NullReferenceException) จะทำให้เงียบสนิท ไม่มี error ขึ้น console (ดูรายละเอียดที่ CoreTowerPanelUI)
         private static void AutoSpawn()
+        {
+            try { AutoSpawnUnsafe(); }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[ResearchManager] AutoSpawn ล้มเหลว — {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+            }
+        }
+
+        private static void AutoSpawnUnsafe()
         {
             if (FindFirstObjectByType<ResearchManager>() != null) return;
             new GameObject("ResearchManager (auto)").AddComponent<ResearchManager>();

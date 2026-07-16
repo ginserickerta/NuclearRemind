@@ -208,7 +208,7 @@ namespace NuclearReMind
             CaptureMetaProgress();
             Time.timeScale = 1f;
             var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-            UnityEngine.SceneManagement.SceneManager.LoadScene(scene.buildIndex);
+            SceneFader.FadeToScene(scene.buildIndex); // เฟดจอดำ → reload → เฟดสว่าง
         }
 
         public void SetState(GameState newState)

@@ -30,7 +30,7 @@ namespace NuclearReMind
         public void NewGame()
         {
             Time.timeScale = 1f;
-            SceneManager.LoadScene(gameSceneName);
+            SceneFader.FadeToScene(gameSceneName); // เฟดจอดำ → โหลด → เฟดสว่าง
         }
 
         /// <summary>ออกจากเกม (ใน editor = หยุด Play)</summary>

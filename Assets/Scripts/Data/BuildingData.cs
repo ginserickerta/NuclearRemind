@@ -72,6 +72,10 @@ namespace NuclearReMind
         // default 1 = วางได้ตั้งแต่วันแรก → asset เดิมทุกตัวไม่กระทบ
         public int unlockPhase = 1;
 
+        // v6.3 §19: ต้องวิจัย note นี้เสร็จก่อนถึงจะวางได้ (Extractor ← deuterium, Zone B ← tritium, ...)
+        // "" = ไม่ต้องวิจัย (อาคารผลิตพื้นฐาน) → asset เดิมทุกตัวไม่กระทบ · gate ที่ KnowledgeDB.IsBuildingUnlocked
+        public string requiredNoteId = "";
+
         [Header("Construction (V4 §5 — เวลาสร้าง)")]
         // เวลาสร้างเต็ม (tick · 5วิ/tick) ที่คนงาน 1 คน — คนมากขึ้น → เร็วขึ้นแบบผกผัน
         // (ConstructionController.ConstructionSpeed: ก้าวหน้า/tick = จำนวนคนงานที่ประจำ cell)

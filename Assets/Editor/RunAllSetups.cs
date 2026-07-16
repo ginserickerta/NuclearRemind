@@ -64,6 +64,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Update Building Hover Panel",    // ย้ายบาร์ก่อสร้างเข้าแผง hover (GDD §6 — หลัง HUD Canvas)
             "NuclearReMind/Setup Inventory (Items GDD §13)", // ItemSO 6 ชนิด + InventoryManager + แผงไอเทม (หลัง Hospital — pet_scanner ใช้ BuildingType.Hospital)
             "NuclearReMind/Setup Side Menu Buttons",         // แถบปุ่มด้านข้าง 4 ปุ่มสไปรต์ (ไอเทม/คีย์ลัด/Codex/บันทึก) — หลัง HUD+Codex+Inventory
+            "NuclearReMind/Setup Quest Panel (Day 2-30)",    // แผงภารกิจรายวัน (สไตล์ tutorial) — หลัง HUD Canvas · เนื้อหาแก้ที่ Assets/Resources/Quests/QuestSchedule.asset
 
             "NuclearReMind/Setup Zone Barrier (Fence + Gate)", // ปิดรั้วเส้นตั้ง (Zone B เป็นกรอบรอบนอกแล้ว — ไม่ใช้รั้ว)
             "NuclearReMind/Setup Ground Tiles (Team Grass)",   // Tile หญ้าจาก Map.PNG (fallback ถ้าไม่มีไทล์คัด)

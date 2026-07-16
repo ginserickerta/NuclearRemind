@@ -46,3 +46,7 @@ crashlytics-build.properties
 
 # WebGL upload zips
 *.zip
+
+# WebGL/standalone build output (build_webgl.ps1)
+/Builds/
+obj/

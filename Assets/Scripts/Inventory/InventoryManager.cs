@@ -323,6 +323,80 @@ namespace NuclearReMind
         }
 
         // ─────────────────────────────────────────
+        //  v6.3 View Layer (docs/INVENTORY.md — Sprint 1)
+        //  Inventory เป็น "หน้าต่างมอง" — ตัวเลขทรัพยากรอ่านจาก ResourceManager เสมอ
+        //  ห้ามเก็บ state ซ้ำ (กติกาข้อ 9) · ของคราฟต์เท่านั้นที่เก็บ stock ที่นี่ (_counts)
+        // ─────────────────────────────────────────
+
+        /// <summary>สร้าง slot ทั้งหมดตามแท็บ (INVENTORY.md ข้อ 2) — เรียกทุกครั้งที่ UI refresh ไม่ cache</summary>
+        public List<InventorySlotView> GetSlots(InventoryTab tab)
+        {
+            var slots = new List<InventorySlotView>();
+            var rm = ResourceManager.Instance;
+            var cfg = GameConfigSO.Instance;
+            if (rm == null) return slots;
+            var c = rm.Current;
+
+            var wm = WorkerManager.Instance;
+            float farmEff = wm != null ? wm.SumEfficiency(WorkerJobs.Farm) : 0f;
+            float powerEff = wm != null ? wm.SumEfficiency(WorkerJobs.Power) : 0f;
+            float waterEff = wm != null ? wm.SumEfficiency(WorkerJobs.Water) : 0f;
+            float mineEff = wm != null ? wm.SumEfficiency(WorkerJobs.Mine) : 0f;
+            int pop = wm != null ? wm.AliveCount : 0;
+
+            if (tab == InventoryTab.All || tab == InventoryTab.Resource)
+            {
+                slots.Add(Slot("power", "Power", "⚡", c.energy, cfg.powerCap,
+                    InventoryDeltaMath.PowerPerDay(cfg, powerEff)));
+                slots.Add(Slot("water", "Water", "💧", c.water, cfg.waterCap,
+                    InventoryDeltaMath.WaterPerDay(cfg, waterEff, pop)));
+                slots.Add(Slot("iron", "Iron", "⛏", c.iron, 999f,
+                    InventoryDeltaMath.IronPerDay(cfg, mineEff)));
+                slots.Add(Slot("labmat", "labMat", "🧪", c.labMat, 999f, cfg.labMatPerDay));
+            }
+
+            if (tab == InventoryTab.All || tab == InventoryTab.Fuel)
+            {
+                // Sprint 2/5 เติม: Extractor +6/วัน · Zone B 3.0/8.0 − Boost 9.0 (ต้องโชว์อัตราสุทธิแดงกระพริบ)
+                slots.Add(Slot("fuel", "Deuterium", "🔷", c.deuterium, 999f, 0f));
+                slots.Add(Slot("tritium", "Tritium", "⚛", c.tritium, 999f, 0f));
+            }
+
+            if (tab == InventoryTab.All || tab == InventoryTab.Food)
+            {
+                slots.Add(Slot("food", "Food", "🌾", c.food, 999f,
+                    InventoryDeltaMath.FoodPerDay(cfg, farmEff, pop)));
+            }
+
+            if (tab == InventoryTab.All || tab == InventoryTab.Medical)
+            {
+                // ของคราฟต์ (Rad Suit — stock จริงอยู่ _counts) · ยังไม่วิจัย → โชว์ล็อก 🔒 ห้ามซ่อน
+                if (allItems != null)
+                    foreach (var item in allItems)
+                    {
+                        if (item == null || item.category != ItemCategory.Medical) continue;
+                        var slot = Slot(item.id, item.displayName, "🥼", GetCount(item.id),
+                            item.maxStack > 0 ? item.maxStack : 999f, 0f);
+                        slot.isCraftable = true;
+                        slot.craftEnabled = CanCraft(item);
+                        if (!IsResearchUnlocked(item))
+                            slot.lockedHint = "ต้องวิจัย รังสีกับร่างกายคน"; // nuclear_medicine
+                        slots.Add(slot);
+                    }
+            }
+
+            // InventoryTab.Agriculture: สถานะอาคาร Co-60/Mutation Lab — Sprint 4 (ยังไม่มีอาคารในระบบใหม่)
+            return slots;
+        }
+
+        private static InventorySlotView Slot(string id, string name, string icon,
+            float count, float cap, float delta) => new InventorySlotView
+        {
+            itemId = id, displayName = name, icon = icon,
+            count = count, cap = cap, deltaPerDay = delta,
+        };
+
+        // ─────────────────────────────────────────
         //  Helpers
         // ─────────────────────────────────────────
 

@@ -201515,6 +201515,7 @@ MonoBehaviour:
   maxDeuterium: 9999
   maxTritium: 9999
   maxKnowledge: 100
+  maxLabMat: 9999
   tickInterval: 5
   consumeFoodPerPerson: 2
   consumeWaterPerPerson: 2

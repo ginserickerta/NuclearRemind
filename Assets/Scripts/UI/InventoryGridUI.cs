@@ -40,8 +40,31 @@ namespace NuclearReMind
         public KeyCode toggleKey = KeyCode.I;
 
         // ── auto-spawn (ไม่ต้องวาง component ในซีน) ──
+        // ★ AfterSceneLoad ยิงครั้งเดียวที่ซีนแรกของแอป (build = MainMenu) — ตัวที่ spawn ในเมนูถูกทำลาย
+        //   ตอน LoadScene(Gamescene) → ต้อง spawn ซ้ำทุก sceneLoaded (ดูคำอธิบายเต็มที่ CoreTowerPanelUI)
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoSpawnHook()
+        {
+            AutoSpawn();
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
+            => AutoSpawn();
+
+        // ★ WebGL build: webGLExceptionSupport ตั้งจับเฉพาะ throw ตรง ๆ — exception จาก runtime เอง (เช่น
+        //   NullReferenceException) จะทำให้เงียบสนิท ไม่มี error ขึ้น console (ดูรายละเอียดที่ CoreTowerPanelUI)
         private static void AutoSpawn()
+        {
+            try { AutoSpawnUnsafe(); }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[InventoryGridUI] AutoSpawn ล้มเหลว — {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+            }
+        }
+
+        private static void AutoSpawnUnsafe()
         {
             if (FindFirstObjectByType<InventoryGridUI>() != null) return;
             var canvas = FindBestCanvas();

@@ -27,5 +27,10 @@ namespace NuclearReMind
         public string statusLabel = "กู้คืนสำเร็จ";
         // ชื่อผู้บันทึกล้วน ๆ (mockup "- ผู้บันทึก: {recorderName}") · ว่าง → UI fallback ไป authorLabel
         public string recorderName;
+
+        // ── v6.3 Data Recovery (GDD §24 / STORY.md) — added, default "" keeps old assets valid ──
+        // ★ Lead pre-unlocked when this record is recovered (record_01→water_analysis, ...).
+        // "" = story-only record (no gameplay unlock).
+        public string unlocksLead;
     }
 }
