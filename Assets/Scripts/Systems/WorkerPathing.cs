@@ -28,25 +28,36 @@ namespace NuclearReMind
 
         /// <summary>
         /// ตำแหน่ง iso ใหม่หลังพยายามก้าวจาก from ไป to โดยไม่ทะลุอาคาร
-        /// isBlocked = ช่องนี้เดินผ่านไม่ได้ (isOccupied หรือนอกกริด) · null = ไม่เช็ค
+        /// isBlocked   = ช่องนี้เดินผ่านไม่ได้ (isOccupied หรือนอกกริด) · null = ไม่เช็ค
+        /// crossBlocked = การก้าว (fromCell → cell) นี้ถูก "ขอบ" กั้นไหม เช่นรั้วโซน B (ต้องอ้อมไปประตู) · null = ไม่เช็ค
+        ///   ต่างจาก isBlocked ตรงที่ขึ้นกับ "คู่ช่อง" ไม่ใช่สภาพของช่องปลายทางเดี่ยว ๆ
         /// </summary>
-        public static Vector2 Step(Vector2 from, Vector2 to, Func<Vector2Int, bool> isBlocked)
+        public static Vector2 Step(Vector2 from, Vector2 to, Func<Vector2Int, bool> isBlocked,
+            Func<Vector2Int, Vector2Int, bool> crossBlocked = null)
         {
-            if (isBlocked == null) return to;
-            if (!isBlocked(CellOf(to))) return to; // ทางโล่ง
+            if (isBlocked == null && crossBlocked == null) return to;
+
+            var fromCell = CellOf(from);
+
+            // ช่องปลายทางเดินไม่ได้ (มีของตั้ง/นอกกริด) หรือก้าวนี้ข้ามขอบที่ถูกกั้น (รั้วโซน)
+            bool Blocked(Vector2Int cell) =>
+                (isBlocked != null && isBlocked(cell)) ||
+                (crossBlocked != null && crossBlocked(fromCell, cell));
+
+            if (!Blocked(CellOf(to))) return to; // ทางโล่ง
 
             // ★ ยืนอยู่ในช่องต้องห้ามอยู่แล้ว (เช่นถูกดันเข้าไป/อาคารถูกสร้างทับ) → ปล่อยให้เดินออกได้
-            //   ถ้าบล็อกตรงนี้ด้วย คนงานจะติดในตึกตลอดกาล
-            if (isBlocked(CellOf(from))) return to;
+            //   เช็คเฉพาะ isBlocked (การข้ามขอบต้องมีคู่ from→to เสมอ ไม่ใช่สภาพช่องเดียว) กันคนงานติดในตึกตลอดกาล
+            if (isBlocked != null && isBlocked(fromCell)) return to;
 
-            // ชนแล้ว — ลองไถลทีละแกน (แกนที่ไม่ชนจะพาอ้อมมุมไปเอง)
+            // ชนแล้ว — ลองไถลทีละแกน (แกนที่ไม่ชนจะพาอ้อมมุม/ไถลตามรั้วไปเอง)
             var slideCol = new Vector2(to.x, from.y);
-            if (!isBlocked(CellOf(slideCol))) return slideCol;
+            if (!Blocked(CellOf(slideCol))) return slideCol;
 
             var slideRow = new Vector2(from.x, to.y);
-            if (!isBlocked(CellOf(slideRow))) return slideRow;
+            if (!Blocked(CellOf(slideRow))) return slideRow;
 
-            return from; // มุมอับ — ยืนนิ่งดีกว่าจมเข้าอาคาร
+            return from; // มุมอับ — ยืนนิ่งดีกว่าจมเข้าอาคาร/ทะลุรั้ว
         }
     }
 }

@@ -139,12 +139,29 @@ namespace NuclearReMind
             if (GameManager.Instance != null)
                 _currentPhase = GameManager.Instance.CurrentPhase;
 
-            // ล้างปุ่มเก่า (ถ้า setup รันซ้ำ)
-            foreach (Transform child in buttonContainer) Destroy(child.gameObject);
-
             _buttons      = new Button[buildings.Length];
             _buttonImages = new Image[buildings.Length];
             _lockLabels   = new Text[buildings.Length];
+
+            // ★ แผงถูก bake เป็น prefab เต็ม (มี Slot_1 อยู่แล้ว) → เติมข้อมูลลง slot เดิม ไม่สร้างใหม่
+            //   → แก้ทั้งแผงด้วยตาใน BuildingSelectionPanel.prefab ได้ · runtime ไม่ทำลาย layout/สี/ฟอนต์ที่จัดไว้
+            //   ไม่ได้ bake → path เดิม (สร้าง slot สดจาก template/โครง)
+            if (HasBakedSlots())
+                PopulateExistingSlots();
+            else
+                GenerateSlots();
+
+            RefreshButtonColors(); // สถานะล็อกเฟสเริ่มต้น (Day 1 = เฟส 1)
+        }
+
+        // แผงถูก bake ไว้แล้วหรือยัง (มีช่องแรกจริงในคอนเทนเนอร์) — ตัดสินตอน Start ก่อน generate
+        private bool HasBakedSlots() =>
+            buttonContainer != null && buttonContainer.Find("Slot_1") != null;
+
+        // path เดิม: ล้างแล้วสร้าง slot สดจาก slotTemplate/โครงตามฟิลด์ Inspector (ไม่มี prefab แผงเต็ม)
+        private void GenerateSlots()
+        {
+            foreach (Transform child in buttonContainer) Destroy(child.gameObject);
 
             for (int i = 0; i < buildings.Length; i++)
             {
@@ -157,12 +174,79 @@ namespace NuclearReMind
             }
 
             BuildDemolishButton();
-            RefreshButtonColors(); // สถานะล็อกเฟสเริ่มต้น (Day 1 = เฟส 1)
+        }
+
+        // เชื่อม slot ที่ bake ไว้ใน prefab (Slot_1..Slot_N + Slot_Demolish)
+        // ★ ผูกเฉพาะสิ่งที่จำเป็น (ปุ่มกด/ลาก/ref ป้ายล็อก) — "ไม่เขียนทับ" text/ไอคอนที่ผู้ใช้แก้มือใน prefab
+        //   (ชื่อ/ราคา/คีย์เป็นค่าคงที่ต่ออาคาร bake ลง prefab ไปแล้ว · อยากซิงก์ค่าใหม่จากข้อมูล = bake ใหม่)
+        private void PopulateExistingSlots()
+        {
+            for (int i = 0; i < buildings.Length; i++)
+            {
+                var data = buildings[i];
+                if (data == null) continue;
+
+                var tf = buttonContainer.Find($"Slot_{i + 1}");
+                if (tf == null)
+                {
+                    Debug.LogWarning($"[BuildingSelectionUI] prefab ไม่มี Slot_{i + 1} — bake ใหม่ถ้าจำนวนอาคารเปลี่ยน");
+                    continue;
+                }
+                tf.gameObject.SetActive(true);
+                WireExistingSlot(tf.gameObject, i, data);
+                _buttons[i]      = tf.GetComponent<Button>();
+                _buttonImages[i] = tf.GetComponent<Image>();
+            }
+
+            // ซ่อนช่องส่วนเกินที่ bake ไว้ (กรณีรายการอาคารสั้นกว่าที่ bake) — ไม่หลุด layout
+            for (int extra = buildings.Length + 1; ; extra++)
+            {
+                var tf = buttonContainer.Find($"Slot_{extra}");
+                if (tf == null) break;
+                tf.gameObject.SetActive(false);
+            }
+
+            var demo = buttonContainer.Find("Slot_Demolish");
+            if (demo != null) { demo.gameObject.SetActive(true); WireDemolish(demo.gameObject); }
+            else BuildDemolishButton();
+        }
+
+        /// <summary>
+        /// [Editor เท่านั้น] สร้าง+เติมข้อมูลทุก slot ลง buttonContainer (อาคาร Slot_1..N + Slot_Demolish)
+        /// เพื่อ bake เป็น prefab แผงเต็ม (BuildingSelectionPanelBaker) — เห็นไอคอน/ชื่อ/ราคาจริงตอนแก้ prefab
+        /// </summary>
+        public void BakePopulateAllSlots()
+        {
+            if (buttonContainer == null || buildings == null) return;
+
+            var kids = new System.Collections.Generic.List<Transform>();
+            foreach (Transform c in buttonContainer) kids.Add(c);
+            foreach (var c in kids)
+            {
+                if (Application.isPlaying) Destroy(c.gameObject);
+                else DestroyImmediate(c.gameObject);
+            }
+
+            _buttons      = new Button[buildings.Length];
+            _buttonImages = new Image[buildings.Length];
+            _lockLabels   = new Text[buildings.Length];
+
+            for (int i = 0; i < buildings.Length; i++)
+            {
+                if (buildings[i] == null) continue;
+                var slot = BuildSlotStructure(buttonContainer, $"Slot_{i + 1}");
+                slot.SetActive(true);
+                PopulateSlot(slot, i, buildings[i]);
+            }
+
+            var demo = BuildDemolishStructure(buttonContainer, "Slot_Demolish");
+            demo.SetActive(true);
+            WireDemolish(demo);
         }
 
         private static Font LoadKanitFont()
         {
-            var f = Resources.Load<Font>("Fonts/Kanit-Regular");
+            var f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
             return f != null ? f : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         }
 
@@ -331,6 +415,31 @@ namespace NuclearReMind
             lockLbl.gameObject.SetActive(false);
 
             return slot;
+        }
+
+        /// <summary>
+        /// โหมด prefab แผงเต็ม: ผูกเฉพาะสิ่งที่ serialize ไม่ได้/ต้องมีตอนรัน — ปุ่มกด, ลากวาง, ref ป้ายล็อก
+        /// "ไม่แตะ" text/ไอคอน (ชื่อ/ราคา/คีย์/รูป) ที่ผู้ใช้แก้มือใน Prefab Mode → คงค่าที่จัดไว้ทุกครั้งที่ Play
+        /// </summary>
+        private void WireExistingSlot(GameObject slot, int index, BuildingData data)
+        {
+            // ref ป้ายล็อก (RefreshButtonColors คุมโชว์/ซ่อน) — ไม่แก้ text ที่ bake ไว้
+            var lockTxt = FindDeep(slot.transform, "LockLabel")?.GetComponent<Text>();
+            if (lockTxt != null) { _lockLabels[index] = lockTxt; lockTxt.gameObject.SetActive(false); }
+
+            // click: lambda ไม่ถูก serialize ใน prefab → ต้องผูกใหม่ทุกครั้งที่รัน
+            var btn = slot.GetComponent<Button>();
+            if (btn != null)
+            {
+                var captured = data;
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(() => EventManager.Instance.RaiseBuildingSelectRequested(captured));
+            }
+
+            // drag & drop: ผูกข้อมูลอาคารให้ตัวลาก (เผื่อ prefab เก่าไม่มี component)
+            var drag = slot.GetComponent<HotbarSlotDrag>();
+            if (drag == null) drag = slot.AddComponent<HotbarSlotDrag>();
+            drag.data = data;
         }
 
         /// <summary>ใส่ข้อมูล/ผูกปุ่มลงช่อง (ทั้ง clone จาก template และโครงสร้างสด) — ไม่แตะ font/สี/layout (ให้ template คุมเอง)</summary>

@@ -53,6 +53,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Story UI",   // StoryCanvas แยกเช่นกัน — การ์ดเนื้อเรื่อง + Records + อนุสรณ์
             "NuclearReMind/Setup Story Content", // beats/records/info cards/อนุสรณ์ (ต้องหลัง Story UI + Crisis + Quiz)
             "NuclearReMind/Setup Record Card UI", // การ์ดบันทึกธีมไม้ 2 ปุ่ม (canvas แยก · หลัง Story UI ที่ลบ StoryCanvas)
+            "NuclearReMind/Setup Record Notification (HUD Icon)", // ไอคอนบันทึกมุมขวาล่าง + badge (ระบบใหม่ · ต้องหลัง HUD Canvas + Story UI)
             "NuclearReMind/Setup Hospital (GDD §6)",       // โรงพยาบาล — asset + hotbar (ต้องหลัง Building Balance + Day 11)
             "NuclearReMind/Apply Building Art (Team Pixel Art)", // art จริงแทน placeholder (ต้องหลัง Hospital — asset เพิ่งถูกสร้าง)
             "NuclearReMind/Apply Building Level Art (L1-L3)",    // art แยกระดับอัปเกรด L1/L2/L3 (ทับ sprite เดี่ยวด้วย L1 — หลัง Building Art)

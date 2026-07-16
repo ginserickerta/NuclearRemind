@@ -27,19 +27,27 @@ namespace NuclearReMind
         {
             if (helpPanel == null) return;
             bool show = !helpPanel.activeSelf;
-            if (show) UIPopIn.Ensure(helpPanel);
-            helpPanel.SetActive(show);
-            if (show) GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)
-            else GameUIStack.Pop(this);
+            if (show)
+            {
+                UIPopIn.Ensure(helpPanel);
+                helpPanel.SetActive(true);
+                GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)
+            }
+            else
+            {
+                GameUIStack.Pop(this);
+                UIPopIn.PlayClose(helpPanel); // หุบออก (Windows 11) แล้วปิดเอง
+            }
         }
 
         // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
         bool GameUIStack.IPanel.ClosableByEscape => true;
         void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(helpPanel);
+        GameObject GameUIStack.IPanel.PanelRoot => helpPanel;
         void GameUIStack.IPanel.CloseFromStack()
         {
-            if (helpPanel != null) helpPanel.SetActive(false);
             GameUIStack.Pop(this);
+            UIPopIn.PlayClose(helpPanel); // หุบออกแล้วปิดเอง
         }
     }
 }

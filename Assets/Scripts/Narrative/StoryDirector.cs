@@ -41,6 +41,7 @@ namespace NuclearReMind
         private readonly HashSet<string> _fired = new HashSet<string>();
         private readonly List<string> _firedOrder = new List<string>();      // ตามลำดับที่ยิง — ลงเซฟ
         private readonly List<RecordCardSO> _archived = new List<RecordCardSO>();
+        private readonly List<int> _archivedDays = new List<int>(); // วันเกมที่กู้คืนแต่ละใบ (คู่ index กับ _archived · โชว์ในแผง Records)
         private readonly Queue<StoryBeatSO> _pendingBeats = new Queue<StoryBeatSO>();
         private readonly Queue<string> _pendingLogLines = new Queue<string>(); // logLines กระจายวันละบรรทัด (ลางพายุ)
 
@@ -73,6 +74,9 @@ namespace NuclearReMind
 
         /// <summary>การ์ดบันทึกที่กู้คืนแล้ว ตามลำดับ (ให้ RecordsPanel ย้อนอ่าน)</summary>
         public IReadOnlyList<RecordCardSO> ArchivedRecords => _archived;
+
+        /// <summary>วันเกมที่กู้คืนบันทึกแต่ละใบ (คู่ index กับ ArchivedRecords · ให้ RecordsPanel/SaveManager)</summary>
+        public IReadOnlyList<int> ArchivedRecordDays => _archivedDays;
 
         /// <summary>วิกฤตซ้อนที่รอวันยิง (read-only ให้ SaveManager — คู่ index กับ DeferredCrisisFireDays)</summary>
         public IReadOnlyList<string> DeferredCrisisKeys => _deferredKeys;
@@ -270,6 +274,7 @@ namespace NuclearReMind
         {
             _fired.Add(beat.beatId);
             _firedOrder.Add(beat.beatId);
+            if (beat.unlocksZoneB) EventManager.Instance.RaiseZoneBUnlocked(); // เปิดประตูโซน B ทันที (ไม่รอคิวเล่นการ์ด)
             _pendingBeats.Enqueue(beat);
             TryPlayNext();
         }
@@ -281,8 +286,7 @@ namespace NuclearReMind
             _activeBeat = _pendingBeats.Dequeue();
             _crisisChoice = -1;
 
-            if (!string.IsNullOrEmpty(_activeBeat.npcLinePre))
-                Notice(_activeBeat.npcLinePre);
+            // npcLinePre ย้ายไปแสดงในกล่องบทสนทนา (รวมกับ dialoguePre ที่ Step.DialoguePre) — ไม่ยัด Alert แล้ว
 
             // logLines: บรรทัดแรกทันที · logLinesDaily = ที่เหลือปล่อยวันละบรรทัด (ลางพายุ "ไม่รวบ")
             //           ไม่ daily = โชว์ทุกบรรทัดทันที (เช่น ปฏิกิริยาโรงไฟฟ้าแรก / แจ้งพายุ)
@@ -308,12 +312,11 @@ namespace NuclearReMind
                 case Step.Record:
                     if (_activeBeat.record != null)
                     {
-                        var rec = _activeBeat.record;
-                        // mockup v2: ไม่ archive อัตโนมัติ — ผู้เล่นเลือกปุ่ม "เก็บเข้าแผง Record" บนการ์ด (RecordCardUI)
-                        ShowCard(() => EventManager.Instance.RaiseStoryRecordShown(rec),
-                                 $"📼 กู้คืนบันทึก: {rec.archiveTitle}");
-                        // ไม่มี Card UI (toast/เทสต์) → ไม่มีปุ่มให้กด → archive อัตโนมัติกันบันทึกหาย (พฤติกรรมเดิมในโหมด degrade)
-                        if (!CardUIAvailable) ArchiveRecord(rec);
+                        // ระบบใหม่: บันทึกไม่เด้งกลางจอ/ไม่หยุดเกม — เก็บอัตโนมัติทุกใบ + ยิง OnRecordArchived
+                        //   → RecordNotificationHUD เด้ง badge ที่ไอคอนขวาล่าง (ผู้เล่นกดเปิดแผง Records อ่านทีหลัง)
+                        //   แล้วเดินเรื่องต่อทันที ไม่รอกดปิดการ์ด (RecordCardUI ถูกปลดออกจาก flow นี้)
+                        ArchiveRecord(_activeBeat.record);
+                        Advance(Step.Info);
                         return;
                     }
                     Advance(Step.Info);
@@ -330,13 +333,17 @@ namespace NuclearReMind
                     return;
 
                 case Step.DialoguePre:
-                    if (_activeBeat.dialoguePre != null && _activeBeat.dialoguePre.Length > 0)
+                {
+                    // รวม npcLinePre (บทพูด NPC นำ) เข้าหน้ากล่องบทสนทนา แทนการยัด Alert
+                    var pre = BuildPreLines(_activeBeat);
+                    if (pre.Length > 0)
                     {
-                        ShowDialogue(_activeBeat.dialoguePre);
+                        ShowDialogue(pre);
                         return;
                     }
                     Advance(Step.Crisis);
                     return;
+                }
 
                 case Step.Crisis:
                     if (_activeBeat.crisis != null)
@@ -360,17 +367,19 @@ namespace NuclearReMind
                     return;
 
                 case Step.DialoguePost:
-                    if (_activeBeat.dialoguePost != null && _activeBeat.dialoguePost.Length > 0)
+                {
+                    // รวม innerVoiceAfter (เสียงในใจ Auren ปิดท้าย) เข้าท้ายกล่องบทสนทนา แทนการยัด Alert
+                    var post = BuildPostLines(_activeBeat);
+                    if (post.Length > 0)
                     {
-                        ShowDialogue(_activeBeat.dialoguePost);
+                        ShowDialogue(post);
                         return;
                     }
                     Advance(Step.Quiz);
                     return;
+                }
 
                 case Step.Quiz:
-                    if (!string.IsNullOrEmpty(_activeBeat.innerVoiceAfter))
-                        Notice($"▸ ความคิด: {_activeBeat.innerVoiceAfter}");
 
                     if (QuizManager.Instance != null)
                     {
@@ -448,6 +457,7 @@ namespace NuclearReMind
         {
             if (record == null || _archived.Contains(record)) return;
             _archived.Add(record);
+            _archivedDays.Add(_currentDay); // วันที่บันทึกนี้เข้ามา (คู่ index กับ _archived)
             EventManager.Instance.RaiseRecordArchived(record);
         }
 
@@ -455,6 +465,48 @@ namespace NuclearReMind
         {
             Debug.Log($"[Story] {message}");
             EventManager.Instance?.RaiseNotice(message);
+        }
+
+        // ═════════════════ เนื้อเรื่อง → กล่องบทสนทนา (ย้ายออกจาก Alert) ═════════════════
+
+        // npcLinePre นำหน้า dialoguePre · เสียงในใจ innerVoiceAfter ปิดท้าย dialoguePost — โชว์ในกล่องบทสนทนา
+        private static DialogueLine[] BuildPreLines(StoryBeatSO beat)
+        {
+            var list = new List<DialogueLine>();
+            if (!string.IsNullOrEmpty(beat.npcLinePre)) list.Add(ParseLine(beat.npcLinePre));
+            if (beat.dialoguePre != null) list.AddRange(beat.dialoguePre);
+            return list.ToArray();
+        }
+
+        private static DialogueLine[] BuildPostLines(StoryBeatSO beat)
+        {
+            var list = new List<DialogueLine>();
+            if (beat.dialoguePost != null) list.AddRange(beat.dialoguePost);
+            if (!string.IsNullOrEmpty(beat.innerVoiceAfter))
+                list.Add(new DialogueLine { speaker = Speaker.InnerVoice, textTH = beat.innerVoiceAfter });
+            return list.ToArray();
+        }
+
+        // แปลง "Kova: ข้อความ" → DialogueLine (แยกผู้พูดจากคำนำหน้า) · ไม่มีคำนำหน้าที่รู้จัก → System
+        private static DialogueLine ParseLine(string raw)
+        {
+            Speaker sp = Speaker.System;
+            string text = raw;
+            int idx = raw.IndexOf(':');
+            if (idx > 0)
+            {
+                string name = raw.Substring(0, idx).Trim();
+                foreach (Speaker s in System.Enum.GetValues(typeof(Speaker)))
+                {
+                    if (SpeakerMeta.DisplayName(s) == name || s.ToString() == name)
+                    {
+                        sp = s;
+                        text = raw.Substring(idx + 1).Trim();
+                        break;
+                    }
+                }
+            }
+            return new DialogueLine { speaker = sp, textTH = text };
         }
 
         // ═════════════════ Save / Load ═════════════════
@@ -475,13 +527,26 @@ namespace NuclearReMind
                     if (!string.IsNullOrEmpty(id) && _fired.Add(id))
                         _firedOrder.Add(id);
 
+            // สถานะประตูโซน B ไม่ได้เซฟตรง — อนุมานจาก _fired: ถ้ามี beat ปลดล็อกยิงไปแล้ว → เปิดประตูอีกครั้ง (ไม่เล่นการ์ดซ้ำ)
+            if (beats != null)
+                foreach (var b in beats)
+                    if (b != null && b.unlocksZoneB && _fired.Contains(b.beatId))
+                    {
+                        EventManager.Instance.RaiseZoneBUnlocked();
+                        break;
+                    }
+
             _archived.Clear();
+            _archivedDays.Clear();
             if (save.archivedRecords != null)
-                foreach (var id in save.archivedRecords)
+                for (int i = 0; i < save.archivedRecords.Count; i++)
                 {
-                    var record = FindRecordById(id);
-                    if (record != null && !_archived.Contains(record))
-                        _archived.Add(record);
+                    var record = FindRecordById(save.archivedRecords[i]);
+                    if (record == null || _archived.Contains(record)) continue;
+                    _archived.Add(record);
+                    int day = (save.archivedRecordDays != null && i < save.archivedRecordDays.Count)
+                        ? save.archivedRecordDays[i] : 0; // เซฟเก่าไม่มี field → 0 (ไม่โชว์วัน)
+                    _archivedDays.Add(day);
                 }
 
             // วิกฤตซ้อนที่ค้างรอวันยิง — list คู่ index (เซฟเก่าไม่มี field → default ว่าง ปลอดภัย)

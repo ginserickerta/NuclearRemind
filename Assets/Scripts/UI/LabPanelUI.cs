@@ -75,23 +75,31 @@ namespace NuclearReMind
 
         private void Awake() => _font = LoadFont();
 
-        private void OnEnable()
+        private bool _subscribed;
+
+        // auto-spawn AfterSceneLoad → OnEnable อาจรันตอน EventManager.Instance ยัง null (build) → guard กัน NullRef ที่ทำให้ AutoSpawn ล้ม
+        private void OnEnable() => TrySubscribe();
+
+        private void TrySubscribe()
         {
+            if (_subscribed || EventManager.Instance == null) return;
             EventManager.Instance.OnResourceChanged += HandleAnyChange;
             EventManager.Instance.OnPopulationChanged += HandlePopChange;
             EventManager.Instance.OnWorkerAssignmentChanged += HandleAssignChange;
             EventManager.Instance.OnResearchCompleted += HandleResearchDone;
             EventManager.Instance.OnBuildingUpgraded += HandleUpgraded;
+            _subscribed = true;
         }
 
         private void OnDisable()
         {
-            if (EventManager.Instance == null) return;
+            if (!_subscribed || EventManager.Instance == null) { _subscribed = false; return; }
             EventManager.Instance.OnResourceChanged -= HandleAnyChange;
             EventManager.Instance.OnPopulationChanged -= HandlePopChange;
             EventManager.Instance.OnWorkerAssignmentChanged -= HandleAssignChange;
             EventManager.Instance.OnResearchCompleted -= HandleResearchDone;
             EventManager.Instance.OnBuildingUpgraded -= HandleUpgraded;
+            _subscribed = false;
         }
 
         private void HandleAnyChange(ResourceData _)              { if (_shown) Refresh(); }
@@ -102,6 +110,7 @@ namespace NuclearReMind
 
         private void Start()
         {
+            TrySubscribe(); // OnEnable อาจข้าม subscribe ถ้า EventManager ยังไม่พร้อม → ผูกที่นี่ (หลัง Awake ทุกตัว)
             BuildPanel();
             Hide();
         }
@@ -138,21 +147,21 @@ namespace NuclearReMind
             GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)
             TimeManager.Instance?.Pause(PauseReason.LabPopup); // §15: เวลาหยุดตอนเปิด popup
             Refresh();
-            var pop = _root != null ? _root.GetComponent<UIClickPop>() : null;
-            if (pop != null) pop.PlayFrom(0.9f);
+            // เปิดด้วย UIPopIn (Windows 11 scale+fade) จาก UIPopIn.Ensure ด้านบนแล้ว — ไม่ใช้ UIClickPop ซ้อน
         }
 
         private void Hide()
         {
             _shown = false;
-            if (_backdrop != null) _backdrop.SetActive(false);
             GameUIStack.Pop(this);
             TimeManager.Instance?.Resume(PauseReason.LabPopup);
+            UIPopIn.PlayClose(_backdrop); // หุบออก (Windows 11) แล้วปิดเอง
         }
 
         // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
         bool GameUIStack.IPanel.ClosableByEscape => true;
         void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(_backdrop);
+        GameObject GameUIStack.IPanel.PanelRoot => _backdrop;
         void GameUIStack.IPanel.CloseFromStack() => Hide();
 
         // ═══════════════ POPULATE ═══════════════
@@ -434,7 +443,7 @@ namespace NuclearReMind
         }
         private static Font LoadFont()
         {
-            var f = Resources.Load<Font>("Fonts/Kanit-Regular");
+            var f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
             if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             return f;
         }

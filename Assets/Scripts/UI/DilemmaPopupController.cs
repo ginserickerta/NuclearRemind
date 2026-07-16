@@ -160,6 +160,7 @@ namespace NuclearReMind
         // ── GameUIStack (แผงบังคับ: Esc เงียบ ปิดเองไม่ได้ · บล็อก Pause · กติกากลางใน PauseMenuController) ──
         bool GameUIStack.IPanel.ClosableByEscape => false;
         void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(popupPanel);
+        GameObject GameUIStack.IPanel.PanelRoot => popupPanel;
         void GameUIStack.IPanel.CloseFromStack() { } // ไม่ถูกเรียก (ClosableByEscape=false — ต้องเลือก+ยืนยัน)
 
         // เปิด/ปิดเรืองขอบปุ่มตัวเลือก index (setup ใส่ Outline component ไว้แล้ว ปิดอยู่)

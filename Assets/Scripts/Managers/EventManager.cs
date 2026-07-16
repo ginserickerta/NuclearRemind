@@ -51,6 +51,7 @@ namespace NuclearReMind
         // ===== Radiation (Story Guide §4 — วิกฤตโรครังสี "Zone A") =====
         public event Action<float> OnRadiationExposureChanged;  // RadiationManager → StoryDirector/HUD (exposure สะสม)
         public event Action<float> OnRadiationExposureDelta;    // OreDepositManager (ขุดโซน B) → RadiationManager (+exposure · ไม่ gate เตา)
+        public event Action OnZoneBUnlocked;                    // StoryDirector (beat.unlocksZoneB) → ZoneBarrierRenderer/WAM (เปิดประตูโซน B ให้เดินเข้า/จัดคนได้)
 
         // ===== CORE TOWER =====
         public event Action<TowerData> OnTowerProgressChanged;
@@ -191,6 +192,7 @@ namespace NuclearReMind
         public void RaiseMoraleChanged(float hope) => OnMoraleChanged?.Invoke(hope);
         public void RaisePopulationChanged(PopulationData data) => OnPopulationChanged?.Invoke(data);
         public void RaiseWorkerStrike() => OnWorkerStrike?.Invoke();
+        public void RaiseZoneBUnlocked() => OnZoneBUnlocked?.Invoke();
         public void RaiseMoraleDelta(float hopeDelta) => OnMoraleDelta?.Invoke(hopeDelta);
         public void RaiseTrainEngineerRequested() => OnTrainEngineerRequested?.Invoke();
         public void RaiseTrainMedicRequested() => OnTrainMedicRequested?.Invoke();

@@ -50,7 +50,42 @@ namespace NuclearReMind
         [Tooltip("วาดเส้นแบ่งโซนใน Scene view (เหลือง = รั้ว · เขียว = ประตู)")]
         public bool showBoundaryGizmo = true;
 
+        [Header("กันคนงานเดินทะลุ / ล็อกโซน B")]
+        [Tooltip("รั้วกั้น 'การเดิน' ของคนงานจริง (ไม่ใช่แค่รูป) — ข้ามเส้นรั้วได้เฉพาะช่องประตูเท่านั้น")]
+        public bool blockWorkers = true;
+        [Tooltip("เริ่มเกมโดยประตูปิด (เดินเข้าโซน B ไม่ได้) จนกว่า Story Beat ที่ตั้ง unlocksZoneB จะยิง")]
+        public bool startLocked = true;
+
         private readonly List<GameObject> _spawned = new List<GameObject>();
+
+        // ── สถานะรั้วสำหรับกันเดิน (อ่านโดย WorkerView/WorkerAssignmentManager ผ่าน static — ไม่ Find ทุกเฟรม) ──
+        //   ★ static เพราะ WorkerView มีหลายสิบตัว เรียกทุกเฟรม · reset ผ่าน SubsystemRegistration กัน fast-play-mode ค้าง
+        private static bool s_blocks;
+        private static int s_barrierCol;
+        private static bool s_gateOpen;
+        private static int s_gateStart = 1, s_gateEnd; // ค่าเริ่ม start>end = ไม่มีประตู
+
+        private bool _unlocked; // ประตูเปิดแล้ว (จาก startLocked=false หรือ OnZoneBUnlocked)
+
+        /// <summary>โซน B เปิดให้เดินเข้าแล้วหรือยัง (ประตูเปิด)</summary>
+        public static bool ZoneBUnlocked => s_gateOpen;
+
+        /// <summary>คอลัมน์นี้อยู่ในโซน B ไหม (ฝั่ง NE ของรั้ว · เฉพาะเมื่อรั้วกันเดินเปิดอยู่)</summary>
+        public static bool IsZoneBColumn(int col) => s_blocks && col >= s_barrierCol;
+
+        /// <summary>ก้าวจาก from → to ถูกรั้วโซนกั้นไหม — ส่งเป็น predicate ให้ WorkerPathing.Step</summary>
+        public static bool CrossBlocked(Vector2Int from, Vector2Int to)
+            => s_blocks && ZoneBarrierMath.CrossingBlocked(from, to, s_barrierCol, s_gateOpen, s_gateStart, s_gateEnd);
+
+        /// <summary>waypoint iso ที่คนงานควรเล็งก่อนเพื่อลอดประตู (ถ้าปลายทางอยู่คนละฝั่งรั้ว) · ไม่มีรั้ว = คืน to</summary>
+        public static Vector2 RouteThroughGate(Vector2 from, Vector2 to)
+            => s_blocks ? ZoneBarrierMath.RouteThroughGate(from, to, s_barrierCol, s_gateOpen, s_gateStart, s_gateEnd) : to;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            s_blocks = false; s_barrierCol = 0; s_gateOpen = false; s_gateStart = 1; s_gateEnd = 0;
+        }
 
         // sprite สร้างครั้งเดียวแล้ว cache (idiom เดียวกับ BuildingVisualSpawner.GetShadowSprite)
         private static Sprite _postSprite;
@@ -58,13 +93,51 @@ namespace NuclearReMind
         private static Sprite _railSprite;
         private static Sprite _signSprite;
 
-        private void Start() { if (active) Rebuild(); }
+        private void OnEnable()
+        {
+            if (EventManager.Instance != null)
+                EventManager.Instance.OnZoneBUnlocked += HandleZoneBUnlocked;
+        }
+
+        private void Start()
+        {
+            _unlocked |= !startLocked; // เปิดเลยถ้าไม่ล็อก · ถ้า event เปิดไปก่อน Start (โหลดเซฟ) ก็คงไว้
+            if (active) Rebuild();
+            PublishState();
+        }
+
+        // Story Beat ที่ตั้ง unlocksZoneB ยิง → เปิดประตูถาวร (เดิน/จัดคนเข้าโซน B ได้)
+        private void HandleZoneBUnlocked()
+        {
+            if (_unlocked) return;
+            _unlocked = true;
+            if (active) Rebuild();  // เผื่ออนาคตเปลี่ยน visual ตอนเปิด (ตอนนี้รูปเท่าเดิม)
+            PublishState();
+            EventManager.Instance?.RaiseNotice("ประตูเขต Zone B เปิดแล้ว — ส่งคนงานเข้าไปได้");
+        }
+
+        // เผยแพร่สถานะรั้วปัจจุบันสู่ static ให้ระบบเดิน/จัดคนอ่าน (เรียกทุกครั้งที่ค่าเปลี่ยน)
+        private void PublishState()
+        {
+            var grid = GridManager.Instance != null
+                ? GridManager.Instance
+                : Object.FindFirstObjectByType<GridManager>();
+            int rows = grid != null ? grid.rows : 0;
+            ComputeGate(rows, out int gStart, out int gEnd);
+
+            s_blocks = active && blockWorkers;
+            s_barrierCol = grid != null ? Mathf.Clamp(barrierColumn, 1, grid.columns - 1) : barrierColumn;
+            s_gateOpen = _unlocked;
+            s_gateStart = gStart;
+            s_gateEnd = gEnd;
+        }
 
         /// <summary>ลบรั้วเดิมแล้วสร้างใหม่ตามค่าปัจจุบัน — เรียกซ้ำได้ (Inspector/Editor tool)</summary>
         [ContextMenu("Rebuild Barrier")]
         public void Rebuild()
         {
             Clear();
+            PublishState(); // ให้ static ตรงกับค่าปัจจุบันเสมอ (รวมตอนกด Rebuild จาก Inspector)
 
             var grid = GridManager.Instance != null
                 ? GridManager.Instance
@@ -127,7 +200,12 @@ namespace NuclearReMind
             sr.sortingOrder = SortingOrderAt(col, r);
         }
 
-        private void OnDisable() => Clear();
+        private void OnDisable()
+        {
+            if (EventManager.Instance != null)
+                EventManager.Instance.OnZoneBUnlocked -= HandleZoneBUnlocked;
+            Clear();
+        }
 
         private void Clear()
         {
@@ -336,6 +414,43 @@ namespace NuclearReMind
             int center = centerRow < 0 ? rows / 2 : centerRow;
             start = Mathf.Clamp(center - width / 2, 0, rows - width);
             end = start + width - 1;
+        }
+
+        /// <summary>
+        /// ก้าวจากช่อง from → to ถูกรั้วโซนกั้นไหม (true = ก้าวไม่ได้)
+        /// รั้วอยู่บนขอบคอลัมน์ barrierColumn (ระหว่าง col-1 กับ col) — กั้นเฉพาะการ "ข้ามเส้น" นั้น
+        ///   gateOpen=false → โซน B ล็อก: กั้นทุกแถว (เข้าไม่ได้เลย)
+        ///   gateOpen=true  → เปิดเฉพาะแถวประตู gateStart..gateEnd (นอกนั้นยังกั้น → ต้องอ้อมไปประตู)
+        /// เดินภายในโซนเดียวกัน / ขนานรั้ว (ไม่ข้ามเส้น) = ไม่กั้น
+        /// </summary>
+        public static bool CrossingBlocked(Vector2Int from, Vector2Int to,
+            int barrierColumn, bool gateOpen, int gateStart, int gateEnd)
+        {
+            bool fromB = from.x >= barrierColumn;
+            bool toB = to.x >= barrierColumn;
+            if (fromB == toB) return false;   // ไม่ได้ข้ามเส้นรั้ว
+            if (!gateOpen) return true;       // โซน B ล็อก → ข้ามไม่ได้ทุกแถว
+            int row = toB ? to.y : from.y;    // แถวฝั่งโซน B ของการข้าม
+            bool throughGate = gateStart <= gateEnd && row >= gateStart && row <= gateEnd;
+            return !throughGate;              // นอกช่องประตู → ยังกั้น
+        }
+
+        /// <summary>
+        /// เป้าหมายชั่วคราวที่คนงานควรมุ่งไปก่อน "เพื่อให้ลอดประตูได้จริง" เมื่อปลายทางอยู่คนละฝั่งรั้ว
+        ///   คืน waypoint ที่ช่องติดประตู (แถว = กึ่งกลางประตู) → การไถลตามรั้ว (WorkerPathing) จะพาแถวมาชิดประตูเองแล้วข้าม
+        ///   ไม่ต้องข้าม / ข้ามไม่ได้ (ล็อก·ไม่มีประตู) → คืน to ตามเดิม (ปล่อยให้ Step กันเอง)
+        /// pure: ไม่มี A* — อาศัยคุณสมบัติว่าถ้า "แถวเป้าหมาย = แถวประตู" การไถลจะ funnel เข้าประตูเสมอ
+        /// </summary>
+        public static Vector2 RouteThroughGate(Vector2 from, Vector2 to,
+            int barrierColumn, bool gateOpen, int gateStart, int gateEnd)
+        {
+            bool fromB = from.x >= barrierColumn;
+            bool toB = to.x >= barrierColumn;
+            if (fromB == toB) return to;                       // อยู่ฝั่งเดียวกับปลายทาง → ไม่ต้องอ้อม
+            if (!gateOpen || gateStart > gateEnd) return to;   // ข้ามไม่ได้/ไม่มีประตู → ปล่อยตามเดิม
+            float gateRow = (gateStart + gateEnd) * 0.5f;
+            float col = toB ? barrierColumn : barrierColumn - 1; // ช่องฝั่งปลายทางที่ติดประตู
+            return new Vector2(col, gateRow);
         }
     }
 }

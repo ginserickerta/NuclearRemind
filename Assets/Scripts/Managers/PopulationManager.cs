@@ -19,6 +19,16 @@ namespace NuclearReMind
         public float hopeRecoveryWithMedic = 2f; // มี Medic ≥1 + ไม่ขาดของ → +2/วัน
         public float hopeLossPerDeath = 5f;      // คนตาย −5/คน (จากทางเลือกวิกฤต/Decree)
 
+        [Header("Sensitivity / ความกดดัน (V5 — ให้สมเกมบริหาร: Hope ลดไวขึ้น)")]
+        [Tooltip("Hope ลดทุกวันเป็นฐาน (ความยากลำบากเอาตัวรอด) — ต้องบริหารเชิงรุกถึงจะทรง · 0 = ปิด")]
+        public float hopeDailyDrift = 1.5f;                   // −1.5/วัน baseline
+        [Tooltip("อาหารเหลือกินได้ < X วัน → เริ่ม 'หิว' Hope ลด (ก่อนหมดเกลี้ยง)")]
+        public float lowFoodBufferDays = 2f;
+        public float hopeLossLowFood = 4f;                    // หิว −4/วัน
+        [Tooltip("คนทำงานหนักเกินสัดส่วน (assigned/total ≥ ratio) → เหนื่อยล้า Hope ลด")]
+        [Range(0f, 1f)] public float overworkRatio = 0.7f;   // ทำงาน ≥70% ของประชากร = หนักเกิน
+        public float hopeLossOverwork = 3f;                   // เหนื่อย −3/วัน
+
         [Header("Training Cost (V4 §5)")]
         public int trainEngineerFood = 30, trainEngineerEnergy = 50;
         public int trainMedicFood = 40, trainMedicEnergy = 60;
@@ -318,6 +328,23 @@ namespace NuclearReMind
                 pop.hope -= hopeLossFoodShortage;
             else if (_depletedResources.Count == 0 && pop.medics > 0)
                 pop.hope += hopeRecoveryWithMedic;
+
+            // 1b) Sensitivity V5 — แรงกดดันรายวัน (เดิม Hope ลดเฉพาะตอนอาหารหมดเกลี้ยง เลยรู้สึกลดยาก)
+            pop.hope -= hopeDailyDrift; // ฐานความยากลำบาก → ต้องบริหารเชิงรุก (Medic ฟื้น +2 ยังกลบ drift ได้)
+
+            // หิวง่ายขึ้น: อาหารเหลือกินได้ < buffer วัน → Hope ลด (ก่อนจะหมดเกลี้ยง)
+            var rm = ResourceManager.Instance;
+            if (rm != null && !_depletedResources.Contains(ResourceType.Food))
+            {
+                float foodPerDay = rm.consumeFoodPerPerson * pop.total;
+                if (foodPerDay > 0f && rm.Current.food < foodPerDay * lowFoodBufferDays)
+                    pop.hope -= hopeLossLowFood;
+            }
+
+            // ทำงานหนัก → เหนื่อยล้า: สัดส่วนคนที่ถูกมอบหมายงานสูงเกิน overworkRatio → Hope ลด
+            var wam = WorkerAssignmentManager.Instance;
+            if (wam != null && pop.total > 0 && (float)wam.TotalAssigned / pop.total >= overworkRatio)
+                pop.hope -= hopeLossOverwork;
 
             // 1.5) ฟื้นจากรังสี (Story Guide §4 + GDD §6): กำลังรักษา/วัน = Medic + โรงพยาบาลที่ประจำครบ × heal
             // เมื่ออาหารไม่ขาด (สมมาตรกับ +Hope)

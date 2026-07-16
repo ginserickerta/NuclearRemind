@@ -112,13 +112,14 @@ namespace NuclearReMind
 
         public void Close()
         {
-            if (panel != null) panel.SetActive(false);
             GameUIStack.Pop(this);
+            UIPopIn.PlayClose(panel); // หุบออก (Windows 11) แล้วปิดเอง
         }
 
         // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
         bool GameUIStack.IPanel.ClosableByEscape => true;
         void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(panel);
+        GameObject GameUIStack.IPanel.PanelRoot => panel;
         void GameUIStack.IPanel.CloseFromStack() => Close();
     }
 }

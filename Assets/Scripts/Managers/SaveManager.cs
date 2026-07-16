@@ -105,6 +105,7 @@ namespace NuclearReMind
             {
                 save.firedStoryBeats = new List<string>(StoryDirector.Instance.FiredBeatIds);
                 save.archivedRecords = StoryDirector.Instance.ArchivedRecordIds;
+                save.archivedRecordDays = new List<int>(StoryDirector.Instance.ArchivedRecordDays);
                 save.deferredCrisisKeys = new List<string>(StoryDirector.Instance.DeferredCrisisKeys);
                 save.deferredCrisisDays = new List<int>(StoryDirector.Instance.DeferredCrisisFireDays);
             }

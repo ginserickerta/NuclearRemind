@@ -35,6 +35,10 @@ namespace NuclearReMind
         [TextArea(1, 2)] public string[] logLines;      // ข้อความ log หลายบรรทัดของ beat (ระบบ/NPC/เควสต์)
         public bool logLinesDaily;                      // true = ปล่อยวันละบรรทัดไม่รวบ (ลางพายุ Day 20–23) · false = โชว์ทุกบรรทัดทันที
 
+        [Header("ผลข้างเคียงพิเศษ")]
+        [Tooltip("beat นี้ยิงแล้ว → เปิดประตูเขต Zone B (คนงานเดินเข้า/จัดคนเข้าโหนดโซน B ได้) · ตั้งไว้กับ beat 'ตอนที่ต้องเข้าโซน B' เพียง beat เดียว")]
+        public bool unlocksZoneB;
+
         [TextArea(1, 4)] public string noteTH; // โน้ตสำหรับทีม — ไม่โชว์ผู้เล่น
 
         /// <summary>IQuizTrigger: คืนควิซของ beat (กรอง null ทิ้ง) — ให้ QuizManager เข้าคิวถามตามลำดับ</summary>

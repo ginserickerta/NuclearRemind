@@ -1,6 +1,12 @@
 # CLAUDE.md — Nuclear Re:Mind
 
-> อ่านไฟล์นี้ก่อนทุกครั้ง ก่อนเขียนโค้ดใดๆ
+> ⛔ **SUPERSEDED (2026-07-16)** — ไฟล์นี้ถูกแทนที่ด้วย **GDD v6.3** แล้ว
+> Spec ปัจจุบัน: `CLAUDE.md` (root) + `docs/GDD.md` §1–§33 + `docs/CONFIG.md`
+> เก็บไว้อ้างอิงประวัติเท่านั้น — **ห้ามใช้เขียนโค้ดใหม่**
+> ที่เปลี่ยนสำคัญ: grid 20×12 → **43×43** · PopulationManager → WorkerManager (per-worker state) ·
+> Hope → HopeLedger · InfoCardSO → ResearchNoteSO · CrisisSO 3 ใบ → CrisisCards 8 ใบ · Phase ผูก core% ไม่ผูก day
+
+> ~~อ่านไฟล์นี้ก่อนทุกครั้ง ก่อนเขียนโค้ดใดๆ~~
 
 ---
 

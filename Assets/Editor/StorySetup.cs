@@ -698,8 +698,8 @@ Kova: คนเท่าเดิม งานเท่าเดิม ต้อ
                 Debug.LogWarning("[StorySetup] ไม่พบ MemorialPanelController — รัน Setup Story UI ก่อน (แผงอนุสรณ์จะไม่มีข้อมูล)");
             }
 
-            // ตึกอนุสรณ์ pre-placed — ตำแหน่งที่ผู้ใช้กำหนด (17,14) · เดิมสูตร (columns/2+4, rows/2-1) = (25,20)
-            var origin = new Vector2Int(17, 14);
+            // ตึกอนุสรณ์ pre-placed — ตำแหน่งที่ผู้ใช้กำหนด (17,17) · เดิมสูตร (columns/2+4, rows/2-1) = (25,20)
+            var origin = new Vector2Int(17, 17);
 
             var go = GameObject.Find("PrePlacedMemorial") ?? new GameObject("PrePlacedMemorial");
             var pre = go.GetComponent<PrePlacedBuilding>() ?? go.AddComponent<PrePlacedBuilding>();

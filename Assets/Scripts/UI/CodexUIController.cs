@@ -115,19 +115,27 @@ namespace NuclearReMind
         {
             if (codexPanel == null) return;
             bool show = !codexPanel.activeSelf;
-            if (show) UIPopIn.Ensure(codexPanel);
-            codexPanel.SetActive(show);
-            if (show) { GameUIStack.Push(this); RefreshAll(); } // ขึ้นบนสุด + ลงทะเบียน
-            else GameUIStack.Pop(this);
+            if (show)
+            {
+                UIPopIn.Ensure(codexPanel);
+                codexPanel.SetActive(true);
+                GameUIStack.Push(this); RefreshAll(); // ขึ้นบนสุด + ลงทะเบียน
+            }
+            else
+            {
+                GameUIStack.Pop(this);
+                UIPopIn.PlayClose(codexPanel); // หุบออก (Windows 11) แล้วปิดเอง
+            }
         }
 
         // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
         bool GameUIStack.IPanel.ClosableByEscape => true;
         void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(codexPanel);
+        GameObject GameUIStack.IPanel.PanelRoot => codexPanel;
         void GameUIStack.IPanel.CloseFromStack()
         {
-            if (codexPanel != null) codexPanel.SetActive(false);
             GameUIStack.Pop(this);
+            UIPopIn.PlayClose(codexPanel); // หุบออกแล้วปิดเอง
         }
 
         private void SetFilter(QuizCategory? category)

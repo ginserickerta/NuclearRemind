@@ -102,21 +102,30 @@ namespace NuclearReMind
 
         private void Awake() => _font = LoadFont();
 
-        private void OnEnable()
+        private bool _subscribed;
+
+        // auto-spawn AfterSceneLoad → OnEnable อาจรันตอน EventManager.Instance ยัง null (build) → guard กัน NullRef ที่ทำให้ AutoSpawn ล้ม
+        private void OnEnable() => TrySubscribe();
+
+        private void TrySubscribe()
         {
+            if (_subscribed || EventManager.Instance == null) return;
             EventManager.Instance.OnInventoryChanged += HandleChanged;
             EventManager.Instance.OnResourceChanged  += HandleResChanged;
+            _subscribed = true;
         }
 
         private void OnDisable()
         {
-            if (EventManager.Instance == null) return;
+            if (!_subscribed || EventManager.Instance == null) { _subscribed = false; return; }
             EventManager.Instance.OnInventoryChanged -= HandleChanged;
             EventManager.Instance.OnResourceChanged  -= HandleResChanged;
+            _subscribed = false;
         }
 
         private void Start()
         {
+            TrySubscribe(); // OnEnable อาจข้าม subscribe ถ้า EventManager ยังไม่พร้อม → ผูกที่นี่ (หลัง Awake ทุกตัว)
             BuildPanel();
             Hide();
         }
@@ -144,13 +153,14 @@ namespace NuclearReMind
         private void Hide()
         {
             _shown = false;
-            if (_backdrop != null) _backdrop.SetActive(false);
             GameUIStack.Pop(this);
+            UIPopIn.PlayClose(_backdrop); // หุบออก (Windows 11) แล้วปิดเอง
         }
 
         // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
         bool GameUIStack.IPanel.ClosableByEscape => true;
         void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(_backdrop);
+        GameObject GameUIStack.IPanel.PanelRoot => _backdrop;
         void GameUIStack.IPanel.CloseFromStack() => Hide();
 
         // ═══════════════════════════ data ═══════════════════════════
@@ -164,17 +174,17 @@ namespace NuclearReMind
             {
                 var c = rm.Current;
                 AddRes("res_energy",   "พลังงาน (Energy)",  Tab.Resource, c.energy,    "⚡",
-                       "พลังงานสำหรับเดินเครื่องอาคารและเตา CORE");
+                       "พลังงานสำหรับเดินเครื่องอาคารและเตา CORE",       ResIcon("Energy"));
                 AddRes("res_water",    "น้ำ (Water)",        Tab.Resource, c.water,     "💧",
-                       "ใช้บริโภค · หล่อเย็นเตา · สกัดดิวเทอเรียม");
+                       "ใช้บริโภค · หล่อเย็นเตา · สกัดดิวเทอเรียม",        ResIcon("Water"));
                 AddRes("res_iron",     "เหล็ก (Iron)",       Tab.Resource, c.iron,      "⛏",
-                       "วัสดุก่อสร้างและอัปเกรดอาคาร");
+                       "วัสดุก่อสร้างและอัปเกรดอาคาร",                     ResIcon("Iron"));
                 AddRes("res_food",     "อาหาร (Food)",       Tab.Food,     c.food,      "🌿",
-                       "เลี้ยงประชากร (บริโภค 2/คน/วัน) · เพดาน 500");
+                       "เลี้ยงประชากร (บริโภค 2/คน/วัน) · เพดาน 500",      ResIcon("Food"));
                 AddRes("res_deuterium","ดิวเทอเรียม",        Tab.Fuel,     c.deuterium, "D",
-                       "เชื้อเพลิงป้อนเตา — ดัน CORE% ตามโหมด Overclock");
+                       "เชื้อเพลิงป้อนเตา — ดัน CORE% ตามโหมด Overclock", ResIcon("Deuterium"));
                 AddRes("res_tritium",  "ทริเทียม",           Tab.Fuel,     c.tritium,   "⚛",
-                       "เชื้อเพลิงเปิดประตูช่วง CORE ≥ 80 (ใช้ช่วงพายุ Day 25+)");
+                       "เชื้อเพลิงเปิดประตูช่วง CORE ≥ 80 (ใช้ช่วงพายุ Day 25+)", ResIcon("Tritium"));
             }
 
             // ไอเทมคราฟต์ที่ถือครอง (> 0)
@@ -208,16 +218,24 @@ namespace NuclearReMind
                     _view.Add(e);
         }
 
-        private void AddRes(string id, string name, Tab tab, float amount, string emoji, string desc)
+        private void AddRes(string id, string name, Tab tab, float amount, string emoji, string desc, Sprite icon = null)
         {
             int n = Mathf.RoundToInt(amount);
             if (n <= 0) return;
             _all.Add(new Entry
             {
                 id = id, name = name, tab = tab, count = n,
-                sprite = null, emoji = emoji, desc = desc,
+                sprite = icon, emoji = emoji, desc = desc,   // มี icon จริง → ใช้ sprite · ไม่มี → fallback emoji
                 stackNote = "ทรัพยากรบัลก์ (สแต็กใหญ่)", isResource = true,
             });
+        }
+
+        // icon ทรัพยากรจาก Resources/Icons/<name>.png (cache ครั้งเดียว · null ได้ → ตกไป emoji)
+        private readonly Dictionary<string, Sprite> _iconCache = new Dictionary<string, Sprite>();
+        private Sprite ResIcon(string name)
+        {
+            if (!_iconCache.TryGetValue(name, out var s)) { s = Resources.Load<Sprite>("Icons/" + name); _iconCache[name] = s; }
+            return s;
         }
 
         private static Tab TabOfItem(ItemCategory cat)
@@ -584,7 +602,7 @@ namespace NuclearReMind
         }
         private static Font LoadFont()
         {
-            var f = Resources.Load<Font>("Fonts/Kanit-Regular");
+            var f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
             if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             return f;
         }

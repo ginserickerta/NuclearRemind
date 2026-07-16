@@ -67,7 +67,7 @@ namespace NuclearReMind
         private void Open()
         {
             _isOpen = true;
-            if (pausePanel != null) { UIPopIn.Ensure(pausePanel); pausePanel.SetActive(true); }
+            UIPopIn.PlayOpen(pausePanel); // เปิดแบบปลอดภัย: ถ้ากำลังหุบปิดอยู่ ยกเลิก close แล้วเปิดใหม่ (กดปิด-เปิดถี่ ๆ ไม่ค้าง)
             GameManager.Instance?.SetSpeed(0f); // → Paused (timeScale 0, คง GameSpeed)
         }
 
@@ -75,7 +75,7 @@ namespace NuclearReMind
         public void Resume()
         {
             _isOpen = false;
-            if (pausePanel != null) pausePanel.SetActive(false);
+            UIPopIn.PlayClose(pausePanel); // หุบออก (Windows 11) แล้วปิดเอง
 
             var gm = GameManager.Instance;
             if (gm != null) gm.SetSpeed(gm.GameSpeed > 0f ? gm.GameSpeed : 1f);
@@ -118,7 +118,7 @@ namespace NuclearReMind
              || state == GameManager.GameState.Victory)
             {
                 _isOpen = false;
-                if (pausePanel != null) pausePanel.SetActive(false);
+                UIPopIn.PlayClose(pausePanel); // หุบออก (Windows 11) แล้วปิดเอง
             }
         }
     }

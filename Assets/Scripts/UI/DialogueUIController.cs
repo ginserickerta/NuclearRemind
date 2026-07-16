@@ -108,7 +108,8 @@ namespace NuclearReMind
             if (leftPortrait != null) { leftPortrait.preserveAspect = true; leftPortrait.gameObject.SetActive(false); }
             if (rightPortrait != null) { rightPortrait.preserveAspect = true; rightPortrait.gameObject.SetActive(false); }
 
-            if (overlayPanel != null) overlayPanel.SetActive(true);
+            // เปิดแบบ Windows 11 (scale+fade ทั้งชิ้น) · PlayOpen กันบั๊กตอนบทเล่นต่อเนื่อง (ปิดแล้วเปิดซ้ำทันที)
+            if (overlayPanel != null) UIPopIn.PlayOpen(overlayPanel, self: true);
             RenderCurrent();
         }
 
@@ -124,7 +125,8 @@ namespace NuclearReMind
         private void Finish()
         {
             IsShowing = false;
-            if (overlayPanel != null) overlayPanel.SetActive(false);
+            // หุบออกแบบ Windows 11 (ถ้า director โชว์บทถัดไปทันที Show() จะ PlayOpen ยกเลิก close นี้ให้เอง)
+            if (overlayPanel != null) UIPopIn.PlayClose(overlayPanel);
             // Resume ก่อน raise — director อาจโชว์การ์ด/บทถัดไปทันที (Pause ใหม่ต้องไม่โดน Resume เก่าลบทิ้ง)
             TimeManager.Instance?.Resume(PauseReason.StoryCard);
             EventManager.Instance.RaiseStoryCardDismissed();
@@ -189,15 +191,17 @@ namespace NuclearReMind
         // วางกรอบ "ข้างๆ ตัวละคร" (เว้นคอลัมน์ portrait ~CharColumn) แล้วงอกกว้างออกไปด้านนอก
         //   ตัวละครซ้าย (Auren/Mira/Dorn) → กรอบอยู่ด้านขวาของตัวละคร
         //   Kova (ขวา) → กรอบอยู่ด้านซ้ายของตัวละคร
-        [Header("ตำแหน่งกล่องบทพูด (ปรับใน Inspector — เห็นผลรอบบทถัดไป)")]
-        [Tooltip("ระยะจากขอบจอถึงกล่อง (px) — ยิ่งน้อย กล่องยิ่งชิดตัวละคร · ใช้ทั้งฝั่งซ้าย(Auren)/ขวา(Kova)")]
+        [Header("เลย์เอาต์กล่องบทพูด")]
+        [Tooltip("ล็อก = ใช้ตำแหน่ง+ขนาด+กรอบ จาก RectTransform ใน prefab/scene ล้วนๆ (แก้ด้วยตาแล้ว 'อยู่' ไม่โดนเขียนทับ) · ปิด = controller ย้ายฝั่ง+รีไซซ์ตามผู้พูด/ความยาวเอง (พฤติกรรมเดิม)")]
+        [SerializeField] private bool lockBoxLayout = true;
+        [Tooltip("ระยะจากขอบจอถึงกล่อง (px) — ใช้เฉพาะเมื่อ 'ปิด' lockBoxLayout · ยิ่งน้อยยิ่งชิดตัวละคร")]
         [SerializeField] private float charColumn = 300f;
         [Tooltip("ระยะกล่องจากขอบล่าง (px)")]
         [SerializeField] private float boxBottom = 56f;
 
         private void SetBoxSide(bool leftSpeaker)
         {
-            if (dialogBox == null) return;
+            if (dialogBox == null || lockBoxLayout) return; // ล็อก → ใช้ตำแหน่งจาก prefab/scene (ไม่ย้าย/ไม่ทับ)
             var rt = dialogBox.GetComponent<RectTransform>();
             if (leftSpeaker)
             {
@@ -214,6 +218,7 @@ namespace NuclearReMind
         // เลือกกรอบตามจำนวนตัวอักษร → set sprite + ปรับกว้างตามอัตราส่วน (สูงคงที่ boxHeight)
         private void ApplyFrame(string text)
         {
+            if (lockBoxLayout) return; // ล็อก → ใช้กรอบ+ขนาดจาก prefab/scene ทั้งหมด (ไม่สลับ sprite/ไม่รีไซซ์)
             int len = text != null ? text.Length : 0;
             Sprite fr = len <= shortMaxChars ? frameShort
                       : len <= mediumMaxChars ? frameMedium

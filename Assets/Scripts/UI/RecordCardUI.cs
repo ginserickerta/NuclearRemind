@@ -41,6 +41,12 @@ namespace NuclearReMind
         private RecordCardSO _current;
         private Coroutine _popIn;
 
+        // สกินการ์ดเต็มใบต่อ record (static image) — cache พื้นเดิมไว้ fallback (เช่น elara_01 ที่ไม่มีรูป)
+        private Image _cardImg;
+        private Sprite _defaultCardSprite;
+        private Image.Type _defaultCardType;
+        private bool _defaultPreserve;
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -68,6 +74,35 @@ namespace NuclearReMind
             if (!IsShowing && overlayPanel != null) overlayPanel.SetActive(false);
             if (ackButton != null) ackButton.onClick.AddListener(Acknowledge);
             if (archiveButton != null) archiveButton.onClick.AddListener(ArchiveAndClose);
+
+            // cache พื้นการ์ดเดิม (frame_wood) ไว้ fallback ให้ record ที่ไม่มีรูปเต็มใบ
+            if (cardRoot != null) _cardImg = cardRoot.GetComponent<Image>();
+            if (_cardImg != null)
+            {
+                _defaultCardSprite = _cardImg.sprite;
+                _defaultCardType   = _cardImg.type;
+                _defaultPreserve   = _cardImg.preserveAspect;
+            }
+
+            // สกินปุ่มใหม่ (ข้อความ baked ในรูปแล้ว → ซ่อน label ที่เกมวาด กันซ้อน)
+            ApplyButtonSkin(archiveButton, "StoryUI/record_btn_archive");
+            ApplyButtonSkin(ackButton,     "StoryUI/record_btn_ack");
+        }
+
+        private static void ApplyButtonSkin(Button b, string resPath)
+        {
+            if (b == null) return;
+            var spr = Resources.Load<Sprite>(resPath);
+            if (spr == null) return; // ไม่มีรูป → คงปุ่มเดิม
+            if (b.image != null)
+            {
+                b.image.sprite = spr;
+                b.image.type = Image.Type.Simple;
+                b.image.preserveAspect = true;
+                b.image.color = Color.white;
+            }
+            var lbl = b.GetComponentInChildren<Text>(true);
+            if (lbl != null) lbl.enabled = false; // ข้อความอยู่ในรูปแล้ว
         }
 
         private void HandleRecordShown(RecordCardSO record)
@@ -78,12 +113,40 @@ namespace NuclearReMind
             IsShowing = true;
             TimeManager.Instance?.Pause(PauseReason.StoryCard);
 
-            if (statusText != null)
-                statusText.text = string.IsNullOrEmpty(record.statusLabel) ? "กู้คืนสำเร็จ" : record.statusLabel;
-            if (recorderText != null)
-                recorderText.text = "- ผู้บันทึก:  " + ResolveRecorder(record);
-            if (bodyText != null)
-                bodyText.text = record.bodyTH;
+            // มีรูปเต็มใบสำหรับ record นี้ → โชว์รูป + ซ่อนข้อความ (baked แล้ว) · ไม่มี (elara_01) → กรอบเดิม + text
+            Sprite full = Resources.Load<Sprite>("StoryUI/RecordCards/record_" + record.recordId);
+            bool useImage = full != null && _cardImg != null;
+
+            if (_cardImg != null)
+            {
+                if (useImage)
+                {
+                    _cardImg.sprite = full;
+                    _cardImg.type = Image.Type.Simple;
+                    _cardImg.preserveAspect = true;
+                    _cardImg.color = Color.white;
+                }
+                else // fallback record ที่ไม่มีรูป → คืนพื้นเดิม
+                {
+                    _cardImg.sprite = _defaultCardSprite;
+                    _cardImg.type = _defaultCardType;
+                    _cardImg.preserveAspect = _defaultPreserve;
+                }
+            }
+
+            if (statusText != null)   statusText.gameObject.SetActive(!useImage);
+            if (recorderText != null) recorderText.gameObject.SetActive(!useImage);
+            if (bodyText != null)     bodyText.gameObject.SetActive(!useImage);
+
+            if (!useImage) // เขียนข้อความเฉพาะโหมดกรอบเดิม
+            {
+                if (statusText != null)
+                    statusText.text = string.IsNullOrEmpty(record.statusLabel) ? "กู้คืนสำเร็จ" : record.statusLabel;
+                if (recorderText != null)
+                    recorderText.text = "- ผู้บันทึก:  " + ResolveRecorder(record);
+                if (bodyText != null)
+                    bodyText.text = record.bodyTH;
+            }
 
             if (overlayPanel != null) overlayPanel.SetActive(true);
             if (cardRoot != null)

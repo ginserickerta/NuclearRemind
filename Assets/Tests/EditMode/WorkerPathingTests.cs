@@ -122,5 +122,38 @@ namespace NuclearReMind.Tests
 
             Assert.AreEqual(from, result, "ขอบแมพต้องกันไว้เหมือนกำแพง");
         }
+
+        // ─────────── cross predicate: รั้วโซน (กั้นการ "ข้ามเส้น" ระหว่าง col 4↔5) ───────────
+        // จำลองรั้วปิดที่ขอบ col 5: ก้าวที่ from.x<5 && cell.x≥5 (หรือกลับกัน) = ข้ามไม่ได้
+        private static System.Func<Vector2Int, Vector2Int, bool> LockedFence(int barrierCol) =>
+            (from, to) => (from.x < barrierCol) != (to.x < barrierCol);
+
+        [Test]
+        public void CrossPredicate_BlocksCrossing_SlidesAlongFence()
+        {
+            // เดินตรงเข้าหารั้ว (col 4 → 5) แนวนอน · แกน col ถูกกั้น เหลือไถลแกน row (คงอยู่โซนเดิม)
+            var from = new Vector2(4.4f, 5f);  // ช่อง (4,5)
+            var to = new Vector2(4.6f, 5.2f);  // ช่อง (5,5) = อีกฝั่งรั้ว
+            var result = WorkerPathing.Step(from, to, Walls(), LockedFence(5));
+
+            Assert.AreEqual(from.x, result.x, 1e-5f, "ห้ามข้ามรั้ว (แกน col คงเดิม)");
+            Assert.AreEqual(to.y, result.y, 1e-5f, "ไถลตามรั้วในโซนเดิมได้");
+        }
+
+        [Test]
+        public void CrossPredicate_WithinSameZone_MovesFreely()
+        {
+            // ก้าวที่ไม่ข้ามเส้น (อยู่โซนเดียว) — รั้วไม่เกี่ยว เดินได้ปกติ
+            var to = new Vector2(3.3f, 2.1f);
+            Assert.AreEqual(to, WorkerPathing.Step(new Vector2(3f, 2f), to, Walls(), LockedFence(5)));
+        }
+
+        [Test]
+        public void CrossPredicate_NullMeansOldBehaviour()
+        {
+            // ไม่ส่ง crossBlocked → พฤติกรรมเดิม (ข้ามได้อิสระ)
+            var to = new Vector2(4.6f, 5f); // ข้ามจาก (4,5) ไป (5,5)
+            Assert.AreEqual(to, WorkerPathing.Step(new Vector2(4.4f, 5f), to, Walls(), null));
+        }
     }
 }

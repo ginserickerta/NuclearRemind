@@ -371,7 +371,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &380026153
 RectTransform:
   m_ObjectHideFlags: 0
@@ -941,6 +941,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: NuclearReMind::NuclearReMind.MenuVideoBackground
   clip: {fileID: 32900000, guid: ebf1de5b3e4eee3488a5ba1020269e47, type: 3}
+  webglFileName: menu.mp4
   renderWidth: 1280
   renderHeight: 720
 --- !u!114 &928273991

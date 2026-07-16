@@ -153,6 +153,10 @@ namespace NuclearReMind
             if (gameOverPanel != null) gameOverPanel.SetActive(false);
             if (livePhaseBanner != null) livePhaseBanner.SetActive(false);
 
+            // sync หลอด Knowledge ครั้งแรก: OnKnowledgeChanged raise เฉพาะตอนมี delta → เริ่มเกม knowledge=0
+            // ไม่ถูก raise → Slider ค้างค่า default ของ Unity (value=1,max=1 = เต็มหลอด) ทั้งที่ค่าเป็น 0
+            HandleKnowledgeChanged(rm.Current.knowledge);
+
             // ปุ่มความเร็ว → raise request ให้ GameManager จัดการ (ไม่เรียก GameManager ตรง)
             if (pauseButton != null)  pauseButton.onClick.AddListener(() => EventManager.Instance.RaiseSpeedChangeRequested(0f));
             if (normalButton != null) normalButton.onClick.AddListener(() => EventManager.Instance.RaiseSpeedChangeRequested(1f));

@@ -1,142 +1,173 @@
-# CLAUDE.md
+# CLAUDE.md — NUCLEAR Re:Mind
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+เกม Survival City-Builder สอนฟิสิกส์นิวเคลียร์/ฟิวชัน · Unity 6 (`6000.3.6f1`) / C# · NSC #28
+URP + URP 2D Renderer (Light 2D) · Legacy Input System · Windows Standalone
+ผู้เล่น (Dr. Auren Vasek) บริหารเมือง Veltara 30 วัน ดัน CORE TOWER ให้ถึง 100% ก่อนพายุรังสี
 
-## Project overview
+> 🔴 **Spec ปัจจุบันคือ GDD v6.3** — เอกสารทั้งหมดอยู่ที่ `docs/` (root)
+> เอกสารเก่าใน `Assets/Docs/` (ImproveCLAUDE.md, PHASE2_TODO.md ฯลฯ) **ถูกทับแล้ว** ใช้อ้างอิงประวัติเท่านั้น
 
-**Nuclear Re:Mind** (นิวเคลียร์เปลี่ยนความคิดโลก) — an isometric survival city-builder for NSC 2026
-(หมวดโปรแกรมส่งเสริมทักษะเพื่อการเรียนรู้). Unity 6 (`6000.3.6f1`), C#, URP + URP 2D Renderer
-(Light 2D), Legacy Input System, Windows Standalone target. The player (Dr. Auren Vasek) rebuilds
-the abandoned city of Veltara and completes the CORE TOWER (a fusion reactor) before resources run
-out, while a Learning Codex teaches real nuclear-science concepts (fission, half-life, radiation
-shielding, nuclear medicine/agriculture applications).
+---
 
-**Read `Assets/Docs/ImproveCLAUDE.md` before writing any code.** It is the canonical, current
-spec for folder structure, naming conventions, the full `EventManager` event list, ScriptableObject
-schemas (`BuildingData`, `CodexEntry`, `DilemmaData`), the data contracts (`ResourceData`,
-`PopulationData`, `TowerData`, `SaveData`), grid constants, and the "ห้ามทำเด็ดขาด" (never-do) rules
-summarized below.
+## 🔴 กติกาที่ห้ามละเมิด
 
-Other reference docs:
-- `Assets/Docs/PHASE2_TODO.md` — current implementation status / day-by-day TODO list
-- `Assets/Docs/ImprovePlan1.csv` — the 30-day development plan (day → tasks → deliverable)
-- `Assets/Docs/NSC info.md` — full project proposal (storyline, learning objectives, team)
+1. **ห้าม `if (day == X)`** — ยกเว้น `day == 30` (เส้นตาย)
+   ทุก trigger ต้องผูก **state** (core%, heat, hunger, rad) ไม่ใช่ปฏิทิน
+2. **ตัวเลขทั้งหมดอ่านจาก `docs/CONFIG.md`** — ห้าม hardcode
+   ทำเป็น `GameConfigSO` ตัวเดียว
+3. **ห้ามแตะ `boost_core_gain = 3.0`** — เปราะมาก (2.3 = แพ้ 100%)
+   ค่าที่มี 🔒 ใน CONFIG.md = ห้ามแก้โดยไม่รัน `nrm_sim.py`
+4. **ห้ามระบบบอกคำตอบก่อนวิจัย** — NPC ไม่รู้ ระบบไม่รู้
+5. **ไม่มีทางเลือกฟรี** — ทุกทางเลือกมีราคา
+6. **★ ตัวเลือกที่ดีในการ์ดต้องล็อก 🔒 จนกว่าจะวิจัย และต้องแสดงให้เห็น ห้ามซ่อน**
+7. **Building output ต้องคูณ `Σ GetEfficiency(workers)`** ไม่ใช่นับหัว
+   ไม่ทำ = ระบบ Worker ทั้งหมดไม่มีผล
+8. **Hope ห้ามเขียนตรง** — ทุกระบบส่ง `HopeEntry` เข้า `HopeLedger`
+9. **Inventory ห้ามเก็บ state ซ้ำ** — เป็น view layer อ่านจาก `ResourceManager`
 
-## Commands
+---
 
-The Unity Editor (6000.3.6f1) must be **closed** before running any `-batchmode` command — Unity
-holds a project lock and batch invocations will fail/hang otherwise.
+## หลักการเดียวที่ต้องจำ
 
-Compile check (forces full reimport, writes a log):
+```
+ความรู้ไม่ใช่รางวัล — มันคือกลไกที่ทำให้ชนะ
+
+Zone B ผลิต 3.0/วัน · Boost กิน 9.0/วัน → ขาด 6/วัน → CORE ค้าง 80 → แพ้
+ตอบควิซ q_tritium_breeding ถูก → 8.0/วัน → ชนะ
+
+ผล sim: ไม่ตอบควิซ = แพ้ 100% ทุก playstyle
+```
+
+---
+
+## เอกสาร (docs/ ที่ root — ไม่ใช่ Assets/Docs)
+
+| ไฟล์ | เนื้อหา |
+|---|---|
+| `docs/GDD.md` | ระบบทั้งหมด §1–§33 — **อ่านก่อนเริ่มทุก Sprint** |
+| `docs/CONFIG.md` | 🔴 ค่าเกมทั้งหมด — แก้ที่นี่ที่เดียว |
+| `docs/NOTES.md` | Research Notes 8 ใบ (ResearchNoteSO assets) + บทตอนวิจัยเสร็จ |
+| `docs/QUIZZES.md` | Quiz 11 ข้อ (QuizQuestionSO assets) |
+| `docs/CARDS.md` | Crisis Cards 8 ใบ (CrisisCardSO assets) + บทตัวละครชนกัน 4 การ์ด |
+| `docs/BARKS.md` | Bark 62 บรรทัด (BarkSO assets) |
+| `docs/STORY.md` | Records / Intro / Endings |
+| `docs/CODEX.md` | Codex 11 entry (CodexEntrySO assets) |
+| `docs/INVENTORY.md` | ระบบคลัง 6 แท็บ + คราฟต์ Rad Suit |
+
+---
+
+## Commands (Unity)
+
+Unity Editor (6000.3.6f1) ต้อง**ปิด**ก่อนรันคำสั่ง `-batchmode` — Unity ล็อกโปรเจกต์อยู่
+
+Compile check:
 ```powershell
 & "C:\Program Files\Unity\Hub\Editor\6000.3.6f1\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\UsEr\NSC2026" -logFile compile.log
 ```
-Then grep `compile.log` for `error CS` — zero matches = clean compile.
+แล้ว grep `compile.log` หา `error CS` — ไม่เจอ = compile ผ่าน
 
-Run all EditMode tests:
+Run EditMode tests:
 ```powershell
 & "C:\Program Files\Unity\Hub\Editor\6000.3.6f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\UsEr\NSC2026" -testPlatform EditMode -testResults results.xml -logFile test.log
 ```
+รันทีละ test/class ใช้ `-testFilter "NuclearReMind.Tests.XxxTests.MethodName"`
+`results.xml` เป็น NUnit XML — เช็ค `result="Failed"`
 
-Run a single test (or a class) with `-testFilter`:
-```powershell
-& "C:\Program Files\Unity\Hub\Editor\6000.3.6f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\UsEr\NSC2026" -testPlatform EditMode -testFilter "NuclearReMind.Tests.GridManagerTests.IsoToWorld_KnownCell_ReturnsExpectedPosition" -testResults results.xml -logFile test.log
+---
+
+## Assembly / Architecture (ของเดิมที่ยังใช้)
+
+- โค้ดทั้งหมดอยู่ `Assets/Scripts/` ใน assembly เดียว `NuclearReMind.asmdef` · ทุกคลาสอยู่ `namespace NuclearReMind`
+- EditMode tests อยู่ `Assets/Tests/EditMode/` (`NuclearReMind.Tests.EditMode.asmdef` อ้างโดยชื่อ assembly)
+- Manager เป็น MonoBehaviour singleton (`Instance` ใน `Awake()`, destroy duplicate)
+- **Cross-system mutation ต้องผ่าน `EventManager.Instance`** (subscribe ใน `OnEnable`, unsubscribe ใน `OnDisable` + null guard; `[DefaultExecutionOrder(-100)]` บน EventManager)
+  - ⚠ **ข้อยกเว้น v6.3:** query แบบ read-only ถึง `MasteryRegistry` / `GameConfigSO` / `KnowledgeDB` เรียกตรงได้
+    (GDD §21 บังคับให้ 6 ระบบ query MasteryRegistry ตรง) — mutation ยังต้องผ่าน event เหมือนเดิม
+- ห้ามใช้ `GameObject.Find()` / `FindObjectOfType()` ใน `Update()` — cache ใน `Awake()`
+- ห้ามเพิ่ม field ใน `SaveData`/data struct โดยไม่มี default — เซฟเก่าต้อง deserialize ได้
+- **Grid: 43×43** (เปลี่ยนจาก 20×12 ตาม CONFIG.md v6.3 — เคาะแล้ว 2026-07-16)
+  สูตร `IsoToWorld()`/`WorldToIso()` ใน `GridManager.cs` **ห้ามแก้** (math ผ่าน test แล้ว) — แก้แค่ bounds/ขนาด
+  ⚠ `GridManagerTests` ที่ fix ขนาดเดิมต้องอัปเดตตาม
+
+---
+
+## Sprint Plan
+
+| Sprint | งาน | Test ที่ต้องผ่าน |
+|---|---|---|
+| 1 | Worker + Shift + HopeLedger + UI + **Inventory panel** | รัน D1-30 → Hope ไม่ 100 ตลอด · เห็นคนหิว/ป่วย · เห็น delta/วัน |
+| 2 | ResearchQueue + SoftTrigger + gating | ต้องติดขัดถ้าไม่วิจัย |
+| 3 | MasteryRegistry + Codex quiz + Codex panel | ตอบ vs ไม่ตอบ → ต่างกันชัด · ปลด entry x/11 |
+| 4 | CrisisCards 8 ใบ + ตัวเลือกล็อก | เห็น 🔒 บนตัวเลือกที่ยังไม่วิจัย |
+| 5 | Bark + DataRecovery + ZoneB | Death Spiral เกิดจริง |
+| 6 | Storm + Sensor + Endings | รัน sim เทียบ |
+
+---
+
+## Code style
+
+- **Comment เป็นภาษาอังกฤษ** ทั้งหมด
+- ให้โค้ดเต็มไฟล์ copy-paste ได้ทันที ไม่ใช่ snippet
+- ตั้งชื่อตรงกับ `docs/GDD.md` §31 (Worker.cs, HopeLedger.cs, ...)
+- ScriptableObject ทุกตัวตรงกับ spec ใน GDD §16
+
+---
+
+## Structure (เป้าหมาย v6.3)
+
+```
+Assets/Scripts/
+  Workers/    Worker.cs · WorkerManager.cs · ShiftSystem.cs
+  Hope/       HopeLedger.cs · HopeEntry.cs · HopeThresholdWatcher.cs
+              UI/HopeBreakdownPanel.cs          ← บังคับมี
+  Research/   ResearchNoteSO.cs · ResearchLeadSO.cs · ResearchLab.cs
+              SoftTriggerWatcher.cs · KnowledgeDB.cs
+              UI/ResearchQueuePanel.cs · UI/NoteCardPopup.cs
+  Mastery/    MasteryBonusSO.cs · MasteryRegistry.cs   ← singleton
+  Cards/      CrisisCardSO.cs · CardOption.cs · CardManager.cs
+              UI/CrisisCardPanel.cs             ← แสดง 🔒 บนตัวเลือกที่ล็อก
+  Barks/      BarkSO.cs · BarkManager.cs
+  Storm/      StormSystem.cs · SensorArray.cs
+  Records/    RecordCardSO.cs · DataRecovery.cs · UI/RecordsPanel.cs
+  ZoneB/      ZoneBController.cs · RadSuitManager.cs
+  Codex/      CodexEntrySO.cs · CodexManager.cs · UI/CodexPanel.cs
+  Inventory/  ItemSO.cs · InventoryManager.cs · UI/InventoryPanel.cs
+  Core/       GameManager.cs · TimeManager.cs · PhaseManager.cs
+              ReactorController.cs · ResourceManager.cs
+              BuildingManager.cs · BuildPlacementManager.cs
+              MetaProgress.cs · GameConfigSO.cs
 ```
 
-`results.xml` is NUnit XML; check `result="Failed"` attributes for failures.
+**`MasteryRegistry` ต้อง query ได้จาก:**
+`ReactorController` · `WorkerManager` · `MedBay` · `Farm` · `FoodStorage` · `ZoneB`
 
-## Architecture
+**Manager เดิมที่ถูกแทน (GDD §16):**
+`PopulationManager` → `WorkerManager` · `CrisisManager`/`DecreeManager` → `CardManager` · `QuizManager` → Codex
+`InfoCardSO` **ห้ามลบ** — rename + เพิ่ม field เป็น `ResearchNoteSO` (asset เนื้อหาเดิมใช้ต่อได้ — ดู `docs/NOTES.md`)
 
-### Assembly / namespace
+---
 
-All gameplay code lives under `Assets/Scripts/` in one assembly, `NuclearReMind.asmdef`
-(assembly name `NuclearReMind`), and every class is in `namespace NuclearReMind`. EditMode tests
-live in `Assets/Tests/EditMode/` under `NuclearReMind.Tests.EditMode.asmdef`, which references
-`NuclearReMind` **by assembly name** — moving script paths within the assembly never requires
-updating this reference.
+## บั๊กที่ sim เจอแล้ว (ห้ามทำซ้ำ — ดู GDD §30)
 
-### Folder layout (`Assets/Scripts/`)
+| # | บั๊ก | ผลถ้าไม่แก้ |
+|---|---|---|
+| 1 | `cooling = 15 + water/10` ไม่มีเพดาน | HEAT = 0 ตลอดเกม เตาไร้ความหมาย |
+| 2 | หักค่าวิจัยทุกวัน | Tritium ดูดเหล็กจนบล็อกตัวเอง วิจัยได้ใบเดียว |
+| 3 | ควิซเช็ค `tritium > 0` | tritium เผาเป็น 0 ทุกเทิร์น → Mastery ปลดได้ 1/40 |
+| 7 | Research deadlock | นักวิจัยถูกดึงออก → progress ค้าง 1.4 ตลอดกาล |
+| 8 | 14 คน ทำ 18 ตำแหน่งไม่ได้ | mine=0 → เหล็กค้าง → แพ้ 100% |
+| 9 | ดึงชาวนาไปวิจัย | อาหารหมด D22 → Hope 0 |
+| 14 | `storm_heat = 12` | cooling กลบสนิท → พายุไร้ผลสิ้นเชิง |
+| **15** | **CORE 100 แล้วเกมไม่จบ** | รันต่อถึง D30 → Hope ไหลจนแพ้ ทั้งที่ชนะแล้ว |
+| 17 | power ติดลบได้ | −395 → สูตรเพี้ยนทั้งระบบ |
+| 18 | water ติดลบได้ | −10 → cooling คำนวณผิด |
 
-```
-Managers/   Singleton managers — GameManager, EventManager, ResourceManager (and future
-            PopulationManager, CoreTowerManager, SaveManager)
-Systems/    GridManager, CameraController, InputManager, PlacementController
-UI/         UIManagerHUD and other HUD/Tooltip/Popup/Codex controllers
-Data/       ScriptableObject + serializable data definitions — BuildingData, ResourceData,
-            PopulationData, TowerData, SaveData, GameEndType, ResourceType
-Utils/      Helpers and example subscribers (EventTestSubscriber)
-Narrative/  Not created yet — added in Phase 3 when the first story/dilemma file lands
-```
-`Assets/ScriptableObjects/Buildings/` holds the `BuildingData` assets (one per building type).
+---
 
-### Singleton + EventManager (Observer pattern)
+## เมื่อไม่แน่ใจ
 
-Every manager is a MonoBehaviour singleton (`public static X Instance`, set in `Awake()`,
-`Destroy(gameObject)` on duplicates). **Systems never call another manager's methods directly** —
-all cross-system communication goes through `EventManager.Instance`:
-
-```csharp
-// ✅ correct
-EventManager.Instance.OnBuildingPlaced += HandleBuildingPlaced;
-EventManager.Instance.RaiseBuildingPlaced(cell, data);
-
-// ❌ wrong — never reference another manager directly
-ResourceManager.Instance.AddFood(50);
-```
-
-`EventManager` carries `[DefaultExecutionOrder(-100)]` so its `Awake()` (which sets `Instance`)
-runs before other components' `OnEnable()` subscribe calls in the same scene load. Subscribers
-must `+=` in `OnEnable()` and `-=` in `OnDisable()`, guarding `OnDisable` with
-`if (EventManager.Instance == null) return;` for teardown ordering (see
-`Assets/Scripts/Utils/EventTestSubscriber.cs`). The full current event list is in
-`Assets/Scripts/Managers/EventManager.cs`; the target list (including Phase-3 narrative/codex
-events not yet added) is documented in `Assets/Docs/ImproveCLAUDE.md`.
-
-### Isometric grid — `Assets/Scripts/Systems/GridManager.cs`
-
-Fixed **20×12** grid. Conversion formulas (tested by `GridManagerTests.cs`, 8/8 must pass):
-
-```csharp
-// grid (col, row) -> world
-x = (col - row) * (tileWidth / 2)
-y = (col + row) * (tileHeight / 2)
-
-// world -> grid (col, row)
-col = worldPos.x / tileWidth + worldPos.y / tileHeight
-row  = worldPos.y / tileHeight - worldPos.x / tileWidth
-```
-
-`GridManager` also owns `Cell` (per-tile state: `isOccupied`, `buildingType`, `radiationLevel`)
-and the `BuildingType` enum. `PlacementController` uses `GridManager.Instance.GetCell/IsInBounds`
-to validate and occupy a building's footprint (`BuildingData.size`) before raising
-`OnBuildingPlaced`.
-
-### BuildingData (`Assets/Scripts/Data/BuildingData.cs`)
-
-ScriptableObject (`[CreateAssetMenu(... menuName = "NuclearReMind/Building")]`) holding identity
-(`buildingName`, `description`, `nuclearKnowledge` — the 3-layer tooltip text), `sprite`, grid
-`size`, `buildingType`, flat build costs (`materialCost`, `energyCost`, `workerRequired`),
-per-tick production fields (`foodProduction`, `waterProduction`, `radiationProtectionBonus`,
-`energyProduction`, `researchPointsPerTick`), and CORE TOWER linkage (`isCoreTowerPart`,
-`towerPhaseRequired`). All gameplay values must come from these assets — never hardcode resource
-numbers in manager code.
-
-### Save data contracts (`Assets/Scripts/Data/`)
-
-`ResourceData`, `PopulationData`, `TowerData` are `[Serializable]` structs; `SaveData` is the
-top-level save object referencing all three plus placed-building lists and relationship values.
-**Never add a field to `SaveData` (or the structs it contains) without giving it a default** —
-old save files must still deserialize.
-
-## Rules that must never be broken
-
-1. Never modify `IsoToWorld()` / `WorldToIso()` in `GridManager.cs` — the math is tested and
-   load-bearing.
-2. Never change the grid size away from 20×12 — fixed design constraint.
-3. Never add a `SaveData`/data-struct field without a default value.
-4. Never hardcode resource/cost/production values — they belong in `BuildingData` (or other
-   ScriptableObjects).
-5. Never call another manager's members directly across systems — go through
-   `EventManager.Instance`.
-6. Never use `GameObject.Find()` or `FindObjectOfType()` inside `Update()` — cache references in
-   `Awake()`.
+- **ค่าตัวเลข** → `docs/CONFIG.md`
+- **ระบบทำงานยังไง** → `docs/GDD.md`
+- **ข้อความในเกม** → `docs/NOTES.md` / `QUIZZES.md` / `CARDS.md` / `BARKS.md` / `STORY.md`
+- **Codex / คลัง** → `docs/CODEX.md` / `docs/INVENTORY.md`
+- **ยังไม่มีในเอกสาร** → ถามก่อน อย่าเดา

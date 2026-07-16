@@ -25,6 +25,7 @@ namespace NuclearReMind
         // ===== Story (Story Guide) — มีค่า default เสมอ: เซฟรุ่นเก่ายังโหลดได้ =====
         public List<string> firedStoryBeats = new List<string>();  // beatId ที่เล่นไปแล้ว (ยิงครั้งเดียวต่อรอบ)
         public List<string> archivedRecords = new List<string>();  // recordId ที่กู้คืนแล้ว (แผง Records)
+        public List<int> archivedRecordDays = new List<int>();      // วันเกมที่กู้คืนบันทึกแต่ละใบ (คู่ index กับ archivedRecords · เซฟเก่าไม่มี = ว่าง → ไม่โชว์วัน)
         public List<string> deferredCrisisKeys = new List<string>(); // วิกฤตซ้อนที่รอวันยิง (คู่ index กับ deferredCrisisDays)
         public List<int> deferredCrisisDays = new List<int>();       // วันที่จะยิง (เลขวันเกม)
 

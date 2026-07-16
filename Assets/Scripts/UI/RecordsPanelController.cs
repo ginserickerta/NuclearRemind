@@ -30,6 +30,9 @@ namespace NuclearReMind
 
         private readonly List<GameObject> _entryButtons = new List<GameObject>();
 
+        /// <summary>แผงเปิดอยู่ไหม (ให้ RecordNotificationHUD เคลียร์ badge เมื่อเปิดดู)</summary>
+        public bool IsOpen => recordsPanel != null && recordsPanel.activeSelf;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -62,19 +65,27 @@ namespace NuclearReMind
         {
             if (recordsPanel == null) return;
             bool nowOpen = !recordsPanel.activeSelf;
-            if (nowOpen) UIPopIn.Ensure(recordsPanel);
-            recordsPanel.SetActive(nowOpen);
-            if (nowOpen) { GameUIStack.Push(this); RefreshList(); } // ขึ้นบนสุด + ลงทะเบียน
-            else GameUIStack.Pop(this);
+            if (nowOpen)
+            {
+                UIPopIn.Ensure(recordsPanel);
+                recordsPanel.SetActive(true);
+                GameUIStack.Push(this); RefreshList(); // ขึ้นบนสุด + ลงทะเบียน
+            }
+            else
+            {
+                GameUIStack.Pop(this);
+                UIPopIn.PlayClose(recordsPanel); // หุบออก (Windows 11) แล้วปิดเอง
+            }
         }
 
         // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
         bool GameUIStack.IPanel.ClosableByEscape => true;
         void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(recordsPanel);
+        GameObject GameUIStack.IPanel.PanelRoot => recordsPanel;
         void GameUIStack.IPanel.CloseFromStack()
         {
-            if (recordsPanel != null) recordsPanel.SetActive(false);
             GameUIStack.Pop(this);
+            UIPopIn.PlayClose(recordsPanel); // หุบออกแล้วปิดเอง
         }
 
         private void HandleRecordArchived(RecordCardSO record)
@@ -95,9 +106,9 @@ namespace NuclearReMind
         {
             if (entryListParent == null || entryButtonTemplate == null) return;
 
-            IReadOnlyList<RecordCardSO> records = StoryDirector.Instance != null
-                ? StoryDirector.Instance.ArchivedRecords
-                : null;
+            var director = StoryDirector.Instance;
+            IReadOnlyList<RecordCardSO> records = director != null ? director.ArchivedRecords : null;
+            IReadOnlyList<int> days = director != null ? director.ArchivedRecordDays : null;
             int count = records != null ? records.Count : 0;
 
             // เพิ่มปุ่มให้พอ (reuse ของเดิม — ไม่ Destroy ทุกรอบแบบ Codex)
@@ -114,9 +125,17 @@ namespace NuclearReMind
                 go.SetActive(used);
                 if (!used) continue;
 
-                var record = records[i];
+                // ★ ล่าสุดอยู่บนสุด — _archived ต่อท้าย (เก่า→ใหม่) จึงกลับ index
+                int idx = count - 1 - i;
+                var record = records[idx];
+                int day = (days != null && idx < days.Count) ? days[idx] : 0;
+
                 var label = go.GetComponentInChildren<Text>();
-                if (label != null) label.text = record != null ? record.archiveTitle : "—";
+                if (label != null)
+                {
+                    string title = record != null ? record.archiveTitle : "—";
+                    label.text = day > 0 ? $"{title}   · วันที่ {day}" : title; // เซฟเก่า (day 0) → ไม่ต่อวัน
+                }
 
                 var btn = go.GetComponent<Button>();
                 if (btn != null)

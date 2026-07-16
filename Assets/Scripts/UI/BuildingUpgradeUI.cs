@@ -187,13 +187,14 @@ namespace NuclearReMind
         private void Hide()
         {
             _shown = false;
-            if (_backdrop != null) _backdrop.SetActive(false); // ปิดทั้งชุด (ไม่งั้น backdrop บังคลิกทั้งจอ)
             GameUIStack.Pop(this);
+            UIPopIn.PlayClose(_backdrop); // หุบออก (Windows 11) แล้วปิดเอง (backdrop บังคลิกจนกว่าจะปิดจริง — สั้น ~0.12s)
         }
 
         // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
         bool GameUIStack.IPanel.ClosableByEscape => true;
         void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(_backdrop);
+        GameObject GameUIStack.IPanel.PanelRoot => _backdrop;
         void GameUIStack.IPanel.CloseFromStack() => Hide();
 
         // Laboratory มีป๊อปอัพเฉพาะ (LabPanelUI — ฝึก/วิจัย/จัดคน/อัปเกรดครบในนั้น) — exclude กันเปิดซ้อน
@@ -774,7 +775,7 @@ namespace NuclearReMind
 
         private static Font LoadFont()
         {
-            var f = Resources.Load<Font>("Fonts/Kanit-Regular");
+            var f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
             if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             return f;
         }

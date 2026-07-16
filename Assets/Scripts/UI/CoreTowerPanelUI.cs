@@ -98,23 +98,34 @@ namespace NuclearReMind
 
         private void Awake() => _font = LoadFont();
 
-        private void OnEnable()
+        private bool _subscribed;
+
+        // ★ auto-spawn ยิง AfterSceneLoad → OnEnable อาจรันตอน EventManager.Instance ยัง null (โดยเฉพาะใน build)
+        //   เดิม OnEnable แตะ .Instance ตรง ๆ → โยน NullReferenceException กลาง Instantiate ใน AutoSpawn
+        //   ทำให้ AutoSpawn หยุดก่อน SetParent เข้า canvas → แผงเพี้ยน/ไม่โผล่ "เฉพาะใน build" (editor จังหวะต่างเลยไม่เจอ)
+        private void OnEnable() => TrySubscribe();
+
+        private void TrySubscribe()
         {
+            if (_subscribed || EventManager.Instance == null) return;
             EventManager.Instance.OnTowerProgressChanged += HandleTowerProgress;
             EventManager.Instance.OnOverclockModeChanged += HandleModeChanged;
             EventManager.Instance.OnResourceChanged += HandleResourceChanged;
+            _subscribed = true;
         }
 
         private void OnDisable()
         {
-            if (EventManager.Instance == null) return;
+            if (!_subscribed || EventManager.Instance == null) { _subscribed = false; return; }
             EventManager.Instance.OnTowerProgressChanged -= HandleTowerProgress;
             EventManager.Instance.OnOverclockModeChanged -= HandleModeChanged;
             EventManager.Instance.OnResourceChanged -= HandleResourceChanged;
+            _subscribed = false;
         }
 
         private void Start()
         {
+            TrySubscribe(); // OnEnable อาจข้าม subscribe ถ้า EventManager ยังไม่พร้อม → ผูกให้ครบที่นี่ (Start รันหลัง Awake ทุกตัว)
             if (_root != null) PostBuildSetup();   // authored prefab: ref ครบแล้ว → แค่ผูก listener + จัด scale + คืน sheen
             else BuildPanel();                     // fallback: สร้างสดทั้งแผง (ของเดิม)
             Hide();
@@ -148,24 +159,24 @@ namespace NuclearReMind
         private void Open()
         {
             _shown = true;
-            if (_backdrop != null) _backdrop.SetActive(true);
+            if (_backdrop != null) { UIPopIn.Ensure(_backdrop); _backdrop.SetActive(true); } // เปิดแบบ Windows 11 (scale+fade)
             GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause / Esc=ปิด)
             var ct = CoreTowerManager.Instance;
             _pendingMode = ct != null ? Mathf.Clamp(ct.Current.overclockMode, 0, 3) : CoreTowerManager.ModeNormal;
             Refresh();
-            if (_rootPop != null) _rootPop.PlayFrom(0.5f); // pop-in ทั้งแผง — เด้งจากเล็กไปใหญ่
         }
 
         private void Hide()
         {
             _shown = false;
-            if (_backdrop != null) _backdrop.SetActive(false);
             GameUIStack.Pop(this);
+            UIPopIn.PlayClose(_backdrop); // หุบออก (Windows 11) แล้วปิดเอง
         }
 
         // ── GameUIStack (แผงปิดได้: Esc=ปิดเหมือน ✕ · กติกากลางใน PauseMenuController) ──
         bool GameUIStack.IPanel.ClosableByEscape => true;
         void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(_backdrop);
+        GameObject GameUIStack.IPanel.PanelRoot => _backdrop;
         void GameUIStack.IPanel.CloseFromStack() => Hide();
 
         private void HandleTowerProgress(TowerData _)    { if (_shown) Refresh(); }
@@ -591,8 +602,8 @@ namespace NuclearReMind
         // ฟอนต์เฉพาะแผง CORE TOWER = Chakra Petch (มี Thai glyph) — fallback Kanit → builtin
         private static Font LoadFont()
         {
-            var f = Resources.Load<Font>("Fonts/ChakraPetch-Regular");
-            if (f == null) f = Resources.Load<Font>("Fonts/Kanit-Regular");
+            var f = Resources.Load<Font>("HUD/Fonts/ChakraPetch-Regular");
+            if (f == null) f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
             if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             return f;
         }

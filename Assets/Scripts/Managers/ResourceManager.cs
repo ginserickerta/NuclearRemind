@@ -128,8 +128,20 @@ namespace NuclearReMind
             EventManager.Instance.RaiseResourceChanged(Current);
         }
 
+        private float _thresholdTimer;               // เช็ก threshold ต่อเนื่อง (realtime alert)
+        private const float ThresholdCheckInterval = 0.5f;
+
         private void Update()
         {
+            // Alert แบบ realtime: เช็ก threshold ทุก 0.5 วิ "แม้เกม pause / เฟสวางแผน" — ไม่ต้องรอ tick/เปลี่ยนวัน/เฟส
+            // (CheckThresholds อ่านค่าอย่างเดียว + ยิง event ที่ AlertController debounce ไว้แล้ว → ไม่สแปม)
+            _thresholdTimer += Time.unscaledDeltaTime;
+            if (_thresholdTimer >= ThresholdCheckInterval)
+            {
+                _thresholdTimer = 0f;
+                CheckThresholds();
+            }
+
             // tick หยุดเมื่อนาฬิกาวันถูก pause (วางอาคาร/ควิซ/วิกฤต — V4 §15)
             if (TimeManager.Instance != null && !TimeManager.Instance.IsRunning)
                 return;

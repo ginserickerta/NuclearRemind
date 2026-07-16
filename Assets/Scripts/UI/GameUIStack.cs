@@ -25,6 +25,12 @@ namespace NuclearReMind
             void BringToFront();
             /// <summary>ปิดแผงแบบเดียวกับปุ่ม ✕ (สแต็ก Pop ให้ตอนแผงปิด — ไม่ต้อง Pop เองในนี้)</summary>
             void CloseFromStack();
+            /// <summary>
+            /// GameObject รากของแผง (ตัวที่ SetActive เปิด/ปิด) — ให้สแต็ก "self-heal":
+            /// ถ้า root ปิด/หายไปทั้งที่ยังค้างในสแต็ก = ถือว่าแผงปิดแล้ว → prune ออกเอง
+            /// (กัน ESC ถูกกลืนค้างถาวรจากรายการค้าง เช่น enter play mode ไม่ reload domain / ปิดทางอื่นโดยไม่ Pop)
+            /// </summary>
+            GameObject PanelRoot { get; }
         }
 
         // ── ค่าฐาน sortingOrder ของ Game UI (เหนือ HUD=0 / Story=60 / QuizExpl=70 / Pause=100) → บนสุดเสมอ ──
@@ -32,6 +38,11 @@ namespace NuclearReMind
 
         private static readonly List<IPanel> _open = new List<IPanel>(); // เรียงตามลำดับเปิด (ท้ายสุด = บนสุด)
         private static int _counter;                                     // นับขึ้นเรื่อย ๆ · เปิดทีหลัง = order สูงกว่า
+
+        // ล้าง static ทุกครั้งที่เริ่ม Play (กัน "Enter Play Mode แบบไม่ reload domain" ทำให้แผงรอบก่อนค้าง
+        // → HandleEscape กลืน Esc เสมอ → Pause เปิดไม่ได้)
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() { _open.Clear(); _counter = 0; }
 
         /// <summary>มี Game UI เปิดค้างอยู่ไหม (ล้าง entry ที่ถูก destroy ทิ้งไปด้วย)</summary>
         public static bool AnyOpen
@@ -68,11 +79,12 @@ namespace NuclearReMind
             for (int i = _open.Count - 1; i >= 0; i--)
             {
                 var p = _open[i];
-                if (p == null) { _open.RemoveAt(i); continue; }
+                // self-heal: แผงถูก destroy หรือ root ปิด/หาย (= ไม่ได้เปิดจริง) → prune ทิ้ง ไม่กลืน Esc
+                if (IsClosed(p)) { _open.RemoveAt(i); continue; }
                 if (p.ClosableByEscape) p.CloseFromStack(); // ปิดตัวบนสุด (มันจะ Pop ตัวเองตอนปิด)
-                return true; // มี Game UI อยู่ → กลืน Esc เสมอ (ทั้งกรณีปิดได้/บังคับ) ไม่ให้ไปเปิด Pause
+                return true; // มี Game UI เปิดจริง → กลืน Esc (ทั้งกรณีปิดได้/บังคับ) ไม่ให้ไปเปิด Pause
             }
-            return false; // ไม่มี Game UI → ปล่อยให้ Pause จัดการต่อ
+            return false; // ไม่มี Game UI เปิดจริง → ปล่อยให้ Pause จัดการต่อ
         }
 
         /// <summary>ดัน GameObject (root/backdrop ของแผง) ขึ้น sortingOrder บนสุด ด้วย overrideSorting (ข้าม Canvas ได้)</summary>
@@ -90,11 +102,23 @@ namespace NuclearReMind
                 panelRoot.AddComponent<GraphicRaycaster>();
         }
 
-        // ล้าง entry ที่กลายเป็น null (แผงถูก destroy ตอนโหลด/รีสตาร์ทซีน)
+        // ล้าง entry ที่ไม่ได้เปิดจริงแล้ว (destroy หรือ root ปิด/หาย) — กันสแต็กค้างจนกลืน Esc/บล็อก Pause ถาวร
         private static void PruneDead()
         {
             for (int i = _open.Count - 1; i >= 0; i--)
-                if (_open[i] == null) _open.RemoveAt(i);
+                if (IsClosed(_open[i])) _open.RemoveAt(i);
+        }
+
+        // แผงนี้ "ไม่ได้เปิดอยู่จริงแล้ว" ไหม → ต้อง prune ออกจากสแต็ก
+        //   • ถูก Destroy (MonoBehaviour → "fake null" ของ Unity — cast เป็น Object แล้วใช้ == ที่ Unity override)
+        //   • หรือ root ถูกปิด/หาย (activeSelf=false / null) ทั้งที่ยังค้างในสแต็ก = ถือว่าปิดแล้ว
+        //     (แผงที่กำลังเล่นแอนิเมชันหุบปิดถูก Pop ไปแล้ว จึงไม่อยู่ในสแต็ก — ไม่โดน prune ผิด)
+        private static bool IsClosed(IPanel p)
+        {
+            if (ReferenceEquals(p, null)) return true;
+            if (p is UnityEngine.Object o && o == null) return true; // controller ถูก destroy
+            var root = p.PanelRoot;
+            return root == null || !root.activeSelf; // Unity == จับ destroyed · activeSelf=false = ปิดอยู่
         }
     }
 }

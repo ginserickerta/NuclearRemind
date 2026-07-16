@@ -28,6 +28,7 @@ namespace NuclearReMind
 
         private bool _isDemolishing;
         private Vector2Int _hoveredCell;
+        private BuildingClickTarget _hoveredTarget; // อาคารใต้เมาส์ (pick ด้วยกรอบสไปรต์ เหมือนแผงอื่น)
 
         private void Awake()
         {
@@ -79,30 +80,31 @@ namespace NuclearReMind
 
         private void UpdateHighlight()
         {
+            // ★ pick อาคารด้วยกรอบสไปรต์ (เหมือน CoreTower/Lab/Memorial) แทน "ช่อง footprint ใต้เมาส์"
+            //   สไปรต์อาคารสูงวาดพุ่งขึ้น → คลิกบนตัวอาคารช่องใต้เมาส์เป็นช่องด้านหลัง ไม่ใช่ footprint → เดิมหาไม่เจอ
+            Vector3 world = InputManager.Instance.GetMouseWorldPosition();
             _hoveredCell = InputManager.Instance.GetMouseGridPosition();
+            _hoveredTarget = BuildingClickTarget.PickAt(world, _ => true);
 
             if (highlightRenderer == null) return;
 
-            // แปลงช่องใต้เมาส์ → อาคารที่ footprint ครอบอยู่ (ทุกช่องของตัวอาคาร ไม่ใช่แค่ origin)
-            // sprite อาคารวาดที่กึ่งกลาง footprint คลิกบนตัวอาคารจึงมักตกช่องที่ไม่ใช่ origin — ต้อง resolve ก่อน
-            bool demolishable = CanDemolishAt(_hoveredCell, out _, out _);
-
-            highlightRenderer.transform.position =
-                GridManager.Instance.IsoToWorld(_hoveredCell.x, _hoveredCell.y);
+            bool demolishable = CanDemolish(_hoveredTarget, out var origin, out _);
+            Vector2Int hl = demolishable ? origin : _hoveredCell; // มีอาคาร → ไฮไลต์ที่ origin · ไม่มี → ช่องใต้เมาส์
+            highlightRenderer.transform.position = GridManager.Instance.IsoToWorld(hl.x, hl.y);
             highlightRenderer.color = demolishable ? canDemolishColor : cannotDemolishColor;
             highlightRenderer.gameObject.SetActive(true);
         }
 
         /// <summary>
-        /// อาคารที่ footprint ครอบ cell นี้ทุบได้ไหม — คืน origin ที่ใช้สั่งทุบ + data
+        /// อาคารใต้เมาส์ (จาก PickAt) ทุบได้ไหม — คืน origin ที่ใช้สั่งทุบ + data
         /// (ทุบไม่ได้ = ไม่มีอาคาร / กำลังก่อสร้าง / CoreTower / Laboratory / แหล่งแร่)
         /// </summary>
-        private bool CanDemolishAt(Vector2Int cell, out Vector2Int origin, out BuildingData data)
+        private bool CanDemolish(BuildingClickTarget target, out Vector2Int origin, out BuildingData data)
         {
             origin = default; data = null;
-            var registry = BuildingRegistry.Instance;
-            if (registry == null || !registry.TryGetBuildingAt(cell, out origin, out data))
-                return false;
+            if (target == null || target.data == null) return false;
+            origin = target.originCell;
+            data = target.data;
 
             if (ConstructionController.Instance != null &&
                 ConstructionController.Instance.IsUnderConstruction(origin))
@@ -118,9 +120,11 @@ namespace NuclearReMind
 
         private void TryDemolish()
         {
-            var registry = BuildingRegistry.Instance;
-            if (registry == null || !registry.TryGetBuildingAt(_hoveredCell, out var origin, out var data))
-                return; // ไม่มีอาคารที่ footprint ครอบช่องนี้
+            var target = _hoveredTarget;
+            if (target == null || target.data == null)
+                return; // ไม่มีอาคารใต้เมาส์
+            var origin = target.originCell;
+            var data = target.data;
 
             if (ConstructionController.Instance != null &&
                 ConstructionController.Instance.IsUnderConstruction(origin))

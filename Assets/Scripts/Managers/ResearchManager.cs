@@ -77,19 +77,28 @@ namespace NuclearReMind
             if (Instance == this) InventoryManager.ResearchUnlockedQuery = null; // คืน stub (คราฟต์ได้หมด)
         }
 
-        private void OnEnable()
+        private bool _subscribed;
+
+        // auto-spawn AfterSceneLoad → OnEnable อาจรันตอน EventManager.Instance ยัง null (build) → guard กัน NullRef ที่ทำให้ AutoSpawn ล้ม
+        private void OnEnable() => TrySubscribe();
+        private void Start() => TrySubscribe(); // retry หลัง Awake ทุกตัว (EventManager พร้อมแน่)
+
+        private void TrySubscribe()
         {
+            if (_subscribed || EventManager.Instance == null) return;
             EventManager.Instance.OnResearchRequested += HandleResearchRequested;
             EventManager.Instance.OnDayEnded += HandleDayEnded;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
+            _subscribed = true;
         }
 
         private void OnDisable()
         {
-            if (EventManager.Instance == null) return;
+            if (!_subscribed || EventManager.Instance == null) { _subscribed = false; return; }
             EventManager.Instance.OnResearchRequested -= HandleResearchRequested;
             EventManager.Instance.OnDayEnded -= HandleDayEnded;
             EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+            _subscribed = false;
         }
 
         public bool IsDone(string projectId) => projectId switch

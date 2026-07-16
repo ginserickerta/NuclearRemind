@@ -1,5 +1,8 @@
 # Phase 2 — Core Systems (Day 5–9, ตาม ImprovePlan1.csv)
 
+> ⛔ **SUPERSEDED (2026-07-16)** — แผนนี้ถูกแทนด้วย **Sprint Plan 6 sprint ของ GDD v6.3**
+> ดู `CLAUDE.md` (root) + `docs/GDD.md` §32 — เก็บไว้เป็นบันทึกสถานะ Phase 1–2 เดิมเท่านั้น
+
 > เขียนเมื่อจบ Day 7 (Review & Buffer — Phase 1), ปรับปรุงหลัง migration สถาปัตยกรรม Original -> Improve (2026-06-14)
 > อ้างอิงแผนเต็ม: `Assets/Docs/ImprovePlan1.csv` (canonical), `Assets/Docs/ImproveCLAUDE.md` (convention)
 

@@ -120,7 +120,9 @@ namespace NuclearReMind
 
             if (!_arrived)
             {
-                var desired = Vector3.MoveTowards(transform.position, _target, speed * Time.deltaTime);
+                // ถ้าปลายทางอยู่คนละฝั่งรั้วโซน B → เล็ง waypoint ที่ประตูก่อน (การไถลตามรั้วจะพาเข้าประตูเอง)
+                Vector3 immediate = GateRoutedTarget(_target);
+                var desired = Vector3.MoveTowards(transform.position, immediate, speed * Time.deltaTime);
                 transform.position = MoveAvoidingBuildings(transform.position, desired);
                 _seekTimer += Time.deltaTime;
 
@@ -170,13 +172,26 @@ namespace NuclearReMind
             return c == null || c.isOccupied; // null = นอกกริด → กันคนงานเดินตกขอบแมพ
         }
 
+        // ปลายทางอยู่คนละฝั่งรั้วโซน B → คืน waypoint ที่ประตู (ไม่งั้นคืนปลายทางจริง)
+        private Vector3 GateRoutedTarget(Vector3 realTarget)
+        {
+            var grid = GridManager.Instance;
+            if (grid == null) return realTarget;
+            Vector2 toIso = grid.WorldToIsoF(realTarget);
+            Vector2 routed = ZoneBarrierRenderer.RouteThroughGate(grid.WorldToIsoF(transform.position), toIso);
+            if (routed == toIso) return realTarget; // ไม่ต้องอ้อม
+            return grid.IsoToWorldF(routed.x, routed.y);
+        }
+
         // ขยับจาก pos ไป desired โดยไถลอ้อมอาคารแทนการทะลุ (ใช้ทั้งตอนเดินเองและตอนถูกเพื่อนดัน)
         private static Vector3 MoveAvoidingBuildings(Vector3 pos, Vector3 desired)
         {
             var grid = GridManager.Instance;
             if (grid == null) return desired;
 
-            Vector2 stepped = WorkerPathing.Step(grid.WorldToIsoF(pos), grid.WorldToIsoF(desired), IsBlocked);
+            // IsBlocked = อาคาร/ขอบกริด · ZoneBarrierRenderer.CrossBlocked = รั้วโซน B (ข้ามได้เฉพาะประตู/เมื่อปลดล็อก)
+            Vector2 stepped = WorkerPathing.Step(grid.WorldToIsoF(pos), grid.WorldToIsoF(desired),
+                IsBlocked, ZoneBarrierRenderer.CrossBlocked);
             return grid.IsoToWorldF(stepped.x, stepped.y);
         }
 

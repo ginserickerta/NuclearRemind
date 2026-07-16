@@ -117,6 +117,13 @@ namespace NuclearReMind
             if (registry == null || !registry.PlacedBuildings.TryGetValue(cell, out var data) || data == null)
                 return;
 
+            // โซน B ยังล็อก (ประตูปิด) → ห้ามส่งคนเข้าโหนดโซน B (เดินเข้าไม่ได้ จะไปติดหน้ารั้ว) · ถอนคนออกได้เสมอ
+            if (delta > 0 && !ZoneBarrierRenderer.ZoneBUnlocked && ZoneBarrierRenderer.IsZoneBColumn(cell.x))
+            {
+                EventManager.Instance.RaiseNotice("เขต Zone B ยังปิดอยู่ — ปลดล็อกตามเนื้อเรื่องก่อนจึงส่งคนงานเข้าไปได้");
+                return;
+            }
+
             int cap = EffectiveCap(cell, data);
             int current = GetAssigned(cell);
             int desired = Mathf.Clamp(current + delta, 0, cap);
