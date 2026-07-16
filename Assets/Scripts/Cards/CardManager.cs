@@ -42,6 +42,34 @@ namespace NuclearReMind
         public CrisisCardSO Pending { get; private set; }
         public bool HasPending => Pending != null;
 
+        // ★ v6.3 cutover (slice 4 Cards): auto-spawn into the live game (was F9-playtest-only). Once live it
+        //   evaluates crisis cards on OnDayEnded and raises OnCrisisCardShown → CrisisCardPanelUI. Re-spawn on
+        //   every sceneLoaded (same pattern as WorkerManager/ResearchLab).
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoSpawnHook()
+        {
+            AutoSpawn();
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
+            => AutoSpawn();
+
+        private static void AutoSpawn()
+        {
+            try
+            {
+                if (EventManager.Instance == null) return; // no core yet (MainMenu) — a later sceneLoaded retries
+                if (FindFirstObjectByType<CardManager>() != null) return;
+                new GameObject("CardManager (auto)").AddComponent<CardManager>();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[CardManager] AutoSpawn ล้มเหลว — {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+            }
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
