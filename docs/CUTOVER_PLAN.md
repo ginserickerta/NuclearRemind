@@ -54,17 +54,18 @@ public float Q => ReactorController.Instance != null
 
 ---
 
-## 3. Pending decisions (ต้องเคาะก่อน slice ที่เกี่ยว — ค่า default = คำแนะนำ ยังต้องเช็ค GDD)
+## 3. Decisions — ✅ เคาะแล้ว 2026-07-16 (อ้าง GDD.md จริง)
 
-| # | คำถาม | คำแนะนำผม | เช็คที่ | กระทบ slice |
+| # | คำถาม | ผล | หลักฐาน | → ลบ |
 |---|---|---|---|---|
-| D1 | ตัด PowerGrid/Conduit วางท่อ? | **ตัด** placement, เหลือ power เป็น resource เฉยๆ | GDD §พลังงาน / CONFIG | Workers |
-| D2 | ตัด construction queue? | **ตัด** — v6.3 pre-place building (มี PrePlacedBuildingTests) | GDD §build | Workers/Reactor |
-| D3 | ตัด ore-node เดินขุด? | **ตัด** — เหลือ Mine job ออกเหล็กแบบ abstract | GDD §19/Worker | Workers |
-| D4 | Zone B strip+fence เก็บเป็น visual? | **เก็บ visual**, logic มาจาก ZoneBController | GDD §22 | Cards/ZoneB |
-| D5 | **Story: rebind หรือ ย้ายไป Cards?** | **Phase 1 rebind** (`Q`→shim) · ย้าย Cards ทีหลัง | STORY.md / GDD §25 | **Reactor (ตัวใหญ่)** |
+| D1 | PowerGrid/Conduit วางท่อ? | **✂️ ตัด** | ไม่มี conduit/grid ใน GDD · Power = resource, `power += powerWorkers×45` (§260), enum ResourceType (§451) | `PowerGridManager` |
+| D2 | construction queue? | **✂️ ตัด** | job list ไม่มี "construction" (§206/§603) · วางอาคารทันที + Placement Pause §15 | `ConstructionController` |
+| D3 | ore-node เดินขุด? | **✂️ ตัด** | "❌ Zone A ตัดทิ้ง" (§290) · เหมือง = `iron += mineWorkers×14` abstract | `OreDepositManager` |
+| D4 | Zone B strip+fence? | **✂️ ตัด strip เก่า** | v6.3 Zone B = อาคารปลด Phase 4 (§278/§304) ไม่ใช่แถบตายตัว · logic จาก ZoneBController | strip visual เก่า |
+| D5 | Story เก่า? | **✂️ ตัด** | user ทำ story ใหม่แล้ว · ใส่หลัง cutover | `StoryDirector`/`DilemmaManager`/beats |
 
-> D5 สำคัญสุด — ถ้า rebind ด้วย shim, Reactor slice เบาลงมหาศาล (ไม่ต้องรื้อ Story ทั้งระบบ)
+> ทั้ง 5 = ตัดตาม v6.3 · Reactor slice ยังใช้ **shim** `Q`→`Core` ชั่วคราวระหว่างย้าย HUD (ดู §2)
+> ★ Story: **ตัดของเก่า** (ไม่ rebind content) — เนื้อเรื่องใหม่ที่ user ทำจะใส่หลัง cutover เสร็จ
 
 ---
 
