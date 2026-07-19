@@ -6,7 +6,9 @@ namespace NuclearReMind
     /// ผู้พูดในบทสนทนา (v8.5) — NPC สามคน + เสียงในใจผู้เล่น (Auren) + ระบบ
     /// Kova/Mira/Dorn = มี portrait (โผล่ในช่องสนทนาซ้าย/ขวา) · InnerVoice/System = ข้อความกลาง ไม่มี portrait
     /// </summary>
-    public enum Speaker { System, InnerVoice, Kova, Mira, Dorn }
+    /// ★ Citizen ต่อท้ายเมื่อ bark ย้ายมาใช้แผงนี้ (BARKS.md มีผู้พูด "ชาวเมือง") — ต่อท้ายเท่านั้น
+    /// ห้ามแทรกกลาง ไม่งั้น DialogueLine ที่ serialize ไว้ใน asset เดิมจะเปลี่ยนผู้พูดยกชุด
+    public enum Speaker { System, InnerVoice, Kova, Mira, Dorn, Citizen }
 
     /// <summary>
     /// อารมณ์สีหน้าของตัวละครที่มี portrait จริง (ตอนนี้ Kova) — เลือกภาพ portrait ตามอารมณ์ของประโยค
@@ -44,6 +46,7 @@ namespace NuclearReMind
                 case Speaker.Kova:       return "Kova";
                 case Speaker.Mira:       return "Mira";
                 case Speaker.Dorn:       return "Dorn";
+                case Speaker.Citizen:    return "ชาวเมือง";
                 case Speaker.InnerVoice: return "เสียงในใจ";
                 case Speaker.System:     return "ระบบ";
                 default:                 return s.ToString();
@@ -70,6 +73,7 @@ namespace NuclearReMind
                 case Speaker.Kova:       return new Color(0.30f, 0.70f, 0.95f); // ฟ้า-วิศวกร
                 case Speaker.Mira:       return new Color(0.95f, 0.45f, 0.70f); // ชมพู-หมอ
                 case Speaker.Dorn:       return new Color(0.70f, 0.80f, 0.35f); // เขียว-เกษตร
+                case Speaker.Citizen:    return new Color(0.72f, 0.70f, 0.66f); // เทาอุ่น-ไม่มีชื่อ
                 case Speaker.InnerVoice: return new Color(0.72f, 0.68f, 0.85f); // ม่วงจาง-ความคิด
                 case Speaker.System:     return new Color(1.00f, 0.55f, 0.30f); // ส้ม-เตือน
                 default:                 return Color.white;

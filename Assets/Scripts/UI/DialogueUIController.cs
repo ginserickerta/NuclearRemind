@@ -97,6 +97,16 @@ namespace NuclearReMind
 
         private void Show(DialogueLine[] lines)
         {
+            // ★ อย่าหยุดนาฬิกาก่อนรู้ว่าแผงโผล่จริง — overlayPanel ที่ยังไม่ได้ wire (Setup Story UI ยังไม่รัน)
+            // จะทำให้เกมค้างโดยไม่มีอะไรให้กด และไม่มีข้อความบอกว่าเกิดอะไรขึ้น (บั๊กแบบเดียวกับ record card วันที่ 9)
+            if (overlayPanel == null)
+            {
+                Debug.LogError("[Dialogue] มีบทจะเล่นแต่ overlayPanel ยังไม่ถูก wire — ข้ามบทนี้ไป " +
+                               "(รัน NuclearReMind ▸ Setup Story UI เพื่อต่อ reference ให้ครบ)");
+                EventManager.Instance.RaiseStoryCardDismissed();
+                return;
+            }
+
             IsShowing = true;
             TimeManager.Instance?.Pause(PauseReason.StoryCard);
 
@@ -109,7 +119,7 @@ namespace NuclearReMind
             if (rightPortrait != null) { rightPortrait.preserveAspect = true; rightPortrait.gameObject.SetActive(false); }
 
             // เปิดแบบ Windows 11 (scale+fade ทั้งชิ้น) · PlayOpen กันบั๊กตอนบทเล่นต่อเนื่อง (ปิดแล้วเปิดซ้ำทันที)
-            if (overlayPanel != null) UIPopIn.PlayOpen(overlayPanel, self: true);
+            UIPopIn.PlayOpen(overlayPanel, self: true);
             RenderCurrent();
         }
 

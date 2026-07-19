@@ -124,6 +124,9 @@ namespace NuclearReMind
         private void HandleBarkFired(BarkSO bark)
         {
             if (bark == null || string.IsNullOrEmpty(bark.text)) return;
+            // The VN dialogue panel owns spoken lines when it is present (BarkDialogueRouter). This feed
+            // stays as the fallback for scenes without it, so a line is never dropped — and never doubled.
+            if (BarkDialogueRouter.HandlesBarks) return;
 
             while (_toasts.Count >= MaxToasts) // oldest out first
             {
