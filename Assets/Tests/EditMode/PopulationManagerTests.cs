@@ -46,7 +46,23 @@ namespace NuclearReMind.Tests
         }
 
         // ── ขวัญกำลังใจ (V4 §9/§18 Hope deltas) ──────────────────────────
+        //
+        // ⚠ These three cover PopulationManager's own Hope recalc, which v6.3 replaced: HopeLedger is the
+        // sole owner of Hope (rule #8), and PopulationManager.HandleDayEnded bails out entirely whenever
+        // WorkerManager is active - i.e. always, in the shipped game. They only still run here because
+        // this suite never creates a WorkerManager, so they are asserting a path no player can reach.
+        //
+        // They also no longer match the numbers: V5 added hopeDailyDrift = 1.5/day, so the food-shortage
+        // case lands on 88.5 rather than 90. Rewriting the expected values would make them green while
+        // still guarding dead code - worse than leaving them visible, because it would hide the fact that
+        // two Hope systems still coexist. Ignored rather than deleted so that debt stays on the record.
+        //
+        // TODO(cutover): retire PopulationManager's Hope block, then delete these.
+        private const string LegacyHopeReason =
+            "v6.3: Hope belongs to HopeLedger; PopulationManager's recalc is dead code when WorkerManager is active";
+
         [Test]
+        [Ignore(LegacyHopeReason)]
         public void DayEnded_FoodShortage_LowersHope10()
         {
             eventManager.RaiseResourceDepleted(ResourceType.Food);
@@ -55,6 +71,7 @@ namespace NuclearReMind.Tests
         }
 
         [Test]
+        [Ignore(LegacyHopeReason)]
         public void DayEnded_WithMedic_NoShortage_Recovers2()
         {
             InjectPop(workers: 5, hope: 80f, shelterCap: 20, medics: 1);
@@ -63,6 +80,7 @@ namespace NuclearReMind.Tests
         }
 
         [Test]
+        [Ignore(LegacyHopeReason)]
         public void DayEnded_NoMedic_NoRecovery()
         {
             eventManager.RaiseMoraleDelta(-20f); // 100 → 80

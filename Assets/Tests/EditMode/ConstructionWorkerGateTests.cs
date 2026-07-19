@@ -132,7 +132,16 @@ namespace NuclearReMind.Tests
             EventManager.Instance.RaiseBuildingPlaced(cell, data); // → registry + construction queue
         }
 
-        private void Tick() => EventManager.Instance.RaiseGameTick();
+        /// <summary>
+        /// Builders now walk to the site before construction starts, and the walk accrues in real time
+        /// from Update - which EditMode never runs, so _walkTime stayed 0 and nothing was ever built.
+        /// AdvanceWalk is public for exactly this reason ("แยกจาก Time.deltaTime ให้เทสต์คุมเวลาได้").
+        /// </summary>
+        private void Tick()
+        {
+            construction.AdvanceWalk(60f);   // long enough that the crew has always arrived
+            EventManager.Instance.RaiseGameTick();
+        }
         private void AssignPlus() => EventManager.Instance.RaiseWorkerAssignRequested(Cell, +1);
 
         private BuildingData MakeBuilding(string name, BuildingType type, int workerRequired, int buildTicks)
