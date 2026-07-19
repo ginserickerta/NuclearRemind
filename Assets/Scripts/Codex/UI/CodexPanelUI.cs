@@ -98,12 +98,7 @@ namespace NuclearReMind
 
         private static Font LoadFont()
         {
-            // Fonts live under Resources/HUD/Fonts — the old "Fonts/..." paths never resolved.
-            var f = Resources.Load<Font>("HUD/Fonts/ChakraPetch-SemiBold");
-            if (f == null) f = Resources.Load<Font>("HUD/Fonts/ChakraPetch-Regular");
-            if (f == null) f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
-            if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            return f;
+            return UIFonts.Body;
         }
 
         private void Start()

@@ -141,8 +141,8 @@ namespace NuclearReMind.EditorTools
         // ─────────────────────────────────────────────
         private static void SetupCodexUI()
         {
-            var font = Resources.Load<Font>("Fonts/Kanit-Regular");
-            if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            UIFonts.ClearCache(); // editor setup re-imports assets between runs
+            var font = UIFonts.Body;
 
             var hudCanvas = GameObject.Find("HUDCanvas");
             if (hudCanvas == null)

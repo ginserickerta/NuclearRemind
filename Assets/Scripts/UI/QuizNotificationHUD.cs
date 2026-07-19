@@ -205,10 +205,7 @@ namespace NuclearReMind
 
         private static Font LoadFont()
         {
-            var f = Resources.Load<Font>("Fonts/Kanit-Regular");
-            if (f == null) f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
-            if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            return f;
+            return UIFonts.Body;
         }
     }
 }

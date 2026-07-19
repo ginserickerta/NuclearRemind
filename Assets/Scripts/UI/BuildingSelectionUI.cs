@@ -255,8 +255,7 @@ namespace NuclearReMind
 
         private static Font LoadKanitFont()
         {
-            var f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
-            return f != null ? f : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return UIFonts.Body;
         }
 
         // ฟอนต์ที่ใช้จริง — hotbarFont ถ้าตั้งไว้ ไม่งั้น Kanit

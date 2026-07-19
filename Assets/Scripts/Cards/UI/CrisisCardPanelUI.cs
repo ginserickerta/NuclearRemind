@@ -92,13 +92,7 @@ namespace NuclearReMind
 
         private static Font LoadFont()
         {
-            // The fonts live under Resources/HUD/Fonts — the old "Fonts/..." paths never resolved,
-            // so this panel had been silently falling back to Unity's built-in face.
-            var f = Resources.Load<Font>("HUD/Fonts/ChakraPetch-SemiBold");
-            if (f == null) f = Resources.Load<Font>("HUD/Fonts/ChakraPetch-Regular");
-            if (f == null) f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
-            if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            return f;
+            return UIFonts.Body;
         }
 
         private void Awake()

@@ -116,8 +116,8 @@ namespace NuclearReMind.EditorTools
 
         private static Font LoadKanit()
         {
-            var f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
-            return f != null ? f : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            UIFonts.ClearCache(); // editor setup re-imports assets between runs
+            return UIFonts.Body;
         }
     }
 }

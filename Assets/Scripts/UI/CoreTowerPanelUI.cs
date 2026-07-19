@@ -667,10 +667,7 @@ namespace NuclearReMind
         // ฟอนต์เฉพาะแผง CORE TOWER = Chakra Petch (มี Thai glyph) — fallback Kanit → builtin
         private static Font LoadFont()
         {
-            var f = Resources.Load<Font>("HUD/Fonts/ChakraPetch-Regular");
-            if (f == null) f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
-            if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            return f;
+            return UIFonts.Body;
         }
     }
 }

@@ -234,10 +234,7 @@ namespace NuclearReMind
         private static Font LoadFont()
         {
             // Chakra Petch (Cadson Demak) — Thai + Latin, techy/sci-fi cut that suits the intro cards.
-            var f = Resources.Load<Font>("HUD/Fonts/ChakraPetch-SemiBold");
-            if (f == null) f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
-            if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            return f;
+            return UIFonts.Body;
         }
     }
 }

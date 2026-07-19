@@ -85,9 +85,7 @@ namespace NuclearReMind
 
         private void Awake()
         {
-            _font = Resources.Load<Font>("Fonts/Kanit-Regular");
-            if (_font == null) _font = Resources.Load<Font>("Fonts/Kanit");
-            if (_font == null) _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _font = UIFonts.Body;
             BuildStack();
         }
 
