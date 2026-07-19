@@ -101,11 +101,22 @@ namespace NuclearReMind
             return sb.ToString();
         }
 
-        /// <summary>Test hook — clears both the cache and the stored key.</summary>
-        public static void ResetForTest()
+        /// <summary>How many are unlocked, out of All.Length — for the meta-progress readout.</summary>
+        public static int UnlockedCount => Unlocked.Count;
+
+        /// <summary>
+        /// Wipe every earned achievement (new game+ reset / testing as a fresh player).
+        /// Pairs with MetaProgress.ResetAll — achievements live in their own key, so a meta wipe that
+        /// skipped this would leave the player's permanent record half-cleared.
+        /// </summary>
+        public static void ResetAll()
         {
             _unlocked = null;
             PlayerPrefs.DeleteKey(PrefsKey);
+            PlayerPrefs.Save();
         }
+
+        /// <summary>Test hook — same wipe, kept under the name the suites already call.</summary>
+        public static void ResetForTest() => ResetAll();
     }
 }
