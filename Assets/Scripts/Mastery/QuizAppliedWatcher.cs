@@ -125,6 +125,13 @@ namespace NuclearReMind
 
             // advance the reveal clock AFTER today's applied flags are set (quizzes surface a beat later)
             q.AdvanceDay(day);
+
+            // Invite the player to any quiz that just opened up. State-driven, not calendar-driven: the
+            // trigger is "the knowledge has been used, plus the reveal delay", never a fixed day number.
+            // The prompt is skippable by design — QUIZZES.md keeps quizzes optional.
+            var fresh = q.TakeNewlyAnswerable();
+            for (int i = 0; i < fresh.Count; i++)
+                EventManager.Instance?.RaiseQuizShown(fresh[i]);
         }
 
         // q_clean_energy — reaching a (winning) ending

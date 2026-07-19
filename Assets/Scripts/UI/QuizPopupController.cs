@@ -92,7 +92,10 @@ namespace NuclearReMind
             _revealed = false;
 
             if (popupPanel != null) { UIPopIn.Ensure(popupPanel); popupPanel.SetActive(true); }
-            GameUIStack.Push(this); // ขึ้นบนสุด + ลงทะเบียน (บล็อก Pause · Esc เงียบ = ตอบบังคับ)
+            GameUIStack.Push(this);
+            // ★ v6.3: the day clock used to be paused by the legacy QuizManager, which no longer runs —
+            // QuizAppliedWatcher raises OnQuizShown directly, so this panel owns the pause now.
+            TimeManager.Instance?.Pause(PauseReason.QuizPopup);
             if (categoryBar != null) categoryBar.color = ColorFor(quiz.category);
             if (topicText != null)
                 topicText.text = string.IsNullOrEmpty(quiz.topicTitle) ? quiz.speaker : quiz.topicTitle;
@@ -139,7 +142,19 @@ namespace NuclearReMind
                 confirmButton.gameObject.SetActive(true);
                 confirmButton.interactable = false; // ต้องเลือกก่อน
             }
-            if (closeButton != null) closeButton.gameObject.SetActive(false);
+            // ★ v6.3: the close button is now visible from the start as the skip affordance. Reusing the
+            // button already wired in the scene avoids adding a new one that nobody would hook up, and a
+            // locked-away skip is the same as no skip at all (rule: ควิซข้ามได้).
+            SetCloseLabel("ไว้ทีหลัง — อยู่ใน Codex (กด C)");
+            if (closeButton != null) closeButton.gameObject.SetActive(true);
+        }
+
+        /// <summary>Relabels the shared close/skip button. No-op if the scene wired no label.</summary>
+        private void SetCloseLabel(string text)
+        {
+            if (closeButton == null) return;
+            var lbl = closeButton.GetComponentInChildren<Text>();
+            if (lbl != null) lbl.text = text;
         }
 
         /// <summary>ผู้เล่นเลือกตัวเลือก index (ผูกกับ onClick ของปุ่มแต่ละตัวตอน runtime)</summary>
@@ -196,33 +211,44 @@ namespace NuclearReMind
                 explainText.gameObject.SetActive(true);
             }
             if (confirmButton != null) confirmButton.gameObject.SetActive(false);
+            SetCloseLabel("ปิด"); // answered — the same button stops being a skip
             if (closeButton != null) closeButton.gameObject.SetActive(true);
         }
 
-        /// <summary>ปิด popup แล้วส่งคำตอบให้ QuizManager (ให้คะแนน/ปลด Codex/คิวข้อต่อไป-resume)</summary>
+        /// <summary>
+        /// ปิด popup — ★ v6.3: ส่งคำตอบให้ CodexQuizManager (Mastery ถาวร + ปลด Codex) ไม่ใช่ QuizManager
+        /// เดิมที่ให้ Knowledge +8 ตามกติกา v4.1 ที่เลิกใช้แล้ว · ยังไม่ได้ตอบ (กด "ไว้ทีหลัง"/Esc) = ข้าม
+        /// ไม่ส่งอะไรทั้งนั้น ควิซยังอยู่ใน Codex ตอบทีหลังได้ ไม่มีโทษ (QUIZZES.md)
+        /// </summary>
         public void Close()
         {
             if (_activeQuiz == null) return;
 
-            // แปลงตำแหน่งบนจอกลับเป็น index จริงใน quiz.options ก่อนส่งให้ QuizManager ตัดสินถูก/ผิด
+            bool submitted = _revealed;
+            string quizId = _activeQuiz.quizId;
+            // แปลงตำแหน่งบนจอกลับเป็น index จริงใน quiz.options ก่อนตัดสินถูก/ผิด
             int answer = (_displayToOriginal != null && _selectedIndex >= 0 && _selectedIndex < _displayToOriginal.Length)
                 ? _displayToOriginal[_selectedIndex]
                 : _selectedIndex;
+
             _activeQuiz = null;
             _selectedIndex = -1;
             _revealed = false;
 
-            // ซ่อน panel ก่อน — ถ้ามีข้อต่อไปในคิว SubmitAnswer จะ raise OnQuizShown เปิด panel ใหม่ (Push ซ้ำ) เอง
             if (popupPanel != null) popupPanel.SetActive(false);
             GameUIStack.Pop(this);
-            QuizManager.Instance.SubmitAnswer(answer);
+            TimeManager.Instance?.Resume(PauseReason.QuizPopup);
+
+            if (submitted) CodexQuizManager.Instance.Submit(quizId, answer);
         }
 
-        // ── GameUIStack (แผงบังคับ: Esc เงียบ ปิดเองไม่ได้ · บล็อก Pause · กติกากลางใน PauseMenuController) ──
-        bool GameUIStack.IPanel.ClosableByEscape => false;
+        // ── GameUIStack ──
+        // ★ v6.3: Esc ปิดได้ ต่างจาก v4.1 ที่ควิซบังคับตอบ — GDD หลักการข้อ 4 + ตาราง QUIZZES.md
+        // กำหนดให้ควิซ "ข้ามได้ ไม่ตอบก็เล่นต่อได้" อย่าเปลี่ยนกลับโดยไม่แก้เอกสารก่อน
+        bool GameUIStack.IPanel.ClosableByEscape => true;
         void GameUIStack.IPanel.BringToFront() => GameUIStack.RaiseToTop(popupPanel);
         GameObject GameUIStack.IPanel.PanelRoot => popupPanel;
-        void GameUIStack.IPanel.CloseFromStack() { } // ไม่ถูกเรียก (ClosableByEscape=false — ต้องตอบก่อน)
+        void GameUIStack.IPanel.CloseFromStack() => Close();
 
         /// <summary>
         /// สร้าง permutation 0..count-1 แบบ Fisher–Yates สำหรับสับตำแหน่งตัวเลือก
