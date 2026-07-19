@@ -202432,7 +202432,7 @@ MonoBehaviour:
   deuteriumWaterReserve: 100
   startEnergy: 200
   startWater: 220
-  startFood: 220
+  startFood: 40
   startIron: 240
   zoneBActiveUpkeepEnergy: 40
 --- !u!1 &800000120
