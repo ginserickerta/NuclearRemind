@@ -23,9 +23,10 @@ namespace NuclearReMind
         public float pulseScale = 1.25f;
         public float pulseSeconds = 0.28f;
 
-        // TEMP verification: force the icon visible even with no answerable quiz, so its placement/render can
-        // be confirmed in-game. Set back to false for shipping (icon should only show when a quiz is ready).
-        private const bool DebugAlwaysShow = true;
+        // Verification aid: force the icon visible even with no answerable quiz, so its placement/render can
+        // be confirmed in-game. MUST stay false for shipping — otherwise the icon is permanently on with no
+        // badge, which trains the player to ignore it and defeats the point of the notification.
+        private const bool DebugAlwaysShow = false;
 
         private Font _font;
         private GameObject _iconRoot;   // whole icon (hidden when nothing answerable)

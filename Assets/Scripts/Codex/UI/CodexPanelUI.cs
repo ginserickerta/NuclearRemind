@@ -26,6 +26,10 @@ namespace NuclearReMind
         static readonly Color CQ         = new Color(0.42f, 0.72f, 0.92f, 1f);
         static readonly Color CBtn       = new Color(0.18f, 0.26f, 0.34f, 1f);
         static readonly Color CBtnDim    = new Color(0.15f, 0.15f, 0.13f, 1f);
+        // Row cards — state should be readable at a glance, before anyone reads a word.
+        static readonly Color CRowEarned = new Color(0.16f, 0.24f, 0.17f, 0.85f);
+        static readonly Color CRowOpen   = new Color(0.14f, 0.20f, 0.27f, 0.90f);
+        static readonly Color CRowLocked = new Color(1f, 1f, 1f, 0.035f);
 
         public static CodexPanelUI Instance { get; private set; }
 
@@ -60,6 +64,11 @@ namespace NuclearReMind
 
         private static void AutoSpawnUnsafe()
         {
+            // MainMenu has no core systems. Without this guard the panel attached itself to the menu
+            // canvas and bound KeyCode.C there, so pressing C in the menu opened a Codex window and
+            // called TimeManager.Pause / GameUIStack.Push with nothing behind them. Its siblings
+            // (QuizNotificationHUD, QuizAppliedWatcher) already guard the same way.
+            if (EventManager.Instance == null) return;
             if (FindFirstObjectByType<CodexPanelUI>() != null) return;
             var canvas = FindBestCanvas();
             if (canvas == null) return;
@@ -89,8 +98,10 @@ namespace NuclearReMind
 
         private static Font LoadFont()
         {
-            var f = Resources.Load<Font>("Fonts/Kanit-Regular");
-            if (f == null) f = Resources.Load<Font>("Fonts/Kanit");
+            // Fonts live under Resources/HUD/Fonts — the old "Fonts/..." paths never resolved.
+            var f = Resources.Load<Font>("HUD/Fonts/ChakraPetch-SemiBold");
+            if (f == null) f = Resources.Load<Font>("HUD/Fonts/ChakraPetch-Regular");
+            if (f == null) f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
             if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             return f;
         }
@@ -102,14 +113,17 @@ namespace NuclearReMind
             DisableLegacy();
         }
 
-        // Retire the legacy scene-placed codex/quiz UI so the old C-toggle + forced popups stop.
+        // Retire the legacy scene-placed codex window so the old C-toggle stops.
+        //
+        // ★ QuizPopupController is deliberately LEFT ENABLED. It is the scene-authored quiz popup (category
+        // bar, speaker, Codex-reward footer, shuffled options, outline highlighting) and it is now the
+        // v6.3 prompt: it submits to CodexQuizManager and can be skipped. Disabling it here would silently
+        // kill the centre-screen quiz again.
         private void DisableLegacy()
         {
             if (_legacyDisabled) return;
             var legacyCodex = FindFirstObjectByType<CodexUIController>();
             if (legacyCodex != null) legacyCodex.enabled = false;
-            var legacyQuiz = FindFirstObjectByType<QuizPopupController>();
-            if (legacyQuiz != null) legacyQuiz.enabled = false;
             _legacyDisabled = true;
         }
 
@@ -162,7 +176,11 @@ namespace NuclearReMind
         {
             var cq = CodexQuizManager.Instance;
             if (_header != null)
-                _header.text = $"📖 Codex — เชี่ยวชาญ {cq.UnlockedCodexCount} / {cq.TotalCodex}";
+            {
+                int open = cq.AnswerableCount;
+                string badge = open > 0 ? $"   <color=#6BB8EB>· ตอบได้ {open} ข้อ</color>" : "";
+                _header.text = $"Codex — เชี่ยวชาญ {cq.UnlockedCodexCount} / {cq.TotalCodex}{badge}";
+            }
 
             if (_listContainer == null) return;
             foreach (var go in _rows) Destroy(go);
@@ -177,24 +195,25 @@ namespace NuclearReMind
                 switch (view.state)
                 {
                     case QuizState.Earned:
-                        AddText($"✅ {title}", CGreen, 19);
+                        AddText($"✔  {title}", CGreen, 19, CRowEarned);
                         break;
 
                     case QuizState.Answerable:
-                        AddText($"❓ {view.quiz.question}", CQ, 19);
+                        AddText($"?  {view.quiz.question}", CQ, 19, CRowOpen);
                         if (view.quiz.options != null)
                             for (int i = 0; i < view.quiz.options.Length; i++)
                             {
                                 string opt = view.quiz.options[i];
                                 string qid = view.quiz.quizId;
                                 int idx = i;
-                                AddButton($"{(char)('A' + i)}. {opt}", CBtn, () => Answer(qid, idx));
+                                AddButton($"{(char)('A' + i)}.  {opt}", CBtn, () => Answer(qid, idx));
                             }
                         AddSpacer();
                         break;
 
-                    default: // Locked
-                        AddText($"🔒 ??? — {title} (ต้องใช้ความรู้ในเกมก่อน)", CMuted, 18);
+                    default: // Locked — never hidden (QUIZZES.md UI spec). "[ล็อก]" not 🔒: legacy
+                             // uGUI Text cannot draw astral-plane glyphs, so the padlock came out blank.
+                        AddText($"[ล็อก]  ??? — {title}", CMuted, 18, CRowLocked);
                         break;
                 }
             }
@@ -225,33 +244,65 @@ namespace NuclearReMind
             crt.anchorMin = crt.anchorMax = new Vector2(1f, 1f); crt.pivot = new Vector2(1f, 1f);
             crt.anchoredPosition = new Vector2(-16f, -16f); crt.sizeDelta = new Vector2(48f, 48f);
 
-            // list
+            // Scrolling list. The viewport clips; Content grows with its children so an answerable
+            // quiz (question + 3 options) can no longer push the rest off the bottom of the panel.
             var list = NewUI("List", _root.transform, new Color(0f, 0f, 0f, 0.22f));
             Anchor(list, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(24f, 150f), new Vector2(-24f, -74f));
-            var vlg = list.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 5f; vlg.padding = new RectOffset(12, 12, 12, 12);
-            vlg.childControlWidth = true; vlg.childControlHeight = false;
+            list.AddComponent<RectMask2D>();
+            var scroll = list.AddComponent<ScrollRect>();
+
+            var content = NewUI("Content", list.transform, new Color(0f, 0f, 0f, 0f));
+            var cnt = content.GetComponent<RectTransform>();
+            cnt.anchorMin = new Vector2(0f, 1f); cnt.anchorMax = new Vector2(1f, 1f);
+            cnt.pivot = new Vector2(0.5f, 1f);
+            cnt.offsetMin = new Vector2(0f, 0f); cnt.offsetMax = new Vector2(0f, 0f);
+
+            var vlg = content.AddComponent<VerticalLayoutGroup>();
+            vlg.spacing = 6f; vlg.padding = new RectOffset(14, 14, 14, 14);
+            // ★ childControlHeight MUST be true. While it was false the group ignored every
+            // LayoutElement and used each row's default 100x100 rect, which is where the huge
+            // gaps between entries came from.
+            vlg.childControlWidth = true; vlg.childControlHeight = true;
             vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
-            _listContainer = list.transform;
+            var fitter = content.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            scroll.content = cnt;
+            scroll.viewport = list.GetComponent<RectTransform>();
+            scroll.horizontal = false; scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 28f;
+            _listContainer = content.transform;
 
             // result / explanation area
             _result = MakeText("Result", _root.transform, "", 17, CText, TextAnchor.UpperLeft);
             Anchor(_result.gameObject, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(24f, 20f), new Vector2(-24f, 138f));
         }
 
-        private void AddText(string text, Color color, int size)
+        /// <summary>
+        /// One list row on its own tinted card. preferredHeight is left at -1 on purpose so the group
+        /// falls back to the Text's own preferred height — a long question wraps instead of clipping.
+        /// </summary>
+        private void AddText(string text, Color color, int size, Color rowBg)
         {
-            var t = MakeText("Row", _listContainer, text, size, color, TextAnchor.MiddleLeft);
-            var le = t.gameObject.AddComponent<LayoutElement>(); le.minHeight = 28f; le.preferredHeight = 28f;
-            _rows.Add(t.gameObject);
+            var row = NewUI("Row", _listContainer, rowBg);
+            var le = row.AddComponent<LayoutElement>(); le.minHeight = 40f; le.preferredHeight = -1f;
+            var hl = row.AddComponent<HorizontalLayoutGroup>();
+            hl.padding = new RectOffset(14, 14, 9, 9);
+            hl.childControlWidth = true; hl.childControlHeight = true;
+            hl.childForceExpandWidth = true; hl.childForceExpandHeight = false;
+
+            var t = MakeText("Label", row.transform, text, size, color, TextAnchor.MiddleLeft);
+            t.verticalOverflow = VerticalWrapMode.Truncate; // the row grows instead
+            _rows.Add(row);
         }
 
         private void AddButton(string text, Color bg, UnityEngine.Events.UnityAction onClick)
         {
             var btn = MakeButton("Opt", _listContainer, text, bg, onClick);
-            var le = btn.gameObject.AddComponent<LayoutElement>(); le.minHeight = 38f; le.preferredHeight = 38f;
+            var le = btn.gameObject.AddComponent<LayoutElement>(); le.minHeight = 44f; le.preferredHeight = 44f;
             var lbl = btn.GetComponentInChildren<Text>();
-            if (lbl != null) lbl.alignment = TextAnchor.MiddleLeft;
+            if (lbl != null) { lbl.alignment = TextAnchor.MiddleLeft; lbl.fontSize = 17; }
             _rows.Add(btn.gameObject);
         }
 

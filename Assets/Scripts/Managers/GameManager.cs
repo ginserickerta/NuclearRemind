@@ -219,6 +219,11 @@ namespace NuclearReMind
         public void Restart()
         {
             CaptureMetaProgress();
+            // CodexQuizManager is a plain static singleton, so reloading the scene does not touch it.
+            // Without this, the new run starts with last run's applied-state already latched (quizzes
+            // pre-unlocked) and with every skipped prompt still marked as offered, so it never invites
+            // the player again. Mastery/Codex are NOT lost — those live in MetaProgress by design.
+            CodexQuizManager.ResetForRun();
             Time.timeScale = 1f;
             var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
             SceneFader.FadeToScene(scene.buildIndex); // เฟดจอดำ → reload → เฟดสว่าง

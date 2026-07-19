@@ -43,6 +43,14 @@ namespace NuclearReMind
         /// <summary>Fresh manager for EditMode tests / restart (does not clear MetaProgress).</summary>
         public static void ResetForTest() => _instance = new CodexQuizManager();
 
+        /// <summary>
+        /// Drop this run's quiz state on Restart. The scene reloads but a plain static singleton does not,
+        /// so applied-flags, the reveal-day latches and the "already offered as a prompt" set would all
+        /// carry into the next run. Mastery and unlocked Codex entries live in MetaProgress and survive
+        /// on purpose — this only clears what belongs to a single playthrough.
+        /// </summary>
+        public static void ResetForRun() => _instance = new CodexQuizManager();
+
         private readonly Dictionary<string, QuizQuestionSO> _quizzes = new Dictionary<string, QuizQuestionSO>();
         private readonly Dictionary<string, CodexEntrySO> _codexByQuiz = new Dictionary<string, CodexEntrySO>();
         private readonly List<CodexEntrySO> _codexAll = new List<CodexEntrySO>();
@@ -275,7 +283,14 @@ namespace NuclearReMind
             res.valid = true;
             res.explanation = q.explainText;                    // shown ALWAYS (QUIZZES.md — every case)
             res.correct = optionIndex == q.correctIndex;
-            if (!res.correct) return res;                       // no penalty; try again tomorrow
+            if (!res.correct)
+            {
+                // No penalty, retry tomorrow — but still announce it. QuizNotificationHUD recounts on
+                // OnQuizAnswered, and firing only on correct answers left the badge stale until the next
+                // day rolled over.
+                EventManager.Instance?.RaiseQuizAnswered(quizId, false);
+                return res;
+            }
 
             // Correct → permanent mastery + codex unlock
             res.masteryEarned = MasteryRegistry.Instance.Grant(quizId);
