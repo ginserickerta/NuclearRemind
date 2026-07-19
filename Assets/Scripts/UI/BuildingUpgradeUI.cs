@@ -266,7 +266,12 @@ namespace NuclearReMind
 
                 if (_extractRow != null)
                 {
+                    // ★ แถวนี้ถูกใช้สองหน้าที่: สถานะขุดแร่ (ตรงนี้) กับสวิตช์สกัดดิวเทอเรียมของโรงน้ำ
+                    //   ต้องปิดปุ่มเองที่นี่ — มีแต่ RefreshExtractRow (ทางโรงน้ำ) ที่จัดการปุ่ม ถ้าไม่ปิด
+                    //   ปุ่มจะติดค้างมาจากอาคารที่เลือกก่อนหน้า แล้วโผล่บนแหล่งแร่ซึ่งสกัดดิวเทอเรียมไม่ได้
                     _extractRow.SetActive(true);
+                    if (_extractBtn != null) _extractBtn.gameObject.SetActive(false);
+                    SetExtractTextRoom(false);
                     if (_extractTxt != null)
                     {
                         if (assigned <= 0)
@@ -782,12 +787,16 @@ namespace NuclearReMind
                 canSwitch = true;
             }
 
+            bool showBtn = false;
             if (_extractBtn != null)
             {
-                _extractBtn.gameObject.SetActive(canSwitch || on);
+                showBtn = canSwitch || on;
+                _extractBtn.gameObject.SetActive(showBtn);
                 _extractBtn.interactable = canSwitch;
                 if (_extractBtnTxt != null) _extractBtnTxt.text = on ? "หยุดสกัด" : "เปิดสกัด";
             }
+            // Locked lines ("🔒 ต้องอัปโรงน้ำถึง Lv.2") show no button and need the full width.
+            SetExtractTextRoom(showBtn);
         }
 
         /// <summary>
@@ -808,10 +817,20 @@ namespace NuclearReMind
                     new Vector2(1, 0.5f), new Vector2(-16, 0), new Vector2(120, 38));
             _extractBtn.onClick.AddListener(OnToggleExtract);
             _extractBtnTxt = _extractBtn.GetComponentInChildren<Text>();
+        }
 
-            // Give the text back the space the button now occupies, so the two never overlap.
-            if (_extractTxt != null)
-                _extractTxt.rectTransform.offsetMax = new Vector2(-150f, _extractTxt.rectTransform.offsetMax.y);
+        /// <summary>
+        /// Keep the row's text clear of the switch — and give the space back when the switch is hidden.
+        ///
+        /// This used to be a one-time shrink applied when the button was created, which permanently cost
+        /// the row 122px. The ore-node branch reuses this same row for mining status and shows no button,
+        /// so its line was silently clipped ("...(~15)" instead of "...(~15 วิ)").
+        /// </summary>
+        private void SetExtractTextRoom(bool buttonVisible)
+        {
+            if (_extractTxt == null) return;
+            var rt = _extractTxt.rectTransform;
+            rt.offsetMax = new Vector2(buttonVisible ? -150f : -28f, rt.offsetMax.y);
         }
 
         private void OnToggleExtract()
