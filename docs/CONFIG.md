@@ -31,6 +31,22 @@ fuel_need           = 6.0      # fuelEfficiency = min(1, fuel/6)
 fuel_eff_bonus      = 0.08     # ต่อ Mastery (deuterium / tritium)
 ```
 
+### การสกัดดิวเทอเรียม (ResearchLab_System_Spec)
+
+ปลดด้วย **การวิจัย** ไม่ใช่ระดับอาคาร — แต่โรงน้ำต้องใหญ่พอด้วย และผู้เล่นต้องเปิดสวิตช์เอง
+(ค่าจริงอยู่ใน `WaterPlant.asset` ฟิลด์ `deuteriumMinLevel` / `deuteriumProductionMinLevel` / `deuteriumProduction`)
+
+```python
+deuterium_note        = "deuterium"  # ต้องวิจัยเสร็จก่อน (KnowledgeDB) — เทียบเท่า unlock_deuterium_button
+deuterium_min_level   = 2      # โรงน้ำต่ำกว่านี้สกัดไม่ได้แม้วิจัยแล้ว
+deuterium_rate_lv2    = 4.0    # /วัน ที่ Lv.2
+deuterium_rate_lv3    = 8.0    # /วัน ที่ Lv.3 (ค่าเดิม — ไม่แตะ ยังไม่ได้รัน sim)
+deuterium_water_per_1 = 25.0   # น้ำที่ใช้ต่อดิวเทอเรียม 1 หน่วย
+deuterium_water_floor = 100.0  # กันน้ำสำรองไว้ ไม่สกัดต่ำกว่านี้
+```
+
+> ⚠ สเปกต้นทางเขียน Lv.3 = 9 แต่คงไว้ที่ **8** ตามของเดิม เพราะเป็นแหล่งเชื้อเพลิงหลักและยังยืนยันสมดุลด้วย `nrm_sim.py` ไม่ได้ (ไฟล์ไม่อยู่ในโปรเจกต์) — ของใหม่คือ "สกัดได้ตั้งแต่ Lv.2" ไม่ใช่การเพิ่มเพดาน
+
 ### ★ Method B Gate (ประตูชนะ)
 
 ```python

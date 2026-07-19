@@ -172,6 +172,9 @@ namespace NuclearReMind
             // สรุปการเล่น (STORY.md §④) — Hope ต่ำสุด/Decree/Triage หายทันทีถ้าไม่จด (ไม่มีระบบไหนเก็บไว้)
             if (RunStats.Instance != null) RunStats.Instance.WriteTo(save);
 
+            // สวิตช์สกัดดิวเทอเรียมรายโรง — ไม่เก็บ = โหลดเซฟแล้วโรงน้ำหยุดสกัดเงียบๆ
+            if (DeuteriumExtraction.Instance != null) DeuteriumExtraction.Instance.WriteTo(save);
+
             File.WriteAllText(SavePath, JsonUtility.ToJson(save, true));
 #if UNITY_WEBGL && !UNITY_EDITOR
             NuclearSyncFs();   // flush ลง IndexedDB (WebGL) ให้เซฟติดเบราว์เซอร์ · เดสก์ท็อป/เอดิเตอร์ข้ามบล็อกนี้

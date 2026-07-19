@@ -137,8 +137,15 @@ namespace NuclearReMind
         [Header("Upgrade / Fuel (V4 §7/§18 — เฟส 6)")]
         public int upgradeIronCost = 40;  // ต้นทุนอัป 1 ระดับ (×ระดับปัจจุบัน) — L1→L2, L2→L3
         public int upgradeEnergyCost = 0; // ต้นทุนพลังงานต่ออัป (×ระดับปัจจุบัน — V4 §6 เช่นโรงผลิต E150)
-        public float deuteriumProduction; // ผลิต/วัน เฉพาะเมื่อถึงระดับสูงสุด (Water Plant L3 §4)
+        public float deuteriumProduction; // ผลิต/วัน ที่ระดับสูงสุด (Water Plant L3 §4)
         public float tritiumProduction;   // ผลิต/วัน เฉพาะเมื่อถึงระดับสูงสุด (Zone B / Lab L3)
+
+        // ResearchLab_System_Spec: extraction unlocks from RESEARCH, not from hitting max level — but the
+        // plant still has to be big enough. These two make the early tier data instead of code: set
+        // deuteriumMinLevel = 2 and the plant can extract from L2 at the lower rate below.
+        // 0 = the old behaviour (max level only), so every other building is unaffected.
+        public int deuteriumMinLevel = 0;
+        public float deuteriumProductionMinLevel = 0f; // ผลิต/วัน ตั้งแต่ deuteriumMinLevel ถึงก่อนระดับสูงสุด
 
         [Header("Power Grid")]
         public int powerRange = 0;        // จำนวน cell รัศมีที่ปล่อยพลังงาน (0 = ผู้บริโภค)

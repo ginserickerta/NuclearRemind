@@ -71,5 +71,9 @@ namespace NuclearReMind
         public bool statTriageEncountered = false;   // เคยเจอการ์ด Triage ไหม (achievement "ไม่มีใครต้องเลือก")
         public int statZoneBWorkerDays = 0;          // วัน-คนที่อยู่ใน Zone B รวมทั้งรอบ (ตัวหารของ ALARA)
         public int statZoneBSuitedDays = 0;          // ในจำนวนนั้น ใส่ชุดกันรังสีกี่วัน-คน (ตัวตั้ง)
+
+        // ===== Deuterium extraction (ResearchLab_System_Spec — ปุ่มสกัด) — default ว่าง = ปิดทุกโรง =====
+        public List<Vector2Int> deuteriumExtractCells = new List<Vector2Int>(); // โรงน้ำที่เปิดสวิตช์สกัดไว้
+        public bool deuteriumUnlockAnnounced = false;                            // แจ้งเตือน "ปลดล็อกแล้ว" ไปหรือยัง
     }
 }

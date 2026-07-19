@@ -55,6 +55,8 @@ namespace NuclearReMind
         private Image _iconImg, _spriteImg;
         private Text _nameTxt, _headLvTxt, _descTxt, _hintTxt;
         private Text _prodLabelTxt, _prodValTxt, _workerValTxt, _bigLvTxt, _maxLvTxt, _extractTxt;
+        private Button _extractBtn;      // สวิตช์สกัดดิวเทอเรียม (โรงน้ำ)
+        private Text _extractBtnTxt;
         private GameObject _extractRow;
         private Button _workerMinus, _workerPlus;
         private Text _upTitleTxt;
@@ -326,23 +328,12 @@ namespace NuclearReMind
                 bool isExtractor = data.deuteriumProduction > 0f;
                 _extractRow.SetActive(isExtractor);
                 if (isExtractor && _extractTxt != null)
-                {
-                    if (level < BuildingRegistry.Instance.maxBuildingLevel)
-                        _extractTxt.text = "🧪 สกัดดิวเทอเรียม: ปลดล็อกที่ Lv.3";
-                    else if (required > 0 && assigned == 0)
-                        _extractTxt.text = "🧪 สกัดดิวเทอเรียม: ต้องมีคนงานประจำ";
-                    else
-                    {
-                        float wScale = required > 0 ? Mathf.Clamp01((float)assigned / required) : 1f;
-                        float ratio = ResourceManager.Instance != null ? ResourceManager.Instance.deuteriumWaterPerUnit : 25f;
-                        float d = data.deuteriumProduction * wScale;
-                        _extractTxt.text = $"🧪 สกัดดิวเทอเรียม +{Mathf.RoundToInt(d)}/วัน (ใช้น้ำ {Mathf.RoundToInt(d * ratio)}/วัน)";
-                    }
-                }
+                    RefreshExtractRow(data, level, required, assigned);
             }
 
             // ระดับปัจจุบัน
             if (_bigLvTxt != null) _bigLvTxt.text = level.ToString();
+
             if (_maxLvTxt != null) _maxLvTxt.text = $"สูงสุด Lv {maxLv}";
 
             // การ์ดอัปเกรด
@@ -541,7 +532,14 @@ namespace NuclearReMind
             _extractRow = Panel("ExtractRow", infoBox.transform, CInset2);
             SetRect(_extractRow.GetComponent<RectTransform>(), new Vector2(0,1),new Vector2(1,1),new Vector2(0.5f,1), new Vector2(0,-140), new Vector2(-28,54));
             _extractTxt = Txt("ExtractVal", _extractRow.transform, "", 17, CGold, TextAnchor.MiddleLeft);
-            SetRect(_extractTxt.rectTransform, new Vector2(0,0),new Vector2(1,1),new Vector2(0.5f,0.5f), new Vector2(16,0), new Vector2(-28,0));
+            SetRect(_extractTxt.rectTransform, new Vector2(0,0),new Vector2(1,1),new Vector2(0.5f,0.5f), new Vector2(16,0), new Vector2(-150,0));
+
+            // ปุ่มเปิด/ปิดการสกัด (ResearchLab_System_Spec) — ผู้เล่นเลือกเอง ไม่ได้สกัดอัตโนมัติ
+            // อยู่ชิดขวาของแถวเดียวกับข้อความ เพื่อให้เห็นผลที่กำลังจะได้/เสียพร้อมกับสวิตช์
+            _extractBtn = Btn("ExtractToggle", _extractRow.transform, "เปิดสกัด", 16, CBtn);
+            SetRect((RectTransform)_extractBtn.transform, new Vector2(1,0.5f),new Vector2(1,0.5f),new Vector2(1,0.5f), new Vector2(-16,0), new Vector2(120,38));
+            _extractBtn.onClick.AddListener(OnToggleExtract);
+            _extractBtnTxt = _extractBtn.GetComponentInChildren<Text>();
 
             // right level box
             _lvBox = Panel("LevelBox", _root.transform, CInset);
@@ -741,6 +739,67 @@ namespace NuclearReMind
             t.horizontalOverflow = HorizontalWrapMode.Overflow; t.verticalOverflow = VerticalWrapMode.Overflow;
             return t;
         }
+        /// <summary>
+        /// The Water Plant extraction row: what it would produce, what it would cost, and the switch.
+        ///
+        /// Rule #6 in spirit — a locked capability is shown with its condition, never hidden. So the row
+        /// always states which gate is still shut (research / level / staffing) instead of going blank,
+        /// and the water cost is spelled out before the player commits, because extraction competes with
+        /// drinking and reactor cooling for the same reservoir.
+        /// </summary>
+        private void RefreshExtractRow(BuildingData data, int level, int required, int assigned)
+        {
+            var dex = DeuteriumExtraction.Instance;
+            int minLv = DeuteriumExtraction.MinLevelFor(data);
+            float rate = DeuteriumExtraction.RateFor(data, level);
+            float ratio = ResourceManager.Instance != null ? ResourceManager.Instance.deuteriumWaterPerUnit : 25f;
+            bool on = dex != null && dex.IsOn(_currentCell);
+
+            bool canSwitch;
+            if (!DeuteriumExtraction.Researched)
+            {
+                // ★ Never hide the better path: name the research that opens it (rule #6).
+                _extractTxt.text = "🔒 สกัดดิวเทอเรียม: ต้องวิจัย \"การสกัดดิวเทอเรียม\" ก่อน";
+                canSwitch = false;
+            }
+            else if (rate <= 0f)
+            {
+                _extractTxt.text = $"🔒 สกัดดิวเทอเรียม: ต้องอัปโรงน้ำถึง Lv.{minLv}";
+                canSwitch = false;
+            }
+            else if (required > 0 && assigned == 0)
+            {
+                _extractTxt.text = "🧪 สกัดดิวเทอเรียม: ต้องมีคนงานประจำ";
+                canSwitch = false;
+            }
+            else
+            {
+                float wScale = required > 0 ? Mathf.Clamp01((float)assigned / required) : 1f;
+                float d = rate * wScale;
+                _extractTxt.text = on
+                    ? $"🧪 กำลังสกัด +{Mathf.RoundToInt(d)}/วัน (ใช้น้ำ {Mathf.RoundToInt(d * ratio)}/วัน)"
+                    : $"🧪 พร้อมสกัด +{Mathf.RoundToInt(d)}/วัน (จะใช้น้ำ {Mathf.RoundToInt(d * ratio)}/วัน)";
+                canSwitch = true;
+            }
+
+            if (_extractBtn != null)
+            {
+                _extractBtn.gameObject.SetActive(canSwitch || on);
+                _extractBtn.interactable = canSwitch;
+                if (_extractBtnTxt != null) _extractBtnTxt.text = on ? "หยุดสกัด" : "เปิดสกัด";
+            }
+        }
+
+        private void OnToggleExtract()
+        {
+            var dex = DeuteriumExtraction.Instance;
+            if (dex == null || BuildingRegistry.Instance == null) return;
+            if (!BuildingRegistry.Instance.PlacedBuildings.TryGetValue(_currentCell, out var data) || data == null) return;
+
+            dex.Toggle(_currentCell, data, BuildingRegistry.Instance.GetLevel(_currentCell));
+            Refresh();
+        }
+
         private Button Btn(string name, Transform parent, string label, int size, Color col)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));

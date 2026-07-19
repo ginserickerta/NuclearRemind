@@ -356,24 +356,27 @@ namespace NuclearReMind
                 delta.iron   += data.ironProduction * scale;
                 delta.knowledge += data.knowledgeProduction * scale; // Research Lab (V4 §6) — clamp ที่ maxKnowledge ใน ApplyDelta
 
-                // เชื้อเพลิงฟิวชันเฉพาะระดับสูงสุด (Water L3 → Deuterium, Zone B/Lab L3 → Tritium)
-                if (level >= BuildingRegistry.Instance.maxBuildingLevel)
+                // ดิวเทอเรียม (ResearchLab_System_Spec): ไม่ผูกกับ "ระดับสูงสุด" อีกแล้ว — ต้องวิจัย note
+                // `deuterium` เสร็จ + โรงถึง deuteriumMinLevel + ผู้เล่นเปิดสวิตช์เองที่แผงโรงน้ำ
+                // อัตรามาจาก DeuteriumExtraction.RateFor (L2 กับ L3 คนละค่า — เก็บใน BuildingData)
+                var dex = DeuteriumExtraction.Instance;
+                if (dex != null && dex.IsExtracting(kvp.Key, data, level))
                 {
-                    // โรงน้ำ L3 (§4): สกัดดิวเทอเรียมโดยกินน้ำเป็นวัตถุดิบที่อัตรา deuteriumWaterPerUnit : 1
-                    // จำกัดพร้อมกัน 2 เพดาน — อัตราของโรง (deuteriumProduction) และน้ำที่มีเหนือ reserve
-                    if (data.deuteriumProduction > 0f)
-                    {
-                        float wantD  = data.deuteriumProduction * workerScale * busyFactor * dayFraction;
-                        float availW = Mathf.Max(0f, runW - deuteriumWaterReserve);
-                        float maxD   = deuteriumWaterPerUnit > 0f ? availW / deuteriumWaterPerUnit : wantD;
-                        float gotD   = Mathf.Min(wantD, maxD);
-                        float usedW  = gotD * deuteriumWaterPerUnit;
-                        runW         -= usedW;
-                        delta.water     -= usedW;
-                        delta.deuterium += gotD;
-                    }
-                    delta.tritium += data.tritiumProduction * workerScale * busyFactor * dayFraction;
+                    // สกัดโดยกินน้ำเป็นวัตถุดิบที่อัตรา deuteriumWaterPerUnit : 1
+                    // จำกัดพร้อมกัน 2 เพดาน — อัตราของโรงตามระดับ และน้ำที่มีเหนือ reserve
+                    float wantD  = DeuteriumExtraction.RateFor(data, level) * workerScale * busyFactor * dayFraction;
+                    float availW = Mathf.Max(0f, runW - deuteriumWaterReserve);
+                    float maxD   = deuteriumWaterPerUnit > 0f ? availW / deuteriumWaterPerUnit : wantD;
+                    float gotD   = Mathf.Min(wantD, maxD);
+                    float usedW  = gotD * deuteriumWaterPerUnit;
+                    runW         -= usedW;
+                    delta.water     -= usedW;
+                    delta.deuterium += gotD;
                 }
+
+                // ทริเทียมยังผูกกับระดับสูงสุดเหมือนเดิม (Zone B / Lab L3) — สเปกนี้แตะเฉพาะดิวเทอเรียม
+                if (level >= BuildingRegistry.Instance.maxBuildingLevel)
+                    delta.tritium += data.tritiumProduction * workerScale * busyFactor * dayFraction;
             }
 
             // Zone B active upkeep (GDD v4.1 §18): มีคนขุด Zone B อยู่ → −40E/วัน (energy sink คุม Phase 4)

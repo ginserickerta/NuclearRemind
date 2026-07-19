@@ -104,8 +104,13 @@ namespace NuclearReMind
                     bool staffed = wam == null || wam.GetAssigned(kv.Key) > 0;
                     if (!staffed) continue;
 
-                    // q_deuterium — Water Plant at max level extracting deuterium = the v6.3 "Extractor"
-                    if (d.deuteriumProduction > 0f && reg.GetLevel(kv.Key) >= reg.maxBuildingLevel)
+                    // q_deuterium — "the extractor ran" now means the player actually switched extraction
+                    // on and it is producing, not merely that a plant reached max level. Asking
+                    // DeuteriumExtraction keeps this in step with the production gate in ResourceManager;
+                    // hard-coding max level here would silently stop the quiz (and bark V06) firing once
+                    // extraction became a researched, opt-in button at a lower level.
+                    var dex = DeuteriumExtraction.Instance;
+                    if (dex != null && dex.IsExtracting(kv.Key, d, reg.GetLevel(kv.Key)))
                         q.MarkExtractorRan();
 
                     // q_mutation + q_food_irradiation — irradiation applied to a working Farm (proxy: no

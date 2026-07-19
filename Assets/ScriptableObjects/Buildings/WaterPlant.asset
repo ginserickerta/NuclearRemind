@@ -63,6 +63,8 @@ MonoBehaviour:
   upgradeEnergyCost: 150
   deuteriumProduction: 8
   tritiumProduction: 0
+  deuteriumMinLevel: 2
+  deuteriumProductionMinLevel: 4
   powerRange: 0
   isPowerRelay: 0
   isOreNode: 0
