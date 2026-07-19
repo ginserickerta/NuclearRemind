@@ -195,8 +195,10 @@ namespace NuclearReMind
 
                 string head = $"{(char)('A' + i)}. {opt.label}";
                 string sub = opt.effectSummary ?? "";
+                // Legacy uGUI Text cannot draw astral-plane characters, so the 🔒 this used to carry
+                // rendered as a blank gap — a locked option has to READ as locked (rule 6).
                 string text = locked
-                    ? $"🔒 {head}\n<size=15><color=#7F7F76>ต้องวิจัย: {opt.requiredNoteId}</color></size>"
+                    ? $"[ล็อก] {head}\n<size=15><color=#7F7F76>ต้องวิจัย: {opt.requiredNoteId}</color></size>"
                     : (string.IsNullOrEmpty(sub) ? head : $"{head}\n<size=15><color=#9EA69A>{sub}</color></size>");
 
                 var btn = MakeButton("Opt", _optContainer, text, locked ? CLocked : COpt, locked ? (UnityEngine.Events.UnityAction)null : () => Choose(idx));
@@ -205,6 +207,60 @@ namespace NuclearReMind
                 if (lbl != null) { lbl.alignment = TextAnchor.MiddleLeft; if (locked) lbl.color = CLockText; }
                 var le = btn.gameObject.AddComponent<LayoutElement>(); le.minHeight = 84f; le.preferredHeight = 84f;
                 _optRows.Add(btn.gameObject);
+            }
+
+            FitPanelToContent(card.options.Length);
+        }
+
+        // Layout constants — the panel is rebuilt per card, so these are the single source of truth.
+        private const float PanelWidth = 760f;
+        private const float PadSide    = 28f;
+        private const float TitleTop   = 24f;
+        private const float TitleH     = 50f;
+        private const float BodyTop    = 82f;   // TitleTop + TitleH + 8
+        private const float BodyGap    = 30f;   // breathing room between the body and the first option
+        private const float RowH       = 84f;
+        private const float RowGap     = 10f;
+        private const float PadBottom  = 24f;
+        private const float PanelMaxH  = 860f;
+
+        /// <summary>
+        /// Short cards used to leave ~200px of dead space because the body reserved a fixed 238px
+        /// and the options were pinned to the bottom. Measure the body instead and shrink to fit.
+        /// </summary>
+        private void FitPanelToContent(int optionCount)
+        {
+            if (_root == null || _body == null) return;
+
+            // preferredHeight is measured against the current rect width, so make sure one layout
+            // pass has run — on the first card the panel is built and populated in the same frame.
+            Canvas.ForceUpdateCanvases();
+
+            var bodyRT = _body.rectTransform;
+            float bodyH = Mathf.Max(_body.preferredHeight, 24f);
+            bodyRT.offsetMax = new Vector2(-PadSide, -BodyTop);
+            bodyRT.offsetMin = new Vector2(PadSide, -(BodyTop + bodyH));
+
+            float optTop = BodyTop + bodyH + BodyGap;
+            float optH   = optionCount * RowH + Mathf.Max(0, optionCount - 1) * RowGap;
+            float wanted = optTop + optH + PadBottom;
+
+            // Very long cards keep the old behaviour: cap the height and let the body absorb the loss.
+            if (wanted > PanelMaxH)
+            {
+                float over = wanted - PanelMaxH;
+                bodyH  = Mathf.Max(bodyH - over, 24f);
+                bodyRT.offsetMin = new Vector2(PadSide, -(BodyTop + bodyH));
+                optTop = BodyTop + bodyH + BodyGap;
+                wanted = PanelMaxH;
+            }
+
+            _root.GetComponent<RectTransform>().sizeDelta = new Vector2(PanelWidth, wanted);
+
+            if (_optContainer is RectTransform optRT)
+            {
+                optRT.offsetMax = new Vector2(-PadSide, -optTop);
+                optRT.offsetMin = new Vector2(PadSide, PadBottom);
             }
         }
 
@@ -221,7 +277,7 @@ namespace NuclearReMind
             var rt = _root.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(760f, 720f);
+            rt.sizeDelta = new Vector2(PanelWidth, 720f); // provisional — FitPanelToContent sets the real height
             var outline = _root.AddComponent<Outline>();
             outline.effectColor = CBorder; outline.effectDistance = new Vector2(2f, -2f);
 
@@ -239,7 +295,7 @@ namespace NuclearReMind
             vlg.spacing = 10f; vlg.padding = new RectOffset(0, 0, 0, 0);
             vlg.childControlWidth = true; vlg.childControlHeight = false;
             vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
-            vlg.childAlignment = TextAnchor.LowerCenter;
+            vlg.childAlignment = TextAnchor.UpperCenter; // the region is measured to fit exactly now
             _optContainer = optRoot.transform;
         }
 
