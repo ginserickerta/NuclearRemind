@@ -40,6 +40,8 @@ Zone B ผลิต 3.0/วัน · Boost กิน 9.0/วัน → ขาด
 
 | ไฟล์ | เนื้อหา |
 |---|---|
+| `PROMPTS.md` | **คำสั่ง Claude Code 6 Sprint — ก๊อปวางได้เลย** |
+| `QA_CHECKLIST.md` | **ตรวจเกมหลัง Sprint 1–6 · 120 ข้อ** |
 | `docs/GDD.md` | ระบบทั้งหมด §1–§33 — **อ่านก่อนเริ่มทุก Sprint** |
 | `docs/CONFIG.md` | 🔴 ค่าเกมทั้งหมด — แก้ที่นี่ที่เดียว |
 | `docs/NOTES.md` | Research Notes 8 ใบ (ResearchNoteSO assets) + **บทตอนวิจัยเสร็จ 8 บรรทัด** |
