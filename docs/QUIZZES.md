@@ -341,7 +341,7 @@ bonus:           Boost heat cost −10%
 ```yaml
 quizId:          q_clean_energy
 linkedNoteId:    (milestone)
-requiresApplied: true          # ถึง ending
+requiresApplied: true          # ★ CORE ≥ 80 (แก้ 2026-07-20 — เดิม "ถึง ending")
 category:        Reactor
 bonus:           (ending stat เท่านั้น)
 ```
@@ -379,7 +379,14 @@ bonus:           (ending stat เท่านั้น)
 | 8 | `q_dt_fuel` | ป้อน Tritium สำเร็จ | `fuelEfficiency +0.08` | Reactor |
 | **9** | **`q_tritium_breeding`** | **Zone B ผลิต ≥2 วัน** | **★ Zone B 3.0→8.0** | Reactor |
 | 10 | `q_fusion` | CORE ≥ 95 | Boost heat −10% | Reactor |
-| 11 | `q_clean_energy` | ถึง ending | (stat) | Reactor |
+| 11 | `q_clean_energy` | **CORE ≥ 80** | (stat) | Reactor |
+
+> **★ แก้ 2026-07-20 — เดิมเงื่อนไขคือ "ถึง ending"**
+> เงื่อนไขเดิม**ตอบไม่ได้เลยตลอดกาล**: `reachedEnding` ตั้งค่าตอน `OnGameOver` แต่ควิซจะโผล่ได้ต้องมี
+> latch ที่เขียนตอน `OnDayEnded` เท่านั้น — พอเกมจบก็ไม่มีวันถัดไป latch เลยไม่เคยลง
+> ผลคือ `codex_clean_energy` ปลดไม่ได้ Codex ค้าง **10/11 ถาวร**
+> เปลี่ยนเป็น CORE ≥ 80 ซึ่งเป็นจุดที่ผู้เล่นได้เห็นฟิวชันเลี้ยงเมืองจริงแล้ว — คำถามยังอิงประสบการณ์
+> ที่เพิ่งผ่านมา ไม่ใช่หน้าสรุปตอนจบ
 
 ---
 

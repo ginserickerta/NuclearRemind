@@ -48,7 +48,13 @@ namespace NuclearReMind
                 // ★ bug #3: latch + days produced, NEVER current tritium stock
                 case QuizIds.TritiumBreeding: return s.tritiumEverProduced && s.zoneBProducedDays >= 2;
                 case QuizIds.Fusion:          return s.coreProgress >= 95f;
-                case QuizIds.CleanEnergy:     return s.reachedEnding;
+                // ★ was s.reachedEnding — structurally unanswerable. reachedEnding is set from OnGameOver,
+                // but IsAnswerable also needs the _appliedOnDay latch, which is only written on OnDayEnded.
+                // Once the run is over there is no next day, so the latch never landed and codex_clean_energy
+                // could never unlock: the Codex was capped at 10/11 forever. CORE 80% is the point where the
+                // player has actually watched clean fusion power carry the colony, so the question ("why is
+                // this energy clean?") still lands on lived experience rather than on a summary screen.
+                case QuizIds.CleanEnergy:     return s.coreProgress >= 80f;
                 default:                      return false;
             }
         }
