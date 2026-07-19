@@ -121,7 +121,7 @@ namespace NuclearReMind
         public static Color ColorForTile(int col, int row, int columns, int rows, int border, GroundPalette pal)
         {
             bool alt = ((col + row) & 1) == 1;
-            bool outside = col < 0 || col >= columns || row < 0 || row >= rows;
+            bool outside = PickOutside(col, row, columns, rows);
 
             if (outside)
             {
@@ -169,6 +169,40 @@ namespace NuclearReMind
             return (Hash(col, row) / 7) % count;
         }
 
+        // ── Grid-edge fray (docs/GROUND_PLAN "E") ──────────────────────────────
+        // The playable/apron boundary used to be a raw rectangle test, so it drew a perfectly straight
+        // diagonal line across the map — the single most artificial-looking thing on the ground.
+        // Fix: reuse the jitter + dither idea already proven on the A/B boundary, so the edge frays.
+        //
+        // ★ Deliberately ONE-SIDED: only cells that are genuinely OUTSIDE the grid may be drawn as
+        //   in-grid. Cells inside the grid are never restyled. Two reasons:
+        //     1. the buildable area keeps reading as buildable (no "can I build on that grass?" doubt)
+        //     2. it provably cannot change any in-grid colour, so existing EditMode expectations
+        //        (e.g. IsoGroundPainterColorTests.DeepZoneB at the very edge cell 42,0) still hold.
+        //   Dirt eating INTO the field would look good too, but needs that test updated first.
+        private const float EdgeFrayReach = 3f;    // how many apron rings can be drawn as in-grid
+        private const float EdgeFrayJitter = 1f;   // wobble, in tiles — kills the straight line
+
+        /// <summary>
+        /// Visual inside/outside test for the grid edge (pure · deterministic · testable).
+        /// VISUAL ONLY — GridManager.IsInBounds, placement and pathing are untouched.
+        /// </summary>
+        public static bool PickOutside(int col, int row, int columns, int rows)
+        {
+            // ring distance: ≤0 inside the grid, ≥1 outside (1 = first apron ring)
+            int sx = Mathf.Max(-col, col - (columns - 1));
+            int sy = Mathf.Max(-row, row - (rows - 1));
+            int s = Mathf.Max(sx, sy);
+
+            if (s <= 0) return false;               // in-grid: always drawn as field
+            if (s > EdgeFrayReach) return true;     // deep apron: always drawn as outside
+
+            // inside the fray band: the further out, the likelier it looks like apron
+            float jitter = (Hash01Edge(col, row) - 0.5f) * 2f * EdgeFrayJitter;
+            float t = Mathf.Clamp01((s - 0.5f + jitter) / EdgeFrayReach);
+            return Hash01EdgeSalt(col, row) < t;
+        }
+
         /// <summary>ตัวคูณความมืดของช่องนอกกริด (1.0 ที่ขอบ → outsideDarken เมื่อห่าง) — ใช้ tint สไปรต์ดิน apron ให้ดูรกร้าง</summary>
         public static float OutsideDarken(int col, int row, int columns, int rows, GroundPalette pal)
             => OutsideDarkenFactor(col, row, columns, rows, pal);
@@ -178,6 +212,11 @@ namespace NuclearReMind
         private static float Hash01Salt(int col, int row) => Hash(col + 1013, row + 809) / 2147483647f;
 
         private static float Hash01(int col, int row) => Hash(col, row) / 2147483647f; // Hash ∈ [0, 0x7fffffff]
+
+        // edge fray uses its own two hash streams — offsets differ from the A/B pair above so the
+        // grid-edge wobble never correlates with the zone boundary wobble
+        private static float Hash01Edge(int col, int row) => Hash(col + 577, row + 331) / 2147483647f;
+        private static float Hash01EdgeSalt(int col, int row) => Hash(col + 2081, row + 1597) / 2147483647f;
 
         private static float Smoothstep(float e0, float e1, float v)
         {

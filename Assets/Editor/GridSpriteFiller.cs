@@ -242,7 +242,13 @@ namespace NuclearReMind.Editor
             for (int x = -m; x < columns + m; x++)
                 for (int y = -m; y < rows + m; y++)
                 {
+                    // Two separate boundaries on purpose:
+                    //   outside     = the real grid rectangle → picks the SPRITE (texture stays continuous;
+                    //                 swapping sprites here pastes flat grass patches over the apron rubble)
+                    //   outsideTint = frayed via jitter/smoothstep/dither → picks only the COLOUR,
+                    //                 so the brightness edge breaks up without touching any artwork
                     bool outside = x < 0 || x >= columns || y < 0 || y >= rows;
+                    bool outsideTint = NuclearReMind.IsoGroundPainter.PickOutside(x, y, columns, rows);
                     bool zoneA = !outside && NuclearReMind.IsoGroundPainter.PickZoneA(
                         x, y, columns, rows, border, pal.transitionWidth, pal.jitterStrength);
                     var zone = zoneA ? grassList : dirtList;   // apron (outside) = ดิน (รกร้าง)
@@ -258,7 +264,7 @@ namespace NuclearReMind.Editor
                     // ★ override สีต่อช่อง (Tile Color Painter) ทาทับ gradient/darken — แก้ทีละช่องไม่หายเมื่อ re-fill
                     if (overrides != null && overrides.TryGetValue(new Vector2Int(x, y), out var ovr))
                         map.SetColor(pos, ovr);
-                    else if (outside)
+                    else if (outsideTint)
                     {
                         float f = NuclearReMind.IsoGroundPainter.OutsideDarken(x, y, columns, rows, pal);
                         map.SetColor(pos, new Color(f, f, f, 1f));

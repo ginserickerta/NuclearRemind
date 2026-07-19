@@ -139,6 +139,12 @@ namespace NuclearReMind
         private void HandleZoom(float dt)
         {
             float scroll = Input.GetAxis("Mouse ScrollWheel"); // ±0.1 ต่อ notch
+            // Scroll belongs to the UI whenever a stacked panel is open OR the cursor is over any UI
+            // element (panel scroll lists must not zoom the city behind them). Zoom only from the bare map.
+            if (GameUIStack.AnyOpen ||
+                (UnityEngine.EventSystems.EventSystem.current != null &&
+                 UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()))
+                scroll = 0f;
             float maxZ = EffectiveMaxZoom();
             if (!Mathf.Approximately(scroll, 0f))
                 _targetZoom = Mathf.Clamp(_targetZoom - scroll * 10f * zoomStepPerNotch, minZoom, maxZ);
