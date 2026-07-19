@@ -12,7 +12,7 @@ namespace NuclearReMind
     public class WorkerTickContext
     {
         public float foodStock;                // in: available food · out: reduced by what was eaten
-        public int foodConsumed;               // out: whole units eaten this tick
+        public float foodConsumed;             // out: food eaten this tick (peopleFed × foodPerWorkerPerDay)
         public bool boosting;                  // reactor Boost mode (Sprint 6)
         public bool stormActive;               // storm system (Sprint 6)
         public float heat;                     // reactor HEAT (Sprint 6) — > 85 leaks +5 rad
@@ -414,15 +414,22 @@ namespace NuclearReMind
         private void ApplyHunger(WorkerTickContext ctx)
         {
             var alive = _workers.Where(w => w.alive).ToList();
-            int need = alive.Count;
-            int avail = Mathf.Min((int)ctx.foodStock, need);
-            ctx.foodStock -= avail;
-            ctx.foodConsumed = avail;
+
+            // Ration size comes from config (CONFIG.md: food -= aliveWorkers * foodPerWorkerPerDay).
+            // Guard <= 0 so a misconfigured asset feeds everyone for free instead of dividing by zero.
+            float perHead = _cfg.foodPerWorkerPerDay;
+            int peopleFed = perHead <= 0f
+                ? alive.Count
+                : Mathf.Min(alive.Count, Mathf.FloorToInt(ctx.foodStock / perHead));
+
+            float eaten = peopleFed * Mathf.Max(perHead, 0f);
+            ctx.foodStock -= eaten;
+            ctx.foodConsumed = eaten;
 
             int fed = 0;
             foreach (var w in alive.OrderByDescending(w => w.hunger))
             {
-                if (fed < avail) { w.hunger = 0f; fed++; }
+                if (fed < peopleFed) { w.hunger = 0f; fed++; }
                 else w.hunger = Mathf.Min(w.hunger + _cfg.hungerPerDay, 100f); // ★ 30 not 20
             }
         }
