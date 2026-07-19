@@ -15,6 +15,18 @@ namespace NuclearReMind.Tests
     /// </summary>
     public class StoryUITests
     {
+        // Two tests below guard paths the v6.3 cutover retired. They are Ignored rather than deleted:
+        // the assertions still describe what the replacement has to guarantee, so they are the spec to
+        // port over - see the TODO(cutover) on each.
+        private const string RetiredCardPathReason =
+            "v6.3 cutover: record cards moved from CardUIController to RecordCardUI - CardUIController " +
+            "no longer subscribes OnStoryRecordShown, so it renders an empty title here. The live path " +
+            "is DataRecovery → RecordFlowBridge → RecordCardUI.";
+        private const string RetiredDirectorReason =
+            "v6.3 cutover: StoryDirector is archived (Scripts/Narrative/_archive) and disabled at runtime " +
+            "by LegacyNarrativeSilencer, so its forced record→info beat order no longer runs. Crisis cards " +
+            "are CardManager's job now (GDD §25).";
+
         private readonly List<Object> _spawned = new List<Object>();
 
         private EventManager eventManager;
@@ -91,7 +103,8 @@ namespace NuclearReMind.Tests
             Assert.AreEqual(1, dismissed, "ไม่มีการ์ดค้าง → ไม่ raise ซ้ำ");
         }
 
-        [Test]
+        // TODO(cutover): rewrite against RecordCardUI, then drop the Ignore.
+        [Test, Ignore(RetiredCardPathReason)]
         public void RecordCardShown_UsesArchiveTitle_AuthorAndButtonLabel()
         {
             var card = NewCardUI();
@@ -124,7 +137,8 @@ namespace NuclearReMind.Tests
 
         // ── Integration: StoryDirector + CardUI จริง ───────────
 
-        [Test]
+        // TODO(cutover): the equivalent guarantee now belongs to CardManager/CrisisCardPanelUI.
+        [Test, Ignore(RetiredDirectorReason)]
         public void Integration_DirectorWaitsForDismiss_ThenShowsNextCard()
         {
             var director = NewComponent<StoryDirector>("StoryDirector");
@@ -204,7 +218,10 @@ namespace NuclearReMind.Tests
                 if (child.gameObject.activeSelf) activeButtons.Add(child.gameObject);
 
             Assert.AreEqual(1, activeButtons.Count, "บันทึกที่กู้แล้ว 1 ใบ → ปุ่ม 1 ปุ่ม");
-            Assert.AreEqual("บันทึก #01 — เชื้อเพลิงในน้ำ", activeButtons[0].GetComponentInChildren<Text>().text);
+            // The row label now carries the recovery day as a suffix ("... · วันที่ 3"), so match the
+            // prefix: the archive title is what this test is about, the date stamp is presentation.
+            StringAssert.StartsWith("บันทึก #01 — เชื้อเพลิงในน้ำ",
+                activeButtons[0].GetComponentInChildren<Text>().text);
 
             records.ShowRecord(record);
             Assert.AreEqual("บันทึก #01 — เชื้อเพลิงในน้ำ", records.detailTitle.text);
@@ -249,8 +266,12 @@ namespace NuclearReMind.Tests
             StringAssert.Contains("ELARA VANE", mem.namesText.text, "ปมเรื่อง: ชื่อ Elara อยู่ในรายชื่อ");
             Assert.AreEqual(1, notices, "เสียงในใจโชว์ตอนเปิดครั้งแรก");
 
+            // Close() now hands off to UIPopIn.PlayClose, which SetActive(false)s only at the end of a
+            // ~0.12s coroutine - EditMode never pumps coroutines, so the panel would stay up forever here.
+            // The subject of this test is the once-per-run inner voice, not the close animation, so settle
+            // the panel by hand and carry on.
             mem.Close();
-            Assert.IsFalse(mem.panel.activeSelf);
+            mem.panel.SetActive(false);
 
             Assert.IsTrue(mem.TryOpenAtCell(new Vector2Int(3, 4)));
             Assert.AreEqual(1, notices, "เปิดซ้ำ → เสียงในใจไม่โชว์อีก (ครั้งเดียวต่อรอบเล่น)");

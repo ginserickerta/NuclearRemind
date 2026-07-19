@@ -15,6 +15,13 @@ namespace NuclearReMind.Tests
     /// </summary>
     public class StoryDirectorTests
     {
+        // StoryDirector is archived (Scripts/Narrative/_archive) and disabled at runtime by
+        // LegacyNarrativeSilencer; it stays compiled only for SaveData and these tests. The two Ignored
+        // cases below cover the card-sequencing it used to own, which CardUIController no longer serves.
+        private const string RetiredBeatOrderReason =
+            "v6.3 cutover: the forced record→info card sequence retired with StoryDirector. Records now " +
+            "flow DataRecovery → RecordFlowBridge → RecordCardUI; crisis cards are CardManager (GDD §25).";
+
         private readonly List<Object> _spawned = new List<Object>();
 
         private EventManager eventManager;
@@ -175,7 +182,8 @@ namespace NuclearReMind.Tests
 
         // ── ลำดับการเล่น: record → info → notice quiz ──────────
 
-        [Test]
+        // TODO(cutover): the record→info guarantee belongs to RecordFlowBridge/RecordCardUI now.
+        [Test, Ignore(RetiredBeatOrderReason)]
         public void Beat_PlaysRecordThenInfo_InForcedOrder()
         {
             var beat = NewBeat("b_seq", StoryTriggerType.OnDay, "2");
@@ -212,7 +220,8 @@ namespace NuclearReMind.Tests
 
         // ── การ์ดค้างรอผู้เล่นกดปิด เมื่อมี Card UI ────────────────
 
-        [Test]
+        // TODO(cutover): re-assert "one card at a time" against CardManager (CardSystemTests already does).
+        [Test, Ignore(RetiredBeatOrderReason)]
         public void WithCardUI_WaitsForDismiss_BeforeNextCard()
         {
             StoryDirector.CardUIAvailable = true;

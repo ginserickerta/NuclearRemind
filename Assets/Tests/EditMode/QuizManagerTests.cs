@@ -9,6 +9,10 @@ namespace NuclearReMind.Tests
     /// T1.T — QuizManager (V4 §12/§16): ตอบถูก +8 / ผิด +3 Knowledge ผ่าน RaiseResourceDelta,
     /// กันถามซ้ำ (_answered), เข้าคิวถามทีละข้อ (_pending), ปลดล็อก Codex ด้วย codexUnlockId,
     /// และ pause/resume เกมผ่าน GameManager.SetState (เฟส 1 · ดู Gap G2/G6)
+    ///
+    /// Knowledge is asserted as a DELTA, never as a total: v6.3 starts the run at
+    /// GameConfigSO.startKnowledge (20 per CONFIG.md), not 0. These tests are about the reward
+    /// the quiz pays out, so they must not encode the starting balance.
     /// </summary>
     public class QuizManagerTests
     {
@@ -63,9 +67,10 @@ namespace NuclearReMind.Tests
             Configure(MakeQuiz("Q1", correctIndex: 1, reward: 8));
             quiz.TriggerByIds("Q1");
 
+            float before = resources.Current.knowledge;
             quiz.SubmitAnswer(_shown[0].correctIndex);
 
-            Assert.AreEqual(8f, resources.Current.knowledge, 1e-4f, "ตอบถูก → Knowledge +8");
+            Assert.AreEqual(8f, resources.Current.knowledge - before, 1e-4f, "ตอบถูก → Knowledge +8");
             Assert.AreEqual(1, _answeredEvents.Count, "ตอบเสร็จต้อง raise OnQuizAnswered หนึ่งครั้ง");
             Assert.AreEqual("Q1", _answeredEvents[0].Key);
             Assert.IsTrue(_answeredEvents[0].Value, "ตอบถูก → OnQuizAnswered(correct=true)");
@@ -79,9 +84,10 @@ namespace NuclearReMind.Tests
 
             var shown = _shown[0];
             int wrongIndex = (shown.correctIndex + 1) % shown.options.Length;
+            float before = resources.Current.knowledge;
             quiz.SubmitAnswer(wrongIndex);
 
-            Assert.AreEqual(3f, resources.Current.knowledge, 1e-4f, "ตอบผิด → Knowledge +3 (แบน)");
+            Assert.AreEqual(3f, resources.Current.knowledge - before, 1e-4f, "ตอบผิด → Knowledge +3 (แบน)");
             Assert.IsFalse(_answeredEvents[0].Value, "ตอบผิด → OnQuizAnswered(correct=false)");
         }
 
@@ -150,10 +156,11 @@ namespace NuclearReMind.Tests
             Configure(MakeQuiz("Q1", correctIndex: 0, reward: 8, codexUnlockId: "Core_01"));
 
             quiz.TriggerByIds("Q1");
+            float before = resources.Current.knowledge;
             quiz.SubmitAnswer(_shown[0].correctIndex);
 
             Assert.IsTrue(codex.IsUnlocked("Core_01"), "codexUnlockId ที่ไม่ว่าง → ต้องปลดล็อก Codex");
-            Assert.AreEqual(10f, resources.Current.knowledge, 1e-4f, "ถูก +8 (ควิซ) +2 (codex) = 10");
+            Assert.AreEqual(10f, resources.Current.knowledge - before, 1e-4f, "ถูก +8 (ควิซ) +2 (codex) = 10");
         }
 
         // ---- GetById (ใช้โดย DilemmaData.GetLinkedQuizzes) ----
