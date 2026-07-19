@@ -22,18 +22,23 @@ namespace NuclearReMind.EditorTools
         {
             Directory.CreateDirectory(Folder);
 
-            Write("record_01", "water_analysis", "บันทึก #01 — เชื้อเพลิงในน้ำ",
+            // STORY.md §③ — each card's header and byline differ: #01 is the first recovery, #02/#03 are
+            // "further decryption", and the last one is the full report. They were all copies of #01's.
+            Write("record_01", "water_analysis", "บันทึก #01 — เชื้อเพลิงอยู่ในน้ำ",
+                  "กู้คืนสำเร็จ #01", RecoveredBy,
 "ถ้ามีใครได้อ่านข้อความนี้ แปลว่าห้องวิจัยยังไม่พังหมด\n" +
 "เชื้อเพลิงตัวแรกอยู่ในที่ที่นายคาดไม่ถึง — มันอยู่ในน้ำ\n\n" +
 "ยังมีบันทึกอีกหลายส่วนที่กู้ไม่สำเร็จ\n" +
 "ระบบจะถอดรหัสต่อเมื่อเมืองเดินหน้า");
 
             Write("record_02", "magnetic_theory", "บันทึก #02 — ปมขดลวด",
+                  "กู้คืนสำเร็จ #02", DecryptedFurther,
 "วันที่เราแพ้ ไม่ใช่เพราะสนามอ่อน\n" +
 "แต่เพราะมีคนเร่งเตาก่อนคอยล์จะพร้อม\n\n" +
 "ถ้านายอ่านถึงตรงนี้ — อย่ารีบ ติดให้ครบก่อน");
 
             Write("record_03", "storm_detection", "บันทึก #03 — ปมพายุ",
+                  "กู้คืนสำเร็จ #03", DecryptedFurther,
 "Zone B ไม่ได้ปิดตายเพราะมันพัง — เราปิดมันเองเพราะเรากลัวทริเทียม\n" +
 "เตาที่เลี้ยงเชื้อเพลิงของตัวเองได้ คือเตาที่ไม่ต้องพึ่งใคร\n" +
 "แต่เราไม่กล้าพอจะไว้ใจมัน\n\n" +
@@ -41,6 +46,7 @@ namespace NuclearReMind.EditorTools
 "มันคือสัญญาณ");
 
             Write("record_final", "lithium_breeding", "บันทึก #04 — เฉลยปม",
+                  "ถอดรหัสไฟล์รายงานฉบับเต็มสำเร็จ", "ผู้บันทึก: Dr. Elara Vane",
 "ก่อนหอคอยระเบิด — เราตรวจพบบางอย่าง\n" +
 "คลื่นรังสีที่จะตามมาหลังการระเบิด\n\n" +
 "เราเขียนมันลงในรายงาน รายงานที่ควรจะถึงมือทุกคน\n\n" +
@@ -52,7 +58,11 @@ namespace NuclearReMind.EditorTools
             Debug.Log("[DataRecordsSetup] สร้าง/อัปเดต RecordCardSO 4 ใบ ที่ " + Folder);
         }
 
-        private static void Write(string recordId, string unlocksLead, string archiveTitle, string bodyTH)
+        private const string RecoveredBy      = "ระบบกู้คืนข้อมูลจากเครือข่ายเก่า · ผู้บันทึก: Dr. Elara Vane";
+        private const string DecryptedFurther = "ระบบถอดรหัสข้อมูลเพิ่มเติมสำเร็จ · ผู้บันทึก: Dr. Elara Vane";
+
+        private static void Write(string recordId, string unlocksLead, string archiveTitle,
+                                  string statusLabel, string authorLabel, string bodyTH)
         {
             string path = $"{Folder}/{recordId}.asset";
             var r = AssetDatabase.LoadAssetAtPath<RecordCardSO>(path);
@@ -60,9 +70,9 @@ namespace NuclearReMind.EditorTools
             if (isNew) r = ScriptableObject.CreateInstance<RecordCardSO>();
 
             r.recordId = recordId;
-            r.authorLabel = "ระบบกู้คืนข้อมูลจากเครือข่ายเก่า · ผู้บันทึก: Dr. Elara Vane";
+            r.authorLabel = authorLabel;
             r.recorderName = "Dr. Elara Vane";
-            r.statusLabel = "กู้คืนสำเร็จ";
+            r.statusLabel = statusLabel;
             r.archiveTitle = archiveTitle;
             r.bodyTH = bodyTH;
             r.unlocksLead = unlocksLead;

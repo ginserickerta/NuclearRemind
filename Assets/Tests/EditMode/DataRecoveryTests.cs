@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -17,25 +18,63 @@ namespace NuclearReMind.Tests
         private ResearchLab lab;
         private DataRecovery dr;
 
+        /// <summary>
+        /// EditMode does not reload the script domain between runs, so MonoBehaviour singletons another
+        /// test class created can still be alive in here. That is not hypothetical for this suite: a live
+        /// ResourceManager holding 0 iron makes ResearchLab.StartRepair bail (it charges repairIron), and
+        /// every test that repairs the lab then fails on the "precondition: repaired" assert - for reasons
+        /// that have nothing to do with data recovery. Start from a clean scene instead.
+        /// </summary>
+        private static void DestroyStray<T>() where T : MonoBehaviour
+        {
+            foreach (var o in Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (o != null) Object.DestroyImmediate(o.gameObject);
+        }
+
+        /// <summary>
+        /// EditMode does not call Awake/OnEnable for AddComponent, so the `Instance` singletons stay null.
+        /// ResearchLab.TickRepair reads WorkerManager.Instance (not our local reference) to count the crew,
+        /// so without this the lab could never be repaired and every test here that needs a working lab
+        /// failed on the precondition. Same idiom as ResearchManagerTests / ResourceManagerTests.
+        /// </summary>
+        private T NewComponent<T>(string name) where T : Component
+        {
+            var go = new GameObject(name);
+            _spawned.Add(go);
+            var c = go.AddComponent<T>();
+            TryInvokePrivate(c, "Awake");
+            TryInvokePrivate(c, "OnEnable");
+            return c;
+        }
+
+        private static void TryInvokePrivate(object target, string methodName)
+        {
+            MethodInfo method = target.GetType().GetMethod(methodName,
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            try { method?.Invoke(target, null); }
+            catch (TargetInvocationException) { }
+        }
+
         [SetUp]
         public void SetUp()
         {
+            DestroyStray<DataRecovery>();
+            DestroyStray<ResearchLab>();
+            DestroyStray<WorkerManager>();
+            DestroyStray<ResourceManager>();
+            DestroyStray<EventManager>();
+
             cfg = ScriptableObject.CreateInstance<GameConfigSO>();
             _spawned.Add(cfg);
             GameConfigSO.OverrideForTest(cfg);
             KnowledgeDB.ResetForTest();
 
-            var evGo = new GameObject("EventManager"); _spawned.Add(evGo);
-            evGo.AddComponent<EventManager>();
+            NewComponent<EventManager>("EventManager");
 
-            var wmGo = new GameObject("WorkerManager"); _spawned.Add(wmGo);
-            wm = wmGo.AddComponent<WorkerManager>(); wm.Initialize(cfg);
+            wm = NewComponent<WorkerManager>("WorkerManager"); wm.Initialize(cfg);
+            lab = NewComponent<ResearchLab>("ResearchLab"); lab.Initialize(cfg);
 
-            var labGo = new GameObject("ResearchLab"); _spawned.Add(labGo);
-            lab = labGo.AddComponent<ResearchLab>(); lab.Initialize(cfg);
-
-            var drGo = new GameObject("DataRecovery"); _spawned.Add(drGo);
-            dr = drGo.AddComponent<DataRecovery>(); dr.Initialize(cfg);
+            dr = NewComponent<DataRecovery>("DataRecovery"); dr.Initialize(cfg);
             dr.RegisterCatalog(BuildRecords());
         }
 
@@ -71,7 +110,11 @@ namespace NuclearReMind.Tests
             lab.StartRepair();
             for (int i = 0; i < cfg.repairWorkers; i++) wm.AssignJob(wm.Workers[i], WorkerJobs.Lab);
             for (int i = 0; i < cfg.repairDays; i++) lab.TickDay();
-            Assert.IsFalse(lab.IsRuined, "precondition: repaired");
+
+            // TickRepair counts the crew through WorkerManager.Instance, so this also asserts that the
+            // singleton wiring survived SetUp - it is what broke here before NewComponent existed.
+            Assert.IsFalse(lab.IsRuined,
+                $"precondition: repaired (paid={lab.RepairPaid} progress={lab.RepairProgress}/{cfg.repairDays})");
 
             // set desired lab headcount
             foreach (var w in wm.GetWorkers(WorkerJobs.Lab).ToList()) wm.AssignJob(w, WorkerJobs.Idle);
