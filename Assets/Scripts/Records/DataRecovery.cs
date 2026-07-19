@@ -44,16 +44,52 @@ namespace NuclearReMind
             RecordsRecovered = 0;
         }
 
-        private void OnEnable()
+        private bool _subscribed;
+
+        // auto-spawn AfterSceneLoad → OnEnable may run while EventManager.Instance is still null (build),
+        // so retry in Start like ResearchManager — a silent drop here would stop recovery for the whole run.
+        private void OnEnable() => TrySubscribe();
+        private void Start() => TrySubscribe();
+
+        private void TrySubscribe()
         {
-            if (EventManager.Instance == null) return;
+            if (_subscribed || EventManager.Instance == null) return;
             EventManager.Instance.OnDayEnded += HandleDayEnded;
+            EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
+            _subscribed = true;
         }
 
         private void OnDisable()
         {
-            if (EventManager.Instance == null) return;
+            if (!_subscribed || EventManager.Instance == null) { _subscribed = false; return; }
             EventManager.Instance.OnDayEnded -= HandleDayEnded;
+            EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+            _subscribed = false;
+        }
+
+        /// <summary>
+        /// Restore from a save. Replays the LEAD unlocks for every record already recovered — KnowledgeDB
+        /// keeps no persistence of its own, so without this the player loses storm_detection (and the
+        /// Sensor Array with it) on load. UnlockLead is idempotent, so replaying is safe.
+        /// Deliberately does NOT route through UnlockNextRecord: that would re-pop all four record cards.
+        /// </summary>
+        private void HandleSaveLoaded(SaveData save) => RestoreFromSave(save);
+
+        /// <summary>Restore body — public so EditMode tests can drive it without a live subscription.</summary>
+        public void RestoreFromSave(SaveData save)
+        {
+            if (save == null) return;
+            EnsureCatalog();
+
+            Progress = save.dataRecoveryProgress;
+            RecordsRecovered = Mathf.Clamp(save.dataRecoveryRecords, 0, Order.Length);
+
+            for (int i = 0; i < RecordsRecovered; i++)
+            {
+                var rec = GetRecord(Order[i]);
+                if (rec != null && !string.IsNullOrEmpty(rec.unlocksLead))
+                    KnowledgeDB.Instance.UnlockLead(rec.unlocksLead);
+            }
         }
 
         private void HandleDayEnded(int day)

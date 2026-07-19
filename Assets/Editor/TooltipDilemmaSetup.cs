@@ -53,7 +53,9 @@ namespace NuclearReMind.EditorTools
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             SetupTooltip(canvasGO.transform, tooltip, font);
-            SetupDilemmaPopup(canvasGO.transform, font);
+            // Dilemma popup ไม่ถูกสร้างอีกแล้ว (v6.3 cutover) — CrisisCardPanelUI แทนที่แล้ว และ
+            // DisableLegacy() ก็ปิดตัวเก่าตอนรันอยู่แล้ว · RemoveChild ข้างบนยังทำงาน = รันเมนูนี้
+            // จะ "เก็บกวาด" ของเก่าออกจากซีนให้ด้วย แทนที่จะสร้างใหม่ทุกครั้ง
 
             EditorUtility.SetDirty(tooltip);
             EditorSceneManager.MarkSceneDirty(scene);
@@ -166,6 +168,7 @@ namespace NuclearReMind.EditorTools
 
             overlay.SetActive(false);
 
+            // ⚠ ARCHIVED (v6.3 cutover) — ไม่มีใครเรียกแล้ว เก็บไว้เผื่อต้องรื้อ layout ปุ่ม A/B/C มาใช้ซ้ำ
             // ===== DilemmaPopupController =====
             var controllerGO = new GameObject("DilemmaPopupController", typeof(RectTransform));
             controllerGO.transform.SetParent(canvasTransform, false);

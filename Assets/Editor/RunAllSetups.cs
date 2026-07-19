@@ -40,7 +40,8 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Codex System",
             "NuclearReMind/Setup Radiation System", // RadiationManager — exposure สะสม (Zone A §4)
             "NuclearReMind/Setup Crisis Effects",   // CrisisEffectManager — ผลกระทบวิกฤตเต็มระบบ (§4)
-            "NuclearReMind/Setup Crisis Dilemmas",
+            // "Setup Crisis Dilemmas" ถอดออก (v6.3 cutover) — CardManager + Resources/CrisisCards แทนแล้ว
+            // เมนูย้ายไป NuclearReMind/Legacy (archived)/ · path เดิมที่ค้างไว้ทำให้เชนข้ามเงียบทุกรอบ
             "NuclearReMind/Setup Quiz System",
             "NuclearReMind/Setup Quiz Explanation UI", // หน้าคำอธิบายหลังตอบควิส (canvas แยก order 70 · หลัง Quiz System — ใช้สกิน frame_metal/plate_inset ที่ import แล้ว)
             "NuclearReMind/Setup Decrees",
@@ -51,7 +52,9 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Setup Pause Menu", // PauseCanvas แยกจาก HUDCanvas — กด ESC ตอนเล่น
             "NuclearReMind/Setup Dialogue Art", // นำเข้า Kova 9 อารมณ์ + กรอบ 3 ขนาด (ต้องก่อน Setup Story UI — SetupDialogueUI ใช้)
             "NuclearReMind/Setup Story UI",   // StoryCanvas แยกเช่นกัน — การ์ดเนื้อเรื่อง + Records + อนุสรณ์
-            "NuclearReMind/Setup Story Content", // beats/records/info cards/อนุสรณ์ (ต้องหลัง Story UI + Crisis + Quiz)
+            // "Setup Story Content" ถอดออก (v6.3 cutover) — beats ผูก `day == X` ขัดกฎข้อ 1 · Records/Notes
+            // มาจาก Resources catalogs แล้ว · เหลือแค่อนุสรณ์ที่ยังเป็นสเปก จึงแยกเป็นเมนูของตัวเองข้างล่าง
+            "NuclearReMind/Setup Memorial (STORY.md §2)", // อนุสรณ์ 6 ชื่อ + pre-placed (ต้องหลัง Story UI — ใช้ MemorialPanelController)
             "NuclearReMind/Setup Record Card UI", // การ์ดบันทึกธีมไม้ 2 ปุ่ม (canvas แยก · หลัง Story UI ที่ลบ StoryCanvas)
             "NuclearReMind/Setup Record Notification (HUD Icon)", // ไอคอนบันทึกมุมขวาล่าง + badge (ระบบใหม่ · ต้องหลัง HUD Canvas + Story UI)
             "NuclearReMind/Setup Hospital (GDD §6)",       // โรงพยาบาล — asset + hotbar (ต้องหลัง Building Balance + Day 11)
@@ -72,11 +75,15 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Fix Isometric Sort (Tile Walls)",   // ตั้ง sort ให้บล็อกขอบเรียงถูก (ต้องก่อน Fill Grids)
             "NuclearReMind/Flatten Ground Tiles (Top Face)",   // ★ สร้างไทล์หน้าบนแบน (ข้างในเรียบ · ขอบบล็อกเต็ม)
             "NuclearReMind/Fill Grids (Ground + Fog)",         // ระบาย Ground/Fog แบ่งโซน สุ่มจากไทล์คัด
+            "NuclearReMind/Generate Stone Tiles",               // สร้างไทล์หินปูพื้น 10 ใบ จาก flat_000 (GROUND_PLAN §2) — ต้องหลัง Flatten Ground Tiles
+            "NuclearReMind/Setup Stone Ground (Plaza + Paths)", // ปูลานหิน/ทางเดิน/ซากปู บน StonePave (GROUND_PLAN §3-4) — ต้องหลัง Fill Grids
             "NuclearReMind/Setup Decor",                       // โรยของประดับนอกกริด (apron) deterministic — หลัง Fill Grids (พื้น apron วาดแล้ว · ข้ามเงียบถ้ายังไม่มี asset)
             "NuclearReMind/Fix 2D Lighting (Light All Sorting Layers)", // กัน sprite รันไทม์เรนเดอร์ดำ (Sprite-Lit-Default)
             "NuclearReMind/Lighting Mood (Warm Key + Cool Fill)", // มู้ดแสงอุ่น+เย็น (ต้องหลัง Fix 2D Lighting)
             "NuclearReMind/Fix Colors (สี sprite สดขึ้น)",        // post-processing color grade (ต้องหลัง Lighting Mood)
             "NuclearReMind/Setup Rendering (Bloom + Reactor Glow)", // Bloom + Vignette + แสงเตาปฏิกรณ์ (ต้องหลัง Fix Colors — ใช้ profile/light ที่ตั้งแล้ว)
+            "NuclearReMind/Setup Ashfall Render (Phase A)", // ★ ธีม post-apocalyptic dawn (RENDER_PLAN.md เฟส A) — ต้องท้ายเชน rendering: ทับค่า light/grade ของ 3 เมนูก่อนหน้า
+            "NuclearReMind/Setup Ashfall Atmosphere (Phase B)", // หมอก+ควัน+เถ้า+flicker (RENDER_PLAN.md เฟส B) — หลังเฟส A (ใช้ reactor light เป็น template)
             "NuclearReMind/Apply UI Scale (Font Size)", // ขยาย UI/ตัวอักษรทั้งเกม (ต้องหลังทุกขั้นที่สร้าง Canvas)
             "NuclearReMind/Apply Kanit Font (Scene + Prefabs)",
         };

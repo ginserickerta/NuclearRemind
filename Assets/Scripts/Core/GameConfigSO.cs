@@ -105,6 +105,7 @@ namespace NuclearReMind
         public float hopeResearchComplete = 6f;    // per note
         public float hopeMemorialVisited = 2f;     // first click only
         public float hopeAlaraCompliant = 2f;      // Zone B fully suited
+        public int quizRevealDelayDays = 1;        // days between USING knowledge and the quiz surfacing (QUIZZES.md pacing)
         public float hopeScram = -3f;
         public float foodSurplusPopMult = 3f;      // surplus condition: food > pop × 3
 
@@ -125,8 +126,13 @@ namespace NuclearReMind
         public float drawCo60 = 20f;
         public float powerCap = 400f;              // [LOCK] floor 0 (bug #17)
         public float waterCap = 200f;              // [LOCK] floor 0 (bug #18)
-        public float spoilBase = 0.05f;            // + (avgRad/100) × 0.15 · Sprint 4 wires Co-60/Granary
+        // spoil = spoilBase + (avgRad/100) × spoilRadCoeff · ×0.3 with Co-60 (CONFIG.md ECONOMY)
+        // ★ Spoilage only runs AFTER the "เสบียงเน่า" crisis card fires (CrisisEffectManager.SpoilageActive).
+        //   CONFIG.md models it as always-on, but that is an unverified balance change — nrm_sim.py is not
+        //   in the repo, so rule #3 cannot be satisfied. Card-gated keeps the numbers honest either way.
+        public float spoilBase = 0.05f;
         public float spoilRadCoeff = 0.15f;
+        public float spoilHighMult = 2f;           // D01/D02 fire above spoilHighMult × spoilBase
 
         // ─────────────────────────────────────────
         //  [LOCK] RESEARCH (CONFIG.md 🔒 RESEARCH)
@@ -280,6 +286,7 @@ namespace NuclearReMind
         public float startCore = 30f;
         public float startHeat = 20f;
         public float startHope = 70f;
+        public float startKnowledge = 20f;         // Auren already knows the basics — head start on the Novice tier (<30)
 
         [Header("Population growth (★ not sim-validated yet — CONFIG.md §33)")]
         public float growthFoodRatio = 5f;         // food > pop × 5

@@ -1,34 +1,39 @@
 namespace NuclearReMind
 {
     /// <summary>
-    /// Live snapshot the bark conditions read (BARKS.md). Built from the running systems; fields whose
-    /// systems aren't wired yet (reactor heat/core/fuel/coils, storm, decree, building flags) default to
-    /// off so those speakers stay quiet until Sprint 6 — same deferred pattern as the reactor cards.
+    /// Live snapshot the bark conditions read (BARKS.md). Built from the running systems.
+    ///
+    /// Every field here is populated from a live system EXCEPT mutationLabBuilt: the mutation lab exists
+    /// only as an unlock string in Resources/ResearchNotes/irradiation.asset (no BuildingType, no asset,
+    /// no manager), so D05 stays quiet until it ships. Do not fake it — a bark that fires with nothing
+    /// behind it lies to the player. (co60Built is real: CARDS.md การ์ด 3 option C, not a building.)
     /// </summary>
     public struct BarkWorldState
     {
-        // reactor (Sprint 6 — default off)
+        // reactor
         public float fuelDemand, fuel, heat, cooling, core, tritium;
         public int toroidalLv, poloidalLv;
         public bool boosting, blackout, researchStalled, tritiumEver;
 
-        // people / economy (live)
+        // people / economy
         public int sickWorkers, dyingWorkers, workerDeaths, hungryWorkers, farmWorkers;
         public int medBayCapacity, zoneBWorkers, suitsMade;
         public float avgRadiation, food, hope;
         public bool hasMedBay, zoneBOpen;
 
-        // farm / spoilage flags (Sprint 6 buildings — default off)
+        // farm / spoilage — co60Built + mutationLabBuilt have no backing building yet (see class doc)
         public bool spoilHigh, co60Built, mutationLabBuilt;
 
-        // storm / decree (Sprint 6 — default off)
+        // storm / decree
         public bool stormActive, decreeActive, decreeChildren, decreeNone;
+
+        /// <summary>Decree asset id the citizens react to (C04) — Assets/ScriptableObjects/Decrees.</summary>
+        public const string ChildLaborDecreeId = "Decree2_ChildLabor";
 
         public static BarkWorldState Snapshot()
         {
             var s = new BarkWorldState();
             var cfg = GameConfigSO.Instance;
-            s.medBayCapacity = cfg != null ? cfg.medBayCapacity : 4;
 
             var rm = ResourceManager.Instance;
             if (rm != null) s.food = rm.Current.food;
@@ -70,6 +75,44 @@ namespace NuclearReMind
             }
             var storm = StormSystem.Instance;
             if (storm != null) s.stormActive = storm.IsStormActive;
+
+            // Blackout: a failed energy draw today, not power<0 (bug #17). Cleared at day start, so this
+            // reads true only for the day it happened — barks fire at day end, before the reset.
+            if (wm != null) s.blackout = wm.BlackoutToday;
+
+            // A finished Hospital IS the Med Bay (GDD §6). No Hospital = 0 beds, not cfg.medBayCapacity —
+            // otherwise M04 ("ที่พยาบาลเต็ม") could fire for a med bay that was never built.
+            if (wm != null)
+            {
+                s.medBayCapacity = wm.MedBayBeds;
+                s.hasMedBay = s.medBayCapacity > 0;
+            }
+
+            // Research stalled = a job is running with nobody staffing it (bug #7 deadlock).
+            var lab = ResearchLab.Instance;
+            if (lab != null && wm != null)
+                s.researchStalled = lab.LabBusy && wm.GetWorkers(WorkerJobs.Lab).Count == 0;
+
+            // Spoilage: BARKS.md D01/D02 want "spoilRate > 2x baseline" · D04 wants the Co-60 option taken.
+            var ce = CrisisEffectManager.Instance;
+            if (ce != null && cfg != null)
+            {
+                s.spoilHigh = ce.FoodSpoilRatePerDay > cfg.spoilHighMult * cfg.spoilBase;
+                s.co60Built = ce.Co60Active;
+            }
+
+            // Decrees are additive-only (DecreeManager never repeals), so "active" == "ever enacted".
+            var dm = DecreeManager.Instance;
+            if (dm != null && dm.decrees != null)
+            {
+                foreach (var d in dm.decrees)
+                {
+                    if (d == null || !dm.IsActive(d)) continue;
+                    s.decreeActive = true;
+                    if (d.id == ChildLaborDecreeId) s.decreeChildren = true; // C04 "เด็กพวกนั้นไม่ควรต้องอยู่ตรงนั้น"
+                }
+                s.decreeNone = !s.decreeActive;
+            }
             return s;
         }
     }
@@ -108,7 +151,7 @@ namespace NuclearReMind
                 case "M01": return s.sickWorkers >= 2;
                 case "M02": return s.sickWorkers >= 2 && !db.HasNote("nuclear_medicine");
                 case "M03": return db.HasNote("nuclear_medicine") && !s.hasMedBay;
-                case "M04": return s.sickWorkers > s.medBayCapacity;
+                case "M04": return s.hasMedBay && s.sickWorkers > s.medBayCapacity; // "เต็ม" needs one to exist
                 case "M05": return s.dyingWorkers > 0;
                 case "M06": return s.workerDeaths >= 1;
                 case "M07": return s.zoneBOpen && s.suitsMade < s.zoneBWorkers;

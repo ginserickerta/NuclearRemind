@@ -272,7 +272,17 @@ namespace NuclearReMind
 
                 if (e.farmersReturned > 0) ReturnFarmers(wm, e.farmersReturned);
             }
-            // e.heatDelta / coreStallDays / spoilMult / stopZoneBDays → consumed by Sprint 5/6 via the event
+
+            // Food spoilage (CARDS.md การ์ด 3) — the crisis itself switches rotting on; the Co-60 option
+            // then mitigates it permanently (×0.3). Dorn's D01/D02 read the rate, D04 reads Co60Active.
+            var ce = CrisisEffectManager.Instance;
+            if (ce != null && cardId == CardIds.Spoil)
+            {
+                ce.ActivateSpoilage();
+                if (e.spoilMult > 0f) ce.ApplySpoilMultiplier(e.spoilMult, isCo60: true);
+            }
+
+            // e.heatDelta / coreStallDays / stopZoneBDays → consumed by Sprint 6 via the event
         }
 
         private static void ReturnFarmers(WorkerManager wm, int count)

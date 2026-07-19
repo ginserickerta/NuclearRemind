@@ -102,6 +102,44 @@ namespace NuclearReMind.Tests
         }
 
         [Test]
+        public void SaveLoaded_RestoresProgressAndReplaysLeads()
+        {
+            dr.RestoreFromSave(new SaveData { dataRecoveryProgress = 42f, dataRecoveryRecords = 3 });
+
+            Assert.AreEqual(42f, dr.Progress, 1e-4f);
+            Assert.AreEqual(3, dr.RecordsRecovered);
+            Assert.AreEqual(3, dr.Recovered.Count(), "แผง Records ต้องเห็นครบ 3 ใบหลังโหลด");
+
+            // ★ KnowledgeDB ไม่มี persistence ของตัวเอง — ถ้าไม่ replay จะเสีย Sensor Array ทั้งรอบ
+            Assert.IsTrue(KnowledgeDB.Instance.HasLead("water_analysis"));
+            Assert.IsTrue(KnowledgeDB.Instance.HasLead("magnetic_theory"));
+            Assert.IsTrue(KnowledgeDB.Instance.HasLead("storm_detection"), "★ record #3 → Sensor Array ต้องรอด");
+            Assert.IsFalse(KnowledgeDB.Instance.HasLead("lithium_breeding"), "ใบที่ 4 ยังไม่กู้ → ห้ามปลด");
+        }
+
+        [Test]
+        public void SaveLoaded_OldSaveWithoutRecordFields_IsFreshRun()
+        {
+            Assert.DoesNotThrow(() => dr.RestoreFromSave(new SaveData()));
+            Assert.AreEqual(0f, dr.Progress, 1e-4f);
+            Assert.AreEqual(0, dr.RecordsRecovered, "เซฟเก่า = ยังไม่กู้ใบไหน (CLAUDE.md default rule)");
+        }
+
+        [Test]
+        public void SaveLoaded_ReplayIsIdempotent_NoDoubleUnlock()
+        {
+            int raised = 0;
+            EventManager.Instance.OnLeadUnlocked += _ => raised++;
+
+            var save = new SaveData { dataRecoveryProgress = 10f, dataRecoveryRecords = 2 };
+            dr.RestoreFromSave(save);
+            dr.RestoreFromSave(save);                     // โหลดซ้ำรอบสอง
+
+            Assert.AreEqual(2, raised, "UnlockLead idempotent → ห้าม raise ซ้ำ");
+            Assert.AreEqual(2, dr.RecordsRecovered);
+        }
+
+        [Test]
         public void IdleResearchers_SpeedUpRecovery()
         {
             RepairLab(0);                                  // repaired, no lab workers → passive only

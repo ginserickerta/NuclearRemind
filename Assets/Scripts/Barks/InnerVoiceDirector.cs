@@ -9,9 +9,12 @@ namespace NuclearReMind
     /// runs. Assets live in Resources/InnerVoice (speaker = Auren) and fire via OnBarkFired, so the HUD
     /// shows them as the nameless ▸ prompt.
     ///
-    /// Wired to the events/state that exist in v6.3. A few milestone lines (V02 memorial · V04 research
-    /// menu · V06 extractor · V12 med bay) need building/UI hooks not present yet — their assets exist
-    /// so a later pass just calls Fire("V06").
+    /// 19 of 20 are wired. Callers outside this class: V01 (IntroSequenceController, on the fade into
+    /// gameplay), V02 (MemorialPanelController, first click), V04 (ResearchQueuePanel, first open).
+    ///
+    /// V06 "Extractor เดินครั้งแรก" is the one that stays silent: there is no Extractor — it is not a
+    /// BuildingType, has no asset and no manager, and exists only as a gating note in BuildingData.
+    /// Its BarkSO is authored and waiting; once the building ships, one Fire("V06") is the whole hookup.
     /// </summary>
     // -18: after BarkManager (-20) so the ▸ line lands alongside the day's NPC bark.
     [DefaultExecutionOrder(-18)]
@@ -23,6 +26,7 @@ namespace NuclearReMind
         private readonly HashSet<string> _fired = new HashSet<string>();
         private bool _catalogLoaded;
         private int _recordCount;
+        private int _coreStallDays;   // V13 needs 3 consecutive stalled days, not just one
 
         private void Awake()
         {
@@ -87,7 +91,13 @@ namespace NuclearReMind
                 if (reactor.Heat > 90f) Fire("V07");
                 if (reactor.ToroidalLv > 0 && reactor.PoloidalLv > 0) Fire("V08");
                 float tritium = ZoneBController.Instance != null ? ZoneBController.Instance.TritiumStock : reactor.Tritium;
-                if (reactor.Core >= 80f && tritium < 5f) Fire("V13");
+
+                // V13 "ค้างอยู่ที่แปดสิบสามวันแล้ว" — BARKS.md requires 3 CONSECUTIVE days of the stall.
+                // The line names the streak out loud, so firing on day 1 of it would be a lie.
+                if (reactor.Core >= 80f && tritium < 5f) _coreStallDays++;
+                else _coreStallDays = 0;
+                if (_coreStallDays >= 3) Fire("V13");
+
                 if (reactor.Core >= 100f) Fire("V20");
             }
 
@@ -97,6 +107,10 @@ namespace NuclearReMind
                 if (wm.SickCount >= 1) Fire("V10");
                 if (GameConfigSO.Instance != null && GameConfigSO.Instance.startPopulation - wm.AliveCount >= 1) Fire("V11");
                 if (wm.Hope != null && wm.Hope.Current < 30f) Fire("V18");
+
+                // V12 "รังสีทำให้เขาป่วย แล้วรังสีก็รักษาเขา" — BARKS.md "สร้าง Med Bay". A finished
+                // Hospital is the Med Bay (GDD §6); polling here beats a build-event hook we don't have.
+                if (wm.MedBayBeds > 0) Fire("V12");
             }
         }
 

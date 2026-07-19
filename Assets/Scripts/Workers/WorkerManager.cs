@@ -90,6 +90,23 @@ namespace NuclearReMind
         public HopeLedger Hope { get; private set; }
         public HopeThresholdWatcher Thresholds { get; private set; }
 
+        /// <summary>True if an energy draw failed today (bug #17 flag). Cleared at day start — read it at day end.</summary>
+        public bool BlackoutToday => _blackoutToday;
+
+        /// <summary>Med Bay beds available right now — 0 when no finished Hospital exists.</summary>
+        public int MedBayBeds => HospitalBeds();
+
+        /// <summary>Mean radiation over living workers (CONFIG.md avgRad). 0 when nobody is alive.</summary>
+        public float AvgRadiation
+        {
+            get
+            {
+                float sum = 0f; int n = 0;
+                foreach (var w in _workers) if (w.alive) { sum += w.radiation; n++; }
+                return n > 0 ? sum / n : 0f;
+            }
+        }
+
         /// <summary>Fired after every daily tick — UI panels refresh from this.</summary>
         public event System.Action OnWorkersChanged;
 
@@ -264,6 +281,7 @@ namespace NuclearReMind
             {
                 foodStock = rm != null ? rm.Current.food : 0f,
                 rng = _dayRng ?? (_dayRng = new System.Random()),
+                medBayCapacity = HospitalBeds(),   // 0 unless a finished Hospital exists (heal was dormant before)
                 medBayHeal = mastery.MedBayHeal(),
                 masteryNuclearMedicine = mastery.Has(QuizIds.NuclearMedicine),
                 // Sprint 6: heat leak (> 85 → +5 rad) and storm rad (+3) — last-known state (this handler
@@ -317,6 +335,35 @@ namespace NuclearReMind
             Thresholds.Evaluate(Hope.Current);
             EventManager.Instance?.RaiseMoraleChanged(Hope.Current);
             OnWorkersChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Live running hope = committed Current + everything reported (not yet committed) today.
+        /// The HUD bar shows this; it settles to Current at the end-of-day commit.
+        /// </summary>
+        public float LiveHope
+        {
+            get
+            {
+                if (Hope == null) return 0f;
+                float sum = 0f;
+                var today = Hope.GetTodayBreakdown();
+                for (int i = 0; i < today.Count; i++) sum += today[i].value;
+                return Mathf.Clamp(Hope.Current + sum, _cfg.hopeMin, _cfg.hopeMax);
+            }
+        }
+
+        /// <summary>
+        /// Report a hope entry AND reflect it on the HUD immediately (raises OnMoraleChanged with the live
+        /// running value). Use for player-visible instant feedback — e.g. the Memorial's +2 first-click
+        /// bonus (STORY.md §②). The entry still commits normally at end of day; this only makes the change
+        /// show now instead of only in the daily total. Hope is still written solely through the ledger.
+        /// </summary>
+        public void ReportHopeLive(string sourceKey, string text, float value, HopeCategory category)
+        {
+            if (Hope == null) return;
+            Hope.Report(sourceKey, text, value, category);
+            EventManager.Instance?.RaiseMoraleChanged(LiveHope);
         }
 
         // ─────────────────────────────────────────
@@ -399,16 +446,41 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>Med Bay heals the most irradiated first, up to capacity (0 until Sprint 3 builds it).</summary>
+        private int _lastMedBayHealed;
+        /// <summary>Patients healed on the last tick — the q_nuclear_medicine "applied" signal (QuizAppliedWatcher).</summary>
+        public int LastMedBayHealed => _lastMedBayHealed;
+
+        /// <summary>Med Bay heals the most irradiated first, up to capacity (0 until a Hospital is built).</summary>
         private void MedBayHeal(WorkerTickContext ctx)
         {
+            _lastMedBayHealed = 0;
             if (ctx.medBayCapacity <= 0 || ctx.medBayHeal <= 0f) return;
             var patients = _workers
                 .Where(w => w.alive && w.radiation > 0f)
                 .OrderByDescending(w => w.radiation)
                 .Take(ctx.medBayCapacity);
             foreach (var w in patients)
+            {
                 w.radiation = Mathf.Max(0f, w.radiation - ctx.medBayHeal);
+                _lastMedBayHealed++;
+            }
+        }
+
+        // A built, finished Hospital provides Med Bay beds (GDD §6). Without one, medBayCapacity stays 0 and
+        // MedBayHeal is a no-op — which is why healing (and q_nuclear_medicine) was dormant before this wiring.
+        private int HospitalBeds()
+        {
+            var reg = BuildingRegistry.Instance;
+            if (reg == null || _cfg == null) return 0;
+            var cc = ConstructionController.Instance;
+            foreach (var kv in reg.PlacedBuildings)
+            {
+                var d = kv.Value;
+                if (d == null || d.buildingType != BuildingType.Hospital) continue;
+                if (cc != null && cc.IsUnderConstruction(kv.Key)) continue;
+                return _cfg.medBayCapacity;
+            }
+            return 0;
         }
 
         /// <summary>Single status per worker, severity-ordered: Dying > Sick > Hungry > Exhausted > Tired.</summary>

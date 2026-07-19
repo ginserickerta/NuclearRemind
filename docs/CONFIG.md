@@ -189,6 +189,7 @@ heat             = 20.0
 fuel             = 0.0
 tritium          = 0.0
 hope             = 70.0
+knowledge        = 20.0    # ★ เพิ่ม 2026-07-19 — Auren รู้พื้นฐานอยู่แล้ว (tier Novice ยังไม่ข้าม 30)
 
 research_lab_is_ruined = True   # ★ เริ่มเกมเป็นซาก
 memorial_clickable     = True   # ★ เปิดได้ตั้งแต่ D1

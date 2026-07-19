@@ -64,12 +64,17 @@ namespace NuclearReMind
 
         private static void AutoSpawnUnsafe()
         {
+            // ★ 2026-07-19: superseded by ResearchLabPanelUI (HTML-mockup skin, same ResearchLab/KnowledgeDB
+            //   backend). Kept compiled as the rollback path — delete this early-return to restore it.
+            return;
+#pragma warning disable CS0162 // unreachable — intentional dormant stub (same pattern as LabPanelUI)
             if (FindFirstObjectByType<ResearchQueuePanel>() != null) return;
             var canvas = FindBestCanvas();
             if (canvas == null) return; // no HUD yet (e.g. MainMenu) — a later sceneLoaded will retry
             var go = new GameObject("ResearchQueuePanel (auto)");
             go.transform.SetParent(canvas.transform, false);
             go.AddComponent<ResearchQueuePanel>();
+#pragma warning restore CS0162
         }
 
         private static Canvas FindBestCanvas()
@@ -155,6 +160,7 @@ namespace NuclearReMind
             _shown = true;
             if (_backdrop != null) _backdrop.SetActive(true);
             GameUIStack.Push(this);
+            InnerVoiceDirector.Instance?.Fire("V04"); // BARKS.md: "เปิดเมนูวิจัยครั้งแรก" (Fire is once-only)
             TimeManager.Instance?.Pause(PauseReason.LabPopup); // §15: time stops while a popup is open
             Refresh();
         }

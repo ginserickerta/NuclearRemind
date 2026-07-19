@@ -54,6 +54,37 @@ namespace NuclearReMind.Tests
         // ─────────────────────────────────────────
         //  Conditions — bound to state, not day
         // ─────────────────────────────────────────
+        // Snapshot() never wrote these 5 fields, so BarkConditions read a permanent `false` and the barks
+        // could not fire at all. Guarding them here because the scheduler tests all pass regardless.
+        [Test]
+        public void RevivedConditions_FireFromTheirSnapshotFields()
+        {
+            Assert.IsTrue(BarkConditions.IsMet("K11", new BarkWorldState { researchStalled = true }));
+            Assert.IsTrue(BarkConditions.IsMet("K12", new BarkWorldState { blackout = true }));
+            Assert.IsTrue(BarkConditions.IsMet("M13", new BarkWorldState { decreeActive = true }));
+            Assert.IsTrue(BarkConditions.IsMet("C04", new BarkWorldState { decreeChildren = true }));
+            Assert.IsTrue(BarkConditions.IsMet("C05", new BarkWorldState { decreeNone = true, stormActive = true }));
+        }
+
+        [Test]
+        public void M03_StopsNaggingOnceTheMedBayExists()
+        {
+            KnowledgeDB.Instance.CompleteNote("nuclear_medicine");
+            Assert.IsTrue(BarkConditions.IsMet("M03", new BarkWorldState { hasMedBay = false }));
+            Assert.IsFalse(BarkConditions.IsMet("M03", new BarkWorldState { hasMedBay = true }),
+                "สร้างที่พยาบาลแล้ว ห้ามบอกให้สร้างอีก");
+        }
+
+        [Test]
+        public void M04_NeedsAMedBayBeforeItCanBeFull()
+        {
+            Assert.IsFalse(BarkConditions.IsMet("M04",
+                new BarkWorldState { hasMedBay = false, medBayCapacity = 0, sickWorkers = 9 }),
+                "ยังไม่มีที่พยาบาล จะ 'เต็ม' ไม่ได้");
+            Assert.IsTrue(BarkConditions.IsMet("M04",
+                new BarkWorldState { hasMedBay = true, medBayCapacity = 4, sickWorkers = 5 }));
+        }
+
         [Test]
         public void Conditions_AreStateBound()
         {

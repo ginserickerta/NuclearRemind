@@ -24,7 +24,7 @@ namespace NuclearReMind
         public Button closeButton;
 
         private Camera _camera;
-        private bool _innerVoiceShown;
+        private bool _firstOpenHandled;
 
         private void Awake()
         {
@@ -103,10 +103,28 @@ namespace NuclearReMind
             if (namesText != null)
                 namesText.text = memorialData.names != null ? string.Join("\n", memorialData.names) : "";
 
-            if (!_innerVoiceShown && !string.IsNullOrEmpty(memorialData.innerVoiceOnFirstOpen))
+            if (!_firstOpenHandled)
             {
-                _innerVoiceShown = true;
-                EventManager.Instance?.RaiseNotice($"▸ ความคิด: {memorialData.innerVoiceOnFirstOpen}");
+                _firstOpenHandled = true;
+
+                // ★ STORY.md §② / BARKS.md V02 "หกชื่อ... พวกเขาอยู่ที่นี่ก่อนผม" — route through the
+                // Inner-Voice channel so it renders as the nameless ▸ line the spec asks for. The notice
+                // channel (prefixed "ความคิด:") is only the fallback for when the director isn't up.
+                if (InnerVoiceDirector.Instance != null)
+                    InnerVoiceDirector.Instance.Fire("V02");
+                else if (!string.IsNullOrEmpty(memorialData.innerVoiceOnFirstOpen))
+                    EventManager.Instance?.RaiseNotice($"▸ ความคิด: {memorialData.innerVoiceOnFirstOpen}");
+
+                // ★ STORY.md §② hopeOnFirstClick +2 — report through the HopeLedger (rule #8: Hope is NEVER
+                //   written directly; every source submits a HopeEntry). ReportHopeLive reflects it on the
+                //   HUD immediately (70→72) instead of only in the end-of-day total, while the entry still
+                //   commits normally. Once per run. Value is config-driven (hopeMemorialVisited = 2).
+                var wm = WorkerManager.Instance;
+                var cfg = GameConfigSO.Instance;
+                if (wm != null && wm.Hope != null && cfg != null
+                    && !Mathf.Approximately(cfg.hopeMemorialVisited, 0f))
+                    wm.ReportHopeLive("memorial.visited", "เยี่ยมอนุสรณ์ทีมสร้างหอคอย",
+                        cfg.hopeMemorialVisited, HopeCategory.Story);
             }
         }
 

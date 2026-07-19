@@ -54,5 +54,14 @@ namespace NuclearReMind
         public bool researchIsotopeDone = false;    // ยาไอโซโทปการแพทย์ (รักษาป่วย ≤15)
         public bool researchCoreUnlockDone = false; // ปลดล็อก CORE TOWER (เงื่อนไขก่อนเดินเตา)
         public bool researchIsotopePending = false; // จ่ายค่ายาไอโซโทปแล้ว — รอวันที่เตาโหมด Idle
+
+        // ===== Food spoilage (CARDS.md การ์ด 3) — default ปิด/×1: เซฟเก่า = วิกฤตเสบียงยังไม่เกิด =====
+        public bool spoilageActive = false;      // วิกฤตเสบียงเกิดแล้วหรือยัง (ก่อนหน้านั้นอาหารไม่เน่า)
+        public float spoilMultiplier = 1f;       // ★ default 1 ไม่ใช่ 0 — 0 = หยุดเน่าถาวรในเซฟเก่า
+        public bool co60Active = false;          // เลือกทางเลือก Co-60 แล้ว (Dorn D04)
+
+        // ===== Data Recovery (STORY.md §3 — บันทึก Elara 4 ใบ) — default 0: เซฟเก่า = ยังไม่กู้ใบไหน =====
+        public float dataRecoveryProgress = 0f;      // ความคืบหน้าใบถัดไป (0..dataRecoveryTarget)
+        public int dataRecoveryRecords = 0;          // กู้ได้กี่ใบแล้ว (0..4) — restore ต้อง replay UnlockLead ด้วย
     }
 }

@@ -27,6 +27,14 @@ namespace NuclearReMind
         // ── state ถาวร (ResourceManager pull ไปใช้) ──
         public float FoodYieldMultiplier { get; private set; } = 1f;
         public float FoodSpoilRatePerDay { get; private set; } = 0f;
+
+        // ── Food spoilage (CONFIG.md ECONOMY · CARDS.md การ์ด 3) ──
+        /// <summary>True once the "เสบียงเน่า" crisis has happened — before that, food never rots.</summary>
+        public bool SpoilageActive { get; private set; }
+        /// <summary>Permanent multiplier on the spoil rate (Co-60 = ×0.3, Granary = ×0.6). Stacks.</summary>
+        public float SpoilMultiplier { get; private set; } = 1f;
+        /// <summary>Player chose the Co-60 option — drives Dorn's D04 "ก็เอาเถอะ".</summary>
+        public bool Co60Active { get; private set; }
         public float WorkerEfficiencyMultiplier { get; private set; } = 1f;
         private int _efficiencyDaysRemaining;
 
@@ -53,6 +61,42 @@ namespace NuclearReMind
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
+        }
+
+        // ─────────────────────────────────────────
+        //  Food spoilage (CARDS.md การ์ด 3 · CONFIG.md spoil formula)
+        // ─────────────────────────────────────────
+
+        /// <summary>The spoil crisis fired — switch spoilage on from this day forward.</summary>
+        public void ActivateSpoilage()
+        {
+            SpoilageActive = true;
+            RecomputeSpoilRate();
+        }
+
+        /// <summary>
+        /// Permanent mitigation from a card option (Co-60 ×0.3 / Granary ×0.6). Multiplicative so two
+        /// mitigations stack the way CONFIG.md writes them. Ignores 0/negative — an unauthored
+        /// spoilMult field must never silently stop spoilage (rule #5: no free option).
+        /// </summary>
+        public void ApplySpoilMultiplier(float mult, bool isCo60)
+        {
+            if (mult <= 0f) return;
+            SpoilMultiplier *= mult;
+            if (isCo60) Co60Active = true;
+            RecomputeSpoilRate();
+        }
+
+        /// <summary>spoil = (spoilBase + avgRad/100 × spoilRadCoeff) × SpoilMultiplier — recomputed daily
+        /// because avgRad climbs through the run.</summary>
+        private void RecomputeSpoilRate()
+        {
+            if (!SpoilageActive) { FoodSpoilRatePerDay = 0f; return; }
+
+            var cfg = GameConfigSO.Instance;
+            if (cfg == null) return;
+            float avgRad = WorkerManager.Instance != null ? WorkerManager.Instance.AvgRadiation : 0f;
+            FoodSpoilRatePerDay = (cfg.spoilBase + avgRad / 100f * cfg.spoilRadCoeff) * SpoilMultiplier;
         }
 
         private void OnEnable()
@@ -173,6 +217,9 @@ namespace NuclearReMind
         // ── นับถอยหลังผลแบบมีเวลา ทุกสิ้นวัน (ล้อ DecreeManager.HandleDayEnded) ──
         private void HandleDayEnded(int day)
         {
+            // 0) อัตราเน่าตามรังสีเฉลี่ยวันนี้ (ไม่มีผลถ้าวิกฤตเสบียงยังไม่เกิด)
+            RecomputeSpoilRate();
+
             // 1) Hope drain ต่อวัน — ยิงทุกช่องที่ยัง active ก่อน แล้วค่อยนับวันลง
             for (int i = 0; i < _hopeDrainPerDay.Count; i++)
                 if (_hopeDrainPerDay[i] != 0f)
@@ -224,6 +271,16 @@ namespace NuclearReMind
             _hopeDrainPerDay.Clear(); _hopeDrainDays.Clear();
             if (save.hopeDrainPerDay != null) _hopeDrainPerDay.AddRange(save.hopeDrainPerDay);
             if (save.hopeDrainDays != null) _hopeDrainDays.AddRange(save.hopeDrainDays);
+
+            // Spoilage flags. A save written before these existed has spoilageActive = false but may still
+            // carry a rate from the old dilemma path — honour that stored rate instead of zeroing it,
+            // otherwise loading an old save silently stops food from rotting.
+            SpoilageActive = save.spoilageActive;
+            SpoilMultiplier = save.spoilMultiplier > 0f ? save.spoilMultiplier : 1f;
+            Co60Active = save.co60Active;
+
+            if (!SpoilageActive && FoodSpoilRatePerDay > 0f) SpoilageActive = true; // legacy save: keep its rate
+            else RecomputeSpoilRate();
         }
     }
 

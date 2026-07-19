@@ -41,7 +41,9 @@ namespace NuclearReMind.EditorTools
             scaler.referenceResolution = UIScaleSetup.ReferenceResolution;
             canvasGO.AddComponent<GraphicRaycaster>();
 
-            SetupStoryDirector();
+            // StoryDirector ไม่ถูกสร้างอีกแล้ว (v6.3 cutover) — beats ผูก `day == X` ขัดกฎข้อ 1 และถูก
+            // LegacyNarrativeSilencer ปิดตอนรันอยู่แล้ว การสร้างซ้ำที่นี่คือการยัดมันกลับเข้าซีนทุกครั้ง
+            // ที่รัน Run All Setups · SaveManager null-guard ไว้แล้ว (ไม่มี director = list ว่าง)
             SetupCardUI(canvasGO.transform, font);
             SetupDialogueUI(canvasGO.transform, font);
             SetupRecordsPanel(canvasGO.transform, font);
@@ -49,17 +51,6 @@ namespace NuclearReMind.EditorTools
 
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             Debug.Log("[StoryUISetup] สร้าง Story UI (การ์ด + Records + อนุสรณ์) สำเร็จ — กด Save Scene (Ctrl+S)");
-        }
-
-        // ─────────────────────────────────────────────
-        //  1. StoryDirector (beats wire โดย Story Setup เฟส 4)
-        // ─────────────────────────────────────────────
-        private static void SetupStoryDirector()
-        {
-            var go = GameObject.Find("StoryDirector") ?? new GameObject("StoryDirector");
-            if (go.GetComponent<StoryDirector>() == null)
-                go.AddComponent<StoryDirector>();
-            EditorUtility.SetDirty(go);
         }
 
         // ─────────────────────────────────────────────

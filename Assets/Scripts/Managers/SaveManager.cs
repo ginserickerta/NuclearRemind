@@ -125,6 +125,9 @@ namespace NuclearReMind
                 save.busyWorkerDays = new List<int>(ce.BusyWorkerDays);
                 save.hopeDrainPerDay = new List<float>(ce.HopeDrainPerDay);
                 save.hopeDrainDays = new List<int>(ce.HopeDrainDays);
+                save.spoilageActive = ce.SpoilageActive;
+                save.spoilMultiplier = ce.SpoilMultiplier;
+                save.co60Active = ce.Co60Active;
             }
 
             foreach (var kvp in BuildingRegistry.Instance.PlacedBuildings)
@@ -157,6 +160,13 @@ namespace NuclearReMind
                 save.researchIsotopeDone = rs.IsotopeDone;
                 save.researchCoreUnlockDone = rs.CoreUnlockDone;
                 save.researchIsotopePending = rs.IsotopePending;
+            }
+
+            // บันทึก Elara (STORY.md §3) — ไม่เก็บ = โหลดเซฟแล้ว Record + Lead ที่ปลดไว้หายหมด
+            if (DataRecovery.Instance != null)
+            {
+                save.dataRecoveryProgress = DataRecovery.Instance.Progress;
+                save.dataRecoveryRecords = DataRecovery.Instance.RecordsRecovered;
             }
 
             File.WriteAllText(SavePath, JsonUtility.ToJson(save, true));
