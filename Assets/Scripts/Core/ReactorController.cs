@@ -81,6 +81,7 @@ namespace NuclearReMind
         public float Tritium { get; set; }            // local fallback when no ZoneBController (tests)
         public float LastCooling { get; private set; }
         public float LastGain { get; private set; }
+        public float LastTritiumConsumed { get; private set; } // tritium the core burned this tick (q_dt_fuel gate)
         private int _scramCooldown;
 
         public float FuelDemand => _cfg != null ? _cfg.fuelNeed : 6f;
@@ -177,6 +178,7 @@ namespace NuclearReMind
         {
             if (_scramCooldown > 0) _scramCooldown--;
             var m = MasteryRegistry.Instance;
+            LastTritiumConsumed = 0f;
 
             // ── HEAT ──
             float cooling = _cfg.coolingBase
@@ -209,6 +211,7 @@ namespace NuclearReMind
                 {
                     float cost = IsBoosting ? _cfg.boostTritiumCost : _cfg.idleTritiumCost;
                     ConsumeTritium(cost);
+                    LastTritiumConsumed = Mathf.Min(cost, tritium); // what the core actually burned (0 if dry)
                     float remaining = CurrentTritium;
                     if (remaining < _cfg.tritiumSoftFloor)
                         gain *= Mathf.Min(1f, remaining / _cfg.tritiumSoftFloor);

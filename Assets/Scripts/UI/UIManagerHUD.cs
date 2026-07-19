@@ -116,6 +116,7 @@ namespace NuclearReMind
         {
             EventManager.Instance.OnResourceChanged += HandleResourceChanged;
             EventManager.Instance.OnPopulationChanged += HandlePopulationChanged;
+            EventManager.Instance.OnMoraleChanged += HandleMoraleChanged;
             EventManager.Instance.OnTowerProgressChanged += HandleTowerProgressChanged;
             EventManager.Instance.OnGameOver += HandleGameOver;
             EventManager.Instance.OnDayStarted += HandleDayStarted;
@@ -130,6 +131,7 @@ namespace NuclearReMind
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnResourceChanged -= HandleResourceChanged;
             EventManager.Instance.OnPopulationChanged -= HandlePopulationChanged;
+            EventManager.Instance.OnMoraleChanged -= HandleMoraleChanged;
             EventManager.Instance.OnTowerProgressChanged -= HandleTowerProgressChanged;
             EventManager.Instance.OnGameOver -= HandleGameOver;
             EventManager.Instance.OnDayStarted -= HandleDayStarted;
@@ -153,7 +155,7 @@ namespace NuclearReMind
             if (gameOverPanel != null) gameOverPanel.SetActive(false);
             if (livePhaseBanner != null) livePhaseBanner.SetActive(false);
 
-            // sync หลอด Knowledge ครั้งแรก: OnKnowledgeChanged raise เฉพาะตอนมี delta → เริ่มเกม knowledge=0
+            // sync หลอด Knowledge ครั้งแรก: OnKnowledgeChanged raise เฉพาะตอนมี delta → ค่าเริ่มเกม (startKnowledge)
             // ไม่ถูก raise → Slider ค้างค่า default ของ Unity (value=1,max=1 = เต็มหลอด) ทั้งที่ค่าเป็น 0
             HandleKnowledgeChanged(rm.Current.knowledge);
 
@@ -308,15 +310,28 @@ namespace NuclearReMind
         private void HandlePopulationChanged(PopulationData data)
         {
             _lastPop = data;
+            // ★ v6.3: HopeLedger (via WorkerManager) is the sole owner of Hope and drives the bar through
+            //   OnMoraleChanged (HandleMoraleChanged below). The legacy PopulationData.hope defaults to 100
+            //   and would latch the HUD at 100 — so only read it when the ledger isn't live (pre-cutover).
+            if (WorkerManager.Instance == null)
+                SetHopeDisplay(data.hope);
+
+            RefreshPopulationText();
+        }
+
+        // v6.3 Hope source: WorkerManager broadcasts the ledger value here — at start (hope_start = 70) and
+        // after every end-of-day commit (research +6, memorial +2, worker/food/water penalties, …).
+        private void HandleMoraleChanged(float hope) => SetHopeDisplay(hope);
+
+        private void SetHopeDisplay(float hope)
+        {
             if (hopeBar != null)
             {
                 hopeBar.maxValue = 100f;
-                hopeBar.value = data.hope;
+                hopeBar.value = hope;
             }
             if (hopeText != null)
-                hopeText.text = $"Hope: {Mathf.RoundToInt(data.hope)}";
-
-            RefreshPopulationText();
+                hopeText.text = $"Hope: {Mathf.RoundToInt(hope)}";
         }
 
         // idle pool (V4 §5) — คนงานว่างที่ยังไม่ถูก assign อาคาร

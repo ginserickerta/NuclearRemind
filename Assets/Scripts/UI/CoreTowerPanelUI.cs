@@ -223,6 +223,32 @@ namespace NuclearReMind
         private void DoScram()      => EventManager.Instance.RaiseScramRequested();
         private void Adjust(ReactorAllocation k, int d) => EventManager.Instance.RaiseReactorAllocationAdjust(k, d);
 
+        // ★ v6.3 cutover (worker-click fix): the old "cooling engineer" allocation buttons are dead under
+        //   the reactor facade (per-turn allocation is gone in §26). Repurpose them to staff the "cool"
+        //   job (workers at the CORE TOWER) via the same building-click assignment path — so cooling is
+        //   managed by clicking the reactor, and the J panel isn't needed. Legacy path kept for pre-cutover.
+        private void AdjustCool(int delta)
+        {
+            if (WorkerManager.Instance != null)
+            {
+                var cell = CoreTowerCell();
+                if (cell.x >= 0) EventManager.Instance.RaiseWorkerAssignRequested(cell, delta);
+                if (_shown) Refresh();
+                return;
+            }
+            Adjust(ReactorAllocation.CoolingEngineer, delta);
+        }
+
+        private static Vector2Int CoreTowerCell()
+        {
+            var reg = BuildingRegistry.Instance;
+            if (reg != null)
+                foreach (var kv in reg.PlacedBuildings)
+                    if (kv.Value != null && (kv.Value.buildingType == BuildingType.CoreTower || kv.Value.isCoreTowerPart))
+                        return kv.Key;
+            return new Vector2Int(-1, -1);
+        }
+
         // ═══════════════════════════ POPULATE ═══════════════════════════
         private void Refresh()
         {
@@ -257,7 +283,11 @@ namespace NuclearReMind
 
             if (_deutTxt != null) _deutTxt.text = $"{ct.PlannedDeuterium:0}";
             if (_tritTxt != null) _tritTxt.text = tritUnlocked ? $"{ct.PlannedTritium:0}" : "ล็อก";
-            if (_engTxt  != null) _engTxt.text  = $"{ct.PlannedCoolingEngineers}/{ct.MaxCoolingEngineers}";
+            // ★ v6.3: "วิศวกร" ช่องนี้กลายเป็นจำนวนคนหล่อเย็น (job cool) — จัดคนด้วยปุ่ม +/− ที่คลิกเตานี่เลย
+            if (_engTxt != null)
+                _engTxt.text = WorkerManager.Instance != null
+                    ? $"หล่อเย็น {WorkerManager.Instance.GetWorkers(WorkerJobs.Cool).Count} คน"
+                    : $"{ct.PlannedCoolingEngineers}/{ct.MaxCoolingEngineers}";
 
             if (_coolPowerTxt != null) _coolPowerTxt.text = $"{ct.PreviewCooling():0}";
             if (_coolWaterTxt != null) _coolWaterTxt.text = $"{ct.PreviewWaterUsed():0}";
@@ -392,9 +422,9 @@ namespace NuclearReMind
             SpriteImg("panel_engineer", rx, 710, rw, deriveH: true, boxH: 0).raycastTarget = false;
             float engMidY = 710 + engH*0.634f;
             SpriteImg("icon_engineer", rx + 10, engMidY - 19, 52, deriveH: true, boxH: 0).raycastTarget = false;
-            _engMinus = SpriteButton("btn_minus", rx + 64, engMidY - 23, 40, 46); _engMinus.onClick.AddListener(() => Adjust(ReactorAllocation.CoolingEngineer, -1)); Pop(_engMinus);
+            _engMinus = SpriteButton("btn_minus", rx + 64, engMidY - 23, 40, 46); _engMinus.onClick.AddListener(() => AdjustCool(-1)); Pop(_engMinus);
             _engTxt = Label("EngV", rx + rw*0.555f, engMidY, 26, CText, TextAnchor.MiddleCenter, FontStyle.Bold, 120);
-            _engPlus = ClearButton("EngPlus", rx + rw*0.78f, engMidY - 24, rw*0.18f, 48); _engPlus.onClick.AddListener(() => Adjust(ReactorAllocation.CoolingEngineer, 1)); Pop(_engPlus);
+            _engPlus = ClearButton("EngPlus", rx + rw*0.78f, engMidY - 24, rw*0.18f, 48); _engPlus.onClick.AddListener(() => AdjustCool(1)); Pop(_engPlus);
             // cooling panel — % ฝังที่ x 0.562–0.636 กลาง y 0.434 · ช่องเลขน้ำกลาง x 0.573, y 0.80 (วัดจาก pixel)
             float coolY = 710 + engH + 16;
             float coolH = rw / AspectOf("panel_cooling");
@@ -451,8 +481,8 @@ namespace NuclearReMind
             if (_deutPlus   != null) _deutPlus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, 5));
             if (_tritMinus  != null) _tritMinus.onClick.AddListener(() => Adjust(ReactorAllocation.Tritium, -5));
             if (_tritPlus   != null) _tritPlus.onClick.AddListener(() => Adjust(ReactorAllocation.Tritium, 5));
-            if (_engMinus   != null) _engMinus.onClick.AddListener(() => Adjust(ReactorAllocation.CoolingEngineer, -1));
-            if (_engPlus    != null) _engPlus.onClick.AddListener(() => Adjust(ReactorAllocation.CoolingEngineer, 1));
+            if (_engMinus   != null) _engMinus.onClick.AddListener(() => AdjustCool(-1));
+            if (_engPlus    != null) _engPlus.onClick.AddListener(() => AdjustCool(1));
             if (_addCoolBtn != null) _addCoolBtn.onClick.AddListener(() => Adjust(ReactorAllocation.CoolingWater, 20));
             if (_scramBtn   != null) _scramBtn.onClick.AddListener(DoScram);
             if (_confirmBtn != null) _confirmBtn.onClick.AddListener(ConfirmMode);

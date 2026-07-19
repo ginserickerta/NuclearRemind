@@ -101,8 +101,9 @@ namespace NuclearReMind
             Current = new ResourceData
             {
                 energy = startEnergy, water = startWater, food = startFood, iron = startIron,
-                deuterium = 0f, tritium = 0f, knowledge = 0f,
-                labMat = GameConfigSO.Instance.startLabMat, // v6.3: เริ่ม 100 (CONFIG.md)
+                deuterium = 0f, tritium = 0f,
+                knowledge = GameConfigSO.Instance.startKnowledge, // v6.3: เริ่ม 20 (CONFIG.md) — ห้าม hardcode (rule #2)
+                labMat = GameConfigSO.Instance.startLabMat,       // v6.3: เริ่ม 100 (CONFIG.md)
             };
         }
 

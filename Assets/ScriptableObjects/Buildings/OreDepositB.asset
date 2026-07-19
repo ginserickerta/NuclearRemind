@@ -36,6 +36,14 @@ MonoBehaviour:
   spriteScale: 1.7
   animationFrames: []
   animationFps: 6
+  overrideShadow: 1
+  shadowOffset: {x: 0.016334295, y: 0.47410285}
+  shadowSquash: 0.5915272
+  shadowLeanDegrees: -0.47477755
+  shadowAlpha: 0.3
+  overrideBaseCollider: 0
+  baseColliderSize: {x: 0, y: 0}
+  baseColliderOffset: {x: 0, y: 0}
   size: {x: 1, y: 1}
   buildingType: 11
   ironCost: 0
@@ -43,6 +51,7 @@ MonoBehaviour:
   workerRequired: 3
   workersPerLevel: 
   unlockPhase: 1
+  requiredNoteId: 
   buildTicks: 1
   foodProduction: 0
   waterProduction: 0

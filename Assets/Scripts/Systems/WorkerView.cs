@@ -24,12 +24,13 @@ namespace NuclearReMind
         public float speed = 1.0f;
 
         [Header("Idle wander (คนว่างงานเดินเล่น)")]
-        [Tooltip("รัศมีเดินเล่นรอบจุดพัก (world units) — เล็กลง 0.9→0.35 กันคนว่างเดินรวมกองซ้อนกัน")]
+        [Tooltip("รัศมีเดินเล่นรอบจุดพัก (world units) — ใช้เฉพาะโหมด SetIdle แบบเก่า")]
         public float wanderRadius = 0.35f;
         [Tooltip("ช่วงเวลาหยุดพักก่อนเดินไปจุดใหม่ (วินาที)")]
         public Vector2 idlePauseRange = new Vector2(0.6f, 2.4f);
-        [Tooltip("เดินเล่นนานเกินนี้ยังไม่ถึง (โดนเบียดขวาง) → เลิกดัน เลือกจุดใหม่")]
-        public float wanderTimeout = 4f;
+        [Tooltip("เดินเล่นนานเกินนี้ยังไม่ถึง (โดนเบียดขวาง) → เลิกดัน เลือกจุดใหม่ · " +
+                 "ต้องมากกว่าเวลาเดินข้ามวงลาดตระเวน (~10 unit ที่ speed 1) ไม่งั้นจะเลิกกลางทางทุกรอบ")]
+        public float wanderTimeout = 12f;
 
         [Header("กันเดินทะลุกัน (crowd separation)")]
         [Tooltip("ระยะห่างศูนย์กลางต่ำสุดระหว่างคนงาน (world x-units) — 0 = ปิดระบบ · " +
@@ -59,6 +60,10 @@ namespace NuclearReMind
 
         private Vector3 _target;
         private Vector3 _idleAnchor;
+        // วงแหวนลาดตระเวน: สุ่มจุดหมายในช่วง [inner, outer] รอบ _idleAnchor
+        // inner = 0 → เป็นวงกลมเต็ม (พฤติกรรม SetIdle แบบเดิม) · outer = 0 → ใช้ wanderRadius
+        private float _patrolInner;
+        private float _patrolOuter;
         private bool _wandering;
         private bool _arrived;      // ถึงเป้าแล้ว → หยุดเดิน ปล่อยให้ separation ดันได้โดยไม่ดึงกลับ (กันสั่น)
         private float _pauseTimer;
@@ -101,6 +106,8 @@ namespace NuclearReMind
             AssignedCell = null;
             Slot = slot;
             _idleAnchor = anchor;
+            _patrolInner = 0f;
+            _patrolOuter = 0f;   // 0 = ใช้ wanderRadius (พฤติกรรมเดิม)
             _wandering = true;
             if (alreadyHere) return; // slot พักเดิม — เดินเล่นต่อ ไม่กระตุกกลับ anchor ทุกครั้งที่ rebuild
 
@@ -111,6 +118,41 @@ namespace NuclearReMind
             if (snap) transform.position = anchor;
             UpdateSorting();
         }
+
+        /// <summary>
+        /// ลาดตระเวน: เดินวนไปมาใน "วงแหวน" รอบแลนด์มาร์ก (CORE TOWER / Research Lab) ตลอดเวลา
+        /// ต่างจาก SetIdle ตรงที่ไม่มี anchor ประจำตัว — ทั้งวงคือพื้นที่เดินของทุกคน จึงกระจายกันเองตามธรรมชาติ
+        /// แทนที่จะยืนเป็นตารางกระจุกกันที่จุดเดียว (บั๊กเดิม: IdlePos วางเป็นกริด 6 คอลัมน์ ห่างกัน 0.6)
+        ///
+        /// inner > 0 กันไม่ให้เดินเข้าไปทับตัวอาคาร · slot ใช้กระจายจุดเริ่มต้นด้วยมุมทอง (ไม่ให้เกิดมาซ้อนกัน)
+        /// </summary>
+        public void SetPatrol(Vector3 center, float inner, float outer, int slot, bool snap)
+        {
+            // ศูนย์กลางเดิม + slot เดิม → กำลังเดินวนอยู่แล้ว ปล่อยเดินต่อ (ไม่กระตุกกลับทุกครั้งที่ Sync)
+            bool sameLoop = !AssignedCell.HasValue && _wandering && Slot == slot
+                            && (_idleAnchor - center).sqrMagnitude < 1e-4f;
+
+            AssignedCell = null;
+            Slot = slot;
+            _idleAnchor = center;
+            _patrolInner = Mathf.Max(0f, inner);
+            _patrolOuter = Mathf.Max(_patrolInner + 0.01f, outer);
+            _wandering = true;
+            if (sameLoop) return;
+
+            // จุดเริ่มต้นกระจายด้วยมุมทอง + รัศมีสลับ — ทุกคนเริ่มคนละมุมของวง ไม่ต้องรอ separation ดันออก
+            float ang = slot * GoldenAngle;
+            float rad = Mathf.Lerp(_patrolInner, _patrolOuter, (slot * 0.618034f) % 1f);
+            _target = center + new Vector3(Mathf.Cos(ang), Mathf.Sin(ang) * 0.5f, 0f) * rad;
+            _pauseTimer = Random.Range(0f, idlePauseRange.y); // เหลื่อมเวลากันไม่ให้ขยับพร้อมกันทั้งฝูง
+            _seekTimer = 0f;
+            _arrived = false;
+            if (snap) transform.position = _target;
+            UpdateSorting();
+        }
+
+        // มุมทอง — กระจายจุดเริ่มต้นให้ไม่ซ้ำมุมกัน (เหตุผลเดียวกับใน WorkerSeparation)
+        private const float GoldenAngle = 2.39996323f;
 
         private void Update()
         {
@@ -151,16 +193,25 @@ namespace NuclearReMind
         // สุ่มจุดเดินเล่นที่ไม่ตกใส่อาคาร — ไม่งั้นคนงานจะเดินไปชนตึกแล้วยืนรอ wanderTimeout ทุกรอบ
         private Vector3 PickWanderTarget()
         {
-            const int attempts = 4;
+            const int attempts = 8;
             var grid = GridManager.Instance;
+            float outer = _patrolOuter > 0f ? _patrolOuter : wanderRadius;
+
             for (int i = 0; i < attempts; i++)
             {
-                Vector2 off = Random.insideUnitCircle * wanderRadius;
-                var candidate = _idleAnchor + new Vector3(off.x, off.y, 0f);
+                // สุ่มในวงแหวน [inner, outer] — ใช้ sqrt กระจายพื้นที่เท่ากันทุกรัศมี
+                // (ถ้าสุ่มรัศมีตรง ๆ ความหนาแน่นจะกองที่ขอบใน = กระจุกกลางวงอีก)
+                float ang = Random.value * Mathf.PI * 2f;
+                float t = Mathf.Sqrt(Random.value);
+                float rad = Mathf.Lerp(_patrolInner, outer, t);
+                // ย่อแกน y ครึ่งหนึ่ง — วงกลมบนพื้น iso ฉายลงจอเป็นวงรี 2:1 (เหตุผลเดียวกับ WorkerSeparation)
+                var candidate = _idleAnchor + new Vector3(Mathf.Cos(ang), Mathf.Sin(ang) * 0.5f, 0f) * rad;
                 if (grid == null || !IsBlocked(WorkerPathing.CellOf(grid.WorldToIsoF(candidate))))
                     return candidate;
             }
-            return _idleAnchor; // รอบตัวโดนอาคารกินหมด — กลับไปยืนจุดพัก
+            // สุ่มไม่ผ่านเลย → ยืนอยู่ที่เดิม รอสุ่มใหม่รอบหน้า
+            // (เดิมคืน _idleAnchor ทำให้จุดกลางกลายเป็นแม่เหล็กดูดทุกคนมากองรวมกัน)
+            return transform.position;
         }
 
         /// <summary>ช่องนี้เดินผ่านไม่ได้? (มีอาคาร/แหล่งแร่ตั้งอยู่ หรืออยู่นอกกริด)</summary>

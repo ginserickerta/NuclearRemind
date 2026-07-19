@@ -12,6 +12,16 @@ namespace NuclearReMind
     ///   คลาสของแต่ละ assignment เดาจาก requiredClass ของอาคารที่ cell นั้น → save format เดิม (cell,count) พอ ไม่ต้องเพิ่ม SaveData field
     /// ผลผลิตอ่านค่า GetAssigned() ใน ResourceManager (ไม่ต้องรู้คลาส — gate ที่ตอน assign แล้ว)
     /// อ่าน BuildingRegistry/PopulationManager แบบ read-only query (เทียบเท่า .Current) — ไม่เรียก method เปลี่ยนสถานะข้าม manager
+    ///
+    /// ★ v6.3 cutover (worker-click assignment): the click panels (BuildingUpgradeUI/LabPanelUI) and the
+    ///   CORE TOWER panel raise OnWorkerAssignRequested(cell, ±1) and read GetAssigned/IdleOfClass. v6.3
+    ///   workers are a global JOB pool (§17), NOT per-cell — but construction, per-building caps, and the
+    ///   panel display all need per-cell granularity. So _assigned (per cell) stays the SOURCE OF TRUTH
+    ///   even when WorkerManager is live; ReconcileJobPool() then PROJECTS it onto the global job pool so
+    ///   production (Σ SumEfficiency per job), world avatars (positioned by job) and reactor cooling
+    ///   (GetWorkers("cool").Count) all reflect the clicks. The single per-cell assign path (EffectiveCap
+    ///   clamp + idle check) enforces the building cap for EVERY entry point (buttons, Q/E, CORE TOWER),
+    ///   and lets a job-less building (Habitat) still take a builder while under construction.
     /// </summary>
     // รันหลัง BuildingRegistry/PopulationManager (default 0) — HandleSaveLoaded ต้องอ่าน placedBuildings + workers ที่ restore แล้ว
     [DefaultExecutionOrder(50)]
@@ -19,11 +29,51 @@ namespace NuclearReMind
     {
         public static WorkerAssignmentManager Instance { get; private set; }
 
-        // cell (origin ของอาคาร) -> จำนวน Worker ที่ประจำ
+        // cell (origin ของอาคาร) -> จำนวน Worker ที่ประจำ (source of truth, per-cell)
         private readonly Dictionary<Vector2Int, int> _assigned = new Dictionary<Vector2Int, int>();
 
-        /// <summary>จำนวน Worker ที่ประจำอาคารที่ cell นี้ (0 ถ้าไม่พบ)</summary>
-        public int GetAssigned(Vector2Int cell) => _assigned.TryGetValue(cell, out int n) ? n : 0;
+        // ── v6.3 job mapping (per-cell _assigned → global job pool) ────────────────
+        public static string JobForBuildingType(BuildingType t)
+        {
+            switch (t)
+            {
+                case BuildingType.Farm:       return WorkerJobs.Farm;
+                case BuildingType.WaterPlant: return WorkerJobs.Water;
+                case BuildingType.PowerPlant: return WorkerJobs.Power;
+                case BuildingType.Mine:       return WorkerJobs.Mine;
+                case BuildingType.Laboratory: return WorkerJobs.Lab;
+                case BuildingType.CoreTower:  return WorkerJobs.Cool;
+                case BuildingType.OreDeposit: return WorkerJobs.Mine; // ore node diggers are miners (Mine rad zone)
+                default:                      return null; // not a staffable production building
+            }
+        }
+
+        /// <summary>Production job for the building at this cell, or null (job-less / under construction).</summary>
+        public static string JobForCell(Vector2Int cell)
+        {
+            var reg = BuildingRegistry.Instance;
+            if (reg == null || !reg.PlacedBuildings.TryGetValue(cell, out var d) || d == null) return null;
+            if (d.isOreNode) return WorkerJobs.Mine;   // ore nodes are dug, never constructed
+            // Under construction → the worker is a BUILDER (held in the Build job), not staff yet.
+            var cc = ConstructionController.Instance;
+            if (cc != null && cc.IsUnderConstruction(cell)) return null;
+            if (d.buildingType == BuildingType.CoreTower || d.isCoreTowerPart) return WorkerJobs.Cool;
+            return JobForBuildingType(d.buildingType);
+        }
+
+        // Jobs this manager projects onto (shrink pass iterates these). Build = holding job for builders.
+        private static readonly string[] ProjectedJobs =
+        {
+            WorkerJobs.Farm, WorkerJobs.Power, WorkerJobs.Water, WorkerJobs.Mine, WorkerJobs.Lab,
+            WorkerJobs.Cool, WorkerJobs.ZoneB, WorkerJobs.Extract, WorkerJobs.Build,
+        };
+
+        /// <summary>จำนวน Worker ที่ประจำอาคารที่ cell นี้ (0 ถ้าไม่พบ) — per-cell truth (ทั้ง legacy และ v6.3)</summary>
+        public int GetAssigned(Vector2Int cell)
+        {
+            EnsureWmHook();
+            return _assigned.TryGetValue(cell, out int n) ? n : 0;
+        }
 
         /// <summary>ผลรวม Worker ที่ถูก assign ทั้งเมือง</summary>
         public int TotalAssigned
@@ -75,8 +125,16 @@ namespace NuclearReMind
             return sum;
         }
 
-        /// <summary>คนคลาส c ที่ว่าง (ยังไม่ถูก assign) = มีอยู่ − ที่ประจำแล้ว</summary>
-        public int IdleOfClass(WorkerClass c) => Mathf.Max(0, ClassCount(c) - AssignedOfClass(c));
+        /// <summary>
+        /// คนคลาส c ที่ว่าง = มีอยู่ − ที่ประจำแล้ว
+        /// v6.3: คนว่างคือ AliveCount ของ WorkerManager − ที่ประจำทั้งเมือง (workforce เดียว ทุก job/สร้าง ดึงจากนี่)
+        /// </summary>
+        public int IdleOfClass(WorkerClass c)
+        {
+            var wm = WorkerManager.Instance;
+            if (wm != null) return Mathf.Max(0, wm.AliveCount - TotalAssigned);
+            return Mathf.Max(0, ClassCount(c) - AssignedOfClass(c));
+        }
 
         /// <summary>read-only export สำหรับ SaveManager (เทียบเท่า CodexManager.UnlockedIds)</summary>
         public IReadOnlyDictionary<Vector2Int, int> Assignments => _assigned;
@@ -98,21 +156,29 @@ namespace NuclearReMind
             EventManager.Instance.OnPopulationChanged += HandlePopulationChanged;
             EventManager.Instance.OnConstructionComplete += HandleConstructionComplete;
             EventManager.Instance.OnSaveLoaded += HandleSaveLoaded;
+            EnsureWmHook();
         }
 
         private void OnDisable()
         {
-            if (EventManager.Instance == null) return;
-            EventManager.Instance.OnWorkerAssignRequested -= HandleAssignRequested;
-            EventManager.Instance.OnBuildingRemoved -= HandleBuildingRemoved;
-            EventManager.Instance.OnPopulationChanged -= HandlePopulationChanged;
-            EventManager.Instance.OnConstructionComplete -= HandleConstructionComplete;
-            EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+            if (EventManager.Instance != null)
+            {
+                EventManager.Instance.OnWorkerAssignRequested -= HandleAssignRequested;
+                EventManager.Instance.OnBuildingRemoved -= HandleBuildingRemoved;
+                EventManager.Instance.OnPopulationChanged -= HandlePopulationChanged;
+                EventManager.Instance.OnConstructionComplete -= HandleConstructionComplete;
+                EventManager.Instance.OnSaveLoaded -= HandleSaveLoaded;
+            }
+            if (_wmHooked != null) { _wmHooked.OnWorkersChanged -= HandleWorkersChanged; _wmHooked = null; }
         }
 
         // ── assign / unassign (UI → ที่นี่) ─────────────────────────
+        // ★ Single per-cell path for BOTH legacy and v6.3 — enforces the building cap for every entry
+        //   point (BuildingUpgradeUI +/−, Q/E keys, LabPanelUI, CORE TOWER cooling). v6.3 adds one step:
+        //   after writing the per-cell plan, ReconcileJobPool projects it onto WorkerManager's job pool.
         private void HandleAssignRequested(Vector2Int cell, int delta)
         {
+            EnsureWmHook();
             var registry = BuildingRegistry.Instance;
             if (registry == null || !registry.PlacedBuildings.TryGetValue(cell, out var data) || data == null)
                 return;
@@ -135,6 +201,7 @@ namespace NuclearReMind
             if (desired == current) return;
 
             SetAssigned(cell, desired);
+            if (WorkerManager.Instance != null) ReconcileJobPool();
             RaisePool();
         }
 
@@ -146,15 +213,21 @@ namespace NuclearReMind
         }
 
         /// <summary>
-        /// เพดานคนงานของ cell นี้ = workerRequired ปกติ · แต่ระหว่างสร้างต้องรับผู้สร้างได้ ≥ 1
+        /// เพดานคนงานของ cell นี้ = workerRequired ตามระดับ · ระหว่างสร้างรับผู้สร้างได้ ≥ 1
         /// (อาคารที่เดินเครื่องไม่ต้องใช้คน เช่น Habitat workerRequired=0 ก็ยังต้องมีคนมาสร้าง — V4 §5)
         /// public ให้ UI (BuildingUpgradeUI) ใช้เพดานชุดเดียวกับ HandleAssignRequested — แหล่งความจริงเดียว
         /// </summary>
         public int EffectiveCap(Vector2Int cell, BuildingData data)
         {
             if (data == null) return 0;
+
+            // CORE TOWER "หล่อเย็น" (job cool) เป็นการจัดสรรของเตา ไม่ใช่ slot คงที่ของอาคาร —
+            // เพดานจำกัดแค่จำนวนคนที่มี (v6.3: คลิกเตาแล้ว +/− เพื่อจัดคนหล่อเย็น)
+            if ((data.buildingType == BuildingType.CoreTower || data.isCoreTowerPart)
+                && WorkerManager.Instance != null)
+                return WorkerManager.Instance.AliveCount;
+
             // เพดานตาม "ระดับปัจจุบัน" (WorkersForLevel ผ่าน registry) — อัปเกรดแล้วรับคนได้มากขึ้น
-            // เดิมใช้ data.workerRequired (ค่า L1 คงที่) → เพดานค้างที่ L1 ทุกระดับ (บั๊กที่ผู้ใช้เจอ)
             var reg = BuildingRegistry.Instance;
             int cap = reg != null ? reg.WorkersRequired(cell) : Mathf.Max(0, data.workerRequired);
             var construction = ConstructionController.Instance;
@@ -163,29 +236,119 @@ namespace NuclearReMind
             return cap;
         }
 
-        // สร้างเสร็จ → คืน "ผู้สร้างส่วนเกิน" ที่เกิน workerRequired กลับเป็น idle
+        // ── v6.3: project the per-cell plan onto WorkerManager's global job pool ──────────────
+        private bool _projecting;
+
+        /// <summary>
+        /// Project _assigned (per-cell truth) onto WorkerManager's job pool: each production-job building's
+        /// count fills that job; job-less / under-construction cells fill the Build holding job (reserved,
+        /// not producing). Incremental — shrink over-full jobs to idle, then grow deficits from idle — so
+        /// unrelated clicks don't churn worker identities (avatars stay put). _projecting guards the
+        /// re-entrant OnWorkersChanged that AssignJob fires.
+        /// </summary>
+        private void ReconcileJobPool()
+        {
+            var wm = WorkerManager.Instance;
+            if (wm == null || _projecting) return;
+            _projecting = true;
+            try
+            {
+                var desired = new Dictionary<string, int>();
+                foreach (var kv in _assigned)
+                {
+                    var job = JobForCell(kv.Key) ?? WorkerJobs.Build;
+                    desired.TryGetValue(job, out int c);
+                    desired[job] = c + kv.Value;
+                }
+
+                // shrink first — frees surplus workers back to idle so the grow pass can reuse them
+                foreach (var job in ProjectedJobs)
+                {
+                    int want = desired.TryGetValue(job, out int d) ? d : 0;
+                    var have = wm.GetWorkers(job);
+                    for (int i = have.Count - 1; i >= want; i--)
+                        wm.AssignJob(have[i], WorkerJobs.Idle);
+                }
+                // grow — pull assignable idle workers into remaining deficits
+                foreach (var kv in desired)
+                {
+                    int deficit = kv.Value - wm.GetWorkers(kv.Key).Count;
+                    if (deficit <= 0) continue;
+                    foreach (var w in wm.GetWorkers(WorkerJobs.Idle))
+                    {
+                        if (deficit <= 0) break;
+                        if (w.strikeDaysLeft <= 0 && !w.resting) { wm.AssignJob(w, kv.Key); deficit--; }
+                    }
+                }
+            }
+            finally { _projecting = false; }
+        }
+
+        // Keep the per-cell plan honest when WorkerManager's population changes (death / exodus). Do NOT
+        // re-project here — the daily tick owns strike/death job moves, and re-growing jobs would fight a
+        // strike. The plan re-syncs to the job pool on the next explicit assignment / construction event.
+        private WorkerManager _wmHooked;
+        private void EnsureWmHook()
+        {
+            var wm = WorkerManager.Instance;
+            if (wm == _wmHooked) return;
+            if (_wmHooked != null) _wmHooked.OnWorkersChanged -= HandleWorkersChanged;
+            _wmHooked = wm;
+            if (wm != null) wm.OnWorkersChanged += HandleWorkersChanged;
+        }
+
+        private void HandleWorkersChanged()
+        {
+            if (_projecting) return;
+            var wm = WorkerManager.Instance;
+            if (wm == null) return;
+            int overflow = TotalAssigned - wm.AliveCount;
+            if (overflow > 0) { TrimAssigned(overflow); RaisePool(); }
+        }
+
+        private void TrimAssigned(int count)
+        {
+            var cells = new List<Vector2Int>(_assigned.Keys);
+            foreach (var cell in cells)
+            {
+                if (count <= 0) break;
+                int have = _assigned[cell];
+                int take = Mathf.Min(have, count);
+                int rem = have - take;
+                count -= take;
+                if (rem <= 0) _assigned.Remove(cell); else _assigned[cell] = rem;
+                EventManager.Instance.RaiseWorkerAssignmentChanged(cell, rem);
+            }
+        }
+
+        // สร้างเสร็จ → คืน "ผู้สร้างส่วนเกิน" ที่เกิน workerRequired กลับเป็น idle · แล้ว re-project (Build → job จริง)
         // (เช่น Habitat: ระหว่างสร้างจัดคนได้ 1 · เสร็จแล้ว workerRequired=0 → ปล่อยคนกลับ)
         private void HandleConstructionComplete(Vector2Int cell, BuildingData data)
         {
             int cap = data != null ? Mathf.Max(0, data.workerRequired) : 0;
-            if (GetAssigned(cell) <= cap) return; // ไม่เกินเพดานปกติ — คงคนประจำไว้เดินเครื่องต่อ
-
-            SetAssigned(cell, cap);
+            if (GetAssigned(cell) > cap) SetAssigned(cell, cap);
+            // Always re-project on completion: JobForCell flips from Build → the real job, so the worker
+            // moves out of the Build holding job into production (or idle for a job-less Habitat).
+            if (WorkerManager.Instance != null) ReconcileJobPool();
             RaisePool();
         }
 
         private void HandleBuildingRemoved(Vector2Int position)
         {
-            if (!_assigned.ContainsKey(position)) return;
-            _assigned.Remove(position); // คนคืน idle อัตโนมัติ (pool เป็น derived)
-            EventManager.Instance.RaiseWorkerAssignmentChanged(position, 0);
-            RaisePool();
+            bool had = _assigned.Remove(position);
+            if (had) EventManager.Instance.RaiseWorkerAssignmentChanged(position, 0); // คนคืน idle อัตโนมัติ
+            if (WorkerManager.Instance != null) ReconcileJobPool();
+            if (had) RaisePool();
         }
 
-        // ── reconcile: จำนวนคนลดลง (ฝึก Worker→คลาสอื่น หัก workers ทันที / คนตาย) ──
-        // ต้องเช็ค overflow "ต่อคลาส" — ฝึก Worker (workers−1) ต้องไม่เตะ Engineer ออกจาก Lab
+        // ── reconcile: จำนวนคนลดลง (legacy PopulationData path only) ──
         private void HandlePopulationChanged(PopulationData pop)
         {
+            // v6.3: WorkerManager owns population — death/exodus handled by HandleWorkersChanged. The legacy
+            // PopulationData counters are stale here (could be 0), so eviction against them would wrongly
+            // clear the plan.
+            if (WorkerManager.Instance != null) return;
+
             EvictOverflow(WorkerClass.Worker,   pop.workers);
             EvictOverflow(WorkerClass.Engineer, pop.engineers);
             EvictOverflow(WorkerClass.Medic,    pop.medics);
@@ -219,16 +382,27 @@ namespace NuclearReMind
             }
         }
 
-        private void RaisePool() => EventManager.Instance.RaiseWorkerPoolChanged(IdleWorkers, TotalWorkers);
+        private void RaisePool()
+        {
+            var wm = WorkerManager.Instance;
+            if (wm != null)
+            {
+                int total = wm.AliveCount;
+                EventManager.Instance.RaiseWorkerPoolChanged(Mathf.Max(0, total - TotalAssigned), total);
+            }
+            else EventManager.Instance.RaiseWorkerPoolChanged(IdleWorkers, TotalWorkers);
+        }
 
         // ── save/load ────────────────────────────────────────────
         private void HandleSaveLoaded(SaveData save)
         {
             _assigned.Clear();
+            var registry = BuildingRegistry.Instance;
+            bool wmLive = WorkerManager.Instance != null;
+
             if (save.workerAssignmentCells != null && save.workerAssignmentCounts != null)
             {
-                var registry = BuildingRegistry.Instance;
-                // clamp remaining "ต่อคลาส" — กันเซฟที่ assign เกินจำนวนคนของคลาสนั้น
+                // clamp remaining "ต่อคลาส" (legacy) — กันเซฟที่ assign เกินจำนวนคนของคลาสนั้น
                 // (เซฟเก่า count เป็น Worker ล้วน → คลาสเดียว ทำงานเหมือนเดิม)
                 var usedByClass = new Dictionary<WorkerClass, int>();
                 int n = Mathf.Min(save.workerAssignmentCells.Count, save.workerAssignmentCounts.Count);
@@ -241,23 +415,36 @@ namespace NuclearReMind
                     if (registry == null || !registry.PlacedBuildings.TryGetValue(cell, out var data) || data == null)
                         continue;
 
-                    var cls = data.requiredClass;
-                    usedByClass.TryGetValue(cls, out int used);
-                    int remaining = Mathf.Max(0, ClassCount(cls) - used);
-
-                    count = Mathf.Clamp(count, 0, registry.WorkersRequired(cell)); // เพดานตามเลเวล (โหลด = L1)
-                    count = Mathf.Min(count, remaining);
-                    if (count <= 0) continue;
+                    count = Mathf.Clamp(count, 0, EffectiveCap(cell, data)); // เพดานตามเลเวล/หล่อเย็น
+                    if (!wmLive)
+                    {
+                        var cls = data.requiredClass;
+                        usedByClass.TryGetValue(cls, out int used);
+                        int remaining = Mathf.Max(0, ClassCount(cls) - used);
+                        count = Mathf.Min(count, remaining);
+                        if (count <= 0) continue;
+                        usedByClass[cls] = used + count;
+                    }
+                    else if (count <= 0) continue;
 
                     _assigned[cell] = count;
-                    usedByClass[cls] = used + count;
                 }
+            }
+
+            // v6.3: clamp the restored plan to the live workforce, then project onto the job pool
+            // (WorkerManager reloads all workers idle — reconcile re-applies their jobs from _assigned).
+            if (wmLive)
+            {
+                int overflow = TotalAssigned - WorkerManager.Instance.AliveCount;
+                if (overflow > 0) TrimAssigned(overflow);
+                ReconcileJobPool();
             }
 
             // แจ้งภาพ/HUD ให้ respawn + refresh
             foreach (var kvp in _assigned)
                 EventManager.Instance.RaiseWorkerAssignmentChanged(kvp.Key, kvp.Value);
             RaisePool();
+            EnsureWmHook();
         }
     }
 }

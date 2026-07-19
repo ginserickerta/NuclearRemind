@@ -148,11 +148,14 @@ namespace NuclearReMind
         {
             if (buildingData == null) return;
 
-            // ล็อกเฟส (GDD §6): ยังไม่ถึงเฟสปลดล็อก → ไม่เข้าโหมดวาง (กันทั้ง hotkey 1-9 และคลิกปุ่ม)
-            if (GameManager.Instance != null && buildingData.unlockPhase > GameManager.Instance.CurrentPhase)
+            // ล็อกเฟส (GDD §6/§7): ยังไม่ถึงเฟสปลดล็อก → ไม่เข้าโหมดวาง (กันทั้ง hotkey 1-9, ลากวาง และคลิกปุ่ม)
+            // ★ v6.3: เฟสอ่านจาก PhaseManager (core%) ไม่ใช่ GameManager.CurrentPhase (ผูกวัน = ผิดกฎข้อ 1)
+            //   ต้องตรงกับ BuildingSelectionUI ที่ซ่อนช่อง ไม่งั้นซ่อนปุ่มแล้วยังลากวางทะลุได้
+            if (buildingData.unlockPhase > PhaseManager.CurrentPhase)
             {
                 EventManager.Instance.RaiseNotice($"{buildingData.buildingName} ปลดล็อกในเฟส {buildingData.unlockPhase} " +
-                                                  $"(ตอนนี้เฟส {GameManager.Instance.CurrentPhase})");
+                                                  $"(ตอนนี้เฟส {PhaseManager.CurrentPhase} · CORE ต้องถึง " +
+                                                  $"{PhaseCoreRequirement(buildingData.unlockPhase)}%)");
                 return;
             }
 
@@ -250,6 +253,10 @@ namespace NuclearReMind
         /// อาคารที่ต้องวิจัยก่อน (v6.3 §19) — ยังไม่วิจัย note = วางไม่ได้ (ghost แดง)
         /// "" = อาคารพื้นฐาน ไม่ผูกวิจัย · ไม่มี KnowledgeDB (test/scene เก่า) → ไม่บล็อก
         /// </summary>
+        /// <summary>CORE% ที่ต้องถึงเพื่อเข้าเฟสนั้น (GDD §7) — ใช้บอกผู้เล่นว่าต้องดันเตาถึงเท่าไหร่</summary>
+        private static int PhaseCoreRequirement(int phase) =>
+            phase >= 4 ? 80 : phase == 3 ? 60 : phase == 2 ? 40 : 0;
+
         private static bool IsResearchUnlocked(BuildingData data)
         {
             // single gate — same method the Sprint 2 acceptance test asserts on (KnowledgeDB.IsBuildingUnlocked)

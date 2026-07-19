@@ -41,6 +41,23 @@ namespace NuclearReMind
         [Tooltip("ความเร็วอนิเมชัน (เฟรม/วินาที) — ใช้เมื่อมี animationFrames เท่านั้น")]
         public float animationFps = 6f;
 
+        [Header("เงา (override รายอาคาร — ลากปรับได้ที่ NuclearReMind → Tools → Shadow Editor)")]
+        [Tooltip("true = ใช้ค่าเงาด้านล่างแทนค่ากลางของ BuildingVisualSpawner\n" +
+                 "false = ใช้ค่ากลาง (อาคารเดิมทุกหลังไม่กระทบ)")]
+        public bool overrideShadow = false;
+
+        [Tooltip("เลื่อนตำแหน่งเงา เทียบฐานอาคาร (world units) — X ซ้าย/ขวา · Y ขึ้น/ลง")]
+        public Vector2 shadowOffset = new Vector2(0f, -0.02f);
+
+        [Tooltip("ความยาวเงา เทียบความสูงอาคาร (0.42 = 42% ของตัวอาคาร)")]
+        [Range(0.05f, 1.2f)] public float shadowSquash = 0.42f;
+
+        [Tooltip("เอียงเงาตามทิศแสง (องศา) — ลบ = เอียงขวา · บวก = เอียงซ้าย")]
+        [Range(-70f, 70f)] public float shadowLeanDegrees = 0f;
+
+        [Tooltip("ความเข้มเงา 0 = ใส · 1 = ดำทึบ")]
+        [Range(0f, 1f)] public float shadowAlpha = 0.30f;
+
         [Header("Depth-sort base collider (override)")]
         [Tooltip("ใช้กล่องฐานที่กำหนดเองแทนการคำนวณอัตโนมัติ (depthBaseFraction ที่ BuildingVisualSpawner)\n" +
                  "worker ที่เดินทับ 'โซนฐาน' นี้ + อยู่หน้า จะวาดเหนืออาคาร · ปรับด้วยเมนู NuclearReMind → Tools → Base Collider Editor (ลาก handle ใน Scene)")]

@@ -28,6 +28,11 @@ MonoBehaviour:
   spriteScale: 1.3
   animationFrames: []
   animationFps: 6
+  overrideShadow: 1
+  shadowOffset: {x: -0.007861495, y: 1.6238824}
+  shadowSquash: 0.9373789
+  shadowLeanDegrees: -0.4111691
+  shadowAlpha: 0.3
   overrideBaseCollider: 0
   baseColliderSize: {x: 0, y: 0}
   baseColliderOffset: {x: 0, y: 0}
@@ -38,6 +43,7 @@ MonoBehaviour:
   workerRequired: 1
   workersPerLevel: 010000000200000003000000
   unlockPhase: 1
+  requiredNoteId: 
   buildTicks: 6
   foodProduction: 40
   waterProduction: 0

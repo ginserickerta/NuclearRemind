@@ -55,7 +55,14 @@ namespace NuclearReMind
         private Button _suitCraftBtn;
         private Text _suitCraftLabel;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        // ★ v6.3 cutover (worker-click fix): the J panel is RETIRED — worker assignment now happens by
+        //   clicking the building (BuildingUpgradeUI/LabPanelUI +/− → job pool) and cooling by clicking the
+        //   CORE TOWER. Auto-spawn is disabled so no panel appears and J does nothing. The file is kept
+        //   (not deleted) because its Zone B open/staff + Rad Suit craft logic is the salvage source for a
+        //   later end-game building UI (deferred per the design decision — Zone B is Phase-4-only).
+        //   To re-enable temporarily for debugging, restore the [RuntimeInitializeOnLoadMethod] hook below.
+        //
+        // [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoSpawnHook()
         {
             AutoSpawn();

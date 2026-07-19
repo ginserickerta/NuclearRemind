@@ -51,6 +51,13 @@ namespace NuclearReMind
         private MasteryAppliedState _applied;
         public MasteryAppliedState Applied => _applied;
 
+        // Reveal delay (QUIZZES.md pacing) — a quiz surfaces a beat AFTER its knowledge is used, not the
+        // same instant. _appliedOnDay latches the first day each quiz became applied; the quiz is withheld
+        // until _today − appliedDay ≥ _revealDelay. _today = 0 means no day clock (EditMode tests) → immediate.
+        private int _today;
+        private int _revealDelay = 1;
+        private readonly Dictionary<string, int> _appliedOnDay = new Dictionary<string, int>();
+
         // ─────────────────────────────────────────
         //  Catalog (tests register directly; play mode auto-loads from Resources)
         // ─────────────────────────────────────────
@@ -101,6 +108,24 @@ namespace NuclearReMind
 
         public void SetApplied(MasteryAppliedState s) => _applied = s;
 
+        /// <summary>
+        /// Advance the reveal clock one day (called by QuizAppliedWatcher on OnDayEnded). Latches the first
+        /// day each quiz's knowledge became "applied" so it surfaces quizRevealDelayDays later — a beat after
+        /// the lesson, not the moment you use it (QUIZZES.md pacing).
+        /// </summary>
+        public void AdvanceDay(int day)
+        {
+            EnsureCatalog();
+            _today = day;
+            var cfg = GameConfigSO.Instance;
+            if (cfg != null) _revealDelay = Mathf.Max(0, cfg.quizRevealDelayDays);
+            foreach (var id in _quizzes.Keys)
+                if (!_appliedOnDay.ContainsKey(id)
+                    && !MasteryRegistry.Instance.Has(id)
+                    && QuizAvailability.IsApplied(id, _applied))
+                    _appliedOnDay[id] = day;
+        }
+
         public void MarkExtractorRan()    => _applied.extractorRanDays++;
         public void SetCoilTypes(int n)   => _applied.coilTypesInstalled = n;
         public void MarkMedBayHealed()    => _applied.medBayHealedCount++;
@@ -124,7 +149,23 @@ namespace NuclearReMind
             if (!_quizzes.TryGetValue(quizId, out var q) || q == null) return false;
             if (MasteryRegistry.Instance.Has(quizId)) return false;         // already earned
             if (!q.requiresApplied) return true;
-            return QuizAvailability.IsApplied(quizId, _applied);
+            if (!QuizAvailability.IsApplied(quizId, _applied)) return false;
+            // reveal a beat after the knowledge was applied (~1-2 days). No day clock (tests) → immediate.
+            if (_today <= 0 || _revealDelay <= 0) return true;
+            return _appliedOnDay.TryGetValue(quizId, out int d) && (_today - d) >= _revealDelay;
+        }
+
+        /// <summary>How many quizzes are answerable-but-unanswered right now — the notification badge count.</summary>
+        public int AnswerableCount
+        {
+            get
+            {
+                EnsureCatalog();
+                int n = 0;
+                foreach (var id in _quizzes.Keys)
+                    if (IsAnswerable(id)) n++;
+                return n;
+            }
         }
 
         /// <summary>Any quiz answerable-but-unanswered → HUD red dot on the Codex button (QUIZZES.md UI).</summary>

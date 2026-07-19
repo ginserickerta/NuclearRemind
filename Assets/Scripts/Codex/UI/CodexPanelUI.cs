@@ -27,6 +27,8 @@ namespace NuclearReMind
         static readonly Color CBtn       = new Color(0.18f, 0.26f, 0.34f, 1f);
         static readonly Color CBtnDim    = new Color(0.15f, 0.15f, 0.13f, 1f);
 
+        public static CodexPanelUI Instance { get; private set; }
+
         public KeyCode toggleKey = KeyCode.C;
 
         private Font _font;
@@ -79,7 +81,11 @@ namespace NuclearReMind
             return fallback;
         }
 
-        private void Awake() => _font = LoadFont();
+        private void Awake() { Instance = this; _font = LoadFont(); }
+
+        /// <summary>Open the Codex from a HUD control (the quiz notification icon). Safe if already open.</summary>
+        public void OpenFromHud() { if (!_shown) Open(); }
+        public bool IsShown => _shown;
 
         private static Font LoadFont()
         {

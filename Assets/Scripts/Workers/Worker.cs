@@ -64,5 +64,11 @@ namespace NuclearReMind
         public const string ZoneB = "zoneb";
         public const string Extract = "extract";
         public const string Idle = "idle";
+
+        // Not a GDD §17 production job — a holding job for workers sent to build a site (per-cell
+        // construction). Kept out of the idle pool so they can't be double-booked, but SumEfficiency
+        // (production) ignores it and no radiation Zone applies. Cleared to the real job (or idle)
+        // when construction completes. See WorkerAssignmentManager.ReconcileJobPool.
+        public const string Build = "build";
     }
 }

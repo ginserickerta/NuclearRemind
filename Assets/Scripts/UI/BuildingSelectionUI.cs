@@ -58,9 +58,15 @@ namespace NuclearReMind
                  "ต้องมีลูกชื่อ: Icon(Image) และ/หรือ IconEmoji(Text) + root มี Image+Button")]
         public GameObject demolishTemplate;
 
+        [Header("ช่องที่ยังไม่ถึงเฟส")]
+        [Tooltip("true = ซ่อนช่องไปเลยจนกว่าจะถึงเฟส (เช่น โรงพยาบาลโผล่ตอนเฟส 3 เท่านั้น)\n" +
+                 "false = โชว์ช่องแบบหรี่ + ป้าย 🔒 เฟส N (พฤติกรรมเดิม)")]
+        public bool hideLockedSlots = true;
+
         // state
         private Button[] _buttons;
         private Image[]  _buttonImages;
+        private GameObject[] _slotRoots; // ตัวช่องทั้งใบ — ใช้ซ่อน/โชว์เมื่อ hideLockedSlots
         private Text[]   _lockLabels; // "🔒 เฟส N" ต่อช่อง — โชว์เมื่อยังไม่ถึงเฟสปลดล็อก (GDD §6)
         private BuildingData _selected;
         private ResourceData _resources;
@@ -90,6 +96,7 @@ namespace NuclearReMind
             EventManager.Instance.OnResourceChanged     += HandleResourceChanged;
             EventManager.Instance.OnDemolishModeToggled += HandleDemolishModeToggled;
             EventManager.Instance.OnDayStarted          += HandleDayStarted;
+            EventManager.Instance.OnReactorStateChanged += HandleReactorStateChanged; // เฟสผูก core% (§7)
         }
 
         private void OnDisable()
@@ -99,6 +106,7 @@ namespace NuclearReMind
             EventManager.Instance.OnResourceChanged     -= HandleResourceChanged;
             EventManager.Instance.OnDemolishModeToggled -= HandleDemolishModeToggled;
             EventManager.Instance.OnDayStarted          -= HandleDayStarted;
+            EventManager.Instance.OnReactorStateChanged -= HandleReactorStateChanged;
         }
 
         private void Start()
@@ -136,11 +144,11 @@ namespace NuclearReMind
             if (buttonContainer == null || buildings == null) return;
 
             // เฟสปัจจุบันตอนสร้างปุ่ม (read-only query — ครอบกรณี UI สร้างหลัง Day เริ่ม/หลังโหลดเซฟ)
-            if (GameManager.Instance != null)
-                _currentPhase = GameManager.Instance.CurrentPhase;
+            _currentPhase = PhaseManager.CurrentPhase;
 
             _buttons      = new Button[buildings.Length];
             _buttonImages = new Image[buildings.Length];
+            _slotRoots    = new GameObject[buildings.Length];
             _lockLabels   = new Text[buildings.Length];
 
             // ★ แผงถูก bake เป็น prefab เต็ม (มี Slot_1 อยู่แล้ว) → เติมข้อมูลลง slot เดิม ไม่สร้างใหม่
@@ -229,6 +237,7 @@ namespace NuclearReMind
 
             _buttons      = new Button[buildings.Length];
             _buttonImages = new Image[buildings.Length];
+            _slotRoots    = new GameObject[buildings.Length];
             _lockLabels   = new Text[buildings.Length];
 
             for (int i = 0; i < buildings.Length; i++)
@@ -423,6 +432,8 @@ namespace NuclearReMind
         /// </summary>
         private void WireExistingSlot(GameObject slot, int index, BuildingData data)
         {
+            _slotRoots[index] = slot; // ให้ RefreshButtonColors ซ่อน/โชว์ทั้งช่องได้ (hideLockedSlots)
+
             // ref ป้ายล็อก (RefreshButtonColors คุมโชว์/ซ่อน) — ไม่แก้ text ที่ bake ไว้
             var lockTxt = FindDeep(slot.transform, "LockLabel")?.GetComponent<Text>();
             if (lockTxt != null) { _lockLabels[index] = lockTxt; lockTxt.gameObject.SetActive(false); }
@@ -445,6 +456,8 @@ namespace NuclearReMind
         /// <summary>ใส่ข้อมูล/ผูกปุ่มลงช่อง (ทั้ง clone จาก template และโครงสร้างสด) — ไม่แตะ font/สี/layout (ให้ template คุมเอง)</summary>
         private void PopulateSlot(GameObject slot, int index, BuildingData data)
         {
+            _slotRoots[index] = slot; // ให้ RefreshButtonColors ซ่อน/โชว์ทั้งช่องได้ (hideLockedSlots)
+
             var slotIcon = (menuIcons != null && index < menuIcons.Length && menuIcons[index] != null)
                 ? menuIcons[index] : data.sprite;
             var iconImg = FindDeep(slot.transform, "Icon")?.GetComponent<Image>();
@@ -519,10 +532,18 @@ namespace NuclearReMind
                 _demolishImage.color = active ? ColDemolishOn : ColDemolish;
         }
 
-        // เฟสเกมเปลี่ยนได้เฉพาะตอนขึ้นวันใหม่ (GamePhase.FromDay) → re-render สถานะล็อก
-        private void HandleDayStarted(int day, bool timed)
+        // ★ v6.3: เฟสผูกกับ core% ไม่ใช่วัน (GDD §7 · CLAUDE.md กฎข้อ 1 ห้าม if(day==X))
+        //   เดิมใช้ GamePhase.FromDay → โรงพยาบาลโผล่ตอน Day 11 ไม่ว่าเตาจะเดินถึงไหน
+        //   ตอนนี้อ่าน PhaseManager.CurrentPhase (core ≥ 60 = เฟส 3) และ re-render เมื่อ CORE ขยับ
+        private void HandleReactorStateChanged(float core, float heat) => SyncPhase();
+
+        private void HandleDayStarted(int day, bool timed) => SyncPhase(); // เผื่อโหลดเซฟ/เตายังไม่ spawn
+
+        private void SyncPhase()
         {
-            _currentPhase = GamePhase.FromDay(day);
+            int phase = PhaseManager.CurrentPhase;
+            if (phase == _currentPhase) return;   // เฟสเท่าเดิม — ไม่ต้อง re-render (OnReactorStateChanged ยิงถี่)
+            _currentPhase = phase;
             RefreshButtonColors();
         }
 
@@ -544,7 +565,17 @@ namespace NuclearReMind
                 bool isSelected = buildings[i] == _selected && !_isDemolishing;
                 bool canAfford  = CanAfford(buildings[i]);
 
-                // ล็อกเฟสชนะทุกสถานะ: ปุ่มหรี่ + กดไม่ได้ + ป้าย 🔒
+                // ★ hideLockedSlots: ซ่อนทั้งช่องจนกว่าจะถึงเฟส (เช่น โรงพยาบาลโผล่ตอนเฟส 3 เท่านั้น)
+                //   ช่องที่เหลือเลื่อนมาชิดกันเองเพราะคอนเทนเนอร์เป็น layout group
+                //   (ซ่อนแล้วยังต้องรันโค้ดสีข้างล่างต่อ เผื่อสลับ hideLockedSlots กลับตอนรัน)
+                if (_slotRoots[i] != null)
+                {
+                    bool shouldShow = !(locked && hideLockedSlots);
+                    if (_slotRoots[i].activeSelf != shouldShow) _slotRoots[i].SetActive(shouldShow);
+                    if (!shouldShow) continue; // ซ่อนอยู่ — ไม่ต้องอัปเดตสี/ป้ายข้างใน
+                }
+
+                // ล็อกเฟสชนะทุกสถานะ: ปุ่มหรี่ + กดไม่ได้ + ป้าย 🔒 (ใช้เมื่อ hideLockedSlots = false)
                 _buttons[i].interactable = !locked;
                 if (_lockLabels[i] != null) _lockLabels[i].gameObject.SetActive(locked);
 

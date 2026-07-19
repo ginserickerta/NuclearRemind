@@ -12,12 +12,43 @@ namespace NuclearReMind
     /// type; jobs with no building, or idle, cluster near CORE TOWER). Reuses WorkerView for
     /// movement/sorting. Suppresses the legacy WorkerVisualSpawner while active so sprites don't double.
     ///
-    /// Spawned by Sprint1TestPanel during playtest (where WorkerManager is live). Safe to add to a
-    /// real scene later once WorkerManager becomes the scene authority.
+    /// ★ v6.3 cutover (worker-walk fix): auto-spawns into the live game once WorkerManager is present —
+    /// was previously created ONLY by Sprint1TestPanel, which is compiled out of release builds
+    /// (#if UNITY_EDITOR || DEVELOPMENT_BUILD). Result in a real build: WorkerManager auto-spawns →
+    /// legacy WorkerVisualSpawner stands down → NOTHING positioned workers, so they never walked to
+    /// their assigned building. Same auto-spawn pattern as WorkerManager/CardManager/ReactorController.
     /// </summary>
     public class WorkerAvatarSpawner : MonoBehaviour
     {
         private const string SortingLayer = "Buildings";
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoSpawnHook()
+        {
+            AutoSpawn();
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
+            => AutoSpawn();
+
+        private static void AutoSpawn()
+        {
+            try
+            {
+                // WorkerManager auto-spawns on the same AfterSceneLoad pass; order between the two hooks
+                // isn't guaranteed, so if it isn't up yet a later sceneLoaded (or the lazy TryInit below)
+                // covers it. Guard on EventManager too — MainMenu has no core systems.
+                if (EventManager.Instance == null || WorkerManager.Instance == null) return;
+                if (FindFirstObjectByType<WorkerAvatarSpawner>() != null) return;
+                new GameObject("WorkerAvatarSpawner (auto)").AddComponent<WorkerAvatarSpawner>();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[WorkerAvatarSpawner] AutoSpawn ล้มเหลว — {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+            }
+        }
 
         private static readonly Dictionary<string, BuildingType> JobToBuilding =
             new Dictionary<string, BuildingType>
@@ -44,11 +75,15 @@ namespace NuclearReMind
         private readonly Dictionary<int, WorkerHealthBadge> _badges = new Dictionary<int, WorkerHealthBadge>();
         private readonly Dictionary<int, string> _lastTarget = new Dictionary<int, string>();
         private WorkerManager _wm;
+        private bool _initialized;
+        private bool _dirty;
 
-        private void Start()
+        // Lazy init: WorkerManager may not exist yet when this spawns (auto-spawn ordering), so we retry
+        // in Update instead of permanently disabling — otherwise a one-frame race kills worker visuals.
+        private bool TryInit()
         {
             _wm = WorkerManager.Instance;
-            if (_wm == null) { enabled = false; return; }
+            if (_wm == null) return false;
 
             var holder = new GameObject("WorkerAvatars");
             _parent = holder.transform;
@@ -63,13 +98,49 @@ namespace NuclearReMind
             }
             if (_sprite == null) _sprite = PlaceholderSprite();
 
-            _wm.OnWorkersChanged += Sync;
+            _wm.OnWorkersChanged += MarkDirty;
+            var em = EventManager.Instance;
+            if (em != null)
+            {
+                // A newly built/registered building is a fresh walk target; a demolished one re-routes its
+                // workers; a loaded save re-places everyone. Re-sync on each (coalesced via the dirty flag,
+                // so it doesn't matter whether BuildingRegistry updated before or after this handler runs).
+                em.OnBuildingPlaced += HandleBuildingPlaced;
+                em.OnBuildingRemoved += HandleBuildingRemoved;
+                em.OnSaveLoaded += HandleSaveLoaded;
+                // Moving a worker between two cells of the SAME job leaves job counts untouched (no
+                // OnWorkersChanged) — without this the avatar would keep standing at the old cell.
+                em.OnWorkerAssignmentChanged += HandleAssignmentChanged;
+            }
+
+            _initialized = true;
             Sync();
+            return true;
+        }
+
+        private void MarkDirty() => _dirty = true;
+        private void HandleAssignmentChanged(Vector2Int cell, int count) => _dirty = true;
+        private void HandleBuildingPlaced(Cell cell, BuildingData data) => _dirty = true;
+        private void HandleBuildingRemoved(Vector2Int cell) => _dirty = true;
+        private void HandleSaveLoaded(SaveData save) => _dirty = true;
+
+        private void Update()
+        {
+            if (!_initialized) { TryInit(); return; }
+            if (_dirty) { _dirty = false; Sync(); }
         }
 
         private void OnDestroy()
         {
-            if (_wm != null) _wm.OnWorkersChanged -= Sync;
+            if (_wm != null) _wm.OnWorkersChanged -= MarkDirty;
+            var em = EventManager.Instance;
+            if (em != null)
+            {
+                em.OnBuildingPlaced -= HandleBuildingPlaced;
+                em.OnBuildingRemoved -= HandleBuildingRemoved;
+                em.OnSaveLoaded -= HandleSaveLoaded;
+                em.OnWorkerAssignmentChanged -= HandleAssignmentChanged;
+            }
         }
 
         // Rebuild map of building cells per type each sync (cheap — dozens of buildings)
@@ -81,25 +152,66 @@ namespace NuclearReMind
             if (_wm == null || GridManager.Instance == null) return;
 
             RefreshBuildingCells();
+            RefreshPatrolCenters(); // ต้องหลัง RefreshBuildingCells — อ่าน _byType
 
             var live = new HashSet<int>();
+            foreach (var w in _wm.Workers) if (w.alive) live.Add(w.id);
+
+            // ★ Per-cell assignment is the source of truth (WorkerAssignmentManager): a worker stands at the
+            //   EXACT building / ore node they were sent to. This is what makes diggers walk to THEIR ore
+            //   node and builders to THEIR construction site — the old job→building-type map could only find
+            //   "a farm" and had no entry at all for ore nodes, so those workers never left the idle cluster.
+            var stand = new Dictionary<int, (Vector2Int cell, int ring)>();
+            var wam = WorkerAssignmentManager.Instance;
+            if (wam != null)
+            {
+                var taken = new HashSet<int>();
+                foreach (var kv in wam.Assignments)
+                {
+                    string job = WorkerAssignmentManager.JobForCell(kv.Key) ?? WorkerJobs.Build;
+                    for (int ring = 0; ring < kv.Value; ring++)
+                    {
+                        Worker pick = null;
+                        // prefer a worker whose job matches this cell, then any other working body
+                        foreach (var w in _wm.Workers)
+                            if (w.alive && !taken.Contains(w.id) && w.job == job) { pick = w; break; }
+                        if (pick == null)
+                            foreach (var w in _wm.Workers)
+                                if (w.alive && !taken.Contains(w.id) && w.job != WorkerJobs.Idle) { pick = w; break; }
+                        if (pick == null) break; // fewer bodies than the plan claims
+                        taken.Add(pick.id);
+                        stand[pick.id] = (kv.Key, ring);
+                    }
+                }
+            }
+
             var jobCount = new Dictionary<string, int>();
             var idleCount = 0;
 
             foreach (var w in _wm.Workers)
             {
                 if (!w.alive) continue;
-                live.Add(w.id);
 
                 var view = GetOrSpawn(w.id);
-                var badge = _badges[w.id];
-                badge.SetStatus(w.status);
+                _badges[w.id].SetStatus(w.status);
 
-                // resolve a stand target from the job
+                // 1) sent to a specific cell → stand there
+                if (stand.TryGetValue(w.id, out var s))
+                {
+                    string cellKey = $"cell:{s.cell.x},{s.cell.y}:{s.ring}";
+                    if (!_lastTarget.TryGetValue(w.id, out var prevCell) || prevCell != cellKey)
+                    {
+                        var jit = Jitter[s.ring % Jitter.Length];
+                        var p = GridManager.Instance.IsoToWorldF(s.cell.x + 0.5f + jit.x, s.cell.y + 0.5f + jit.y);
+                        view.SetAssigned(p, s.cell, s.ring, snap: !_lastTarget.ContainsKey(w.id));
+                        _lastTarget[w.id] = cellKey;
+                    }
+                    continue;
+                }
+
+                // 2) fallback (no assignment manager / legacy): any building matching the job type
                 int k = jobCount.TryGetValue(w.job, out int c) ? c : 0;
                 jobCount[w.job] = k + 1;
-
-                bool placed = false;
                 if (JobToBuilding.TryGetValue(w.job, out var type) &&
                     _byType.TryGetValue(type, out var cells) && cells.Count > 0)
                 {
@@ -113,19 +225,19 @@ namespace NuclearReMind
                         view.SetAssigned(pos, cell, ring, snap: !_lastTarget.ContainsKey(w.id));
                         _lastTarget[w.id] = key;
                     }
-                    placed = true;
+                    continue;
                 }
 
-                if (!placed)
+                // 3) nothing to do → patrol a landmark (CORE TOWER / Research Lab) instead of parking
+                int lm = idleCount % _patrolCenters.Count;
+                string idleKey = $"patrol:{lm}:{idleCount}";
+                if (!_lastTarget.TryGetValue(w.id, out var prevIdle) || prevIdle != idleKey)
                 {
-                    string key = $"idle:{idleCount}";
-                    if (!_lastTarget.TryGetValue(w.id, out var prev) || prev != key)
-                    {
-                        view.SetIdle(IdlePos(idleCount), idleCount, snap: !_lastTarget.ContainsKey(w.id));
-                        _lastTarget[w.id] = key;
-                    }
-                    idleCount++;
+                    view.SetPatrol(_patrolCenters[lm], PatrolInner, PatrolOuter, idleCount,
+                                   snap: !_lastTarget.ContainsKey(w.id));
+                    _lastTarget[w.id] = idleKey;
                 }
+                idleCount++;
             }
 
             // despawn avatars for workers that died / left
@@ -184,12 +296,30 @@ namespace NuclearReMind
             return view;
         }
 
-        private Vector3 IdlePos(int i)
+        // ===== จุดลาดตระเวนคนว่าง =====
+        // เดิม: IdlePos() วางเป็นตาราง 6 คอลัมน์ ระยะห่าง 0.6 cell ที่จุดเดียวกลางกริด
+        //       → คนว่างทุกคนกระจุกกันเป็นกองเดียว แล้ว wanderRadius 0.35 ก็ขยับได้แค่คืบเดียว
+        // ตอนนี้: กระจายรอบแลนด์มาร์ก (CORE TOWER + Research Lab) แล้วเดินวนในวงแหวนตลอดเวลา
+        private const float PatrolInner = 1.8f; // เว้นตัวอาคารไว้ ไม่ให้เดินทับ (world units)
+        private const float PatrolOuter = 5.0f; // ความกว้างของลานที่เดินวน
+        private static readonly BuildingType[] PatrolLandmarks =
+            { BuildingType.CoreTower, BuildingType.Laboratory };
+
+        private readonly List<Vector3> _patrolCenters = new List<Vector3>();
+
+        private void RefreshPatrolCenters()
         {
             var g = GridManager.Instance;
-            float baseCol = (g.columns - 1) * 0.5f - 2f + (i % 6) * 0.6f;
-            float baseRow = (g.rows - 1) * 0.5f - 2.5f - (i / 6) * 0.6f;
-            return g.IsoToWorldF(baseCol, baseRow);
+            _patrolCenters.Clear();
+
+            foreach (var type in PatrolLandmarks)
+                if (_byType.TryGetValue(type, out var cells))
+                    foreach (var c in cells)
+                        _patrolCenters.Add(g.IsoToWorldF(c.x + 0.5f, c.y + 0.5f));
+
+            // ยังไม่ได้สร้าง/ยังไม่ลงทะเบียนแลนด์มาร์กสักหลัง → เดินวนกลางกริด (ที่ตั้ง CORE TOWER)
+            if (_patrolCenters.Count == 0)
+                _patrolCenters.Add(g.IsoToWorldF((g.columns - 1) * 0.5f, (g.rows - 1) * 0.5f));
         }
 
         private static Sprite _placeholder;

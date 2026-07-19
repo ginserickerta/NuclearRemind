@@ -31,9 +31,14 @@ MonoBehaviour:
   - {fileID: 165204097388825707, guid: 020f1f6d2715c8e42a2ab8484d273ae0, type: 3}
   - {fileID: -475516504622547031, guid: 020f1f6d2715c8e42a2ab8484d273ae0, type: 3}
   animationFps: 6
+  overrideShadow: 1
+  shadowOffset: {x: 0.012912273, y: 0.97422504}
+  shadowSquash: 0.42
+  shadowLeanDegrees: 0
+  shadowAlpha: 0.3
   overrideBaseCollider: 1
-  baseColliderSize: {x: 2.5, y: 1.3285714}
-  baseColliderOffset: {x: 0, y: 0.6642857}
+  baseColliderSize: {x: 2.5, y: 1.6842517}
+  baseColliderOffset: {x: 0, y: 0.84212583}
   size: {x: 3, y: 3}
   buildingType: 7
   ironCost: 0
@@ -41,6 +46,7 @@ MonoBehaviour:
   workerRequired: 0
   workersPerLevel: 
   unlockPhase: 1
+  requiredNoteId: 
   buildTicks: 6
   foodProduction: 0
   waterProduction: 0
