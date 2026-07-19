@@ -128,7 +128,10 @@ namespace NuclearReMind.Tests
 
             var opt = Opt("ฉีดสารหล่อเย็นฉุกเฉิน", "confinement", 0f);
             string row = CrisisCardPanel.OptionRow(2, opt, KnowledgeDB.Instance);
-            StringAssert.Contains("🔒", row, "ต้องโชว์แม่กุญแจ");
+            // ★ marker is "[ล็อก]" not 🔒 — legacy uGUI Text cannot draw astral-plane glyphs, so the
+            //   padlock rendered as a blank gap in play. The rule being tested is unchanged: a locked
+            //   option must READ as locked, and an invisible glyph does not satisfy that.
+            StringAssert.Contains("[ล็อก]", row, "ต้องโชว์ป้ายล็อก");
             StringAssert.Contains(note.title, row, "ต้องบอกว่าต้องวิจัยอะไร (ห้ามซ่อน)");
             Assert.IsTrue(CrisisCardPanel.IsRowLocked(opt, KnowledgeDB.Instance));
 

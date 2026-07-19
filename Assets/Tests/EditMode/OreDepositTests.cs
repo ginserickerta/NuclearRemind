@@ -243,29 +243,13 @@ namespace NuclearReMind.Tests
 
         // ─────────────── Q5 (ALARA) — เด้งครั้งแรกครั้งเดียว ───────────────
 
-        [Test]
-        public void Q5_FirstZoneBAssignment_ShowsOnce()
-        {
-            var q5 = ScriptableObject.CreateInstance<QuizQuestionSO>();
-            q5.id = "Q5";
-            _spawned.Add(q5);
-            quiz.allQuizzes = new[] { q5 };
-
-            int shown = 0;
-            eventManager.OnQuizShown += _ => shown++;
-
-            SetResources(energy: 100f, water: 100f, workers: 20);
-            Place(MakeOreNode("OreB1", workerRequired: 3, quotaMin: 60f, quotaMax: 60f, exposure: 1f), 1, 1);
-            Place(MakeOreNode("OreB2", workerRequired: 3, quotaMin: 60f, quotaMax: 60f, exposure: 1f), 2, 2);
-
-            Assign(1, 1, 1);
-            InvokePrivate(ore, "Update"); // Q5 หน่วง 1 เฟรม (กันเด้งตอนโหลดเซฟ) — เทสต์เดินเฟรมเอง
-            Assert.AreEqual(1, shown, "จ่ายคนเข้าโซน B ครั้งแรก → Q5 เด้ง");
-
-            Assign(2, 2, 1); // โหนด B อีกแห่ง
-            InvokePrivate(ore, "Update");
-            Assert.AreEqual(1, shown, "Q5 เด้งครั้งเดียว — ครั้งต่อไปไม่ซ้ำ");
-        }
+        // ★ v6.3: ลบเทสต์ "Q5_FirstZoneBAssignment_ShowsOnce" ออก
+        //
+        // เดิมยืนยันว่าจ่ายคนเข้าโซน B ครั้งแรกแล้วควิซ Q5 ต้องเด้ง — เป็นพฤติกรรมของระบบควิซบังคับ v4.1
+        // ที่ GDD หลักการข้อ 4 ยกเลิกไปแล้ว ตอนนี้ OreDepositManager แสดงแค่ประโยค primer ส่วนควิซ ALARA
+        // ตัวจริง (q_alara) โผล่เองใน Codex เมื่อ QuizAvailability เห็นว่า riskZoneEntered
+        //
+        // เทสต์ที่เหลือด้านล่าง (Q5_ZoneAAssignment_DoesNotShow) ยังผ่าน เพราะยืนยันว่า "ไม่เด้ง"
 
         [Test]
         public void Q5_ZoneAAssignment_DoesNotShow()

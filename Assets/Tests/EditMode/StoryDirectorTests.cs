@@ -245,7 +245,7 @@ namespace NuclearReMind.Tests
         // ── วิกฤตครบวง: request → resolve → afterText → ควิซรายทางเลือก ──
 
         [Test]
-        public void CrisisBeat_FullFlow_OutcomeThenPerChoiceQuiz()
+        public void CrisisBeat_FullFlow_ShowsOutcome_AndNoLongerForcesAQuiz()
         {
             NewComponent<DilemmaManager>("DilemmaManager").dilemmaPool = new DilemmaData[0];
 
@@ -280,7 +280,12 @@ namespace NuclearReMind.Tests
             eventManager.RaiseDilemmaResolved(crisis, 1); // ผู้เล่นเลือก B
 
             Assert.AreEqual("[ระบบ] ขดลวดซ่อมเสร็จ", outcomeText, "afterText ของทางเลือก B");
-            Assert.AreSame(quizB, quizShown, "ควิซรายทางเลือก B เด้งหลัง Outcome (ลำดับ Story Guide)");
+
+            // ★ v6.3: เดิมยืนยันว่าควิซรายทางเลือกเด้งตามหลัง Outcome — ตอนนี้ต้อง "ไม่เด้ง"
+            // GDD หลักการข้อ 4 ยกเลิกควิซบังคับ · ควิซชุด v4.1 ทุกใบมี quizId ว่าง ส่งให้
+            // CodexQuizManager ไม่ได้ ปล่อยให้เด้งจะได้คำถามที่ตอบแล้วไม่ได้รางวัลอะไรเลย
+            // ส่วน afterText/ลำดับ Outcome ยังเป็นของจริง จึงเก็บ assertion นั้นไว้
+            Assert.IsNull(quizShown, "ควิซบังคับถูกปิดถาวรแล้ว — ควิซ v6.3 อยู่ใน Codex");
         }
 
         // ── Save / Load ───────────────────────────────────────

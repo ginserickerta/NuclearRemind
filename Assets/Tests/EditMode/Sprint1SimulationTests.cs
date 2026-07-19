@@ -192,7 +192,8 @@ namespace NuclearReMind.Tests
             StringAssert.Contains("−6/วัน", InventoryPanel.FormatSlot(slot), "ติดลบต้องเห็นชัด (จุดสอน Tritium)");
 
             slot.lockedHint = "ต้องวิจัย รังสีกับร่างกายคน";
-            StringAssert.Contains("🔒", InventoryPanel.FormatSlot(slot), "ของล็อกต้องแสดง ห้ามซ่อน (กติกาข้อ 6)");
+            // marker changed 🔒 → [ล็อก] (legacy uGUI Text cannot draw astral glyphs — it showed blank)
+            StringAssert.Contains("[ล็อก]", InventoryPanel.FormatSlot(slot), "ของล็อกต้องแสดง ห้ามซ่อน (กติกาข้อ 6)");
         }
     }
 }
