@@ -21,6 +21,17 @@ namespace NuclearReMind
         private const float ToastSeconds = 9f;   // visible lifetime
         private const float FadeSeconds = 1.5f;  // fade-out tail inside the lifetime
 
+        /// <summary>
+        /// Draw order for the feed. The project's ladder: HUD 0 · Story/Record 60 · Quiz 70 ·
+        /// Pause 100 · GameUIStack panels 200+ · Codex 200 · fade 32000.
+        ///
+        /// 50 puts barks above every HUD widget — the hotbar, the panels baked into HUDCanvas — while
+        /// still sitting under anything the player deliberately opened. That is the intent: a bark is
+        /// ambient colour, not something to read right now, so it should never cover a Codex entry or a
+        /// crisis card the player is actually reading. Raise this to 250 to float it over everything.
+        /// </summary>
+        private const int SortingOrder = 50;
+
         private static readonly Color CBg = new Color(0.06f, 0.06f, 0.05f, 0.82f);
         private static readonly Color CText = new Color(0.93f, 0.92f, 0.86f, 1f);
         private static readonly Color CInner = new Color(0.80f, 0.86f, 0.95f, 1f); // Auren ▸ tint
@@ -139,8 +150,37 @@ namespace NuclearReMind
         }
 
         // ═══════════════ BUILD ═══════════════
+
+        /// <summary>
+        /// Give the feed its own nested Canvas so its draw order is a number we chose, not an accident.
+        ///
+        /// Without this the feed inherits HUDCanvas at order 0 and loses to every GameUIStack panel
+        /// (base 200), so the inner voice vanished under whatever the player had open. Sibling index
+        /// cannot fix that — it only orders within one canvas.
+        ///
+        /// Deliberately no GraphicRaycaster: a nested canvas without one takes no clicks, which is
+        /// exactly right for a passive feed ("never blocks clicks"). Adding one would let the invisible
+        /// stack rect swallow presses meant for the map underneath.
+        /// </summary>
+        private void EnsureOwnCanvas()
+        {
+            var rect = GetComponent<RectTransform>();
+            if (rect == null) rect = gameObject.AddComponent<RectTransform>();
+            // Stretch to the parent canvas so child anchors still mean screen corners.
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var canvas = GetComponent<Canvas>();
+            if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = SortingOrder;
+        }
         private void BuildStack()
         {
+            EnsureOwnCanvas();
+
             var go = new GameObject("BarkStack", typeof(RectTransform));
             go.transform.SetParent(transform, false);
             _stack = go.GetComponent<RectTransform>();
