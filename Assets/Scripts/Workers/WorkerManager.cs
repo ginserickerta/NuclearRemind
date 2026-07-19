@@ -74,12 +74,18 @@ namespace NuclearReMind
             }
         }
 
+        /// <summary>
+        /// Worker names — short US/UK given names, one word each so they fit the name tag under a
+        /// sprite at world scale. Handed out in order (i % length), never shuffled: the name is part of
+        /// the saved Worker, and a run that renamed its people on reload would make every bark, death
+        /// notice and dashboard row from before the save refer to somebody who no longer exists.
+        /// </summary>
         private static readonly string[] NamePool =
         {
-            "อาริน", "เมษ", "วิน", "ปราง", "คีต", "ลดา", "ธาร", "มุก",
-            "ภูมิ", "ใบตอง", "เดชา", "ฟ้าใส", "กันต์", "อิงฟ้า", "ณัฐ", "พิม",
-            "ตุลย์", "แพร", "ภาคิน", "มายด์", "ศร", "อันดา", "เจตน์", "นารา",
-            "ปั้น", "ไอริน", "ธาม", "พลอย",
+            "Alice", "Bennett", "Clara", "Dorian", "Eleanor", "Felix", "Grace", "Harvey",
+            "Imogen", "Jasper", "Kate", "Lewis", "Maeve", "Nathan", "Olive", "Peter",
+            "Quinn", "Rosalie", "Silas", "Thea", "Vera", "Walter", "Wren", "Xavier",
+            "Yvette", "Zachary", "Cormac", "Delia",
         };
 
         private readonly List<Worker> _workers = new List<Worker>();

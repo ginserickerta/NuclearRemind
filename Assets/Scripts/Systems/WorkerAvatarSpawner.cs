@@ -73,6 +73,7 @@ namespace NuclearReMind
         private Sprite _sprite;
         private readonly Dictionary<int, WorkerView> _avatars = new Dictionary<int, WorkerView>();
         private readonly Dictionary<int, WorkerHealthBadge> _badges = new Dictionary<int, WorkerHealthBadge>();
+        private readonly Dictionary<int, WorkerNameTag> _tags = new Dictionary<int, WorkerNameTag>();
         private readonly Dictionary<int, string> _lastTarget = new Dictionary<int, string>();
         private WorkerManager _wm;
         private bool _initialized;
@@ -194,6 +195,7 @@ namespace NuclearReMind
 
                 var view = GetOrSpawn(w.id);
                 _badges[w.id].SetStatus(w.status);
+                _tags[w.id].SetName(w.displayName);
 
                 // 1) sent to a specific cell → stand there
                 if (stand.TryGetValue(w.id, out var s))
@@ -251,6 +253,7 @@ namespace NuclearReMind
                     if (_avatars[id] != null) Destroy(_avatars[id].gameObject);
                     _avatars.Remove(id);
                     _badges.Remove(id);
+                    _tags.Remove(id);
                     _lastTarget.Remove(id);
                 }
             }
@@ -291,8 +294,14 @@ namespace NuclearReMind
             var badge = badgeGo.AddComponent<WorkerHealthBadge>();
             badge.Init(sr);
 
+            var tagGo = new GameObject("NameTag");
+            tagGo.transform.SetParent(go.transform, false);
+            var tag = tagGo.AddComponent<WorkerNameTag>();
+            tag.Init(sr);
+
             _avatars[id] = view;
             _badges[id] = badge;
+            _tags[id] = tag;
             return view;
         }
 
