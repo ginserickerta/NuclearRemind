@@ -63,5 +63,11 @@ namespace NuclearReMind
         // ===== Data Recovery (STORY.md §3 — บันทึก Elara 4 ใบ) — default 0: เซฟเก่า = ยังไม่กู้ใบไหน =====
         public float dataRecoveryProgress = 0f;      // ความคืบหน้าใบถัดไป (0..dataRecoveryTarget)
         public int dataRecoveryRecords = 0;          // กู้ได้กี่ใบแล้ว (0..4) — restore ต้อง replay UnlockLead ด้วย
+
+        // ===== Run stats (STORY.md §④ สรุปการเล่น) — เก็บเฉพาะค่าที่หายไปถ้าไม่จด =====
+        public float statLowestHope = -1f;           // ★ default −1 ไม่ใช่ 0 — 0 = "Hope เคยตกถึงศูนย์" ในเซฟเก่า
+        public int statLowestHopeDay = 0;            // วันที่ Hope ต่ำสุด (0 = ยังไม่เคยเก็บค่า)
+        public int statDecreeOption = 0;             // 0 = ไม่ออกประกาศ · 1 = B · 2 = C
+        public bool statTriageEncountered = false;   // เคยเจอการ์ด Triage ไหม (achievement "ไม่มีใครต้องเลือก")
     }
 }

@@ -126,7 +126,18 @@ namespace NuclearReMind
                     _appliedOnDay[id] = day;
         }
 
-        public void MarkExtractorRan()    => _applied.extractorRanDays++;
+        /// <summary>
+        /// Also the V06 trigger ("Extractor เดินครั้งแรก"). v6.3 has no Extractor building — a Water Plant
+        /// at max level doing deuterium extraction IS the extractor (see QuizAppliedWatcher), and this is
+        /// the one place that knows it ran. Fire on the 0→1 edge; the bark is onceOnly regardless.
+        /// </summary>
+        public void MarkExtractorRan()
+        {
+            bool first = _applied.extractorRanDays == 0;
+            _applied.extractorRanDays++;
+            if (first && InnerVoiceDirector.Instance != null)
+                InnerVoiceDirector.Instance.Fire("V06");
+        }
         public void SetCoilTypes(int n)   => _applied.coilTypesInstalled = n;
         public void MarkMedBayHealed()    => _applied.medBayHealedCount++;
         public void MarkRiskZoneEntered() => _applied.riskZoneEntered = true;

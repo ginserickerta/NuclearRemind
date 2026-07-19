@@ -428,7 +428,7 @@ namespace NuclearReMind
                     "▸ ความคิด: ยังไม่จบ ยังมีงานให้ทำอีกมาก แต่เมืองนี้ยังมีพรุ่งนี้",
                 GameEndType.HopeZero     => "GAME OVER — ขวัญเมืองหมด\nHope = 0 · ประชาชนหมดศรัทธา เมืองล่มสลาย",
                 GameEndType.Meltdown     => "GAME OVER — เตาหลอมละลาย\nHEAT ≥ 100 · เร่งเครื่องเกินกำลังหล่อเย็น",
-                GameEndType.TimeoutLowQ  => "GAME OVER — หมดเวลา\nหมดเวลา 30 วัน แต่ค่า Q ยังไม่ถึงเป้า",
+                GameEndType.TimeoutLowQ  => "GAME OVER — หมดเวลา\nหมดเวลา 30 วัน แต่ CORE ยังไม่ถึง 100%",
                 _ => ""
             };
 
@@ -438,8 +438,18 @@ namespace NuclearReMind
             int knowledge = ResourceManager.Instance != null
                 ? Mathf.RoundToInt(ResourceManager.Instance.Current.knowledge) : 0;
 
+            // สรุปการเล่น (STORY.md §④) + Achievements — RunStats latches what the live systems forget
+            string runSummary = "";
+            string achievements = "";
+            if (RunStats.Instance != null)
+            {
+                runSummary = "\nสรุปการเล่นของคุณ\n" + RunStats.Instance.BuildSummary();
+                achievements = Achievements.BuildSummary(Achievements.Evaluate(RunStats.Instance, endType));
+            }
+
             // Knowledge Summary (Story Guide §4 true_ending onEnd): สรุปหัวข้อความรู้/Codex ที่ปลดล็อกรอบนี้
             gameOverText.text = $"{msg}\n\nวันที่ {day} · Q {q:0.00} · Knowledge {knowledge}\n" +
+                                runSummary + achievements + "\n" +
                                 CollectKnowledgeSummary() +
                                 "ความรู้ที่คุณได้ — ไม่มีวันหาย เริ่มใหม่แล้วไปให้ไกลกว่าเดิม";
         }

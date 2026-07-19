@@ -9,12 +9,13 @@ namespace NuclearReMind
     /// runs. Assets live in Resources/InnerVoice (speaker = Auren) and fire via OnBarkFired, so the HUD
     /// shows them as the nameless ▸ prompt.
     ///
-    /// 19 of 20 are wired. Callers outside this class: V01 (IntroSequenceController, on the fade into
-    /// gameplay), V02 (MemorialPanelController, first click), V04 (ResearchQueuePanel, first open).
+    /// All 20 are wired. Callers outside this class: V01 (IntroSequenceController, on the fade into
+    /// gameplay), V02 (MemorialPanelController, first click), V04 (ResearchQueuePanel, first open),
+    /// V06 (CodexQuizManager.MarkExtractorRan, first extraction day).
     ///
-    /// V06 "Extractor เดินครั้งแรก" is the one that stays silent: there is no Extractor — it is not a
-    /// BuildingType, has no asset and no manager, and exists only as a gating note in BuildingData.
-    /// Its BarkSO is authored and waiting; once the building ships, one Fire("V06") is the whole hookup.
+    /// V06 "Extractor เดินครั้งแรก" was long thought blocked on a building that does not exist. It is
+    /// not: v6.3 defines the extractor as a max-level Water Plant producing deuterium, which
+    /// QuizAppliedWatcher already detects for q_deuterium — so the trigger was there all along.
     /// </summary>
     // -18: after BarkManager (-20) so the ▸ line lands alongside the day's NPC bark.
     [DefaultExecutionOrder(-18)]
