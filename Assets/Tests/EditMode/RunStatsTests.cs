@@ -152,20 +152,61 @@ namespace NuclearReMind.Tests
         // ── Summary rows ──────────────────────────────────────────
 
         [Test]
-        public void Summary_ShowsSixRows_AndOmitsAlaraUntilItIsDefined()
+        public void Summary_ShowsAllSevenSpecRows()
         {
             string s = stats.BuildSummary();
 
             StringAssert.Contains("ความรู้ที่ยืนยันแล้ว", s);
             StringAssert.Contains("คนที่รอด", s);
             StringAssert.Contains("คนที่เสียไป", s);
+            StringAssert.Contains("ALARA compliance", s);
             StringAssert.Contains("Decree ที่ออก", s);
             StringAssert.Contains("Hope ต่ำสุด", s);
             StringAssert.Contains("Record ที่กู้คืน", s);
+        }
 
-            // ALARA has no agreed formula yet (STORY.md names the row but not the maths), so the row is
-            // omitted rather than filled with an invented number. Flip this when the definition lands.
-            StringAssert.DoesNotContain("ALARA", s);
+        // ── ALARA — วัน-คนใน Zone B ที่ใส่ชุด ─────────────────────
+
+        [Test]
+        public void Alara_CountsSuitedWorkerDays_NotHeadcount()
+        {
+            var a = wm.Workers[0];
+            var b = wm.Workers[1];
+            wm.AssignJob(a, WorkerJobs.ZoneB);
+            wm.AssignJob(b, WorkerJobs.ZoneB);
+
+            a.hasRadSuit = true;                      // วันที่ 2: 1 ใน 2 คนมีชุด
+            events.RaiseDayEnded(2);
+
+            b.hasRadSuit = true;                      // วันที่ 3: ครบทั้งคู่
+            events.RaiseDayEnded(3);
+
+            Assert.AreEqual(4, stats.ZoneBWorkerDays, "2 คน × 2 วัน = 4 วัน-คน");
+            Assert.AreEqual(3, stats.ZoneBSuitedDays, "ใส่ชุด 1 + 2 = 3 วัน-คน");
+            Assert.AreEqual(0.75f, stats.AlaraCompliance.Value, 1e-3f);
+            StringAssert.Contains("75%", stats.BuildSummary());
+        }
+
+        [Test]
+        public void Alara_NeverSentAnyone_ReportsNoData_NotZeroPercent()
+        {
+            // ★ 0% would accuse the player of sending crews in unprotected; 100% would credit them for
+            //   caution they never had to show. Neither happened — there is nothing to report.
+            events.RaiseDayEnded(2);
+
+            Assert.IsFalse(stats.AlaraCompliance.HasValue);
+            StringAssert.Contains("ไม่เคยส่งคนเข้า Zone B", stats.BuildSummary());
+        }
+
+        [Test]
+        public void Alara_DeadWorkersDoNotCount()
+        {
+            var w = wm.Workers[0];
+            wm.AssignJob(w, WorkerJobs.ZoneB);
+            w.alive = false;
+            events.RaiseDayEnded(2);
+
+            Assert.AreEqual(0, stats.ZoneBWorkerDays);
         }
 
         [Test]
@@ -187,7 +228,14 @@ namespace NuclearReMind.Tests
         [Test]
         public void SaveLoad_KeepsTheStatsThatNothingElseRemembers()
         {
+            var a = wm.Workers[0];
+            var b = wm.Workers[1];
+            wm.AssignJob(a, WorkerJobs.ZoneB);
+            wm.AssignJob(b, WorkerJobs.ZoneB);
+            a.hasRadSuit = true;
+
             Day(6, hope: 33f);
+            events.RaiseDayEnded(6);
             events.RaiseCrisisCardResolved(CardIds.Decree, 1);
             events.RaiseCrisisCardShown(MakeCard(CardIds.Triage));
 
@@ -200,6 +248,8 @@ namespace NuclearReMind.Tests
             Assert.AreEqual(6, stats.LowestHopeDay);
             Assert.AreEqual(1, stats.DecreeOption);
             Assert.IsTrue(stats.TriageEncountered);
+            Assert.AreEqual(2, stats.ZoneBWorkerDays, "วัน-คนใน Zone B ต้องรอดข้ามเซฟ");
+            Assert.AreEqual(1, stats.ZoneBSuitedDays);
         }
 
         [Test]

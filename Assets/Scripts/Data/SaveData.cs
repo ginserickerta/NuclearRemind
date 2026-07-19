@@ -69,5 +69,7 @@ namespace NuclearReMind
         public int statLowestHopeDay = 0;            // วันที่ Hope ต่ำสุด (0 = ยังไม่เคยเก็บค่า)
         public int statDecreeOption = 0;             // 0 = ไม่ออกประกาศ · 1 = B · 2 = C
         public bool statTriageEncountered = false;   // เคยเจอการ์ด Triage ไหม (achievement "ไม่มีใครต้องเลือก")
+        public int statZoneBWorkerDays = 0;          // วัน-คนที่อยู่ใน Zone B รวมทั้งรอบ (ตัวหารของ ALARA)
+        public int statZoneBSuitedDays = 0;          // ในจำนวนนั้น ใส่ชุดกันรังสีกี่วัน-คน (ตัวตั้ง)
     }
 }

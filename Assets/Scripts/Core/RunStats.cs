@@ -34,6 +34,10 @@ namespace NuclearReMind
         /// <summary>True once a Triage card has been presented — the player had to choose who goes without.</summary>
         public bool TriageEncountered { get; private set; }
 
+        /// <summary>Worker-days spent inside Zone B, and how many of those were spent wearing a suit.</summary>
+        public int ZoneBWorkerDays { get; private set; }
+        public int ZoneBSuitedDays { get; private set; }
+
         private int _day;
         private bool _subscribed;
         private HopeLedger _hope;   // re-created by WorkerManager.Initialize, so re-resolve each day
@@ -108,7 +112,29 @@ namespace NuclearReMind
             HookHope();
         }
 
-        private void HandleDayEnded(int day) => _day = day;
+        private void HandleDayEnded(int day)
+        {
+            _day = day;
+            SampleAlara();
+        }
+
+        /// <summary>
+        /// One ALARA sample per day: of the workers standing in Zone B right now, how many are wearing a
+        /// suit? This runs at execution order -90, i.e. BEFORE WorkerManager (-50) applies the day's
+        /// radiation and before ZoneBController (-35) rotates anyone out — so it sees the crew as it
+        /// actually worked the day, not the survivors. Suits were fitted at day start by RadSuitManager.
+        /// </summary>
+        private void SampleAlara()
+        {
+            var wm = WorkerManager.Instance;
+            if (wm == null) return;
+            foreach (var w in wm.GetWorkers(WorkerJobs.ZoneB))
+            {
+                if (!w.alive) continue;
+                ZoneBWorkerDays++;
+                if (w.hasRadSuit) ZoneBSuitedDays++;
+            }
+        }
 
         private void HookHope()
         {
@@ -157,13 +183,19 @@ namespace NuclearReMind
         public int RecordsTotal => DataRecovery.Instance != null ? DataRecovery.Instance.TotalRecords : 0;
 
         /// <summary>
-        /// ALARA compliance (STORY.md §④). Deliberately unimplemented: STORY.md asks for the row but
-        /// never defines the formula, and CLAUDE.md forbids guessing at values the docs don't specify.
-        /// CONFIG.md only defines the per-day Hope entry `alara.compliant` = "Zone B ชุดครบ".
-        /// Returns null until the definition is settled; the summary omits the row while it is null.
-        /// TODO(story): fill in once the ALARA % definition is agreed, then delete this note.
+        /// ALARA compliance (STORY.md §④) — the share of Zone B worker-days that were spent in a suit.
+        ///
+        /// STORY.md names the row but never defines the maths, so this follows the only definition the
+        /// game already had: CONFIG.md scores the Hope entry `alara.compliant` as "Zone B ชุดครบ". The
+        /// measure is protection, not outcome — ALARA is about shielding people you send in, so a player
+        /// who researches nuclear_medicine and crafts suits first scores well even if nobody happens to
+        /// fall ill, and a player who sends crews in bare scores badly even if the Med Bay saves them.
+        ///
+        /// Null when nobody ever entered Zone B: there is no compliance to report, and printing 0% (or
+        /// 100%) would both be lies about a decision the player never faced.
         /// </summary>
-        public float? AlaraCompliance => null;
+        public float? AlaraCompliance =>
+            ZoneBWorkerDays > 0 ? (float?)ZoneBSuitedDays / ZoneBWorkerDays : null;
 
         // ── Summary block ─────────────────────────────────────────────────────────────
 
@@ -179,7 +211,9 @@ namespace NuclearReMind
             Row(sb, "คนที่เสียไป", Deaths.ToString());
 
             float? alara = AlaraCompliance;
-            if (alara.HasValue) Row(sb, "ALARA compliance", $"{Mathf.RoundToInt(alara.Value * 100f)}%");
+            Row(sb, "ALARA compliance", alara.HasValue
+                ? $"{Mathf.RoundToInt(alara.Value * 100f)}%"
+                : "— (ไม่เคยส่งคนเข้า Zone B)");
 
             Row(sb, "Decree ที่ออก", DecreeLabel());
             Row(sb, "Hope ต่ำสุด", LowestHopeDay > 0
@@ -209,6 +243,8 @@ namespace NuclearReMind
             save.statLowestHopeDay = LowestHopeDay;
             save.statDecreeOption = DecreeOption;
             save.statTriageEncountered = TriageEncountered;
+            save.statZoneBWorkerDays = ZoneBWorkerDays;
+            save.statZoneBSuitedDays = ZoneBSuitedDays;
         }
 
         private void HandleSaveLoaded(SaveData save) => RestoreFromSave(save);
@@ -223,6 +259,8 @@ namespace NuclearReMind
             LowestHopeDay = save.statLowestHopeDay;
             DecreeOption = save.statDecreeOption;
             TriageEncountered = save.statTriageEncountered;
+            ZoneBWorkerDays = save.statZoneBWorkerDays;
+            ZoneBSuitedDays = save.statZoneBSuitedDays;
         }
 
         /// <summary>Wipe every latched stat — a fresh run starts from nothing.</summary>
@@ -232,6 +270,8 @@ namespace NuclearReMind
             LowestHopeDay = 0;
             DecreeOption = NoDecree;
             TriageEncountered = false;
+            ZoneBWorkerDays = 0;
+            ZoneBSuitedDays = 0;
             _day = 0;
         }
     }
