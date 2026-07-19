@@ -129,6 +129,7 @@ namespace NuclearReMind
             }
             else BuildPanel();
 
+            EnsureExtractButton(); // prefab path has no switch of its own — add it either way
             Hide();
         }
 
@@ -532,14 +533,7 @@ namespace NuclearReMind
             _extractRow = Panel("ExtractRow", infoBox.transform, CInset2);
             SetRect(_extractRow.GetComponent<RectTransform>(), new Vector2(0,1),new Vector2(1,1),new Vector2(0.5f,1), new Vector2(0,-140), new Vector2(-28,54));
             _extractTxt = Txt("ExtractVal", _extractRow.transform, "", 17, CGold, TextAnchor.MiddleLeft);
-            SetRect(_extractTxt.rectTransform, new Vector2(0,0),new Vector2(1,1),new Vector2(0.5f,0.5f), new Vector2(16,0), new Vector2(-150,0));
-
-            // ปุ่มเปิด/ปิดการสกัด (ResearchLab_System_Spec) — ผู้เล่นเลือกเอง ไม่ได้สกัดอัตโนมัติ
-            // อยู่ชิดขวาของแถวเดียวกับข้อความ เพื่อให้เห็นผลที่กำลังจะได้/เสียพร้อมกับสวิตช์
-            _extractBtn = Btn("ExtractToggle", _extractRow.transform, "เปิดสกัด", 16, CBtn);
-            SetRect((RectTransform)_extractBtn.transform, new Vector2(1,0.5f),new Vector2(1,0.5f),new Vector2(1,0.5f), new Vector2(-16,0), new Vector2(120,38));
-            _extractBtn.onClick.AddListener(OnToggleExtract);
-            _extractBtnTxt = _extractBtn.GetComponentInChildren<Text>();
+            SetRect(_extractTxt.rectTransform, new Vector2(0,0),new Vector2(1,1),new Vector2(0.5f,0.5f), new Vector2(16,0), new Vector2(-28,0));
 
             // right level box
             _lvBox = Panel("LevelBox", _root.transform, CInset);
@@ -650,6 +644,12 @@ namespace NuclearReMind
             _reqTitleTxt = r.reqTitleTxt; _reqEnergyTxt = r.reqEnergyTxt; _reqIronTxt = r.reqIronTxt;
             _reqWorkerTxt = r.reqWorkerTxt; _reqTimeTxt = r.reqTimeTxt; _warnTxt = r.warnTxt;
             _upgradeBtn = r.upgradeBtn; _upgradeBtnTxt = r.upgradeBtnTxt;
+            if (r.extractBtn != null)   // authored switch — otherwise EnsureExtractButton makes one
+            {
+                _extractBtn = r.extractBtn;
+                _extractBtnTxt = _extractBtn.GetComponentInChildren<Text>();
+                _extractBtn.onClick.AddListener(OnToggleExtract);
+            }
             if (r.cards != null)
             {
                 _cards = new LevelCard[r.cards.Length];
@@ -788,6 +788,30 @@ namespace NuclearReMind
                 _extractBtn.interactable = canSwitch;
                 if (_extractBtnTxt != null) _extractBtnTxt.text = on ? "หยุดสกัด" : "เปิดสกัด";
             }
+        }
+
+        /// <summary>
+        /// Add the extraction switch to whichever panel we ended up with.
+        ///
+        /// The panel is normally an authored prefab (Resources/BuildingUI/BuildingStatusPanel) and
+        /// BuildPanel() is only the fallback, so building the button in BuildPanel alone meant it never
+        /// appeared in the real game — the row rendered its text and nothing else. Creating it here, once,
+        /// covers both paths and keeps working if the prefab is re-authored without it. If a future prefab
+        /// does ship one, BuildingPanelRefs.extractBtn wins and this is a no-op.
+        /// </summary>
+        private void EnsureExtractButton()
+        {
+            if (_extractBtn != null || _extractRow == null) return;
+
+            _extractBtn = Btn("ExtractToggle", _extractRow.transform, "เปิดสกัด", 16, CBtn);
+            SetRect((RectTransform)_extractBtn.transform, new Vector2(1, 0.5f), new Vector2(1, 0.5f),
+                    new Vector2(1, 0.5f), new Vector2(-16, 0), new Vector2(120, 38));
+            _extractBtn.onClick.AddListener(OnToggleExtract);
+            _extractBtnTxt = _extractBtn.GetComponentInChildren<Text>();
+
+            // Give the text back the space the button now occupies, so the two never overlap.
+            if (_extractTxt != null)
+                _extractTxt.rectTransform.offsetMax = new Vector2(-150f, _extractTxt.rectTransform.offsetMax.y);
         }
 
         private void OnToggleExtract()

@@ -26,6 +26,8 @@ namespace NuclearReMind
         public Text nameTxt, headLvTxt, descTxt, hintTxt;
         public Text prodLabelTxt, prodValTxt, workerValTxt, bigLvTxt, maxLvTxt, extractTxt;
         public GameObject extractRow;
+        // Optional: leave empty and BuildingUpgradeUI creates the deuterium switch at runtime.
+        public Button extractBtn;
         public Button workerMinus, workerPlus;
         public Text upTitleTxt;
         public Button closeBtn;
