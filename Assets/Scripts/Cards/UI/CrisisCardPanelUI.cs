@@ -27,6 +27,10 @@ namespace NuclearReMind
         static readonly Color COpt       = new Color(0.20f, 0.30f, 0.24f, 1f);
         static readonly Color CLocked    = new Color(0.16f, 0.16f, 0.15f, 1f);
         static readonly Color CLockText  = new Color(0.50f, 0.50f, 0.46f, 1f);
+        // Tints for the metal option frame — near-white keeps the art true, the dark tint reads as
+        // disabled while leaving the 🔒 and the "ต้องวิจัย" line legible (rule 6: never hide a locked option).
+        static readonly Color CFrameOn   = new Color(1f, 1f, 1f, 1f);
+        static readonly Color CFrameLock = new Color(0.46f, 0.45f, 0.43f, 1f);
 
         /// <summary>
         /// True while a crisis card is on screen. CardManager checks this right after raising
@@ -36,6 +40,7 @@ namespace NuclearReMind
         public static bool IsShowing { get; private set; }
 
         private Font _font;
+        private Sprite _optFrame;
         private bool _shown, _legacyDisabled;
         private GameObject _backdrop, _root;
         private Text _title, _body;
@@ -87,13 +92,20 @@ namespace NuclearReMind
 
         private static Font LoadFont()
         {
-            var f = Resources.Load<Font>("Fonts/Kanit-Regular");
-            if (f == null) f = Resources.Load<Font>("Fonts/Kanit");
+            // The fonts live under Resources/HUD/Fonts — the old "Fonts/..." paths never resolved,
+            // so this panel had been silently falling back to Unity's built-in face.
+            var f = Resources.Load<Font>("HUD/Fonts/ChakraPetch-SemiBold");
+            if (f == null) f = Resources.Load<Font>("HUD/Fonts/ChakraPetch-Regular");
+            if (f == null) f = Resources.Load<Font>("HUD/Fonts/Kanit-Regular");
             if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             return f;
         }
 
-        private void Awake() => _font = LoadFont();
+        private void Awake()
+        {
+            _font = LoadFont();
+            _optFrame = Resources.Load<Sprite>("CardUI/opt_frame"); // null → flat colour, as before
+        }
 
         private void OnEnable()
         {
@@ -191,7 +203,7 @@ namespace NuclearReMind
                 btn.interactable = !locked;
                 var lbl = btn.GetComponentInChildren<Text>();
                 if (lbl != null) { lbl.alignment = TextAnchor.MiddleLeft; if (locked) lbl.color = CLockText; }
-                var le = btn.gameObject.AddComponent<LayoutElement>(); le.minHeight = 62f; le.preferredHeight = 62f;
+                var le = btn.gameObject.AddComponent<LayoutElement>(); le.minHeight = 84f; le.preferredHeight = 84f;
                 _optRows.Add(btn.gameObject);
             }
         }
@@ -213,11 +225,13 @@ namespace NuclearReMind
             var outline = _root.AddComponent<Outline>();
             outline.effectColor = CBorder; outline.effectDistance = new Vector2(2f, -2f);
 
-            _title = MakeText("Title", _root.transform, "", 28, CTitle, TextAnchor.UpperLeft);
-            Anchor(_title.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(28f, -24f), new Vector2(-28f, -74f));
+            // Anchor() takes offsetMin (left, BOTTOM) then offsetMax (right, TOP). Both rows used to pass
+            // them the other way round, giving the title a height of -50 and dropping it out of view.
+            _title = MakeText("Title", _root.transform, "", 30, CTitle, TextAnchor.UpperLeft);
+            Anchor(_title.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(28f, -74f), new Vector2(-28f, -24f));
 
             _body = MakeText("Body", _root.transform, "", 19, CText, TextAnchor.UpperLeft);
-            Anchor(_body.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(28f, -82f), new Vector2(-28f, -320f));
+            Anchor(_body.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(28f, -320f), new Vector2(-28f, -82f));
 
             var optRoot = NewUI("Options", _root.transform, new Color(0f, 0f, 0f, 0f));
             Anchor(optRoot, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(28f, 24f), new Vector2(-28f, -330f));
@@ -266,12 +280,23 @@ namespace NuclearReMind
         private Button MakeButton(string name, Transform parent, string text, Color bg, UnityEngine.Events.UnityAction onClick)
         {
             var go = NewUI(name, parent, bg);
+            var img = go.GetComponent<Image>();
+            if (_optFrame != null)
+            {
+                // The frame art is 1600x666 with a 150px border; a row is ~84px tall, so scale the
+                // border down rather than letting the nine-slice corners overlap and smear the bolts.
+                img.sprite = _optFrame;
+                img.type = Image.Type.Sliced;
+                img.pixelsPerUnitMultiplier = 5f;
+                img.color = bg == CLocked ? CFrameLock : CFrameOn;
+            }
             var btn = go.AddComponent<Button>();
             if (onClick != null) btn.onClick.AddListener(onClick);
             var label = MakeText("Label", go.transform, text, 18, CText, TextAnchor.MiddleLeft);
             Stretch(label.gameObject, Vector2.zero, Vector2.one);
-            label.rectTransform.offsetMin = new Vector2(14f, 0f);
-            label.rectTransform.offsetMax = new Vector2(-14f, 0f);
+            float pad = _optFrame != null ? 34f : 14f; // clear the corner bolts when the frame is used
+            label.rectTransform.offsetMin = new Vector2(pad, 0f);
+            label.rectTransform.offsetMax = new Vector2(-pad, 0f);
             return btn;
         }
     }
