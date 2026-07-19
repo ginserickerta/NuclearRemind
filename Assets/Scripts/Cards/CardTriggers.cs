@@ -79,5 +79,28 @@ namespace NuclearReMind
                 default:               return false;
             }
         }
+
+        /// <summary>
+        /// Diagnostic: the same rule as IsTriggered, written out as "actual vs threshold".
+        ///
+        /// Kept next to IsTriggered on purpose — a log that reads thresholds from somewhere else would
+        /// drift and then lie, which is worse than no log at all. Used by CardManager's day-end trace.
+        /// </summary>
+        public static string Describe(string cardId, in CardWorldState s)
+        {
+            var cfg = GameConfigSO.Instance;
+            switch (cardId)
+            {
+                case CardIds.Heat:     return $"heat {s.heat:0.0} / >{cfg.cardHeatThreshold}";
+                case CardIds.Sick:     return $"sick {s.sickWorkers} / >={cfg.cardSickCount}";
+                case CardIds.Spoil:    return $"food {s.food:0.0} / >{cfg.cardSpoilFood} && rad {s.avgRadiation:0.0} / >{cfg.cardSpoilRad}";
+                case CardIds.Hunger:   return $"hungry {s.hungryWorkers} / >={cfg.cardHungryCount}";
+                case CardIds.Overwork: return $"exhausted {s.exhaustedWorkers} / >={cfg.cardExhaustedCount}";
+                case CardIds.ZoneB:    return $"zoneBOpen {s.zoneBOpen} && staff {s.zoneBWorkers} / <{cfg.cardZoneBMinStaff}";
+                case CardIds.Triage:   return $"sick {s.sickWorkers} / >beds {s.medBayCapacity} && >={cfg.cardTriageMinSick}";
+                case CardIds.Decree:   return $"storm {s.stormActive} && cooling {s.coolingWorkers} / <{cfg.cardDecreeMinCool}";
+                default:               return "ไม่รู้จักการ์ดนี้";
+            }
+        }
     }
 }

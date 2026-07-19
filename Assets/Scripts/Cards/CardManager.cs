@@ -60,7 +60,13 @@ namespace NuclearReMind
         {
             try
             {
-                if (EventManager.Instance == null) return; // no core yet (MainMenu) — a later sceneLoaded retries
+                if (EventManager.Instance == null)
+                {
+                    // Normal in MainMenu; a real problem in Gamescene — say which, don't fail silently.
+                    Trace("ยังไม่มี EventManager ตอน AutoSpawn — ข้ามไปก่อน (ปกติถ้าอยู่หน้าเมนู) " +
+                          "รอ sceneLoaded รอบหน้าลองใหม่");
+                    return;
+                }
                 if (FindFirstObjectByType<CardManager>() != null) return;
                 new GameObject("CardManager (auto)").AddComponent<CardManager>();
             }
@@ -89,9 +95,17 @@ namespace NuclearReMind
 
         private void OnEnable()
         {
-            if (EventManager.Instance == null) return;
+            if (EventManager.Instance == null)
+            {
+                // Not a warning we can shrug off: with no subscription this manager never evaluates a
+                // single card for the whole run, silently. Louder than a Trace on purpose.
+                Debug.LogError("[Cards] CardManager ตื่นมาแต่ยังไม่มี EventManager — ไม่ได้ subscribe OnDayEnded " +
+                               "แปลว่าจะไม่มีการ์ดขึ้นเลยทั้งเกม");
+                return;
+            }
             EventManager.Instance.OnDayStarted += HandleDayStarted;
             EventManager.Instance.OnDayEnded += HandleDayEnded;
+            Trace($"CardManager พร้อมแล้ว (GameObject '{name}') — subscribe OnDayEnded เรียบร้อย");
         }
 
         private void OnDisable()
@@ -105,7 +119,12 @@ namespace NuclearReMind
 
         private void HandleDayEnded(int day)
         {
-            if (day <= 1) return; // Day 1 = tutorial: no crisis yet (matches WorkerManager)
+            if (day <= 1)
+            {
+                Trace($"วันที่ {day} จบ — ข้ามการประเมินการ์ด (วันแรกเป็นบทเรียน)");
+                return; // Day 1 = tutorial: no crisis yet (matches WorkerManager)
+            }
+            Trace($"วันที่ {day} จบ — เริ่มประเมินการ์ด");
             ApplyRecurringHope();
             EvaluateDay(day, CardWorldState.Snapshot());
         }
@@ -147,19 +166,48 @@ namespace NuclearReMind
         {
             EnsureCatalog();
             _currentDay = day;
-            if (HasPending) return Pending; // one at a time — wait for the player to resolve
+            if (HasPending)
+            {
+                Trace($"วันที่ {day}: ข้าม — ยังมีการ์ด '{Pending.cardId}' ค้างรอคำตอบอยู่");
+                return Pending; // one at a time — wait for the player to resolve
+            }
 
             foreach (var cardId in CardIds.All)          // fixed priority: card 1 → 8
             {
                 if (!_catalog.TryGetValue(cardId, out var card) || card == null) continue;
                 if (!IsEligible(card, day, state)) continue;
 
-                Pending = card;
-                TimeManager.Instance?.Pause(PauseReason.CrisisPopup);
-                EventManager.Instance?.RaiseCrisisCardShown(card);
+                if (!Present(card)) continue; // presentation failed — try the next card, don't hang
                 return card;
             }
+            TraceNothingFired(day, state);
             return null;
+        }
+
+        /// <summary>
+        /// Hand a card to the UI, then check it actually arrived.
+        ///
+        /// The order matters. Pending + the clock pause used to be set before RaiseCrisisCardShown, so a
+        /// card that no panel picked up left Pending stuck forever — and Pending is cleared ONLY by
+        /// ResolveOption. One silent miss and every remaining card of the run was blocked with no error,
+        /// which is indistinguishable from "no trigger fired". Same shape as the day-9 record-card hang.
+        ///
+        /// Returns false when the card could not be shown; the caller keeps looking and the run continues.
+        /// </summary>
+        private bool Present(CrisisCardSO card)
+        {
+            Pending = card;
+            TimeManager.Instance?.Pause(PauseReason.CrisisPopup);
+            EventManager.Instance?.RaiseCrisisCardShown(card);
+
+            // EditMode tests drive this headless — there is no panel to confirm against, by design.
+            if (!Application.isPlaying || CrisisCardPanelUI.IsShowing) return true;
+
+            Debug.LogError($"[Cards] การ์ด '{card.cardId}' ถูกสั่งแสดงแล้วแต่แผงไม่ขึ้น — " +
+                           "CrisisCardPanelUI ไม่ได้อยู่ในซีนหรือ spawn ไม่สำเร็จ ปล่อยการ์ดทิ้งเพื่อไม่ให้ค้างทั้งเกม");
+            Pending = null;
+            TimeManager.Instance?.Resume(PauseReason.CrisisPopup);
+            return false;
         }
 
         /// <summary>Dev/test: present a specific card now, bypassing triggers &amp; cooldown (F9 panel).</summary>
@@ -167,11 +215,55 @@ namespace NuclearReMind
         {
             EnsureCatalog();
             if (HasPending) return Pending;
-            if (!_catalog.TryGetValue(cardId, out var card) || card == null) return null;
-            Pending = card;
-            TimeManager.Instance?.Pause(PauseReason.CrisisPopup);
-            EventManager.Instance?.RaiseCrisisCardShown(card);
-            return card;
+            if (!_catalog.TryGetValue(cardId, out var card) || card == null)
+            {
+                Debug.LogError($"[Cards] ไม่พบการ์ด '{cardId}' ใน Resources/CrisisCards — asset หายหรือ cardId ไม่ตรง");
+                return null;
+            }
+            return Present(card) ? card : null;
+        }
+
+        /// <summary>Dev/test: drop a card stuck in Pending and let the clock run again.</summary>
+        public void ClearPending()
+        {
+            if (!HasPending) return;
+            Debug.LogWarning($"[Cards] ล้างการ์ดค้าง '{Pending.cardId}' ทิ้ง");
+            Pending = null;
+            TimeManager.Instance?.Resume(PauseReason.CrisisPopup);
+        }
+
+        // ─────────────────────────────────────────
+        //  Diagnostics — why did no card fire today?
+        // ─────────────────────────────────────────
+
+        /// <summary>Day-end trigger trace to the Console. Off in builds; toggled from the Editor menu.</summary>
+        public static bool VerboseTrace = true;
+
+        private static void Trace(string message)
+        {
+            if (VerboseTrace) Debug.Log($"[Cards] {message}");
+        }
+
+        private void TraceNothingFired(int day, in CardWorldState state)
+        {
+            if (!VerboseTrace) return;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"[Cards] วันที่ {day}: ไม่มีการ์ดขึ้น (โหลดได้ {_catalog.Count}/8 ใบ)");
+            foreach (var cardId in CardIds.All)
+            {
+                sb.Append('\n').Append("  ").Append(cardId).Append(" — ");
+                if (!_catalog.TryGetValue(cardId, out var card) || card == null)
+                { sb.Append("★ ไม่มี asset ใน Resources/CrisisCards"); continue; }
+
+                if (card.onceOnly && _usedOnce.Contains(cardId)) { sb.Append("ใช้ไปแล้ว (onceOnly)"); continue; }
+                if (_lastFiredDay.TryGetValue(cardId, out var last) && day - last < card.cooldownDays)
+                { sb.Append($"ติด cooldown (เหลืออีก {card.cooldownDays - (day - last)} วัน)"); continue; }
+
+                sb.Append(CardTriggers.IsTriggered(cardId, state) ? "เข้าเงื่อนไข!" : "ยังไม่ถึงเกณฑ์")
+                  .Append("  ▸ ").Append(CardTriggers.Describe(cardId, state));
+            }
+            Debug.Log(sb.ToString());
         }
 
         private bool IsEligible(CrisisCardSO card, int day, in CardWorldState state)

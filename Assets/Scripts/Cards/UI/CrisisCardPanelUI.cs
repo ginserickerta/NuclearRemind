@@ -28,6 +28,13 @@ namespace NuclearReMind
         static readonly Color CLocked    = new Color(0.16f, 0.16f, 0.15f, 1f);
         static readonly Color CLockText  = new Color(0.50f, 0.50f, 0.46f, 1f);
 
+        /// <summary>
+        /// True while a crisis card is on screen. CardManager checks this right after raising
+        /// OnCrisisCardShown: if the card never made it to a panel it must not stay Pending, because
+        /// Pending is cleared only by resolving an option and would block the rest of the run silently.
+        /// </summary>
+        public static bool IsShowing { get; private set; }
+
         private Font _font;
         private bool _shown, _legacyDisabled;
         private GameObject _backdrop, _root;
@@ -102,8 +109,8 @@ namespace NuclearReMind
 
         private void Start()
         {
-            BuildPanel();
-            Hide();
+            if (_root == null) BuildPanel(); // Show() may have built it already this frame
+            if (!_shown) Hide();
             DisableLegacy();
         }
 
@@ -118,9 +125,14 @@ namespace NuclearReMind
         // ── show / hide (CardManager owns the day-clock pause/resume) ──
         private void Show(CrisisCardSO card)
         {
-            if (card == null || _root == null) return;
+            if (card == null) return;
+            // A card can arrive before Start() on the frame we auto-spawn — build on demand rather than
+            // dropping it on the floor (a dropped card used to hang the run; see CardManager.Present).
+            if (_root == null) BuildPanel();
+            if (_root == null) return;
             Populate(card);
             _shown = true;
+            IsShowing = true;
             if (_backdrop != null) _backdrop.SetActive(true);
             GameUIStack.Push(this);
         }
@@ -128,6 +140,7 @@ namespace NuclearReMind
         private void Hide()
         {
             _shown = false;
+            IsShowing = false;
             if (_backdrop != null) _backdrop.SetActive(false);
             GameUIStack.Pop(this);
         }
