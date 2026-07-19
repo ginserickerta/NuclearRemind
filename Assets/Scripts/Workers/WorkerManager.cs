@@ -500,8 +500,13 @@ namespace NuclearReMind
                 if (w.radiation > _cfg.dyingThreshold) w.status = WorkerStatus.Dying;
                 else if (w.radiation > _cfg.sickThreshold) w.status = WorkerStatus.Sick;
                 else if (w.hunger > _cfg.hungryThreshold) w.status = WorkerStatus.Hungry;
-                else if (w.fatigue > _cfg.effFatigueHard) w.status = WorkerStatus.Exhausted;
-                else if (w.fatigue > _cfg.effFatigueSoft) w.status = WorkerStatus.Tired;
+                // ★ exhaustedThreshold (68) ไม่ใช่ effFatigueHard (85) — เลข 85 เคยทำสองหน้าที่พร้อมกัน
+                //   (วัดกำลัง + ตั้งชื่อสถานะ) แต่ ShiftSystem ดึงคนไปพักที่ 70 ยอดความล้าจริงจึงแค่ 72
+                //   ป้าย "หมดแรง" เลยไม่เคยถูกติดให้ใคร และการ์ด overwork ไม่มีทางเกิด (ดู GameConfigSO)
+                else if (w.fatigue > _cfg.exhaustedThreshold) w.status = WorkerStatus.Exhausted;
+                // tiredThreshold (45) ไม่ใช่ effFatigueSoft (60) — ความล้าเดินทีละ 12 ถ้าใช้ 60 ช่วง "ล้า"
+                // จะเหลือ 61-68 ซึ่งไม่มีค่าไหนตกลงไปเลย ผู้เล่นจะไม่ได้สัญญาณเตือนก่อนคนถูกดึงไปพัก
+                else if (w.fatigue > _cfg.tiredThreshold) w.status = WorkerStatus.Tired;
                 else w.status = WorkerStatus.Healthy;
             }
         }

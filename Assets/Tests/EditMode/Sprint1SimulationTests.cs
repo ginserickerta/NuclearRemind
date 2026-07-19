@@ -138,16 +138,26 @@ namespace NuclearReMind.Tests
             var rng = new System.Random(99);
             float food = 999f;
 
-            int maxExhausted = 0;
+            // ★ วัด "ถาวรไหม" ไม่ใช่ "กี่คน" — บั๊ก #5 คือ *ทั้งเมือง Exhausted **ถาวร** D8* คำสำคัญคือถาวร
+            //   เดิมเทสต์นี้ผูกกับ maxExhausted <= 4 ซึ่งใช้ได้ตอนที่ Exhausted แปลว่า "ล้าเกิน 85 = ทำงาน
+            //   ไม่ได้เลย" (ซึ่งไม่เคยเกิดจริง เพราะกะดึงคนออกที่ 70 — ตัวเลขจึงเป็น 0 ตลอดและเทสต์ผ่าน
+            //   แบบว่างเปล่า) ตอนนี้ Exhausted แปลว่า "ล้าเกิน 68 = ถึงจุดที่ต้องถูกดึงออก" คนทั้งกะที่เข้างาน
+            //   พร้อมกันจึงติดป้ายพร้อมกันหนึ่งวันเป็นเรื่องปกติ — สิ่งที่ต้องห้ามคือมันค้างข้ามวัน
+            var prevExhausted = new HashSet<int>();
             for (int day = 2; day <= 20; day++)
             {
                 food += 200f; // อาหารล้น — แยกตัวแปรความล้าออกมาดูอย่างเดียว
                 food = SimulateDay(food, rng, out _);
-                maxExhausted = Mathf.Max(maxExhausted, wm.ExhaustedCount);
+
+                var now = new HashSet<int>(wm.Workers.Where(w => w.alive && w.status == WorkerStatus.Exhausted)
+                                                     .Select(w => w.id));
+                var stuck = now.Intersect(prevExhausted).ToList();
+                Assert.IsEmpty(stuck,
+                    $"วันที่ {day}: คนงาน id {string.Join(",", stuck)} หมดแรงติดกันสองวัน — " +
+                    "ระบบกะต้องดึงออกไปพักทุกครั้ง (บั๊ก #5: ไม่มีกะ → ทั้งเมือง Exhausted ถาวร D8)");
+                prevExhausted = now;
             }
 
-            Assert.LessOrEqual(maxExhausted, 4,
-                "ระบบกะต้องกันเมือง Exhausted ยกเมือง (บั๊ก #5: ไม่มีกะ → ทั้งเมือง Exhausted ถาวร D8)");
             Assert.IsTrue(wm.Workers.Any(w => w.fatigue < 70f), "ต้องมีคนได้พักจริง");
         }
 

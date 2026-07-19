@@ -220,8 +220,10 @@ namespace NuclearReMind
             foreach (var w in alive)
             {
                 if (w.hunger > cfg.hungryThreshold) hungry++;
-                if (w.fatigue > cfg.effFatigueHard) exhausted++;
-                else if (w.fatigue > cfg.effFatigueSoft) tired++;
+                // เกณฑ์ป้ายสถานะ (68) ไม่ใช่เกณฑ์ประสิทธิภาพ (85) — ต้องตรงกับ RecalcStatus
+                // ไม่งั้นแถบสรุปจะเถียงกับคอลัมน์สถานะในตารางเดียวกัน
+                if (w.fatigue > cfg.exhaustedThreshold) exhausted++;
+                else if (w.fatigue > cfg.tiredThreshold) tired++;
                 if (w.radiation > cfg.dyingThreshold) dying++;
                 else if (w.radiation > cfg.sickThreshold) sick++;
                 if (wm.GetEfficiency(w) <= 0f) useless++;
@@ -269,7 +271,9 @@ namespace NuclearReMind
 
                 Set(cells[0], string.IsNullOrEmpty(w.displayName) ? $"#{w.id:00}" : w.displayName, CText);
                 Set(cells[1], JobLabel(w), w.IsWorking ? CText : CMuted);
-                Set(cells[2], Metric(w.fatigue, d.x, cfg.effFatigueSoft, cfg.effFatigueHard), CText);
+                // ▲ ใช้เกณฑ์ป้ายสถานะ (45/68) ไม่ใช่เกณฑ์ประสิทธิภาพ (60/85) — ให้ทั้งแถวพูดภาษาเดียวกัน
+                // กับคอลัมน์ "สถานะ" และแถบสรุปข้างบน · ผลกระทบเชิงกลไกอ่านได้จากคอลัมน์ประสิทธิภาพอยู่แล้ว
+                Set(cells[2], Metric(w.fatigue, d.x, cfg.tiredThreshold, cfg.exhaustedThreshold), CText);
                 Set(cells[3], Metric(w.hunger, d.y, cfg.hungryThreshold, 100f), CText);
                 Set(cells[4], Metric(w.radiation, d.z, cfg.sickThreshold, cfg.dyingThreshold), CText);
                 Set(cells[5], $"{eff * 100f:0}%", eff <= 0f ? CBad : eff < 1f ? CWarn : CGood);
