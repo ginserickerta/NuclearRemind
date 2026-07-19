@@ -206,8 +206,13 @@ namespace NuclearReMind
         {
             int knowledge = ResourceManager.Instance != null
                 ? Mathf.RoundToInt(ResourceManager.Instance.Current.knowledge) : 0;
-            var codex = CodexManager.Instance != null ? CodexManager.Instance.UnlockedIds : null;
-            MetaProgress.Capture(knowledge, codex);
+            // ★ v6.3: nothing to merge in. This used to pass CodexManager.UnlockedIds, but that manager
+            // is retired and its set only ever held ids from the dead legacy unlock path — so the capture
+            // contributed nothing for entries earned this run. The live path
+            // (CodexQuizManager.UnlockCodexFor) writes straight into MetaProgress.UnlockedCodex, which is
+            // the same set Capture would merge into, so passing null is correct rather than lossy. Capture
+            // still banks Knowledge and Saves.
+            MetaProgress.Capture(knowledge, null);
         }
 
         /// <summary>เริ่มเกมใหม่ (V4 §14) — reload scene · คลังความรู้ถาวรคงอยู่ (Knowledge/Codex)</summary>

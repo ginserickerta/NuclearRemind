@@ -87,7 +87,18 @@ namespace NuclearReMind
 
         public int TotalCodex { get { EnsureCatalog(); return _codexAll.Count; } }
 
-        /// <summary>Header count "x / 11" — counts all unlocked entries, never per-category (CODEX.md §6).</summary>
+        /// <summary>
+        /// Header count "x / 11" — counts all unlocked entries, never per-category (CODEX.md §6).
+        ///
+        /// ★ Counted from MasteryRegistry, NOT from MetaProgress.UnlockedCodex. The two are separate
+        /// persistent stores, and the rows underneath this header derive their state from mastery
+        /// (see GetAll). Counting the other store produced headers like "เชี่ยวชาญ 3 / 11" sitting above
+        /// eleven rows that all rendered as locked, because the retired legacy CodexManager wrote codex
+        /// ids without ever granting the matching mastery. Mastery is also what actually pays the player
+        /// a bonus, so this is the reading that cannot lie: if the header says unlocked, the bonus is live.
+        /// MetaProgress.UnlockedCodex is still written by UnlockCodexFor and still carries entries
+        /// across runs; it is simply no longer a second opinion on the count.
+        /// </summary>
         public int UnlockedCodexCount
         {
             get
@@ -95,12 +106,26 @@ namespace NuclearReMind
                 EnsureCatalog();
                 int n = 0;
                 foreach (var c in _codexAll)
-                    if (MetaProgress.UnlockedCodex.Contains(c.entryId)) n++;
+                    if (IsCodexUnlocked(c)) n++;
                 return n;
             }
         }
 
-        public bool IsCodexUnlocked(string entryId) => MetaProgress.UnlockedCodex.Contains(entryId);
+        private static bool IsCodexUnlocked(CodexEntrySO c)
+        {
+            if (c == null) return false;
+            // An entry with no owning quiz has no mastery to check — fall back to the persisted set.
+            if (string.IsNullOrEmpty(c.unlockedFromQuiz)) return MetaProgress.UnlockedCodex.Contains(c.entryId);
+            return MasteryRegistry.Instance.Has(c.unlockedFromQuiz);
+        }
+
+        public bool IsCodexUnlocked(string entryId)
+        {
+            EnsureCatalog();
+            foreach (var c in _codexAll)
+                if (c != null && c.entryId == entryId) return IsCodexUnlocked(c);
+            return MetaProgress.UnlockedCodex.Contains(entryId);
+        }
 
         // ─────────────────────────────────────────
         //  Applied state — the game loop / tests feed this (requiresApplied)
@@ -203,6 +228,30 @@ namespace NuclearReMind
                                                                        : QuizState.Locked;
                 yield return new QuizView { quiz = q, codex = codex, state = st };
             }
+        }
+
+        // Quizzes already offered as a centre-screen prompt. A prompt is a one-time invitation: skipping
+        // it must not make it reappear tomorrow, or "ข้ามได้" would only mean "ข้ามได้วันนี้".
+        private readonly HashSet<string> _prompted = new HashSet<string>();
+
+        /// <summary>
+        /// Quizzes that have just become answerable and have never been offered as a prompt. Calling this
+        /// consumes them. QUIZZES.md keeps quizzes optional, so the caller must present them skippably —
+        /// this only decides WHEN to invite, never whether the player has to answer.
+        /// </summary>
+        public List<QuizQuestionSO> TakeNewlyAnswerable()
+        {
+            EnsureCatalog();
+            var fresh = new List<QuizQuestionSO>();
+            foreach (var kv in _quizzes)
+            {
+                var q = kv.Value;
+                if (q == null || _prompted.Contains(q.quizId)) continue;
+                if (!IsAnswerable(q.quizId)) continue;
+                _prompted.Add(q.quizId);
+                fresh.Add(q);
+            }
+            return fresh;
         }
 
         /// <summary>Codex list ordered for the panel — all entries, locked ones INCLUDED (never hidden).</summary>
