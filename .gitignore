@@ -54,3 +54,19 @@ Assets/Resources/PerformanceTestRun*.json*
 compile_*.log
 test_*.log
 results_*.xml
+
+# Office lock files (~$ prefix) — appear whenever a .docx is open, never wanted
+~$*
+
+# Windows shortcuts
+*.lnk
+
+# Local tooling: butler (itch.io upload) + its cache
+/tools/
+
+# Generated code reports (rebuildable from tools/make_code_report.py)
+/docs/*.docx
+
+# Claude Code session backups (chat recovery, not project content)
+*.jsonl.bak
+chat-recovered-*.md
