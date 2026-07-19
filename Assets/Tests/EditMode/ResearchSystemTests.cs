@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -28,19 +29,36 @@ namespace NuclearReMind.Tests
             KnowledgeDB.Instance.RegisterNotes(BuildCatalog());
 
             // EventManager first — managers' OnEnable subscribe to it; tests assert on its events
-            var evGo = new GameObject("EventManager");
-            _spawned.Add(evGo);
-            events = evGo.AddComponent<EventManager>();
+            events = NewComponent<EventManager>("EventManager");
 
-            var wmGo = new GameObject("WorkerManager");
-            _spawned.Add(wmGo);
-            wm = wmGo.AddComponent<WorkerManager>();
+            wm = NewComponent<WorkerManager>("WorkerManager");
             wm.Initialize(cfg);
 
-            var labGo = new GameObject("ResearchLab");
-            _spawned.Add(labGo);
-            lab = labGo.AddComponent<ResearchLab>();
+            lab = NewComponent<ResearchLab>("ResearchLab");
             lab.Initialize(cfg);
+        }
+
+        /// <summary>
+        /// EditMode never calls Awake/OnEnable for AddComponent, so the `Instance` singletons stay null -
+        /// and ResearchLab reaches for WorkerManager.Instance (not any reference held here) when it counts
+        /// staff. Same idiom as ResearchManagerTests / DataRecoveryTests.
+        /// </summary>
+        private T NewComponent<T>(string name) where T : Component
+        {
+            var go = new GameObject(name);
+            _spawned.Add(go);
+            var c = go.AddComponent<T>();
+            TryInvokePrivate(c, "Awake");
+            TryInvokePrivate(c, "OnEnable");
+            return c;
+        }
+
+        private static void TryInvokePrivate(object target, string methodName)
+        {
+            MethodInfo method = target.GetType().GetMethod(methodName,
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            try { method?.Invoke(target, null); }
+            catch (TargetInvocationException) { }
         }
 
         [TearDown]
@@ -85,6 +103,11 @@ namespace NuclearReMind.Tests
             foreach (var w in wm.Workers.Take(cfg.repairWorkers)) wm.AssignJob(w, WorkerJobs.Lab);
             for (int i = 0; i < cfg.repairDays; i++) lab.TickDay();
             Assert.IsFalse(lab.IsRuined, "precondition: lab repaired");
+
+            // Send the repair crew back to idle. AssignJobCounts only fills FROM idle - it does not clear
+            // existing assignments - so leaving 2 workers on Lab makes every later count off by two, and
+            // the tests below are written assuming a clean pool ("เหลือ idle 10 คน" after Mine 4 of 14).
+            foreach (var w in wm.GetWorkers(WorkerJobs.Lab).ToList()) wm.AssignJob(w, WorkerJobs.Idle);
         }
 
         // ── bug #11: lead_map ครบ 8 ใบ ─────────────────────────────

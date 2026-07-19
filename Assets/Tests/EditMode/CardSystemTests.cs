@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -27,19 +28,36 @@ namespace NuclearReMind.Tests
             GameConfigSO.OverrideForTest(cfg);
             KnowledgeDB.ResetForTest();
 
-            var evGo = new GameObject("EventManager");
-            _spawned.Add(evGo);
-            events = evGo.AddComponent<EventManager>();
+            events = NewComponent<EventManager>("EventManager");
 
-            var wmGo = new GameObject("WorkerManager");
-            _spawned.Add(wmGo);
-            wm = wmGo.AddComponent<WorkerManager>();
+            wm = NewComponent<WorkerManager>("WorkerManager");
             wm.Initialize(cfg);
 
-            var cmGo = new GameObject("CardManager");
-            _spawned.Add(cmGo);
-            cm = cmGo.AddComponent<CardManager>();
+            cm = NewComponent<CardManager>("CardManager");
             cm.Initialize(cfg);
+        }
+
+        /// <summary>
+        /// EditMode never calls Awake/OnEnable for AddComponent, so the `Instance` singletons stay null -
+        /// CardManager resolves effects through WorkerManager.Instance / its hope ledger, not through any
+        /// reference held here. Same idiom as ResearchManagerTests / DataRecoveryTests.
+        /// </summary>
+        private T NewComponent<T>(string name) where T : Component
+        {
+            var go = new GameObject(name);
+            _spawned.Add(go);
+            var c = go.AddComponent<T>();
+            TryInvokePrivate(c, "Awake");
+            TryInvokePrivate(c, "OnEnable");
+            return c;
+        }
+
+        private static void TryInvokePrivate(object target, string methodName)
+        {
+            MethodInfo method = target.GetType().GetMethod(methodName,
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            try { method?.Invoke(target, null); }
+            catch (TargetInvocationException) { }
         }
 
         [TearDown]

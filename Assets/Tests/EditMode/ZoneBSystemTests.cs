@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -29,17 +30,32 @@ namespace NuclearReMind.Tests
             CodexQuizManager.ResetForTest();
             KnowledgeDB.ResetForTest();
 
-            var evGo = new GameObject("EventManager"); _spawned.Add(evGo);
-            evGo.AddComponent<EventManager>();
+            NewComponent<EventManager>("EventManager");
+            wm = NewComponent<WorkerManager>("WorkerManager"); wm.Initialize(cfg);
+            zb = NewComponent<ZoneBController>("ZoneBController"); zb.Initialize(cfg);
+            suits = NewComponent<RadSuitManager>("RadSuitManager"); suits.Initialize(cfg);
+        }
 
-            var wmGo = new GameObject("WorkerManager"); _spawned.Add(wmGo);
-            wm = wmGo.AddComponent<WorkerManager>(); wm.Initialize(cfg);
+        /// <summary>
+        /// EditMode never calls Awake/OnEnable for AddComponent, so the `Instance` singletons stay null
+        /// and the systems cannot find each other. Same idiom as ResearchManagerTests / DataRecoveryTests.
+        /// </summary>
+        private T NewComponent<T>(string name) where T : Component
+        {
+            var go = new GameObject(name);
+            _spawned.Add(go);
+            var c = go.AddComponent<T>();
+            TryInvokePrivate(c, "Awake");
+            TryInvokePrivate(c, "OnEnable");
+            return c;
+        }
 
-            var zbGo = new GameObject("ZoneBController"); _spawned.Add(zbGo);
-            zb = zbGo.AddComponent<ZoneBController>(); zb.Initialize(cfg);
-
-            var suitGo = new GameObject("RadSuitManager"); _spawned.Add(suitGo);
-            suits = suitGo.AddComponent<RadSuitManager>(); suits.Initialize(cfg);
+        private static void TryInvokePrivate(object target, string methodName)
+        {
+            MethodInfo method = target.GetType().GetMethod(methodName,
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            try { method?.Invoke(target, null); }
+            catch (TargetInvocationException) { }
         }
 
         [TearDown]

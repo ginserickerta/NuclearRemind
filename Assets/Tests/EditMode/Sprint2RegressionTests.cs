@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -38,11 +39,25 @@ namespace NuclearReMind.Tests
             GameConfigSO.OverrideForTest(null);
         }
 
+        // EditMode never calls Awake/OnEnable for AddComponent, so they have to be invoked by hand -
+        // without this ResourceManager.Current is never initialised and every food assertion here is
+        // measuring an empty struct. Same idiom as ResearchManagerTests / DataRecoveryTests.
         private T New<T>(string name) where T : Component
         {
             var go = new GameObject(name);
             _spawned.Add(go);
-            return go.AddComponent<T>();
+            var c = go.AddComponent<T>();
+            TryInvokePrivate(c, "Awake");
+            TryInvokePrivate(c, "OnEnable");
+            return c;
+        }
+
+        private static void TryInvokePrivate(object target, string methodName)
+        {
+            MethodInfo method = target.GetType().GetMethod(methodName,
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            try { method?.Invoke(target, null); }
+            catch (TargetInvocationException) { }
         }
 
         private void SetFood(float target)
