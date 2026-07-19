@@ -146,6 +146,14 @@ namespace NuclearReMind
         {
             if (IsDone(projectId)) { reason = "วิจัยสำเร็จแล้ว"; return false; }
 
+            // An unknown id is answered first: the staffing gate below was added later and shadowed the
+            // `default:` branch, so a bogus project reported "ห้องวิจัย..." instead of "ไม่รู้จัก".
+            if (projectId != ProjectSeeds && projectId != ProjectIsotope && projectId != ProjectCoreTower)
+            {
+                reason = $"ไม่รู้จักโครงการ '{projectId}'";
+                return false;
+            }
+
             // ห้องวิจัยต้องมีวิศวกรประจำครบจึงเดินงานวิจัย (ทุกโครงการ)
             if (!LabStaffed(out string labReason)) { reason = labReason; return false; }
 
