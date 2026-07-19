@@ -110,9 +110,6 @@ namespace NuclearReMind
             if (record == null) return;
             _current = record;
 
-            IsShowing = true;
-            TimeManager.Instance?.Pause(PauseReason.StoryCard);
-
             // มีรูปเต็มใบสำหรับ record นี้ → โชว์รูป + ซ่อนข้อความ (baked แล้ว) · ไม่มี (elara_01) → กรอบเดิม + text
             Sprite full = Resources.Load<Sprite>("StoryUI/RecordCards/record_" + record.recordId);
             bool useImage = full != null && _cardImg != null;
@@ -149,12 +146,47 @@ namespace NuclearReMind
             }
 
             if (overlayPanel != null) overlayPanel.SetActive(true);
+
+            // ★ Freeze the clock only once the card is provably on screen. The old order paused first
+            // and hoped the panel appeared — and when RecordCardCanvas was left inactive in the scene,
+            // SetActive(true) on a child of a disabled parent showed nothing, the dismiss buttons could
+            // never be clicked, and PauseReason.StoryCard was held forever. That is what stopped the
+            // clock on day 9 (Record #1 lands there: 14/day passive vs. a target of 100).
+            if (!CanBeDismissed())
+            {
+                Debug.LogWarning($"[RecordCardUI] แสดงการ์ด '{record.recordId}' ไม่ได้ " +
+                                 "(overlay ปิดอยู่ หรือไม่มีปุ่มปิด) — เก็บเข้าแผง Records แล้วปล่อยเวลาเดินต่อ");
+                _current = null;
+                IsShowing = false;
+                if (overlayPanel != null) overlayPanel.SetActive(false);
+                // The record itself must not be lost just because its card could not be drawn.
+                EventManager.Instance.RaiseRecordArchiveRequested(record);
+                EventManager.Instance.RaiseStoryCardDismissed();
+                return;
+            }
+
+            IsShowing = true;
+            TimeManager.Instance?.Pause(PauseReason.StoryCard);
+
             if (cardRoot != null)
             {
                 if (_popIn != null) StopCoroutine(_popIn);
                 _popIn = StartCoroutine(PopIn());
             }
         }
+
+        /// <summary>
+        /// Is the card actually visible AND closable? Both halves matter: a panel nobody can see and a
+        /// panel with no working dismiss button trap the player exactly the same way.
+        /// </summary>
+        private bool CanBeDismissed()
+        {
+            if (overlayPanel == null || !overlayPanel.activeInHierarchy) return false;
+            return IsUsable(ackButton) || IsUsable(archiveButton);
+        }
+
+        private static bool IsUsable(Button b)
+            => b != null && b.isActiveAndEnabled && b.interactable;
 
         // ชื่อผู้บันทึก: ใช้ recorderName ถ้ามี · ไม่งั้นดึงจาก authorLabel หลัง "ผู้บันทึก:" · สุดท้าย authorLabel ทั้งก้อน
         private static string ResolveRecorder(RecordCardSO record)
