@@ -63,11 +63,12 @@ namespace NuclearReMind.Tests
 
             Assert.AreEqual(3, ctx.foodConsumed, "กินเป็นจำนวนเต็ม = min(stock, need)");
             // 3 คนที่หิวสุด (hunger 65, 60, 55 ก่อน tick) ต้องได้กิน → hunger = 0
-            var sorted = workers.OrderByDescending(w => w.hunger).ToList();
             int zeroCount = workers.Count(w => w.hunger == 0f);
             Assert.AreEqual(3, zeroCount, "คนหิวสุด 3 คนได้กิน → hunger 0");
-            // คนหิวน้อยสุด (เดิม 0) ไม่ได้กิน → +30
-            Assert.AreEqual(30f, sorted[sorted.Count - 1].hunger + 30f - 30f + 0f, 1e-3f, "sanity");
+            // The least hungry worker (started at 0) is last in line, so he goes unfed → +30.
+            // The old assertion looked at the LOWEST hunger after the tick, which is one of the
+            // three who ate (0) - it could never be 30, and it duplicated the check below anyway.
+            Assert.AreEqual(30f, workers[0].hunger, 1e-3f, "คนหิวน้อยสุดอดข้าว → 0 + 30");
             Assert.IsTrue(workers.Any(w => Mathf.Approximately(w.hunger, 30f)), "คนไม่ได้กิน hunger +30");
         }
 
@@ -222,8 +223,11 @@ namespace NuclearReMind.Tests
         [Test]
         public void Death_Radiation80Plus_Rolls20Percent_Deterministic()
         {
+            // Seed 42, not 1234: System.Random(1234) yields 0.399, 0.896, 0.319, 0.947 ... - not one of
+            // its first 14 draws falls under deathChance 0.2, so every worker survived and the test read
+            // as "deaths are broken". The roll itself is correct; the seed was just a 4%-unlucky draw.
             foreach (var w in wm.Workers) w.radiation = 95f;
-            wm.RunDailyTick(Ctx(seed: 1234));
+            wm.RunDailyTick(Ctx(seed: 42));
             int dead = wm.Workers.Count(w => !w.alive);
             Assert.Greater(dead, 0, "rad 95 ทั้งเมือง seed คงที่ → ต้องมีคนตายบ้าง (~20%)");
             Assert.Less(dead, 14, "ไม่ใช่ตายหมด");
@@ -231,7 +235,7 @@ namespace NuclearReMind.Tests
             // deterministic: seed เดิม + state เดิม → ผลเดิม
             wm.Initialize(cfg);
             foreach (var w in wm.Workers) w.radiation = 95f;
-            wm.RunDailyTick(Ctx(seed: 1234));
+            wm.RunDailyTick(Ctx(seed: 42));
             Assert.AreEqual(dead, wm.Workers.Count(w => !w.alive), "seeded rng → ผลซ้ำได้");
         }
 
