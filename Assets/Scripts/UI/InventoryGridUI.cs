@@ -198,11 +198,11 @@ namespace NuclearReMind
                 var c = rm.Current;
                 AddRes("res_energy",   "พลังงาน (Energy)",  Tab.Resource, c.energy,    "⚡",
                        "พลังงานสำหรับเดินเครื่องอาคารและเตา CORE",       ResIcon("Energy"));
-                AddRes("res_water",    "น้ำ (Water)",        Tab.Resource, c.water,     "💧",
+                AddRes("res_water",    "น้ำ (Water)",        Tab.Resource, c.water,     "",
                        "ใช้บริโภค · หล่อเย็นเตา · สกัดดิวเทอเรียม",        ResIcon("Water"));
                 AddRes("res_iron",     "เหล็ก (Iron)",       Tab.Resource, c.iron,      "⛏",
                        "วัสดุก่อสร้างและอัปเกรดอาคาร",                     ResIcon("Iron"));
-                AddRes("res_food",     "อาหาร (Food)",       Tab.Food,     c.food,      "🌿",
+                AddRes("res_food",     "อาหาร (Food)",       Tab.Food,     c.food,      "",
                        "เลี้ยงประชากร (บริโภค 2/คน/วัน) · เพดาน 500",      ResIcon("Food"));
                 AddRes("res_deuterium","ดิวเทอเรียม",        Tab.Fuel,     c.deuterium, "D",
                        "เชื้อเพลิงป้อนเตา — ดัน CORE% ตามโหมด Overclock", ResIcon("Deuterium"));
@@ -283,7 +283,7 @@ namespace NuclearReMind
                 _selectedId = null;
 
             // ตัวนับหัวกริด = จำนวนช่องที่มีของ (ทุกหมวด) / เพดาน
-            if (_countTxt != null) _countTxt.text = $"{_all.Count:00} / {SlotCap} 🔒";
+            if (_countTxt != null) _countTxt.text = $"{_all.Count:00} / {SlotCap} [ล็อก]";
 
             // เติมกริด
             for (int i = 0; i < _cells.Length; i++)
@@ -345,7 +345,7 @@ namespace NuclearReMind
 
             // รูป/emoji
             if (_dIcon != null)    _dIcon.enabled    = has && sel.sprite != null;
-            if (_dIconTxt != null) { _dIconTxt.enabled = !has || sel.sprite == null; _dIconTxt.text = has ? sel.emoji : "🎒"; _dIconTxt.color = has ? CText : CMuted; }
+            if (_dIconTxt != null) { _dIconTxt.enabled = !has || sel.sprite == null; _dIconTxt.text = has ? sel.emoji : ""; _dIconTxt.color = has ? CText : CMuted; }
             if (has && sel.sprite != null && _dIcon != null) _dIcon.sprite = sel.sprite;
 
             if (_dName != null)  { _dName.text = has ? sel.name : "เลือกไอเทม"; _dName.color = has ? CGold : CText; }
@@ -358,7 +358,7 @@ namespace NuclearReMind
             // ปุ่มทิ้ง: ทิ้งได้เฉพาะไอเทมคราฟต์ที่เลือก (ทรัพยากรทิ้งไม่ได้)
             bool canDiscard = has && !sel.isResource;
             if (_discardBtn != null) _discardBtn.interactable = canDiscard;
-            if (_discardTxt != null) _discardTxt.text = (has && sel.isResource) ? "🗑 ทิ้งทรัพยากรไม่ได้" : "🗑 ทิ้งไอเทม";
+            if (_discardTxt != null) _discardTxt.text = (has && sel.isResource) ? "ทิ้งทรัพยากรไม่ได้" : "ทิ้งไอเทม";
         }
 
         private void SelectSlot(int cellIndex)
@@ -407,7 +407,7 @@ namespace NuclearReMind
             var iconBox = Panel("HeaderIcon", _root.transform, CInset);
             SetRect(iconBox.GetComponent<RectTransform>(), new Vector2(0,1), new Vector2(0,1), new Vector2(0,1), new Vector2(pad,-24), new Vector2(64,64));
             AddBorder(iconBox, CBorder, 2f);
-            var hIco = Txt("hi", iconBox.transform, "🎒", 34, CGold, TextAnchor.MiddleCenter);
+            var hIco = Txt("hi", iconBox.transform, "", 34, CGold, TextAnchor.MiddleCenter);
             Stretch(hIco.rectTransform); hIco.raycastTarget = false;
 
             var title = Txt("Title", _root.transform, "INVENTORY", 36, CText, TextAnchor.UpperLeft, FontStyle.Bold);
@@ -429,7 +429,7 @@ namespace NuclearReMind
             float rowY = -(panelSize.y - 40f - 56f); // แถวแท็บ/ปุ่มล่าง (อ้างจาก top)
 
             // ===== COUNTER (หัวกริด ขวาบน) =====
-            _countTxt = Txt("Count", _root.transform, "00 / 999 🔒", 20, CMuted, TextAnchor.UpperRight, FontStyle.Bold);
+            _countTxt = Txt("Count", _root.transform, "00 / 999 [ล็อก]", 20, CMuted, TextAnchor.UpperRight, FontStyle.Bold);
             SetRect(_countTxt.rectTransform, new Vector2(0,1), new Vector2(0,1), new Vector2(1,1), new Vector2(gridX+leftW,-84), new Vector2(360,26));
 
             // ===== GRID =====
@@ -471,7 +471,7 @@ namespace NuclearReMind
             }
 
             // ===== DISCARD (ล่างขวา) =====
-            _discardBtn = Btn("Discard", _root.transform, "🗑 ทิ้งไอเทม", 22, CRed);
+            _discardBtn = Btn("Discard", _root.transform, "ทิ้งไอเทม", 22, CRed);
             SetRect((RectTransform)_discardBtn.transform, new Vector2(0,1), new Vector2(0,1), new Vector2(1,1), new Vector2(W-pad,rowY), new Vector2(rightW, 56));
             AddBorder(_discardBtn.gameObject, CRedBright, 2f);
             _discardTxt = _discardBtn.GetComponentInChildren<Text>();
@@ -535,7 +535,7 @@ namespace NuclearReMind
             drt.anchoredPosition = Vector2.zero; drt.sizeDelta = new Vector2(boxS*0.7f, boxS*0.7f);
             _dIcon.raycastTarget = false; _dIcon.preserveAspect = true; _dIcon.enabled = false;
 
-            _dIconTxt = Txt("diconT", iconBox.transform, "🎒", 96, CMuted, TextAnchor.MiddleCenter);
+            _dIconTxt = Txt("diconT", iconBox.transform, "", 96, CMuted, TextAnchor.MiddleCenter);
             Stretch(_dIconTxt.rectTransform); _dIconTxt.raycastTarget = false;
 
             // ชื่อ
@@ -645,10 +645,10 @@ namespace NuclearReMind
         {
             switch (c)
             {
-                case ItemCategory.Equipment: return "🛡";
+                case ItemCategory.Equipment: return "";
                 case ItemCategory.Medical:   return "⚕";
-                case ItemCategory.Agri:      return "🌾";
-                case ItemCategory.Emergency: return "🧯";
+                case ItemCategory.Agri:      return "";
+                case ItemCategory.Emergency: return "";
                 default:                     return "⚛";
             }
         }

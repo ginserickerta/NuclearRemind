@@ -200,9 +200,9 @@ namespace NuclearReMind
         {
             if (lab.IsRuined)
                 return lab.RepairPaid
-                    ? $"🏚 กำลังซ่อม {lab.RepairProgress:0}/{GameConfigSO.Instance.repairDays} วัน (ต้องมีคน lab ≥ {GameConfigSO.Instance.repairWorkers})"
-                    : $"🏚 ห้องวิจัยเป็นซาก — ซ่อม: เหล็ก {GameConfigSO.Instance.repairIron} · {GameConfigSO.Instance.repairDays} วัน · {GameConfigSO.Instance.repairWorkers} คน";
-            return $"🔬 ห้องวิจัย Lv{lab.Level} · ที่นั่งนักวิจัย {lab.ResearcherSlots} · คิว {lab.QueueCapacity}";
+                    ? $"กำลังซ่อม {lab.RepairProgress:0}/{GameConfigSO.Instance.repairDays} วัน (ต้องมีคน lab ≥ {GameConfigSO.Instance.repairWorkers})"
+                    : $"ห้องวิจัยเป็นซาก — ซ่อม: เหล็ก {GameConfigSO.Instance.repairIron} · {GameConfigSO.Instance.repairDays} วัน · {GameConfigSO.Instance.repairWorkers} คน";
+            return $"ห้องวิจัย Lv{lab.Level} · ที่นั่งนักวิจัย {lab.ResearcherSlots} · คิว {lab.QueueCapacity}";
         }
 
         public static string ActiveJobLine(ResearchLab lab)
@@ -238,7 +238,7 @@ namespace NuclearReMind
                 }
                 else
                 {
-                    AddRow("🔒 ??? — ยังไม่มีเบาะแส", CMuted); // rule #4: never reveal before research
+                    AddRow("[ล็อก] ??? — ยังไม่มีเบาะแส", CMuted); // rule #4: never reveal before research
                 }
             }
 
@@ -247,7 +247,7 @@ namespace NuclearReMind
                 if (!db.HasLead(kvp.Key)) continue;
                 var note = db.GetNote(kvp.Value);
                 if (note != null && !db.HasNote(note.noteId))
-                    AddRow($"💡 \"{note.leadHint}\"", CGold);
+                    AddRow($"\"{note.leadHint}\"", CGold);
             }
         }
 
@@ -258,7 +258,7 @@ namespace NuclearReMind
             if (note.costPower > 0) cost.Append($" P{note.costPower}");
             if (note.costIron > 0) cost.Append($" Fe{note.costIron}");
             if (note.costLabMat > 0) cost.Append($" Lab{note.costLabMat}");
-            return $"🔬 {note.title} · {note.researcherSlots} คน × {note.daysRequired} วัน ·{cost}";
+            return $"{note.title} · {note.researcherSlots} คน × {note.daysRequired} วัน ·{cost}";
         }
 
         // ═══════════════ BUILD (runtime uGUI) ═══════════════
@@ -282,7 +282,7 @@ namespace NuclearReMind
             // NewUI already gave _root a raycast-target Image, so clicks on the panel are absorbed here
             // and never reach the backdrop's close button — no extra Image needed.
 
-            var title = MakeText("Title", _root.transform, "🔬 ห้องวิจัย (Research)", 30, CGold, TextAnchor.UpperLeft);
+            var title = MakeText("Title", _root.transform, "ห้องวิจัย (Research)", 30, CGold, TextAnchor.UpperLeft);
             Anchor(title.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(24f, -20f), new Vector2(-24f, -64f));
 
             var close = MakeButton("Close", _root.transform, "✕", CBtnDim, Hide);
@@ -298,7 +298,7 @@ namespace NuclearReMind
 
             // repair button (shown only when ruined & unpaid)
             _repairButton = MakeButton("Repair", _root.transform,
-                $"🔧 จ่ายเหล็ก {GameConfigSO.Instance.repairIron} เริ่มซ่อม", CRepair,
+                $"จ่ายเหล็ก {GameConfigSO.Instance.repairIron} เริ่มซ่อม", CRepair,
                 () => { ResearchLab.Instance?.StartRepair(); Refresh(); });
             var rrt = _repairButton.GetComponent<RectTransform>();
             rrt.anchorMin = new Vector2(0f, 1f); rrt.anchorMax = new Vector2(1f, 1f); rrt.pivot = new Vector2(0.5f, 1f);

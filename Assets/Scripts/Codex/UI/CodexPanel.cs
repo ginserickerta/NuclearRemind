@@ -16,7 +16,7 @@ namespace NuclearReMind
         public static string EntryRow(CodexEntrySO e, bool unlocked)
         {
             if (e == null) return "";
-            return unlocked ? $"● {e.titleTh} · {e.titleEn}" : "🔒 ? ? ?";
+            return unlocked ? $"● {e.titleTh} · {e.titleEn}" : "[ล็อก] ? ? ?";
         }
 
         /// <summary>Right-detail for an unlocked entry.</summary>

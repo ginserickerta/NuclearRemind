@@ -121,7 +121,7 @@ namespace NuclearReMind
         public static string FormatSlot(InventorySlotView s)
         {
             if (!string.IsNullOrEmpty(s.lockedHint))
-                return $"🔒 {s.displayName} — {s.lockedHint}";
+                return $"[ล็อก] {s.displayName} — {s.lockedHint}";
 
             string cap = s.cap >= 999f ? $"{s.count:0}" : $"{s.count:0}/{s.cap:0}";
             string delta = s.deltaPerDay >= 0f ? $"+{s.deltaPerDay:0.#}" : $"−{Mathf.Abs(s.deltaPerDay):0.#}";

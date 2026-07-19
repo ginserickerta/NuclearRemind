@@ -223,7 +223,7 @@ namespace NuclearReMind
             foreach (var w in wm.Workers)
             {
                 if (!w.alive) continue;
-                string flags = (w.resting ? " 😴" : "") + (w.strikeDaysLeft > 0 ? $" ✊{w.strikeDaysLeft}" : "");
+                string flags = (w.resting ? "" : "") + (w.strikeDaysLeft > 0 ? $" ✊{w.strikeDaysLeft}" : "");
                 GUILayout.Label(
                     $"  {w.displayName,-8} {w.job,-7} F{w.fatigue,3:0} H{w.hunger,3:0} R{w.radiation,3:0}  {w.status}{flags}",
                     w.status == WorkerStatus.Healthy ? GUI.skin.label : _loss);
@@ -353,7 +353,7 @@ namespace NuclearReMind
 
             GUILayout.Label("Mastery + Codex (§21)", _hdr);
             GUILayout.Label($"  Codex {cq.UnlockedCodexCount}/{cq.TotalCodex}  ·  Mastery {mr.EarnedCount}  ·  " +
-                            (cq.HasNewQuiz ? "🔴 มีควิซใหม่ให้ตอบ" : "— ยังไม่มีควิซใหม่"));
+                            (cq.HasNewQuiz ? "มีควิซใหม่ให้ตอบ" : "— ยังไม่มีควิซใหม่"));
 
             // ★ answer-vs-no-answer proof — these numbers flip only when a quiz is mastered
             GUILayout.Label($"  ★ ZoneB tritium {mr.ZoneBTritiumPerDay():0.0}/วัน  ·  radiation ×{mr.RadiationMult():0.00}  ·  " +
@@ -379,7 +379,7 @@ namespace NuclearReMind
             {
                 if (v.quiz == null) continue;
                 GUILayout.BeginHorizontal();
-                string tag = v.state == QuizState.Earned ? "✅" : v.state == QuizState.Answerable ? "○" : "🔒";
+                string tag = v.state == QuizState.Earned ? "✅" : v.state == QuizState.Answerable ? "○" : "[ล็อก]";
                 var style = v.state == QuizState.Earned ? _gain : v.state == QuizState.Locked ? _loss : GUI.skin.label;
                 GUILayout.Label($"  {tag} {v.quiz.topicTitle}", style, GUILayout.Width(300));
                 if (v.state == QuizState.Answerable)
@@ -509,7 +509,7 @@ namespace NuclearReMind
                         : string.Join("  ·  ", fired.Select(b => $"{b.speaker}: {b.text}"));
                 }
                 GUILayout.EndHorizontal();
-                if (!string.IsNullOrEmpty(_lastBark)) GUILayout.Label("  💬 " + _lastBark);
+                if (!string.IsNullOrEmpty(_lastBark)) GUILayout.Label("" + _lastBark);
             }
         }
 
@@ -567,7 +567,7 @@ namespace NuclearReMind
 
             var end = EndingSystem.Instance;
             if (end != null && end.Ended)
-                GUILayout.Label($"  🏁 จบเกม: {end.Result}", _gain);
+                GUILayout.Label($"จบเกม: {end.Result}", _gain);
         }
 
         // ── Hope ledger + breakdown ──────────────────────────────
@@ -618,10 +618,10 @@ namespace NuclearReMind
             int pop = wm.AliveCount;
 
             Row("⚡ Power", c.energy, InventoryDeltaMath.PowerPerDay(cfg, wm.SumEfficiency(WorkerJobs.Power)));
-            Row("💧 Water", c.water, InventoryDeltaMath.WaterPerDay(cfg, wm.SumEfficiency(WorkerJobs.Water), pop));
-            Row("🌾 Food", c.food, InventoryDeltaMath.FoodPerDay(cfg, wm.SumEfficiency(WorkerJobs.Farm), pop));
+            Row("Water", c.water, InventoryDeltaMath.WaterPerDay(cfg, wm.SumEfficiency(WorkerJobs.Water), pop));
+            Row("Food", c.food, InventoryDeltaMath.FoodPerDay(cfg, wm.SumEfficiency(WorkerJobs.Farm), pop));
             Row("⛏ Iron", c.iron, InventoryDeltaMath.IronPerDay(cfg, wm.SumEfficiency(WorkerJobs.Mine)));
-            Row("🧪 labMat", c.labMat, cfg.labMatPerDay);
+            Row("labMat", c.labMat, cfg.labMatPerDay);
         }
 
         private void Row(string label, float count, float delta) =>

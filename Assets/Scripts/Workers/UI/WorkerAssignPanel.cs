@@ -31,11 +31,11 @@ namespace NuclearReMind
         // job id → display label (GDD §17 jobs the player can staff)
         private static readonly (string job, string label)[] Jobs =
         {
-            (WorkerJobs.Farm,  "🌾 ฟาร์ม (อาหาร)"),
-            (WorkerJobs.Water, "💧 น้ำ"),
+            (WorkerJobs.Farm,  "ฟาร์ม (อาหาร)"),
+            (WorkerJobs.Water, "น้ำ"),
             (WorkerJobs.Power, "⚡ โรงไฟ (พลังงาน)"),
             (WorkerJobs.Mine,  "⛏ เหมือง (เหล็ก)"),
-            (WorkerJobs.Lab,   "🔬 ห้องวิจัย"),
+            (WorkerJobs.Lab,   "ห้องวิจัย"),
             (WorkerJobs.Cool,  "❄ ระบายความร้อนเตา"),
         };
 
@@ -240,21 +240,21 @@ namespace NuclearReMind
 
             if (rs == null)
             {
-                _suitLabel.text = "🥼 Rad Suit — ระบบยังไม่พร้อม";
+                _suitLabel.text = "Rad Suit — ระบบยังไม่พร้อม";
                 if (_suitCraftBtn != null) _suitCraftBtn.gameObject.SetActive(false);
                 return;
             }
 
             if (!hasNote)
             {
-                _suitLabel.text = "🥼 Rad Suit — 🔒 ต้องวิจัย Note 'nuclear_medicine'";
+                _suitLabel.text = "Rad Suit — [ล็อก] ต้องวิจัย Note 'nuclear_medicine'";
                 if (_suitCraftBtn != null) _suitCraftBtn.gameObject.SetActive(false);
                 return;
             }
 
             int inZone = wm != null ? wm.GetWorkers(WorkerJobs.ZoneB).Count : 0;
             int worn = Mathf.Min(rs.SuitsMade, inZone);
-            _suitLabel.text = $"🥼 Rad Suit · มี {rs.SuitsMade}/{cfg.suitTargetCount} · สวมใน Zone B {worn} คน (รังสี ×{cfg.radSuitMult:0.0#})";
+            _suitLabel.text = $"Rad Suit · มี {rs.SuitsMade}/{cfg.suitTargetCount} · สวมใน Zone B {worn} คน (รังสี ×{cfg.radSuitMult:0.0#})";
 
             if (_suitCraftBtn != null)
             {
@@ -288,9 +288,9 @@ namespace NuclearReMind
             if (_zoneOpenBtn != null) _zoneOpenBtn.gameObject.SetActive(!open && hasNote && phaseOk && zb != null);
 
             if (!hasNote)
-                _zoneLabel.text = "☢ Zone B — 🔒 ต้องวิจัย Note 'tritium'";
+                _zoneLabel.text = "☢ Zone B — [ล็อก] ต้องวิจัย Note 'tritium'";
             else if (!phaseOk)
-                _zoneLabel.text = "☢ Zone B — 🔒 ปลดที่ Phase 4 (CORE ≥ 80)";
+                _zoneLabel.text = "☢ Zone B — [ล็อก] ปลดที่ Phase 4 (CORE ≥ 80)";
             else
                 _zoneLabel.text = "☢ Zone B (Tritium)";
 
@@ -355,7 +355,7 @@ namespace NuclearReMind
             var row = NewUI("Row_radsuit", parent, new Color(0.75f, 0.65f, 0.35f, 0.06f));
             var le = row.AddComponent<LayoutElement>(); le.minHeight = 54f; le.preferredHeight = 54f;
 
-            _suitLabel = MakeText("Name", row.transform, "🥼 Rad Suit", 18, CText, TextAnchor.MiddleLeft);
+            _suitLabel = MakeText("Name", row.transform, "Rad Suit", 18, CText, TextAnchor.MiddleLeft);
             Anchor(_suitLabel.gameObject, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(12f, 0f), new Vector2(-220f, 0f));
 
             _suitCraftBtn = MakeButton("Craft", row.transform, "คราฟต์", new Color(0.30f, 0.27f, 0.14f, 1f), CraftSuit);

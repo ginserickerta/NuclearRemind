@@ -348,23 +348,23 @@ namespace NuclearReMind
             {
                 slots.Add(Slot("power", "Power", "⚡", c.energy, cfg.powerCap,
                     InventoryDeltaMath.PowerPerDay(cfg, powerEff)));
-                slots.Add(Slot("water", "Water", "💧", c.water, cfg.waterCap,
+                slots.Add(Slot("water", "Water", "", c.water, cfg.waterCap,
                     InventoryDeltaMath.WaterPerDay(cfg, waterEff, pop)));
                 slots.Add(Slot("iron", "Iron", "⛏", c.iron, 999f,
                     InventoryDeltaMath.IronPerDay(cfg, mineEff)));
-                slots.Add(Slot("labmat", "labMat", "🧪", c.labMat, 999f, cfg.labMatPerDay));
+                slots.Add(Slot("labmat", "labMat", "", c.labMat, 999f, cfg.labMatPerDay));
             }
 
             if (tab == InventoryTab.All || tab == InventoryTab.Fuel)
             {
                 // Sprint 2/5 เติม: Extractor +6/วัน · Zone B 3.0/8.0 − Boost 9.0 (ต้องโชว์อัตราสุทธิแดงกระพริบ)
-                slots.Add(Slot("fuel", "Deuterium", "🔷", c.deuterium, 999f, 0f));
+                slots.Add(Slot("fuel", "Deuterium", "", c.deuterium, 999f, 0f));
                 slots.Add(Slot("tritium", "Tritium", "⚛", c.tritium, 999f, 0f));
             }
 
             if (tab == InventoryTab.All || tab == InventoryTab.Food)
             {
-                slots.Add(Slot("food", "Food", "🌾", c.food, 999f,
+                slots.Add(Slot("food", "Food", "", c.food, 999f,
                     InventoryDeltaMath.FoodPerDay(cfg, farmEff, pop)));
             }
 
@@ -375,7 +375,7 @@ namespace NuclearReMind
                     foreach (var item in allItems)
                     {
                         if (item == null || item.category != ItemCategory.Medical) continue;
-                        var slot = Slot(item.id, item.displayName, "🥼", GetCount(item.id),
+                        var slot = Slot(item.id, item.displayName, "", GetCount(item.id),
                             item.maxStack > 0 ? item.maxStack : 999f, 0f);
                         slot.isCraftable = true;
                         slot.craftEnabled = CanCraft(item);

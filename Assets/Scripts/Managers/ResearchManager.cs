@@ -226,7 +226,7 @@ namespace NuclearReMind
                     EventManager.Instance.RaiseResourceDelta(ResourceType.Iron, -seedsIronCost);
                     SeedsDone = true;
                     EventManager.Instance.RaiseResearchCompleted(ProjectSeeds); // CrisisEffectManager → FoodYield ×2
-                    EventManager.Instance.RaiseNotice("🌾 วิจัยเมล็ดพันธุ์ฉายรังสีสำเร็จ — ผลผลิตฟาร์ม +100% ถาวร");
+                    EventManager.Instance.RaiseNotice("วิจัยเมล็ดพันธุ์ฉายรังสีสำเร็จ — ผลผลิตฟาร์ม +100% ถาวร");
                     break;
 
                 case ProjectIsotope:
@@ -257,7 +257,7 @@ namespace NuclearReMind
             IsotopeDone = true;
             EventManager.Instance.RaisePopulationSickCured(isotopeCureCount);
             EventManager.Instance.RaiseResearchCompleted(ProjectIsotope);
-            EventManager.Instance.RaiseNotice($"💊 ยาไอโซโทปการแพทย์พร้อมใช้ — รักษาคนป่วยสูงสุด {isotopeCureCount} คน");
+            EventManager.Instance.RaiseNotice($"ยาไอโซโทปการแพทย์พร้อมใช้ — รักษาคนป่วยสูงสุด {isotopeCureCount} คน");
         }
 
         private void HandleSaveLoaded(SaveData save)

@@ -277,7 +277,7 @@ namespace NuclearReMind
                         if (assigned <= 0)
                             _extractTxt.text = "⛏ ใส่คนงานเพื่อเริ่มขุด (ยิ่งหลายคน ยิ่งเร็ว)";
                         else if (om != null && om.IsWalking(_currentCell))
-                            _extractTxt.text = $"🚶 คนงานกำลังเดินไปแหล่งแร่... (~{Mathf.CeilToInt(om.GetWalkRemaining(_currentCell))} วิ)";
+                            _extractTxt.text = $"คนงานกำลังเดินไปแหล่งแร่... (~{Mathf.CeilToInt(om.GetWalkRemaining(_currentCell))} วิ)";
                         else
                         {
                             float prog = om != null ? om.GetMineProgress01(_currentCell) : 0f;
@@ -291,7 +291,7 @@ namespace NuclearReMind
 
             float actual = building ? 0f : ActualPrimaryOutput(data, level, primBase, required, assigned);
             // ระหว่างก่อสร้าง: โชว์ป้ายสถานะ 3 ระยะ (ใส่คนงาน → เดินมา → กำลังสร้าง%) แทนค่าผลิต
-            if (_prodLabelTxt != null) _prodLabelTxt.text = building ? "🏗 สถานะก่อสร้าง" : $"{primEmoji} {primLabel} ที่ผลิต";
+            if (_prodLabelTxt != null) _prodLabelTxt.text = building ? "สถานะก่อสร้าง" : $"{primEmoji} {primLabel} ที่ผลิต";
             if (_prodValTxt != null)
             {
                 if (building)
@@ -300,13 +300,13 @@ namespace NuclearReMind
                     if (assigned <= 0)
                         _prodValTxt.text = "⛏ ใส่คนงานเพื่อเริ่มสร้าง";
                     else if (cc != null && cc.IsWalking(_currentCell))
-                        _prodValTxt.text = $"🚶 คนงานกำลังเดินมาสร้าง... (~{Mathf.CeilToInt(cc.GetWalkRemaining(_currentCell))} วิ)";
+                        _prodValTxt.text = $"คนงานกำลังเดินมาสร้าง... (~{Mathf.CeilToInt(cc.GetWalkRemaining(_currentCell))} วิ)";
                     else if (cc != null)
                     {
                         int total = cc.GetTotalTicks(_currentCell);
                         int prog = cc.GetProgress(_currentCell);
                         int pct = total > 0 ? Mathf.Clamp(Mathf.RoundToInt(100f * prog / total), 0, 100) : 0;
-                        _prodValTxt.text = $"🏗 กำลังสร้าง {pct}%";
+                        _prodValTxt.text = $"กำลังสร้าง {pct}%";
                     }
                     else _prodValTxt.text = "กำลังสร้าง";
                     _prodValTxt.color = (assigned <= 0) ? CWarn : CAccent;
@@ -358,7 +358,7 @@ namespace NuclearReMind
                 bool current = lv == level, done = lv < level;
                 if (c.status != null)
                 {
-                    c.status.text = current ? "ปัจจุบัน" : done ? "✔" : "🔒";
+                    c.status.text = current ? "ปัจจุบัน" : done ? "✔" : "[ล็อก]";
                     c.status.color = current ? CGold : done ? CAccent : CMuted;
                 }
                 if (c.frame != null) c.frame.effectColor = current ? CGold : (done ? CBorder : new Color(0.22f,0.24f,0.22f,1f));
@@ -404,9 +404,9 @@ namespace NuclearReMind
         private static (string, string, float) PrimaryOutput(BuildingData d)
         {
             if (d.energyProduction > 0f) return ("⚡", "ไฟฟ้า", d.energyProduction);
-            if (d.waterProduction  > 0f) return ("💧", "น้ำ", d.waterProduction);
-            if (d.foodProduction   > 0f) return ("🌿", "อาหาร", d.foodProduction);
-            if (d.knowledgeProduction > 0f) return ("📖", "ความรู้", d.knowledgeProduction);
+            if (d.waterProduction  > 0f) return ("", "น้ำ", d.waterProduction);
+            if (d.foodProduction   > 0f) return ("", "อาหาร", d.foodProduction);
+            if (d.knowledgeProduction > 0f) return ("", "ความรู้", d.knowledgeProduction);
             if (d.ironProduction   > 0f || d.isOreNode) return ("⛏", "แร่เหล็ก", d.ironProduction);
             return ("⚙", "ผลผลิต", 0f);
         }
@@ -523,7 +523,7 @@ namespace NuclearReMind
             // คนงาน row
             var wRow = Panel("WorkerRow", infoBox.transform, CInset2);
             SetRect(wRow.GetComponent<RectTransform>(), new Vector2(0,1),new Vector2(1,1),new Vector2(0.5f,1), new Vector2(0,-78), new Vector2(-28,54));
-            var wLabel = Txt("WLabel", wRow.transform, "👤 คนงานที่ใช้", 20, CText, TextAnchor.MiddleLeft);
+            var wLabel = Txt("WLabel", wRow.transform, "คนงานที่ใช้", 20, CText, TextAnchor.MiddleLeft);
             SetRect(wLabel.rectTransform, new Vector2(0,0),new Vector2(0.5f,1),new Vector2(0,0.5f), new Vector2(16,0), Vector2.zero);
             _workerMinus = Btn("WMinus", wRow.transform, "−", 24, new Color(0.55f,0.24f,0.22f));
             SetRect((RectTransform)_workerMinus.transform, new Vector2(1,0.5f),new Vector2(1,0.5f),new Vector2(1,0.5f), new Vector2(-150,0), new Vector2(40,40));
@@ -572,7 +572,7 @@ namespace NuclearReMind
                 card.sprite.preserveAspect = true;
                 card.output = Txt("Out", card.root.transform, "+0 /วัน", 18, CAccent, TextAnchor.MiddleCenter, FontStyle.Bold);
                 SetRect(card.output.rectTransform, new Vector2(0,0),new Vector2(1,0),new Vector2(0.5f,0), new Vector2(0,48), new Vector2(-10,26));
-                card.status = Txt("St", card.root.transform, "🔒", 18, CMuted, TextAnchor.LowerCenter);
+                card.status = Txt("St", card.root.transform, "[ล็อก]", 18, CMuted, TextAnchor.LowerCenter);
                 SetRect(card.status.rectTransform, new Vector2(0,0),new Vector2(1,0),new Vector2(0.5f,0), new Vector2(0,14), new Vector2(-10,28));
                 _cards[i] = card;
             }
@@ -587,8 +587,8 @@ namespace NuclearReMind
 
             // three cost items
             _reqEnergyTxt = CostItem(_reqRow.transform, "⚡", "พลังงาน", 20);
-            _reqIronTxt   = CostItem(_reqRow.transform, "🧱", "วัสดุ", 250);
-            _reqWorkerTxt = CostItem(_reqRow.transform, "👷", "คนงาน", 480);
+            _reqIronTxt   = CostItem(_reqRow.transform, "", "วัสดุ", 250);
+            _reqWorkerTxt = CostItem(_reqRow.transform, "", "คนงาน", 480);
             _reqTimeTxt   = Txt("ReqTime", _reqRow.transform, "ทันที", 18, CText, TextAnchor.MiddleLeft);
             var timeLabel = Txt("TimeLabel", _reqRow.transform, "⏱ เวลาอัปเกรด", 16, CMuted, TextAnchor.MiddleLeft);
             SetRect(timeLabel.rectTransform, new Vector2(0.55f,0),new Vector2(0.55f,0),new Vector2(0,0), new Vector2(20,60), new Vector2(180,24));
@@ -764,17 +764,17 @@ namespace NuclearReMind
             if (!DeuteriumExtraction.Researched)
             {
                 // ★ Never hide the better path: name the research that opens it (rule #6).
-                _extractTxt.text = "🔒 สกัดดิวเทอเรียม: ต้องวิจัย \"การสกัดดิวเทอเรียม\" ก่อน";
+                _extractTxt.text = "[ล็อก] สกัดดิวเทอเรียม: ต้องวิจัย \"การสกัดดิวเทอเรียม\" ก่อน";
                 canSwitch = false;
             }
             else if (rate <= 0f)
             {
-                _extractTxt.text = $"🔒 สกัดดิวเทอเรียม: ต้องอัปโรงน้ำถึง Lv.{minLv}";
+                _extractTxt.text = $"[ล็อก] สกัดดิวเทอเรียม: ต้องอัปโรงน้ำถึง Lv.{minLv}";
                 canSwitch = false;
             }
             else if (required > 0 && assigned == 0)
             {
-                _extractTxt.text = "🧪 สกัดดิวเทอเรียม: ต้องมีคนงานประจำ";
+                _extractTxt.text = "สกัดดิวเทอเรียม: ต้องมีคนงานประจำ";
                 canSwitch = false;
             }
             else
@@ -782,8 +782,8 @@ namespace NuclearReMind
                 float wScale = required > 0 ? Mathf.Clamp01((float)assigned / required) : 1f;
                 float d = rate * wScale;
                 _extractTxt.text = on
-                    ? $"🧪 กำลังสกัด +{Mathf.RoundToInt(d)}/วัน (ใช้น้ำ {Mathf.RoundToInt(d * ratio)}/วัน)"
-                    : $"🧪 พร้อมสกัด +{Mathf.RoundToInt(d)}/วัน (จะใช้น้ำ {Mathf.RoundToInt(d * ratio)}/วัน)";
+                    ? $"กำลังสกัด +{Mathf.RoundToInt(d)}/วัน (ใช้น้ำ {Mathf.RoundToInt(d * ratio)}/วัน)"
+                    : $"พร้อมสกัด +{Mathf.RoundToInt(d)}/วัน (จะใช้น้ำ {Mathf.RoundToInt(d * ratio)}/วัน)";
                 canSwitch = true;
             }
 

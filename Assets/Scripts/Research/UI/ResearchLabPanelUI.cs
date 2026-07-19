@@ -344,7 +344,7 @@ namespace NuclearReMind
                     AddNoteRow(note, rank, lab, cfg, wm);
                 }
                 if (hidden > 0)
-                    AddSimpleRow($"🔒 ยังไม่มีเบาะแส — อีก {hidden} หัวข้อ (หาบันทึก/สำรวจเพื่อปลดเบาะแส)", CFaint, 34f);
+                    AddSimpleRow($"[ล็อก] ยังไม่มีเบาะแส — อีก {hidden} หัวข้อ (หาบันทึก/สำรวจเพื่อปลดเบาะแส)", CFaint, 34f);
             }
 
             // ── records (หมวด "กู้บันทึก") — PASSIVE decode, live progress ──
@@ -361,7 +361,7 @@ namespace NuclearReMind
                     else if (i == dr.RecordsRecovered)
                         AddRecordActiveRow(dr, cfg, lab);
                     else
-                        AddSimpleRow("🔒 บันทึกที่เข้ารหัส — ถอดได้ตามลำดับเท่านั้น", CFaint, 34f);
+                        AddSimpleRow("[ล็อก] บันทึกที่เข้ารหัส — ถอดได้ตามลำดับเท่านั้น", CFaint, 34f);
                 }
             }
         }
@@ -548,7 +548,7 @@ namespace NuclearReMind
                     total++;
                     if (v.state != QuizState.Earned) continue;
                     earned++;
-                    string label = "🚩 " + (!string.IsNullOrEmpty(v.quiz.topicTitle) ? v.quiz.topicTitle : v.quiz.quizId);
+                    string label = !string.IsNullOrEmpty(v.quiz.topicTitle) ? v.quiz.topicTitle : v.quiz.quizId;
                     float w = EstWidth(label, 12f) + 20f;
                     if (x + w > maxW && x > 0f) { x = 0f; y -= rowH; }
                     var chip = Rounded("Chip", _masteryContainer, Hex("#12283f"), 4);
@@ -570,7 +570,7 @@ namespace NuclearReMind
                 _chips.Add(t.gameObject);
             }
             if (_masteryHead != null)
-                _masteryHead.text = $"🏅 ความเชี่ยวชาญที่ปลดแล้ว <color=#7a6d52>({earned}/{total})</color>";
+                _masteryHead.text = $"ความเชี่ยวชาญที่ปลดแล้ว <color=#7a6d52>({earned}/{total})</color>";
 
             // container tall enough for the wrapped rows (parent layout reads this)
             var le = _masteryContainer.GetComponent<LayoutElement>();
@@ -738,7 +738,7 @@ namespace NuclearReMind
 
             // ═════ engineer assignment ═════
             float ay = -80f;
-            var aHead = Txt("AH", _mainBlock.transform, "👥 จัดวิศวกรเข้าห้องวิจัย", 14, CText, TextAnchor.UpperLeft, FontStyle.Bold);
+            var aHead = Txt("AH", _mainBlock.transform, "จัดวิศวกรเข้าห้องวิจัย", 14, CText, TextAnchor.UpperLeft, FontStyle.Bold);
             SetTL(aHead.rectTransform, new Vector2(18f, ay), new Vector2(300f, 20f));
             var aSub = Txt("AS", _mainBlock.transform, "ปุ่มลัด Q ลด / E เพิ่ม · งานวิจัยเดินเมื่อคนพอตามที่หัวข้อกำหนด", 11, CDim, TextAnchor.UpperRight, FontStyle.Normal);
             SetTR(aSub.rectTransform, new Vector2(-18f, ay), new Vector2(320f, 18f));
@@ -770,7 +770,7 @@ namespace NuclearReMind
 
             // ═════ projects header: title + filter tabs ═════
             float py = ay - 140f;
-            var pHead = Txt("PH", _mainBlock.transform, "📋 โครงการวิจัย", 14, CText, TextAnchor.UpperLeft, FontStyle.Bold);
+            var pHead = Txt("PH", _mainBlock.transform, "โครงการวิจัย", 14, CText, TextAnchor.UpperLeft, FontStyle.Bold);
             SetTL(pHead.rectTransform, new Vector2(18f, py), new Vector2(220f, 20f));
 
             (string id, string label)[] tabs = { ("all", "ทั้งหมด"), ("notes", "ความรู้"), ("records", "กู้บันทึก") };
@@ -835,7 +835,7 @@ namespace NuclearReMind
             _masteryHead.font = _font; _masteryHead.fontSize = 14; _masteryHead.color = CText;
             _masteryHead.fontStyle = FontStyle.Bold; _masteryHead.alignment = TextAnchor.MiddleLeft;
             _masteryHead.supportRichText = true;
-            _masteryHead.text = "🏅 ความเชี่ยวชาญที่ปลดแล้ว";
+            _masteryHead.text = "ความเชี่ยวชาญที่ปลดแล้ว";
             var mhLe = mHeadGo.AddComponent<LayoutElement>();
             mhLe.minHeight = 34f; mhLe.preferredHeight = 34f;
 

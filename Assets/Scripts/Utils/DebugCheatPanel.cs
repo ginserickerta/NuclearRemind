@@ -68,7 +68,7 @@ namespace NuclearReMind
 
             var prevSkin = GUI.skin;
             GUI.skin = _skin;
-            _window = GUILayout.Window(918273, _window, DrawWindow, "🛠  แผงทดสอบเกม (Debug / Bypass)");
+            _window = GUILayout.Window(918273, _window, DrawWindow, "แผงทดสอบเกม (Debug / Bypass)");
             GUI.skin = prevSkin;
         }
 
@@ -187,7 +187,7 @@ namespace NuclearReMind
             var ct = CoreTowerManager.Instance;
             if (ct == null) { GUILayout.Label("(ยังไม่มี CoreTowerManager)"); return; }
 
-            if (GUILayout.Button("🔓 ปลดล็อกเตาทันที (CORE 30%)")) ct.DebugUnlockNow();
+            if (GUILayout.Button("[ปลด] ปลดล็อกเตาทันที (CORE 30%)")) ct.DebugUnlockNow();
 
             GUILayout.Label("ตั้ง CORE%");
             GUILayout.BeginHorizontal();
@@ -247,11 +247,11 @@ namespace NuclearReMind
             GUILayout.Label("บังคับจบเกม / รีเซ็ต", _hdr);
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("🏆 ชนะ (True)")) Raise(e => e.RaiseTowerComplete());
+            if (GUILayout.Button("ชนะ (True)")) Raise(e => e.RaiseTowerComplete());
             if (GUILayout.Button("☢ หลอมละลาย")) Raise(e => e.RaiseGameOver(GameEndType.Meltdown));
             GUILayout.EndHorizontal();
 
-            if (GameManager.Instance != null && GUILayout.Button("🔄 เริ่มเกมใหม่ (Restart)"))
+            if (GameManager.Instance != null && GUILayout.Button("เริ่มเกมใหม่ (Restart)"))
                 GameManager.Instance.Restart();
         }
 

@@ -76,7 +76,7 @@ namespace NuclearReMind
             if (_note == null) return;
 
             if (titleText != null)
-                titleText.text = _page == 0 ? $"📗 {_note.title}" : "";
+                titleText.text = _page == 0 ? $"{_note.title}" : "";
 
             if (_page == 0)
             {

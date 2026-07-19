@@ -142,7 +142,7 @@ namespace NuclearReMind
             if (noteId != NoteId || _announced) return;
             _announced = true;
             EventManager.Instance?.RaiseNotice(
-                "🧪 ปลดล็อกการสกัดดิวเทอเรียม — เปิดสวิตช์ได้ที่แผงโรงน้ำ (กินน้ำ แลกกับเชื้อเพลิงเตา)");
+                "ปลดล็อกการสกัดดิวเทอเรียม — เปิดสวิตช์ได้ที่แผงโรงน้ำ (กินน้ำ แลกกับเชื้อเพลิงเตา)");
         }
 
         // A demolished plant must not keep its switch: the cell can be rebuilt with something else.

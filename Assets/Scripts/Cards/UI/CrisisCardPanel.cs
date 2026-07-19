@@ -33,7 +33,7 @@ namespace NuclearReMind
             if (opt == null) return "";
             string letter = Letter(index);
             if (opt.IsLocked(db))
-                return $"[{letter}] 🔒 {opt.label}  ·  ต้องวิจัย \"{NoteTitle(db, opt.requiredNoteId)}\" ก่อน";
+                return $"[{letter}] [ล็อก] {opt.label} · ต้องวิจัย \"{NoteTitle(db, opt.requiredNoteId)}\" ก่อน";
             return $"[{letter}] {opt.label}\n      {opt.effectSummary}";
         }
 

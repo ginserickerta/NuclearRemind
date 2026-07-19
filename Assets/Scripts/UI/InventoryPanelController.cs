@@ -21,7 +21,7 @@ namespace NuclearReMind
         public GameObject panel;
         public Transform rowsParent;      // content ที่มี VerticalLayoutGroup
         public GameObject rowTemplate;    // แถวต้นแบบ (inactive) — ลูก: Icon/Name/Info/CraftBtn/UseBtn
-        public Button toggleButton;       // ปุ่ม "🎒 ไอเทม (I)" บน HUD
+        public Button toggleButton;       // ปุ่ม "ไอเทม (I)" บน HUD
         public Button closeButton;
 
         [Header("Behaviour")]
@@ -255,12 +255,12 @@ namespace NuclearReMind
             switch (type)
             {
                 case ResourceType.Energy:    return "⚡";
-                case ResourceType.Water:     return "💧";
-                case ResourceType.Food:      return "🌿";
+                case ResourceType.Water:     return "";
+                case ResourceType.Food:      return "";
                 case ResourceType.Iron:      return "⛏";
                 case ResourceType.Deuterium: return "D";
                 case ResourceType.Tritium:   return "⚛";
-                default:                     return "📖";
+                default:                     return "";
             }
         }
 
@@ -268,10 +268,10 @@ namespace NuclearReMind
         {
             switch (c)
             {
-                case ItemCategory.Equipment: return "🛡";
+                case ItemCategory.Equipment: return "";
                 case ItemCategory.Medical:   return "⚕";
-                case ItemCategory.Agri:      return "🌾";
-                case ItemCategory.Emergency: return "🧯";
+                case ItemCategory.Agri:      return "";
+                case ItemCategory.Emergency: return "";
                 default:                     return "⚛";
             }
         }

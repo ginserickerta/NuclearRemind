@@ -43,7 +43,7 @@ namespace NuclearReMind
         [Tooltip("ราคา")] public int costFontSize = 11;
         public Color costColor = new Color(1f, 0.85f, 0.3f);
         [Tooltip("เลขคีย์ลัดมุมช่อง")] public int keyFontSize = 13;
-        [Tooltip("ป้ายล็อกเฟส 🔒")] public int lockFontSize = 13;
+        [Tooltip("ป้ายล็อกเฟส [ล็อก]")] public int lockFontSize = 13;
         public Color lockColor = new Color(1f, 0.85f, 0.3f);
 
         [Header("Slot template (แก้ layout ช่องด้วยตา — ว่าง = สร้างสดตามฟิลด์ข้างบน)")]
@@ -60,14 +60,14 @@ namespace NuclearReMind
 
         [Header("ช่องที่ยังไม่ถึงเฟส")]
         [Tooltip("true = ซ่อนช่องไปเลยจนกว่าจะถึงเฟส (เช่น โรงพยาบาลโผล่ตอนเฟส 3 เท่านั้น)\n" +
-                 "false = โชว์ช่องแบบหรี่ + ป้าย 🔒 เฟส N (พฤติกรรมเดิม)")]
+                 "false = โชว์ช่องแบบหรี่ + ป้าย [ล็อก] เฟส N (พฤติกรรมเดิม)")]
         public bool hideLockedSlots = true;
 
         // state
         private Button[] _buttons;
         private Image[]  _buttonImages;
         private GameObject[] _slotRoots; // ตัวช่องทั้งใบ — ใช้ซ่อน/โชว์เมื่อ hideLockedSlots
-        private Text[]   _lockLabels; // "🔒 เฟส N" ต่อช่อง — โชว์เมื่อยังไม่ถึงเฟสปลดล็อก (GDD §6)
+        private Text[]   _lockLabels; // "[ล็อก] เฟส N" ต่อช่อง — โชว์เมื่อยังไม่ถึงเฟสปลดล็อก (GDD §6)
         private BuildingData _selected;
         private ResourceData _resources;
         private bool _isDemolishing;
@@ -309,7 +309,7 @@ namespace NuclearReMind
             iconImg.raycastTarget = false;
 
             // IconEmoji(Text 🔨) — fallback เมื่อไม่มี sprite
-            var emoji = MakeText("IconEmoji", slot.transform, font, "🔨", 30,
+            var emoji = MakeText("IconEmoji", slot.transform, font, "", 30,
                 new Vector2(0, 20), new Vector2(0, 48), TextAnchor.MiddleCenter);
             emoji.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.3f);
             emoji.gameObject.SetActive(hammerIcon == null);
@@ -413,7 +413,7 @@ namespace NuclearReMind
             costLbl.GetComponent<RectTransform>().anchorMax = new Vector2(1, 0);
             costLbl.color = costColor;
 
-            var lockLbl = MakeText("LockLabel", slot.transform, font, "🔒 เฟส 1", lockFontSize,
+            var lockLbl = MakeText("LockLabel", slot.transform, font, "[ล็อก] เฟส 1", lockFontSize,
                 new Vector2(0, 0), new Vector2(0, 24), TextAnchor.MiddleCenter);
             var lockRect = lockLbl.GetComponent<RectTransform>();
             lockRect.anchorMin = new Vector2(0, 0.35f);
@@ -474,7 +474,7 @@ namespace NuclearReMind
             var lockTxt = FindDeep(slot.transform, "LockLabel")?.GetComponent<Text>();
             if (lockTxt != null)
             {
-                lockTxt.text = $"🔒 เฟส {data.unlockPhase}";
+                lockTxt.text = $"[ล็อก] เฟส {data.unlockPhase}";
                 lockTxt.gameObject.SetActive(false); // RefreshButtonColors คุมการโชว์
                 _lockLabels[index] = lockTxt;
             }
@@ -603,7 +603,7 @@ namespace NuclearReMind
             var parts = new System.Collections.Generic.List<string>();
             if (data.energyCost     > 0) parts.Add($"⚡{data.energyCost}");
             if (data.ironCost       > 0) parts.Add($"⛏{data.ironCost}");
-            if (data.workerRequired > 0) parts.Add($"👷{data.workerRequired}");
+            if (data.workerRequired > 0) parts.Add($"{data.workerRequired}");
             return parts.Count > 0 ? string.Join(" ", parts) : "ฟรี";
         }
 
