@@ -60,9 +60,8 @@ namespace NuclearReMind
             if (d.hopeImmediate != 0f)
                 EventManager.Instance.RaiseMoraleDelta(d.hopeImmediate);
 
-            // ผูกควิซจริยธรรม Q10 (V4 §12)
-            if (d.linkedQuizIds != null && d.linkedQuizIds.Length > 0)
-                QuizManager.Instance?.TriggerByIds(d.linkedQuizIds);
+            // ★ v6.3: ไม่เด้งควิซผูกประกาศแล้ว — linkedQuizIds ชี้ไปที่ควิซชุด v4.1 ที่ quizId ว่าง
+            // ตอบแล้วไม่ได้รางวัลอะไร (ดู OreDepositManager.ShowAlaraQuiz) · ควิซ v6.3 อยู่ใน Codex
 
             Debug.Log($"[Decree] ประกาศ {d.id}: +{d.coolingLaborGain} หล่อเย็น, Hope {d.hopeImmediate}");
         }

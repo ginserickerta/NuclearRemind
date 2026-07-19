@@ -440,13 +440,17 @@ namespace NuclearReMind
             _q5Pending = true; // เด้งจริงเฟรมถัดไปใน Update (โหลดเซฟยกเลิกได้)
         }
 
+        /// <summary>
+        /// ★ v6.3: ไม่เด้งควิซบังคับอีกแล้ว — เหลือแค่ประโยค primer
+        ///
+        /// เดิมบรรทัดถัดไปเรียก QuizManager.TriggerByIds("Q5") ซึ่งเป็นควิซชุดเก่า (v4.1) ที่ทุกใบมี quizId
+        /// ว่าง พอ QuizPopupController ย้ายไปส่งคำตอบให้ CodexQuizManager แล้ว การ์ดพวกนี้เลยตอบไปก็ไม่ได้
+        /// อะไรเลยแบบเงียบๆ · ตัวจริงของ ALARA คือ q_alara ใน Resources/Quizzes ซึ่งจะโผล่เองใน Codex
+        /// เมื่อผู้เล่นเข้าเขตรังสีจริง (QuizAvailability → riskZoneEntered)
+        /// </summary>
         private void ShowAlaraQuiz()
         {
-            if (QuizManager.Instance == null || QuizManager.Instance.AlreadyAnswered("Q5")) return;
-
-            // primer 1 บรรทัดแทน info card (คำถาม Q5 อ้าง "ที่เพิ่งอ่าน")
             EventManager.Instance.RaiseNotice("VESTA: หลัก ALARA — รับรังสีให้น้อยที่สุดเท่าที่ทำได้ (เวลา·ระยะห่าง·กำบัง)");
-            QuizManager.Instance.TriggerByIds("Q5"); // precedent: DilemmaManager/DecreeManager เรียกตรง
         }
 
         // ─────────────────────────────────────────

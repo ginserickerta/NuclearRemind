@@ -52,32 +52,21 @@ namespace NuclearReMind
         public bool AlreadyAnswered(string id) => _answered.Contains(id);
 
         /// <summary>เข้าคิวควิซทั้งหมดที่ trigger ผูกไว้ (วิกฤต/decree/ignition ที่ implement IQuizTrigger)</summary>
-        public void EnqueueQuizzes(IQuizTrigger trigger)
-        {
-            if (trigger == null) return;
+        // ═══════════════════════════════════════════════════════════════════════════════
+        // ★ v6.3 — คิวควิซบังคับถูกปิดถาวร (RETIRED)
+        //
+        // GDD หลักการข้อ 4 + ตาราง QUIZZES.md: ควิซ "ไม่บังคับ อยู่ Codex หลังใช้จริง" · ควิซชุดนี้
+        // (Q1–Q10, QT1, QT2) เป็นของ v4.1 และทุกใบมี quizId ว่าง จึงส่งให้ CodexQuizManager ไม่ได้ —
+        // ปล่อยไว้จะเด้งคำถามที่ตอบแล้วไม่ได้รางวัลอะไรเลยแบบเงียบๆ
+        //
+        // ที่ต้องปิดถึงระดับนี้ ไม่ใช่แค่ลบ call site: ShowNext() เรียก Resume(PauseReason.QuizPopup)
+        // ทุกครั้งที่คิวหมด ซึ่งเป็น pause reason ตัวเดียวกับที่ QuizPopupController ใช้ตอนนี้ — ถ้ามีใคร
+        // (เช่นโค้ดใน _archive) เผลอเรียกเข้ามา นาฬิกาวันจะเดินต่อทั้งที่ควิซยังค้างจอ
+        // ═══════════════════════════════════════════════════════════════════════════════
 
-            var quizzes = trigger.GetLinkedQuizzes();
-            if (quizzes == null) return;
+        public void EnqueueQuizzes(IQuizTrigger trigger) { }
 
-            foreach (var quiz in quizzes)
-                Enqueue(quiz);
-
-            // ถ้ายังไม่มีข้อไหนแสดงอยู่ → เริ่มข้อแรก
-            if (_current == null)
-                ShowNext();
-        }
-
-        /// <summary>เข้าคิวควิซตาม id โดยตรง (ฮุกสำหรับ trigger ที่ยัง stub เช่น TriggerByIds("Q8","Q9"))</summary>
-        public void TriggerByIds(params string[] ids)
-        {
-            if (ids == null) return;
-
-            foreach (var id in ids)
-                Enqueue(GetById(id));
-
-            if (_current == null)
-                ShowNext();
-        }
+        public void TriggerByIds(params string[] ids) { }
 
         /// <summary>
         /// ผู้เล่นตอบควิซข้อปัจจุบัน (ตอบบังคับ ข้ามไม่ได้ — V4 §12)

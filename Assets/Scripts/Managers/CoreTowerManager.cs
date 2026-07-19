@@ -243,15 +243,16 @@ namespace NuclearReMind
             TryUnlock(day);
         }
 
-        // ควิซ #Tritium + #Tritium-2 (Codex_Spec v8) — เด้งตอน "ป้อน Tritium เข้าเตาครั้งแรก"
-        // latch ต่อรัน + AlreadyAnswered กันเด้งซ้ำข้ามเซฟ (precedent: OreDepositManager → Q5)
+        // ★ v6.3: no-op — ควิซไทรเทียมไม่เด้งตอนป้อนเชื้อเพลิงอีกแล้ว
+        //
+        // ของเดิมเด้ง QT1/QT2 ซึ่งเป็นควิซชุด v4.1 ที่ quizId ว่าง → ตอบแล้วไม่ได้อะไร (ดู OreDepositManager)
+        // ตัวจริงคือ q_tritium_breeding / q_dt_fuel ใน Resources/Quizzes ซึ่ง QuizAppliedWatcher จะปลดให้เอง
+        // หลังเตาได้กินไทรเทียมจริง แล้วเด้งเชิญผ่าน OnQuizShown · เก็บเมธอดไว้เพื่อไม่ต้องแก้ call site
         private bool _tritiumQuizFired;
         private void TriggerTritiumQuizzesOnce()
         {
             if (_tritiumQuizFired) return;
             _tritiumQuizFired = true;
-            if (QuizManager.Instance == null || QuizManager.Instance.AlreadyAnswered("QT1")) return;
-            QuizManager.Instance.TriggerByIds("QT1", "QT2");
         }
 
         // ───────────────────────── Turn (per day) ─────────────────────────
