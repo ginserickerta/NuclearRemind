@@ -25,6 +25,15 @@ namespace NuclearReMind
         private SpriteRenderer _overlay;      // สำเนา "แถบบน" — ยกเหนืออาคารที่บัง
         private BoxCollider2D _baseCollider;  // โซนฐาน (trigger)
         private BoxCollider2D _topCollider;   // โซนบน (trigger)
+
+        // ★ กล่องชุดที่สอง สำหรับ "worker ทับอาคาร" โดยเฉพาะ — แยกจาก base/top ด้านบนที่ตัดสิน "อาคารทับอาคาร"
+        //   เดิม TryGetRaiseOrder ยืม _baseCollider มาใช้ กล่องเดียวจึงต้องรับสองหน้าที่ที่ต้องการรูปทรงคนละแบบ
+        //   จูนให้อาคารเรียงถูก worker ก็ลอย · จูนให้ worker ถูก อาคารก็เรียงผิด
+        private BoxCollider2D _workerBase;    // แถบพื้นเตี้ย ๆ — เท้าต่ำกว่ากึ่งกลางแถบนี้ = ยืนหน้าอาคาร
+        private BoxCollider2D _workerTop;     // โซน "ยืนตรงนี้ = อยู่หลังอาคาร" → ห้ามยกขึ้นมา
+
+        /// <summary>สัดส่วนความสูงเริ่มต้นของ worker base (แถบพื้น) เมื่อยังไม่ได้จูนเอง — เตี้ยไว้ก่อน กัน worker ดูลอย</summary>
+        public const float DefaultWorkerBaseFraction = 0.08f;
         private int _isoOrder;                // sortingOrder ฐาน (iso depth) ของ main
         private string _sortingLayer = "Buildings";
 
@@ -62,6 +71,16 @@ namespace NuclearReMind
                 _topCollider = gameObject.AddComponent<BoxCollider2D>();
                 _topCollider.isTrigger = true;
             }
+            if (_workerBase == null)
+            {
+                _workerBase = gameObject.AddComponent<BoxCollider2D>();
+                _workerBase.isTrigger = true;
+            }
+            if (_workerTop == null)
+            {
+                _workerTop = gameObject.AddComponent<BoxCollider2D>();
+                _workerTop.isTrigger = true;
+            }
         }
 
         /// <summary>สร้างแถบบน + วาง collider ใหม่ตามสไปรต์ปัจจุบัน (เรียกซ้ำได้ตอนอัปเกรดสลับ sprite)</summary>
@@ -97,6 +116,35 @@ namespace NuclearReMind
             float topWorldH = Mathf.Max(0f, b.max.y - baseTopY);
             _topCollider.size = new Vector2(b.size.x, topWorldH);
             _topCollider.offset = new Vector2(b.center.x, baseTopY + topWorldH * 0.5f);
+
+            // ── กล่องชุด worker (จูนแยกจากชุดอาคาร) ──
+            float wBaseTopY;
+            if (data != null && data.overrideWorkerCollider && data.workerBaseColliderSize != Vector2.zero)
+            {
+                _workerBase.size = data.workerBaseColliderSize;
+                _workerBase.offset = data.workerBaseColliderOffset;
+                wBaseTopY = data.workerBaseColliderOffset.y + data.workerBaseColliderSize.y * 0.5f;
+            }
+            else
+            {
+                // ยังไม่จูน → แถบพื้นเตี้ย ๆ เต็มความกว้าง (อย่างน้อย 1px เพื่อไม่ให้กล่องแบนเป็นศูนย์)
+                float wh = Mathf.Max(1f / ppu, b.size.y * DefaultWorkerBaseFraction);
+                _workerBase.size = new Vector2(b.size.x, wh);
+                _workerBase.offset = new Vector2(b.center.x, b.min.y + wh * 0.5f);
+                wBaseTopY = b.min.y + wh;
+            }
+
+            if (data != null && data.overrideWorkerCollider && data.workerTopColliderSize != Vector2.zero)
+            {
+                _workerTop.size = data.workerTopColliderSize;
+                _workerTop.offset = data.workerTopColliderOffset;
+            }
+            else
+            {
+                float wth = Mathf.Max(0f, b.max.y - wBaseTopY);
+                _workerTop.size = new Vector2(b.size.x, wth);
+                _workerTop.offset = new Vector2(b.center.x, wBaseTopY + wth * 0.5f);
+            }
 
             // overlay = แถบบนของ texture (sub-rect) เหนือขอบบนโซนฐาน · pivot มุมล่างซ้าย → วางทับแถบบนของ main พอดี
             int baseHpx = Mathf.Clamp(Mathf.RoundToInt((baseTopY - b.min.y) * ppu), 1, rectH - 1);
@@ -181,27 +229,82 @@ namespace NuclearReMind
         }
 
         /// <summary>
-        /// worker ที่ "ตัวสไปรต์ทับโซนฐาน" ของอาคาร และยืน "หน้า" ฐาน (feetY ต่ำกว่ากึ่งกลางฐาน) → ต้องวาดเหนืออาคารนั้น
-        /// (แก้ปัญหา worker เดินหน้าอาคารแล้วถูกบังหมด — Unit tier ต่ำกว่า Building เสมอ) · อยู่หลังฐาน = ปล่อยให้อาคารบังตามเดิม
-        /// คืน order สูงสุดที่ควรยก worker ขึ้นไป (เหนือทั้งฐานและยอดของอาคารที่ทับ) · false = ไม่ทับอาคารไหน
-        /// เรียกทุกเฟรมจาก WorkerView.UpdateSorting (อาคารนิ่ง — bounds ฐานคงที่ ไม่ต้อง SyncTransforms ที่นี่)
+        /// ตัดสิน sortingOrder สุดท้ายของ worker เทียบกับอาคารทุกหลัง (เรียกทุกเฟรมจาก WorkerView.UpdateSorting)
+        ///
+        /// ★ ทำไมต้อง "กดลง" ไม่ใช่แค่ "งดยก":
+        ///   พื้นถูกวาง y = (col+row)·tileHeight/2 → ช่องที่ไกลออกไปอยู่ "สูงขึ้นบนจอ"
+        ///   แต่ SortOrder = (col+row)·SortScale → ช่องที่ไกลออกไป "วาดทับ" ของที่ใกล้กว่า
+        ///   สองอย่างนี้สวนกัน ผลคือคนงานที่ยืนหลังอาคาร (สูงบนจอ) ถูกดันมาข้างหน้าตั้งแต่ต้น
+        ///   โดยไม่ต้องมีกฎอะไรมาช่วยเลย → กฎที่บอกแค่ "ไม่ต้องยก" จึงไม่มีผลใด ๆ ทั้งสิ้น
+        ///   กล่อง top ต้องกดคนงานลงไปใต้อาคารจริง ๆ ถึงจะเห็นผล
+        ///
+        ///   (ต้นเหตุจริงอยู่ที่เครื่องหมายของแกนความลึกในสูตรกลาง แต่สูตรนั้นถูกใช้โดยอาคาร/แร่/ของตกแต่ง
+        ///    และ overlay ของอาคารก็ถูกจูนทับความเพี้ยนนั้นมาแล้ว — แก้ตรงนี้คือแก้เฉพาะผู้ใช้ที่ยังไม่มีตัวกลบ)
+        ///
+        /// ลำดับการบังคับ: ยกก่อน แล้วค่อยกด — "ถูกบัง" สำคัญกว่า "ได้ทับ" เวลาสองเงื่อนไขขัดกัน
+        /// (ยืนหลังตึก A แต่หน้าตึก B พร้อมกัน) เพราะคนโผล่ทะลุตึกสะดุดตากว่าคนที่ถูกบังเกินจริงหนึ่งชั้น
         /// </summary>
-        public static bool TryGetRaiseOrder(Bounds workerBounds, float feetY, out int order)
+        public static int ResolveWorkerOrder(Bounds workerBounds, Vector3 feet, int naturalOrder)
         {
-            order = int.MinValue;
-            bool any = false;
+            int raise = naturalOrder;   // สูงสุดที่ควรถูกยก (ยืนหน้าอาคาร)
+            int ceiling = int.MaxValue; // ต่ำสุดที่ต้องไม่เกิน (ยืนหลังอาคาร)
+
             for (int i = 0; i < All.Count; i++)
             {
                 var b = All[i];
-                if (b == null || b._baseCollider == null) continue;
-                Bounds bb = b._baseCollider.bounds;
+                if (b == null || b._workerBase == null) continue;
+
+                // ยืนในโซนบน = อยู่หลังอาคารหลังนี้ → ต้องอยู่ใต้มัน
+                // ★ เช็คด้วย "จุดที่เท้าเหยียบ" ไม่ใช่กรอบสไปรต์ทั้งตัว — คนที่ยืนหน้าอาคารสูง หัวก็ยังกิน
+                //   พื้นที่ Y เดียวกับครึ่งบนของอาคาร ถ้าเช็คด้วยกรอบทั้งตัวจะโดนกดลงกันหมดทุกคน
+                if (b._workerTop != null && ContainsXY(b._workerTop.bounds, feet))
+                {
+                    ceiling = Mathf.Min(ceiling, b._isoOrder - 1);
+                    continue; // หลังเดียวกันจะเป็นทั้ง "ยืนหลัง" และ "ยืนหน้า" ไม่ได้
+                }
+
+                Bounds bb = b._workerBase.bounds;
                 if (!workerBounds.Intersects(bb)) continue;
-                if (feetY >= bb.center.y) continue; // worker อยู่หลังฐาน → อาคารบังตามปกติ
+                if (feet.y >= bb.center.y) continue; // อยู่หลังฐาน → อาคารบังตามเดิม
                 int top = (b._overlay != null && b._overlay.enabled) ? b._overlay.sortingOrder : b._isoOrder;
-                int cand = Mathf.Max(b._isoOrder, top) + 1;
-                if (cand > order) { order = cand; any = true; }
+                raise = Mathf.Max(raise, Mathf.Max(b._isoOrder, top) + 1);
             }
-            return any;
+
+            return ceiling == int.MaxValue ? raise : Mathf.Min(raise, ceiling);
+        }
+
+        // Bounds.Contains ต้องให้ z อยู่ในช่วงด้วย แต่ collider 2D มีความหนา z = 0 → เทียบเฉพาะ XY
+        private static bool ContainsXY(Bounds b, Vector3 p)
+            => p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y;
+
+        // ─────────────────────────────────────────
+        //  Gizmos — เห็นกล่องจริงตอนเล่น
+        // ─────────────────────────────────────────
+
+        /// <summary>
+        /// วาดกรอบ collider ทั้ง 4 ใบตอน Play (เปิด/ปิดจากเมนู NuclearReMind → Tools → Show Depth Boxes)
+        ///
+        /// จำเป็นเพราะกล่องพวกนี้ถูก "คำนวณตอนรันไทม์" จาก sprite bounds — ค่าที่เห็นใน BuildingData ไม่ได้
+        /// บอกว่ากล่องไปโผล่ที่ไหนจริง ๆ บนจอ เวลา worker เรียงผิดจึงแยกไม่ออกว่าเป็นเพราะกล่องวางผิดที่
+        /// หรือเพราะกฎการยกลำดับ — อันนี้ตอบได้ด้วยการมอง ไม่ต้องเดา
+        /// </summary>
+        public static bool DrawGizmos;
+
+        private void OnDrawGizmos()
+        {
+            if (!DrawGizmos) return;
+            Box(_baseCollider, new Color(0.30f, 1.00f, 0.40f)); // เขียว — อาคารทับอาคาร
+            Box(_topCollider,  new Color(0.20f, 0.65f, 0.30f)); // เขียวเข้ม — ยอดอาคาร
+            Box(_workerBase,   new Color(0.35f, 0.70f, 1.00f)); // ฟ้า — "ยืนหน้า" ของ worker
+            Box(_workerTop,    new Color(1.00f, 0.60f, 0.25f)); // ส้ม — "ยืนหลัง" ของ worker
+        }
+
+        private static void Box(BoxCollider2D c, Color color)
+        {
+            if (c == null) return;
+            Gizmos.color = color;
+            var b = c.bounds;
+            Gizmos.DrawWireCube(new Vector3(b.center.x, b.center.y, 0f), new Vector3(b.size.x, b.size.y, 0f));
         }
     }
 }

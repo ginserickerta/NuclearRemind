@@ -76,6 +76,17 @@ namespace NuclearReMind
         /// <summary>ผูกเงาใต้เท้า (สร้างโดย WorkerVisualSpawner) — จะถูกจัด sortingOrder ให้อยู่ใต้ตัวทุกครั้งที่คนงานขยับ</summary>
         public void SetShadow(SpriteRenderer shadow) => _shadow = shadow;
 
+        // Decorations that must ride the body's depth (health badge, name tag). A fixed high order made
+        // them float over buildings the worker was standing behind — a face and a name showing through a
+        // wall the body was hidden by. Registered once at spawn; no per-frame lookups.
+        private readonly List<(Renderer r, int offset)> _sortFollowers = new List<(Renderer, int)>();
+
+        /// <summary>Keep a child renderer at (worker order + offset) every time the worker is re-sorted.</summary>
+        public void AddSortFollower(Renderer r, int offset)
+        {
+            if (r != null) _sortFollowers.Add((r, offset));
+        }
+
         private void OnEnable() => _active.Add(this);
         private void OnDisable() => _active.Remove(this);
 
@@ -284,14 +295,22 @@ namespace NuclearReMind
         {
             if (_sr == null) _sr = GetComponent<SpriteRenderer>();
             if (_sr == null || GridManager.Instance == null) return;
-            var iso = GridManager.Instance.WorldToIso(transform.position);
+            // ★ ต้องเป็น WorldToIsoF (ทศนิยม) ไม่ใช่ WorldToIso ที่ปัดเป็นช่องเต็ม — ไม่งั้น sortingOrder
+            //   กระโดดทีละ SortScale (16) ตอนข้ามเส้นแบ่งช่อง คนงานเลยเด้งจากหลังอาคารมาหน้าอาคารทันที
+            //   ณ จุดที่ไม่ตรงกับที่ตาเห็น และ bias ต่างประเภท (+8 ของอาคาร) ก็ใช้ไม่ได้เพราะ "ครึ่งช่อง"
+            //   ไม่มีอยู่จริงเมื่อปัดเศษทิ้ง — WorldToIsoF ถูกเขียนมาเพื่อกรณีนี้โดยเฉพาะ
+            var iso = GridManager.Instance.WorldToIsoF(transform.position);
             // Player(unit) = ชั้นล่างสุดตอนซ้อน depth เดียวกัน (อาคาร/แร่/tower ที่ depth เท่ากันวาดทับ)
             int orderVal = GridManager.SortOrder(iso.x, iso.y, GridManager.SortTier.Unit);
-            // เดินอยู่หน้า/ทับ "ส่วนล่าง (ฐาน)" ของอาคาร → ยกเหนืออาคารนั้น (ไม่ให้อาคารบังตัว worker)
-            if (BuildingDepthSort.TryGetRaiseOrder(_sr.bounds, transform.position.y, out int raise) && raise > orderVal)
-                orderVal = raise;
+            // ยืนหน้าอาคาร → ยกเหนืออาคารนั้น · ยืนหลังอาคาร → กดลงไปใต้มัน (ดูเหตุผลที่ ResolveWorkerOrder)
+            orderVal = BuildingDepthSort.ResolveWorkerOrder(_sr.bounds, transform.position, orderVal);
             _sr.sortingOrder = orderVal;
             if (_shadow != null) _shadow.sortingOrder = orderVal - 1; // เงาอยู่ใต้ตัวคนงานเสมอ
+            for (int i = 0; i < _sortFollowers.Count; i++)
+            {
+                var f = _sortFollowers[i];
+                if (f.r != null) f.r.sortingOrder = orderVal + f.offset;
+            }
         }
     }
 }

@@ -60,6 +60,15 @@ namespace NuclearReMind
             _face = fGo.AddComponent<SpriteRenderer>();
             _face.sortingLayerName = layer;
             _face.sortingOrder = BadgeOrder + 1;
+
+            // Ride the worker's depth instead of floating above the whole scene — otherwise the face
+            // shows through a building the worker is standing behind.
+            var view = GetComponentInParent<WorkerView>();
+            if (view != null)
+            {
+                view.AddSortFollower(_bg, 1);
+                view.AddSortFollower(_face, 2);
+            }
         }
 
         /// <summary>Set the shown status (no-op if unchanged — cheap to call every refresh).</summary>

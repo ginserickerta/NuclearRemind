@@ -40,6 +40,15 @@ namespace NuclearReMind
             _shadow = MakeText("NameShadow", layer, TagOrder, CShadow,
                                new Vector3(ShadowOffset, -ShadowOffset, 0f));
             _text = MakeText("NameText", layer, TagOrder + 1, CName, Vector3.zero);
+
+            // Ride the worker's depth (same reason as the health badge) so a name never shows through a
+            // building the worker is hidden behind.
+            var view = GetComponentInParent<WorkerView>();
+            if (view != null)
+            {
+                view.AddSortFollower(_shadow.GetComponent<MeshRenderer>(), 1);
+                view.AddSortFollower(_text.GetComponent<MeshRenderer>(), 2);
+            }
         }
 
         private TextMesh MakeText(string name, string layer, int order, Color color, Vector3 localOffset)

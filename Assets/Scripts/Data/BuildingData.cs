@@ -67,6 +67,18 @@ namespace NuclearReMind
         [Tooltip("ตำแหน่งกึ่งกลางกล่องฐาน เทียบ pivot สไปรต์ (world units) — ใช้เมื่อ overrideBaseCollider = true")]
         public Vector2 baseColliderOffset = Vector2.zero;
 
+        [Header("Depth-sort worker collider (override)")]
+        [Tooltip("กล่องคนละชุดกับ base/top ด้านบน — ชุดนั้นตัดสิน 'อาคารทับอาคาร' ชุดนี้ตัดสิน 'worker ทับอาคาร' อย่างเดียว\n" +
+                 "แยกกันเพราะกล่องเดียวรับสองหน้าที่ไม่ได้: จูนให้อาคารถูก worker จะพัง และกลับกัน\n" +
+                 "worker base = แถบพื้นเตี้ย ๆ · เท้าต่ำกว่ากึ่งกลางแถบนี้ = ยืนหน้าอาคาร → วาดทับ\n" +
+                 "worker top  = โซนที่ 'ยืนตรงนี้ = อยู่หลังอาคาร' → ไม่ยกขึ้นมาไม่ว่าเท้าจะต่ำแค่ไหน\n" +
+                 "ปรับด้วยเมนู NuclearReMind → Tools → Base Collider Editor (สลับกล่องที่แก้ได้ในนั้น)")]
+        public bool overrideWorkerCollider = false;
+        public Vector2 workerBaseColliderSize = Vector2.zero;
+        public Vector2 workerBaseColliderOffset = Vector2.zero;
+        public Vector2 workerTopColliderSize = Vector2.zero;
+        public Vector2 workerTopColliderOffset = Vector2.zero;
+
         [Header("Grid")]
         public Vector2Int size = Vector2Int.one;
 
