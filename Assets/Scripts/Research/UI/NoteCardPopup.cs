@@ -5,12 +5,16 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
-    /// Note completion popup (GDD §19 + NOTES.md) — fires on OnResearchNoteCompleted:
-    ///   page 1: knowledgeBody (the actual knowledge, verbatim from the asset)
-    ///   page 2: the 1-line NPC reaction (completionSpeaker/completionLine)
+    /// Note completion popup (GDD §19 + NOTES.md) — fires on OnResearchNoteCompleted and shows
+    /// knowledgeBody, the actual knowledge, verbatim from the asset.
+    ///
+    /// The NPC reaction (completionSpeaker/completionLine) used to be a second page of this same panel,
+    /// which meant a one-line remark rattling around a 720x460 box with the title area blanked out. It
+    /// now hands off to the story dialogue system on close — portrait, name plate and speech frame, the
+    /// same presentation every other character line in the game gets.
     ///
     /// ★ Deliberately NOT routed through BarkManager — barks are capped at 2/day but this
-    ///   dialogue must ALWAYS show (NOTES.md implement note).
+    ///   dialogue must ALWAYS show (NOTES.md implement note). StoryDialogue has no such cap.
     /// Pauses the day clock while open (PauseReason.NotePopup — pause-reason stack §3,
     /// never Time.timeScale).
     ///
@@ -26,7 +30,6 @@ namespace NuclearReMind
         static readonly Color CBorder   = new Color(0.22f, 0.48f, 0.55f, 1f);
         static readonly Color CTitle    = new Color(0.42f, 0.82f, 0.88f, 1f);
         static readonly Color CText     = new Color(0.90f, 0.92f, 0.93f, 1f);
-        static readonly Color CSpeaker  = new Color(0.78f, 0.72f, 0.46f, 1f);
         static readonly Color CBtn      = new Color(0.16f, 0.30f, 0.34f, 1f);
         static readonly Color CEyebrow  = new Color(0.55f, 0.62f, 0.66f, 1f);
 
@@ -35,11 +38,10 @@ namespace NuclearReMind
 
         private Font _font;
         private GameObject _backdrop, _root;
-        private Text _eyebrow, _title, _speaker, _body, _btnLabel;
+        private Text _eyebrow, _title, _body, _btnLabel;
         private bool _shown;
 
         private ResearchNoteSO _note;
-        private int _page;                                        // 0 = knowledgeBody, 1 = NPC line
         private readonly Queue<ResearchNoteSO> _pending = new Queue<ResearchNoteSO>();
 
         // ── auto-spawn (same pattern as the other v6.3 panels) ──
@@ -131,7 +133,6 @@ namespace NuclearReMind
             }
 
             _note = note;
-            _page = 0;
             _shown = true;
             _backdrop.SetActive(true);
             GameUIStack.Push(this);
@@ -139,52 +140,72 @@ namespace NuclearReMind
             Render();
         }
 
-        /// <summary>Continue button: knowledgeBody → NPC line → close.</summary>
-        public void Advance()
-        {
-            // ข้ามหน้า NPC ถ้าโน้ตไม่มีบท (ไม่ควรเกิด — NOTES.md มีครบ 8)
-            if (_page == 0 && !string.IsNullOrEmpty(_note?.completionLine))
-            {
-                _page = 1;
-                Render();
-                return;
-            }
-            Close();
-        }
+        /// <summary>Continue button — closes the knowledge card and hands the NPC line to StoryDialogue.</summary>
+        public void Advance() => Close();
 
         private void Render()
         {
             if (_note == null) return;
-
-            if (_page == 0)
-            {
-                if (_eyebrow != null) _eyebrow.text = "วิจัยสำเร็จ";
-                if (_title != null)   _title.text = _note.title;
-                if (_speaker != null) _speaker.text = "";
-                if (_body != null)    _body.text = _note.knowledgeBody;
-                if (_btnLabel != null)
-                    _btnLabel.text = string.IsNullOrEmpty(_note.completionLine) ? "ปิด" : "ต่อไป";
-            }
-            else
-            {
-                if (_eyebrow != null) _eyebrow.text = "";
-                if (_title != null)   _title.text = "";
-                if (_speaker != null) _speaker.text = _note.completionSpeaker;
-                if (_body != null)    _body.text = $"“{_note.completionLine}”";
-                if (_btnLabel != null) _btnLabel.text = "ปิด";
-            }
+            if (_eyebrow != null)  _eyebrow.text = "วิจัยสำเร็จ";
+            if (_title != null)    _title.text = _note.title;
+            if (_body != null)     _body.text = _note.knowledgeBody;
+            if (_btnLabel != null) _btnLabel.text = "ปิด";
         }
 
         private void Close()
         {
+            var finished = _note;      // captured before the reset — the NPC line still needs it
             _note = null;
-            _page = 0;
             _shown = false;
             HideRoot();
             GameUIStack.Pop(this);
             TimeManager.Instance?.Resume(PauseReason.NotePopup);
 
-            if (_pending.Count > 0) Show(_pending.Dequeue());
+            // Queued notes first: two knowledge cards back to back read better than interleaving each
+            // one with its own character line.
+            if (_pending.Count > 0) { Show(_pending.Dequeue()); return; }
+
+            SpeakCompletionLine(finished);
+        }
+
+        /// <summary>
+        /// Hand the note's closing remark to the story dialogue system (portrait + name plate + speech
+        /// frame). DialogueUIController owns its own PauseReason.StoryCard, and this runs after
+        /// NotePopup's pause is released, so the two never overlap.
+        /// </summary>
+        private static void SpeakCompletionLine(ResearchNoteSO note)
+        {
+            if (note == null || string.IsNullOrEmpty(note.completionLine)) return;
+            if (EventManager.Instance == null) return;
+
+            EventManager.Instance.RaiseStoryDialogueShown(new[]
+            {
+                new DialogueLine
+                {
+                    speaker = ParseSpeaker(note.completionSpeaker),
+                    textTH  = note.completionLine,
+                    emotion = Emotion.Neutral,
+                },
+            });
+        }
+
+        /// <summary>
+        /// The assets spell speakers in caps (KOVA/MIRA/DORN — verified across all 8 notes). Anything
+        /// unrecognised falls back to System rather than silently picking the wrong portrait.
+        /// </summary>
+        private static Speaker ParseSpeaker(string raw)
+        {
+            if (string.IsNullOrEmpty(raw)) return Speaker.System;
+            switch (raw.Trim().ToUpperInvariant())
+            {
+                case "KOVA":       return Speaker.Kova;
+                case "MIRA":       return Speaker.Mira;
+                case "DORN":       return Speaker.Dorn;
+                case "AUREN":
+                case "INNERVOICE": return Speaker.InnerVoice;
+                case "CITIZEN":    return Speaker.Citizen;
+                default:           return Speaker.System;
+            }
         }
 
         private void HideRoot()
@@ -223,11 +244,8 @@ namespace NuclearReMind
             _title = MakeText("Title", _root.transform, "", 28, CTitle, TextAnchor.UpperLeft);
             Anchor(_title.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(30f, -98f), new Vector2(-30f, -52f));
 
-            _speaker = MakeText("Speaker", _root.transform, "", 19, CSpeaker, TextAnchor.UpperLeft);
-            Anchor(_speaker.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(30f, -128f), new Vector2(-30f, -100f));
-
             _body = MakeText("Body", _root.transform, "", 19, CText, TextAnchor.UpperLeft);
-            Anchor(_body.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(30f, -(PanelHeight - 92f)), new Vector2(-30f, -136f));
+            Anchor(_body.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(30f, -(PanelHeight - 92f)), new Vector2(-30f, -108f));
 
             var btn = MakeButton("Continue", _root.transform, "ต่อไป", CBtn, Advance);
             Anchor(btn.gameObject, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-110f, 24f), new Vector2(110f, 68f));
