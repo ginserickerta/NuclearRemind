@@ -228,13 +228,13 @@ public string job; // farm/power/water/mine/lab/cool/zoneb/extract/idle
 ### กลไกเติมประชากร
 
 ```csharp
-// §27 v5.2
-if (food > pop * 5 && pop < shelterCap)
-    if (Random() < 0.25f) { pop += 1; food -= 20; }
+// §27 v5.2 · ค่าปรับ 2026-07-20 (ดู CONFIG.md ★ POPULATION GROWTH)
+if (food > pop * 3 && pop < shelterCap)
+    if (Random() < 0.35f) { pop += 1; food -= 20; }
 ```
 
-- ต้องมี **อาหารเหลือ** (food > pop×5) และ **ยังไม่เต็มเพดาน**
-- โอกาส 25%/วัน · +1 คน · หัก food 20
+- ต้องมี **อาหารเหลือ** (food > pop×3) และ **ยังไม่เต็มเพดาน**
+- โอกาส 35%/วัน · +1 คน · หัก food 20
 - **ไม่ผูก Hope** (v4.1 ผูก Hope ≥ 50 — ตัดออกเพราะ Hope เริ่ม 70 ต่ำกว่าเดิม)
 
 > ⚠ **ผลกระทบ sim:** ค่า sim ทั้งหมดรันที่ pop 14 คงที่

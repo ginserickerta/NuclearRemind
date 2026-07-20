@@ -311,8 +311,8 @@ namespace NuclearReMind
         public float startKnowledge = 20f;         // Auren already knows the basics — head start on the Novice tier (<30)
 
         [Header("Population growth (★ not sim-validated yet — CONFIG.md §33)")]
-        public float growthFoodRatio = 5f;         // food > pop × 5
-        public float growthChance = 0.25f;
+        public float growthFoodRatio = 3f;         // food > pop × 3 (was 5 — see CONFIG.md 2026-07-20 note)
+        public float growthChance = 0.35f;         // 35%/day (was 0.25)
         public float growthFoodCost = 20f;
         public int growthAmount = 1;
 
