@@ -79,6 +79,43 @@ namespace NuclearReMind.EditorTools
             return true;
         }
 
+        // ── Force present: check the PRESENTATION path without waiting for a trigger ──
+        //
+        // This proves the dialogue → card → options chain works and that the asset's text and lock states
+        // render. It proves NOTHING about whether the trigger can ever fire in a real run — that is what
+        // "Log Card States" and the trace file are for. Keep the two questions apart: a card that force-
+        // shows fine but never appears in play has a threshold problem, not a UI problem.
+        [MenuItem(Root + "Force Show/1 · heat", false, 50)]      private static void F1() => Force(CardIds.Heat);
+        [MenuItem(Root + "Force Show/2 · sick", false, 51)]      private static void F2() => Force(CardIds.Sick);
+        [MenuItem(Root + "Force Show/3 · spoil", false, 52)]     private static void F3() => Force(CardIds.Spoil);
+        [MenuItem(Root + "Force Show/4 · hunger", false, 53)]    private static void F4() => Force(CardIds.Hunger);
+        [MenuItem(Root + "Force Show/5 · overwork", false, 54)]  private static void F5() => Force(CardIds.Overwork);
+        [MenuItem(Root + "Force Show/6 · zoneb", false, 55)]     private static void F6() => Force(CardIds.ZoneB);
+        [MenuItem(Root + "Force Show/7 · triage", false, 56)]    private static void F7() => Force(CardIds.Triage);
+        [MenuItem(Root + "Force Show/8 · decree", false, 57)]    private static void F8() => Force(CardIds.Decree);
+
+        private static void Force(string cardId)
+        {
+            if (!RequirePlayMode()) return;
+
+            var cm = CardManager.Instance;
+            if (cm == null) { Debug.LogWarning("[CardTools] ยังไม่มี CardManager ในฉาก"); return; }
+
+            if (cm.HasPending)
+            {
+                Debug.LogWarning($"[CardTools] มีการ์ด '{cm.Pending.cardId}' ค้างอยู่ — ตอบให้จบก่อน " +
+                                 "(ทีละใบเท่านั้น ตามกติกาของ CardManager)");
+                return;
+            }
+
+            var card = cm.ForcePresent(cardId);
+            if (card == null)
+                Debug.LogError($"[CardTools] สั่งแสดง '{cardId}' ไม่สำเร็จ — ไม่มี asset ใน Resources/CrisisCards " +
+                               "หรือแผงไม่ขึ้น (ดู Console บรรทัดของ [Cards])");
+            else
+                Debug.Log($"[CardTools] สั่งแสดง '{cardId}' แล้ว — ข้ามเงื่อนไขและ cooldown");
+        }
+
         private static bool RequirePlayMode()
         {
             if (Application.isPlaying) return true;
