@@ -385,9 +385,21 @@ namespace NuclearReMind
             if (popWorkerText != null) popWorkerText.text = _idleWorkers >= 0
                                                               ? $"{crew}  ·  ว่าง {_idleWorkers}"
                                                               : $"{crew}";
-            if (popEngineerText != null) popEngineerText.text = $"{_lastPop.engineers}";
-            if (popMedicText != null)    popMedicText.text    = $"{_lastPop.medics}";
-            if (popFarmerText != null)   popFarmerText.text   = $"{_lastPop.farmers}";
+            // ★ v6.3: the engineer/medic/farmer rows used to count job classes, which v5.2 deleted — they
+            //   read 0 for the whole run. Repurposed as the attrition warnings CLAUDE.md's Sprint 1 test
+            //   asks for ("เห็นคนหิว/ป่วย"), which had no HUD presence at all. Labelled in text because the
+            //   icons are still the old class art and would otherwise read as the wrong thing.
+            //   WorkerStatus is exclusive and severity-ordered, so a hungry-and-sick worker counts once,
+            //   under the worse label — these are status counts, not totals of everyone affected.
+            if (popEngineerText != null) popEngineerText.text = wm != null
+                                                                  ? $"ล้า {wm.ExhaustedCount}"
+                                                                  : $"{_lastPop.engineers}";
+            if (popMedicText != null)    popMedicText.text    = wm != null
+                                                                  ? $"ป่วย {wm.SickCount + wm.DyingCount}"
+                                                                  : $"{_lastPop.medics}";
+            if (popFarmerText != null)   popFarmerText.text   = wm != null
+                                                                  ? $"หิว {wm.HungryCount}"
+                                                                  : $"{_lastPop.farmers}";
         }
 
         // Knowledge 0–100 + ป้าย tier (Novice/Aware/Skilled/Expert) — อ่าน tier จาก ResourceManager (config-style query)
