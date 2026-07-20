@@ -103,14 +103,16 @@ namespace NuclearReMind
 
         private void OnEnable()
         {
-            if (EventManager.Instance != null)
-                EventManager.Instance.OnCrisisCardShown += Show;
+            if (EventManager.Instance == null) return;
+            EventManager.Instance.OnCrisisCardShown += Show;
+            EventManager.Instance.OnStoryCardDismissed += HandleDialogueFinished;
         }
 
         private void OnDisable()
         {
-            if (EventManager.Instance != null)
-                EventManager.Instance.OnCrisisCardShown -= Show;
+            if (EventManager.Instance == null) return;
+            EventManager.Instance.OnCrisisCardShown -= Show;
+            EventManager.Instance.OnStoryCardDismissed -= HandleDialogueFinished;
         }
 
         private void Start()
@@ -129,6 +131,8 @@ namespace NuclearReMind
         }
 
         // ── show / hide (CardManager owns the day-clock pause/resume) ──
+        private bool _awaitingDialogue;
+
         private void Show(CrisisCardSO card)
         {
             if (card == null) return;
@@ -137,6 +141,54 @@ namespace NuclearReMind
             if (_root == null) BuildPanel();
             if (_root == null) return;
             Populate(card);
+
+            // ★ Set IsShowing here, not in Reveal(). CardManager reads it immediately after raising
+            // OnCrisisCardShown and clears Pending if no panel took the card — so accepting the card and
+            // revealing it have to be separable, otherwise playing the dialogue first would look like a
+            // dropped card and silently cancel the crisis.
+            IsShowing = true;
+
+            if (TryPlayDialogue(card)) { _awaitingDialogue = true; return; }
+            Reveal();
+        }
+
+        /// <summary>
+        /// Hand the card's character lines to the story dialogue system — portraits and speech frames,
+        /// the same presentation every other conversation in the game gets, instead of grey text stacked
+        /// inside the card body. The options panel follows once the conversation ends, so the player reads
+        /// the argument first and then decides.
+        /// </summary>
+        private bool TryPlayDialogue(CrisisCardSO card)
+        {
+            if (card.dialogueLines == null || card.dialogueLines.Length == 0) return false;
+            if (EventManager.Instance == null || DialogueUIController.Instance == null) return false;
+
+            var lines = new List<DialogueLine>(card.dialogueLines.Length);
+            foreach (var raw in card.dialogueLines)
+            {
+                if (string.IsNullOrEmpty(raw)) continue;
+                var line = SpeakerMeta.FromPrefixedLine(raw);
+                if (!string.IsNullOrEmpty(line.textTH)) lines.Add(line);
+            }
+            if (lines.Count == 0) return false;
+
+            EventManager.Instance.RaiseStoryDialogueShown(lines.ToArray());
+
+            // If the dialogue UI declined to open, do NOT wait for a callback that will never come: the
+            // day clock is already paused for this crisis and the player would be stuck with no panel.
+            // Same guard shape as RecordCardUI's CanBeDismissed check.
+            return DialogueUIController.Instance.IsShowing;
+        }
+
+        private void HandleDialogueFinished()
+        {
+            if (!_awaitingDialogue) return; // fired by some other story card, not ours
+            _awaitingDialogue = false;
+            Reveal();
+        }
+
+        private void Reveal()
+        {
             _shown = true;
             IsShowing = true;
             if (_backdrop != null) _backdrop.SetActive(true);
@@ -147,6 +199,7 @@ namespace NuclearReMind
         {
             _shown = false;
             IsShowing = false;
+            _awaitingDialogue = false;
             if (_backdrop != null) _backdrop.SetActive(false);
             GameUIStack.Pop(this);
         }
@@ -169,12 +222,10 @@ namespace NuclearReMind
         {
             if (_title != null) _title.text = $"⚠ {card.title}";
 
-            var sb = new StringBuilder();
-            if (!string.IsNullOrEmpty(card.description)) sb.Append(card.description);
-            if (card.dialogueLines != null)
-                foreach (var line in card.dialogueLines)
-                    if (!string.IsNullOrEmpty(line)) sb.Append("\n\n<color=#CCD2E6>").Append(line).Append("</color>");
-            if (_body != null) _body.text = sb.ToString();
+            // Body is the situation only. The character lines used to be appended here as grey text;
+            // they now play as story dialogue before the card appears (TryPlayDialogue), so the panel
+            // stays a decision screen rather than a wall of text with buttons underneath.
+            if (_body != null) _body.text = card.description ?? "";
 
             foreach (var go in _optRows) Destroy(go);
             _optRows.Clear();

@@ -53,6 +53,57 @@ namespace NuclearReMind
             }
         }
 
+        /// <summary>
+        /// Name → Speaker. Case-insensitive because the content assets are not consistent: research notes
+        /// spell it "KOVA", crisis cards spell it "Kova". Anything unrecognised becomes System rather than
+        /// silently drawing the wrong character's portrait.
+        /// </summary>
+        public static Speaker Parse(string raw)
+        {
+            if (string.IsNullOrEmpty(raw)) return Speaker.System;
+            switch (raw.Trim().ToUpperInvariant())
+            {
+                case "KOVA":       return Speaker.Kova;
+                case "MIRA":       return Speaker.Mira;
+                case "DORN":       return Speaker.Dorn;
+                case "AUREN":
+                case "INNERVOICE": return Speaker.InnerVoice;
+                case "CITIZEN":    return Speaker.Citizen;
+                default:           return Speaker.System;
+            }
+        }
+
+        /// <summary>
+        /// Parse one authored line in the crisis-card format: `Kova: "…"`. The surrounding quotes are
+        /// stripped because the dialogue box draws its own speech frame. A line with no `Name:` prefix is
+        /// kept verbatim as a System line rather than being dropped.
+        /// </summary>
+        public static DialogueLine FromPrefixedLine(string raw)
+        {
+            var line = new DialogueLine { speaker = Speaker.System, emotion = Emotion.Neutral, textTH = raw };
+            if (string.IsNullOrEmpty(raw)) return line;
+
+            int colon = raw.IndexOf(':');
+            string body = raw;
+            if (colon > 0)
+            {
+                var candidate = Parse(raw.Substring(0, colon));
+                if (candidate != Speaker.System)      // only treat it as a prefix if the name is real
+                {
+                    line.speaker = candidate;
+                    body = raw.Substring(colon + 1);
+                }
+            }
+
+            body = body.Trim();
+            if (body.Length >= 2 && (body[0] == '"' || body[0] == '“') &&
+                                    (body[body.Length - 1] == '"' || body[body.Length - 1] == '”'))
+                body = body.Substring(1, body.Length - 2);
+
+            line.textTH = body.Trim();
+            return line;
+        }
+
         // อักษรย่อบน placeholder portrait (จนกว่าจะมีภาพจริงมาสลับ)
         public static string Initial(Speaker s)
         {

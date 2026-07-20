@@ -182,30 +182,11 @@ namespace NuclearReMind
             {
                 new DialogueLine
                 {
-                    speaker = ParseSpeaker(note.completionSpeaker),
+                    speaker = SpeakerMeta.Parse(note.completionSpeaker),
                     textTH  = note.completionLine,
                     emotion = Emotion.Neutral,
                 },
             });
-        }
-
-        /// <summary>
-        /// The assets spell speakers in caps (KOVA/MIRA/DORN — verified across all 8 notes). Anything
-        /// unrecognised falls back to System rather than silently picking the wrong portrait.
-        /// </summary>
-        private static Speaker ParseSpeaker(string raw)
-        {
-            if (string.IsNullOrEmpty(raw)) return Speaker.System;
-            switch (raw.Trim().ToUpperInvariant())
-            {
-                case "KOVA":       return Speaker.Kova;
-                case "MIRA":       return Speaker.Mira;
-                case "DORN":       return Speaker.Dorn;
-                case "AUREN":
-                case "INNERVOICE": return Speaker.InnerVoice;
-                case "CITIZEN":    return Speaker.Citizen;
-                default:           return Speaker.System;
-            }
         }
 
         private void HideRoot()
