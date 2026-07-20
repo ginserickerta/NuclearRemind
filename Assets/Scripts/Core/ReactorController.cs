@@ -228,7 +228,49 @@ namespace NuclearReMind
             Core = Mathf.Min(_cfg.coreWin, Core + gain);
             LastGain = gain;
 
+            ReportHope(stormActive, gain);
             EventManager.Instance?.RaiseReactorStateChanged(Core, Heat);
+        }
+
+        private int _stalledDays;
+
+        /// <summary>
+        /// The four reactor-side Hope sources from CONFIG.md's table. All four were documented with
+        /// non-zero values in GameConfigSO and had no call site anywhere in the project, which is a large
+        /// part of why Hope looked like it only ever went up: the recurring positives were wired and the
+        /// recurring negatives were not.
+        ///
+        /// Rule #8 — never write Hope directly; everything goes through the ledger WorkerManager owns.
+        /// WorkerManager commits at execution order -50 and this runs at -33, so these entries land in the
+        /// following day's total. That one-day lag already applies to research.complete and is left as-is
+        /// rather than reshuffling execution order on a deadline.
+        /// </summary>
+        private void ReportHope(bool stormActive, float gain)
+        {
+            var hope = WorkerManager.Instance?.Hope;
+            if (hope == null) return;
+
+            if (Heat > _cfg.heatWarn)
+                hope.Report("heat.critical", "เตาร้อนวิกฤต", _cfg.hopeHeatCritical, HopeCategory.Reactor);
+
+            if (stormActive)
+                hope.Report("storm.active", "พายุรังสี", _cfg.hopeStormActive, HopeCategory.Storm);
+
+            if (gain > 0f)
+            {
+                hope.Report("core.progress", $"CORE +{gain:0.0}%", gain * _cfg.hopeCoreProgress, HopeCategory.Reactor);
+                _stalledDays = 0;
+            }
+            else if (!IsWin)
+            {
+                // Only nag while the tower still needs work — a finished core is not "stalled".
+                _stalledDays++;
+                if (_stalledDays >= _cfg.hopeCoreStalledDays)
+                {
+                    hope.Report("core.stalled", "หอคอยไม่คืบหน้า", _cfg.hopeCoreStalled, HopeCategory.Reactor);
+                    _stalledDays = 0; // re-arm, so a long stall keeps costing rather than firing once
+                }
+            }
         }
 
         // ── fuel: the deuterium ledger, mirroring the tritium pair below ──

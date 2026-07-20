@@ -620,6 +620,29 @@ namespace NuclearReMind
             if (_deathsThisTick > 0)
                 Hope.Report("worker.death", $"เสียคนไป {_deathsThisTick} คน",
                     _cfg.hopeWorkerDeath * _deathsThisTick, HopeCategory.Worker);
+
+            ReportAlara();
+        }
+
+        /// <summary>
+        /// alara.compliant (CONFIG.md Hope Sources) — the crew sent into Zone B is fully suited. Documented
+        /// with a value since v6.3 and never reported by anything, like the reactor-side sources. Pays only
+        /// when someone is actually down there: an empty Zone B is not compliance, it is just an empty room.
+        /// </summary>
+        private void ReportAlara()
+        {
+            int inZone = 0, suited = 0;
+            for (int i = 0; i < _workers.Count; i++)
+            {
+                var w = _workers[i];
+                if (!w.alive || !w.IsWorking || w.job != WorkerJobs.ZoneB) continue;
+                inZone++;
+                if (w.hasRadSuit) suited++;
+            }
+
+            if (inZone > 0 && suited == inZone)
+                Hope.Report("alara.compliant", $"Zone B ใส่ชุดครบ {inZone} คน",
+                    _cfg.hopeAlaraCompliant, HopeCategory.Worker);
         }
 
         private void ReportStatus(WorkerStatus status, string key, string label, float perHead)

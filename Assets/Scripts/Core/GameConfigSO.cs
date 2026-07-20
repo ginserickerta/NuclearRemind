@@ -117,19 +117,21 @@ namespace NuclearReMind
         public float hopeWorkerSick = -3f;
         public float hopeWorkerDying = -5f;
         public float hopeWorkerDeath = -8f;        // once per death
-        public float hopeFoodSurplus = 3f;         // food > pop×3
+        public float hopeFoodSurplus = 2f;         // food > pop × foodSurplusPopMult (was +3 — see CONFIG.md 2026-07-21)
         public float hopeFoodEmpty = -6f;          // food == 0
         public float hopeWaterShortage = -4f;      // water < pop
         public float hopePowerBlackout = -5f;      // via flag, never power < 0 (bug #17)
         public float hopeHeatCritical = -3f;       // HEAT > 90
         public float hopeStormActive = -1f;
         public float hopeCoreStalled = -4f;        // no CORE gain 3 days straight
+        public int hopeCoreStalledDays = 3;        // how many consecutive dead days count as stalled
+        public float hopeCoreProgress = 1.6f;      // per CORE% gained
         public float hopeResearchComplete = 6f;    // per note
         public float hopeMemorialVisited = 2f;     // first click only
         public float hopeAlaraCompliant = 2f;      // Zone B fully suited
         public int quizRevealDelayDays = 1;        // days between USING knowledge and the quiz surfacing (QUIZZES.md pacing)
         public float hopeScram = -3f;
-        public float foodSurplusPopMult = 3f;      // surplus condition: food > pop × 3
+        public float foodSurplusPopMult = 6f;      // surplus condition: food > pop × 6 (was ×3 — CONFIG.md 2026-07-21)
 
         // ─────────────────────────────────────────
         //  [LOCK] ECONOMY / day (CONFIG.md 🔒 ECONOMY)
