@@ -2,9 +2,12 @@ namespace NuclearReMind
 {
     /// <summary>
     /// Live world snapshot the card triggers read (GDD §25 / CONFIG.md 🔒 CARDS). Built from the
-    /// running systems, or set by tests / the F9 panel. Fields whose systems aren't built yet
-    /// (heat, storm, Zone B) default to values that simply keep those cards from firing — correct,
-    /// not a bug: card 1 can't trigger until the reactor exists, etc.
+    /// running systems, or set by tests / the F9 panel.
+    ///
+    /// ⚠ The old note here said heat/storm/Zone B "aren't built yet" and that those cards not firing was
+    /// correct rather than a bug. That has been stale since the reactor and Zone B clusters went live
+    /// (9b231ce / b3e0b24) — all three are running now, so a card of theirs that never appears IS worth
+    /// investigating. Use CardManager.VerboseTrace to see the actual per-card reason.
     /// </summary>
     public struct CardWorldState
     {
@@ -24,8 +27,6 @@ namespace NuclearReMind
         public static CardWorldState Snapshot()
         {
             var s = new CardWorldState();
-            var cfg = GameConfigSO.Instance;
-            s.medBayCapacity = cfg != null ? cfg.medBayCapacity : 4;
 
             var rm = ResourceManager.Instance;
             if (rm != null) s.food = rm.Current.food;
@@ -33,7 +34,18 @@ namespace NuclearReMind
             var wm = WorkerManager.Instance;
             if (wm != null)
             {
-                s.sickWorkers = wm.SickCount;
+                // ★ Beds, not the heal rate. This used to read GameConfigSO.medBayCapacity, which is
+                // "patients healed per day" (4) and exists whether or not a Hospital was ever built —
+                // so card 7 (triage) demanded 5+ sick against 4 imaginary beds. WorkerManager.MedBayBeds
+                // is the real count and is 0 until a Hospital is finished, which is what the spec's
+                // "sickWorkers > medBayCapacity" is actually asking about.
+                s.medBayCapacity = wm.MedBayBeds;
+
+                // ★ Dying counts as sick. WorkerStatus is exclusive and severity-ordered, so a worker who
+                // deteriorates from Sick to Dying silently LEFT the sick tally — the worse the outbreak
+                // got, the fewer "sick workers" cards 2 and 7 could see, and a city with everyone dying
+                // reported zero. Neither card's threshold moved; the input just stopped lying.
+                s.sickWorkers = wm.SickCount + wm.DyingCount;
                 s.hungryWorkers = wm.HungryCount;
                 s.exhaustedWorkers = wm.ExhaustedCount;
                 s.coolingWorkers = wm.GetWorkers(WorkerJobs.Cool).Count;
