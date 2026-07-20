@@ -216,7 +216,11 @@ namespace NuclearReMind
 
         private void HandleDayEnded(int day)
         {
-            if (day <= 1) return; // Day 1 tutorial
+            // ★ No day-1 skip. The lab starts as rubble (CONFIG research_lab_is_ruined), so day 1 is
+            // exactly when a player who wants a head start pays to repair it — and skipping the tick meant
+            // that first day of repair, and any research queued during it, quietly counted for nothing.
+            // Attrition systems still skip day 1 on purpose: the tutorial should not starve or irradiate
+            // anyone. Choosing to work on day 1 is not attrition, so the lab does not share that guard.
             TickDay();
         }
 
@@ -341,6 +345,7 @@ namespace NuclearReMind
         /// Realtime progress so the bar moves while the player watches instead of jumping once at
         /// midnight. Spreads the same DailyGain across dayLength seconds, so the daily total is
         /// unchanged and a note can now finish mid-day rather than always on a day boundary.
+        /// Runs from day 1, matching HandleDayEnded — see the note there.
         ///
         /// EditMode tests drive TickDay() directly and never run Update, so _accruedToday stays 0 there
         /// and the day tick still awards a whole step — the headless behaviour tests assert is intact.
@@ -351,7 +356,6 @@ namespace NuclearReMind
 
             var gm = GameManager.Instance;
             if (gm == null || gm.dayLength <= 0f) return;
-            if (gm.CurrentDay <= 1) return;                                        // Day 1 tutorial, as HandleDayEnded
             if (TimeManager.Instance != null && !TimeManager.Instance.IsRunning) return; // popups freeze the lab too
 
             float gain = DailyGain(WorkerManager.Instance);
