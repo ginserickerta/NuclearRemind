@@ -165,6 +165,7 @@ namespace NuclearReMind
             {
                 if (Input.GetKeyDown(KeyCode.Q)) EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, -1);
                 else if (Input.GetKeyDown(KeyCode.E)) EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, +1);
+                TrackLiveProgress();
                 return;
             }
 
@@ -316,6 +317,7 @@ namespace NuclearReMind
             if (_listContainer == null) return;
             foreach (var go in _rows) Destroy(go);
             _rows.Clear();
+            _activeBarFill = null; // the row that owned it is gone; AddBar re-caches if a job is active
 
             var db = KnowledgeDB.Instance;
             var wm = WorkerManager.Instance;
@@ -447,7 +449,10 @@ namespace NuclearReMind
             {
                 float frac = note.daysRequired > 0 ? lab.ActiveJob.progress / note.daysRequired : 0f;
                 bool stalled = wm != null && wm.GetWorkers(WorkerJobs.Lab).Count < note.researcherSlots * cfg.staffRatioMin;
-                AddBar(row.transform, new Vector2(14f, 8f), 856f, frac, stalled ? Hex("#854f0b") : CGold);
+                // Cached so Update can slide it as ResearchLab accrues, without rebuilding the row —
+                // a rebuild 4x a second would destroy buttons out from under the player's cursor.
+                _activeBarFill = AddBar(row.transform, new Vector2(14f, 8f), 856f, frac, stalled ? Hex("#854f0b") : CGold);
+                _activeBarDays = note.daysRequired;
             }
 
             _rows.Add(row);
@@ -510,7 +515,7 @@ namespace NuclearReMind
             return x + w + 5f;
         }
 
-        private void AddBar(Transform parent, Vector2 bottomLeft, float width, float frac, Color fill)
+        private Image AddBar(Transform parent, Vector2 bottomLeft, float width, float frac, Color fill)
         {
             var track = Rounded("BarTrack", parent, CTrack, 3);
             var rt = track.GetComponent<RectTransform>();
@@ -520,6 +525,27 @@ namespace NuclearReMind
             var frt = f.GetComponent<RectTransform>();
             frt.anchorMin = Vector2.zero; frt.anchorMax = new Vector2(Mathf.Clamp01(frac), 1f);
             frt.offsetMin = frt.offsetMax = Vector2.zero;
+            return f.GetComponent<Image>();
+        }
+
+        // Live progress bar — ResearchLab now accrues continuously instead of stepping once at midnight,
+        // so the bar has to be nudged every frame. Only the fill rect is touched; Refresh() still owns
+        // everything else and runs on events as before. Cleared when the row is rebuilt or the job ends,
+        // so a stale Image from a destroyed row is never written to.
+        private Image _activeBarFill;
+        private int _activeBarDays;
+
+        private void TrackLiveProgress()
+        {
+            if (_activeBarFill == null) return;
+
+            var job = ResearchLab.Instance?.ActiveJob;
+            if (job == null || _activeBarDays <= 0)
+            {
+                _activeBarFill = null;   // job finished or was dropped — the next Refresh redraws the row
+                return;
+            }
+            SetFill(_activeBarFill, job.progress / _activeBarDays);
         }
 
         private void SetFill(Image fillImg, float frac)

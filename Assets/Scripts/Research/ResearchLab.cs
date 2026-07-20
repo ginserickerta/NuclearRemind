@@ -299,17 +299,69 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>GDD §19 OnDayEnd verbatim: progress += 1 × avgEff × staffRatio (min 0.5 gate).</summary>
-        private void TickProgress(WorkerManager wm)
+        /// <summary>
+        /// GDD §19 OnDayEnd verbatim: 1 × avgEff × staffRatio, with a min-staffing gate at staffRatioMin.
+        /// Returns what a full day of this lab is worth right now; 0 when the job is stalled or unstaffed.
+        /// </summary>
+        private float DailyGain(WorkerManager wm)
         {
-            if (ActiveJob == null || wm == null) return;
+            if (ActiveJob == null || wm == null) return 0f;
             var labW = wm.GetWorkers(WorkerJobs.Lab);
-            if (labW.Count == 0) return;
+            if (labW.Count == 0) return 0f;
 
             float staffRatio = Mathf.Min(1f, (float)labW.Count / ActiveJob.note.researcherSlots);
-            if (staffRatio < _cfg.staffRatioMin) return;
+            if (staffRatio < _cfg.staffRatioMin) return 0f;
 
-            ActiveJob.progress += 1f * labW.Average(w => wm.GetEfficiency(w)) * staffRatio;
+            return 1f * labW.Average(w => wm.GetEfficiency(w)) * staffRatio;
+        }
+
+        // Progress already banked by the realtime ticker since the last day boundary. The day-end tick
+        // adds only the remainder, so a full day is still worth exactly DailyGain no matter how the day
+        // was spent — same accrue-then-reconcile shape ResourceManager uses for production.
+        //
+        // Deliberately NOT reset when the active job changes: the lab produces one day of output per day,
+        // and if job A finishes at noon then job B inherits the afternoon rather than getting its own
+        // full day for free.
+        private float _accruedToday;
+
+        /// <summary>Day boundary: bank whatever the realtime ticker did not already award today.</summary>
+        private void TickProgress(WorkerManager wm)
+        {
+            float remainder = Mathf.Max(0f, DailyGain(wm) - _accruedToday);
+            _accruedToday = 0f;
+
+            if (ActiveJob == null || remainder <= 0f) return;
+
+            ActiveJob.progress += remainder;
+            if (ActiveJob.progress >= ActiveJob.note.daysRequired)
+                CompleteResearch();
+        }
+
+        /// <summary>
+        /// Realtime progress so the bar moves while the player watches instead of jumping once at
+        /// midnight. Spreads the same DailyGain across dayLength seconds, so the daily total is
+        /// unchanged and a note can now finish mid-day rather than always on a day boundary.
+        ///
+        /// EditMode tests drive TickDay() directly and never run Update, so _accruedToday stays 0 there
+        /// and the day tick still awards a whole step — the headless behaviour tests assert is intact.
+        /// </summary>
+        private void Update()
+        {
+            if (IsRuined || ActiveJob == null) return;
+
+            var gm = GameManager.Instance;
+            if (gm == null || gm.dayLength <= 0f) return;
+            if (gm.CurrentDay <= 1) return;                                        // Day 1 tutorial, as HandleDayEnded
+            if (TimeManager.Instance != null && !TimeManager.Instance.IsRunning) return; // popups freeze the lab too
+
+            float gain = DailyGain(WorkerManager.Instance);
+            if (gain <= 0f || _accruedToday >= gain) return;
+
+            float step = Mathf.Min(gain * (Time.deltaTime / gm.dayLength), gain - _accruedToday);
+            if (step <= 0f) return;
+
+            _accruedToday += step;
+            ActiveJob.progress += step;
             if (ActiveJob.progress >= ActiveJob.note.daysRequired)
                 CompleteResearch();
         }
