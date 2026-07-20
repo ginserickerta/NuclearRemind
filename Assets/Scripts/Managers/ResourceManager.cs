@@ -137,7 +137,10 @@ namespace NuclearReMind
         private void Update()
         {
             // Alert แบบ realtime: เช็ก threshold ทุก 0.5 วิ "แม้เกม pause / เฟสวางแผน" — ไม่ต้องรอ tick/เปลี่ยนวัน/เฟส
-            // (CheckThresholds อ่านค่าอย่างเดียว + ยิง event ที่ AlertController debounce ไว้แล้ว → ไม่สแปม)
+            // CheckResource is edge-triggered and re-armed once per day, so polling this often is cheap
+            // and silent. (The old comment claimed AlertController's debounce prevented spam — it does
+            // not: that guard only lasts while a toast is on screen, so the next poll 0.5s later
+            // immediately queued another one.)
             _thresholdTimer += Time.unscaledDeltaTime;
             if (_thresholdTimer >= ThresholdCheckInterval)
             {
@@ -248,6 +251,13 @@ namespace NuclearReMind
         {
             _accruedProd = default;
             _accruedConsume = default;
+
+            // Re-arm the alert latch daily. Without this, a resource that stays empty would announce
+            // itself once and then never again — and WorkerManager derives _blackoutToday from
+            // OnResourceDepleted while clearing that flag every morning, so a multi-day outage would
+            // only ever count as one blackout. One warning per resource per day is the intent: enough
+            // to keep the state visible, far from the 0.5s stream it used to be.
+            _alertState.Clear();
         }
 
         /// <summary>ผลิต/บริโภคเสี้ยวหนึ่งของวันต่อ tick (5 วิ) แล้วสะสมยอดที่ลงจริงไว้ reconcile จบวัน</summary>
@@ -483,12 +493,45 @@ namespace NuclearReMind
             // Deuterium/Tritium/Knowledge เริ่มที่ 0 โดยตั้งใจ — ไม่ alert depletion
         }
 
+        // ── Alert latch (edge-triggered) ──────────────────────────────
+        //
+        // CheckThresholds runs from ApplyDelta, i.e. every production tick (tickInterval = 5s). The old
+        // level-triggered test re-raised the event on EVERY tick the stock sat below the threshold, and
+        // AlertController's only guard is an active-key set cleared when the toast auto-dismisses — also
+        // after 5s. Tick and dismiss being the same length meant a resource that stayed low produced an
+        // endless stream of identical "ใกล้หมด" toasts, which reads as random noise rather than a warning.
+        //
+        // Iron is the one that shows it worst: day 1 costs ~195 of the 240 the run starts with, so it
+        // sits under criticalIron (200) for most of the early game and warned every 5 seconds throughout.
+        //
+        // Now the event fires only when severity INCREASES (ok -> critical -> depleted). Recovery is
+        // silent, and clearing needs the stock to climb RearmMargin above the threshold, so a value
+        // hovering exactly on the line cannot flap the alert back and forth.
+        private enum ResourceAlertState { Ok = 0, Critical = 1, Depleted = 2 }
+
+        private const float RearmMargin = 1.15f;
+
+        private readonly System.Collections.Generic.Dictionary<ResourceType, ResourceAlertState> _alertState =
+            new System.Collections.Generic.Dictionary<ResourceType, ResourceAlertState>();
+
         private void CheckResource(float amount, float threshold, ResourceType type)
         {
-            if (amount <= 0f)
-                EventManager.Instance.RaiseResourceDepleted(type);
-            else if (amount < threshold)
-                EventManager.Instance.RaiseResourceCritical(type);
+            if (!_alertState.TryGetValue(type, out var prev)) prev = ResourceAlertState.Ok;
+
+            ResourceAlertState now;
+            if (amount <= 0f) now = ResourceAlertState.Depleted;
+            else if (amount < threshold) now = ResourceAlertState.Critical;
+            else if (amount >= threshold * RearmMargin) now = ResourceAlertState.Ok;
+            else now = prev == ResourceAlertState.Ok ? ResourceAlertState.Ok  // hysteresis band
+                                                     : ResourceAlertState.Critical;
+
+            if (now == prev) return;
+            _alertState[type] = now;
+
+            if (now <= prev) return; // recovering — no toast for good news
+
+            if (now == ResourceAlertState.Depleted) EventManager.Instance.RaiseResourceDepleted(type);
+            else EventManager.Instance.RaiseResourceCritical(type);
         }
     }
 }
