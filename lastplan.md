@@ -1,7 +1,61 @@
-# lastplan.md — ความคืบหน้างาน NSC2026 (backlog 5 งาน)
+# lastplan.md — ความคืบหน้างาน NSC2026
 
-> อัปเดตล่าสุด: 2026-07-13 · เขียนไว้เพื่อทำต่อบนอีกเครื่อง
+> อัปเดตล่าสุด: **2026-07-20** · เขียนไว้เพื่อทำต่อบนอีกเครื่อง
 > โปรเจกต์: **Nuclear Re:Mind** · Unity 6 (6000.3.6f1) · URP 2D · Legacy Input · path `C:\Users\UsEr\NSC2026`
+> branch ปัจจุบัน: **`cutover`** (push แล้วถึง `66844f8`)
+
+---
+
+## ★ ย้ายไปทำต่อเครื่องใหม่ — ต้องพกอะไรไปบ้าง
+
+**1. โค้ด + สเปก** — `git clone` แล้ว `git checkout cutover` ได้ครบทันที
+(`CLAUDE.md` ที่ root คือกฎ 9 ข้อที่ห้ามละเมิด · `docs/` คือสเปก v6.3 ทั้งหมด)
+
+**2. ความจำของ Claude Code** — ก๊อปโฟลเดอร์นี้ทั้งอัน (~40KB) ไปวางที่ path เดียวกันบนเครื่องใหม่:
+```
+C:\Users\UsEr\.claude\projects\c--Users-UsEr-NSC2026\memory\
+```
+ข้างในมี: ข้อตกลงเรื่อง commit ทีละชิ้น · วิธีอธิบายที่ผู้ใช้ต้องการ · จุดบอดของ Roslyn check ·
+ช่องว่างที่ยังเหลือใน STORY.md · กติกา 3 แชทเครื่องเดียว
+**ถ้าไม่ก๊อป ทุกอย่างยังทำงานได้ แต่ Claude จะไม่รู้บทเรียนพวกนี้และอาจพลาดซ้ำ**
+
+**3. ตัวแชทเอง ย้ายไม่ได้** — session เก็บเป็นไฟล์ในเครื่อง ไม่ sync ตามบัญชี
+เอกสารนี้ + memory คือสิ่งที่ใช้แทน
+
+**4. ที่เครื่องใหม่ต้องมี** — Unity 6000.3.6f1 (+ WebGL module) · butler (ถ้าจะ deploy) ·
+`butler login` ครั้งเดียว · Git credential ของ repo
+
+---
+
+## ⚡ สถานะล่าสุด 2026-07-20 (งาน Codex/Quiz)
+
+**เกมขึ้นเว็บแล้ว:** https://rutxkrps.itch.io/nuclear-remind-2026 · build `2026.07.20-2212924` · channel `html`
+
+**เทสต์:** EditMode 542/554 ผ่าน · เหลือ 5 ข้อที่พังมาก่อนหน้านี้แล้ว (ยืนยันด้วยการรันย้อนที่ `dc20189`)
+— ConstructionWorkerGate · ResourceManager deuterium L3 · RunStats save · WorkerVisualSpawner ×2
+
+**บั๊กใหญ่ที่แก้ไปแล้ว:** ควิซตอบแล้วไม่ได้รางวัล (ควิซชุด v4.1 quizId ว่าง) · Codex ปลดได้แค่ 10/11 ตลอดกาล ·
+หัวเรื่องกับรายการอ่านคนละคลัง · ตอนจบเกมบันทึกจากคลังเก่า · นาฬิกาวันเดินทั้งที่ควิซค้างจอ ·
+ฟอนต์ 6 ไฟล์ชี้พาธที่ไม่มีจริง (รวมเป็น `UIFonts.Body` ที่เดียว) · emoji วาดไม่ได้ 103 จุด
+
+### ⏳ ค้างรอผู้ใช้ตัดสินใจ
+
+| เรื่อง | รายละเอียด |
+|---|---|
+| **itch มี 2 upload** | `html` (อัปใหม่แล้ว) กับ `html5` (เก่า 16 ก.ค.) — ยังไม่รู้ว่าหน้าเว็บโชว์ตัวไหน ถ้าเปิดแล้วเป็นเวอร์ชันเก่าให้อัป `html5` ด้วยหรือลบทิ้ง |
+| **`q_fusion` CORE ≥ 95** | เกมจบที่ 100 → หน้าต่างตอบแคบ ~1-2 วัน · ยังไม่แก้เพราะยังไม่อนุมัติ · เสนอลดเป็น 85 |
+| **ยังไม่มีใครเล่นจริง** | ทดสอบแค่ compile + unit test · ควรลอง `NuclearReMind → Quizzes → Force Prompt` สักรอบ |
+| **ลบของเก่าได้น้อยกว่าที่คิด** | `CodexManager` ยังใช้จริงในระบบเซฟ (SaveManager + GameManager) ลบไม่ได้ |
+
+### ⚠ กับดักที่เจอมาแล้ว (อย่าพลาดซ้ำ)
+
+- **Roslyn check มองไม่เห็น `Assets/Scripts/Narrative/_archive`** แต่ Unity คอมไพล์ → ผ่าน check แล้วยัง build พังได้
+  ก่อนลบ public member ใดๆ ต้อง grep `_archive` ก่อน
+- **คอมไพล์พัง → `-runTests` ใช้ assembly เก่าเงียบๆ** `results.xml` จะดูเหมือนไม่เปลี่ยน
+  **เช็ค `grep -c "error CS" test.log` ก่อนเชื่อผลเทสต์เสมอ**
+- **Unity batchmode แก้ scene เองได้** (เคยเปลี่ยนฟอนต์ + ปิด GameObject) → `git diff` scene หลังรันทุกครั้ง
+- **legacy uGUI `Text` วาด emoji เกิน U+FFFF ไม่ได้** → ขึ้นเป็นช่องว่าง ใช้ `[ล็อก]` แทน 🔒
+- **regex sweep ทั้งไฟล์อันตราย** — ต้องจำกัดขอบเขตให้อยู่ใน string literal เท่านั้น ไม่งั้นย่อหน้าโค้ดหาย
 
 ---
 
@@ -10,7 +64,7 @@
 - **หากสงสัยห้ามคิดเอง ถามผู้ใช้เสมอ**
 - ยอมรับงาน = ต้อง **compile ผ่าน batch mode (error CS = 0)** — ต้อง **ปิด Unity Editor ก่อน** รัน
 - ห้ามแก้ไฟล์ต้นฉบับใน `Downloads` (คัดลอกเข้าโปรเจกต์ก่อน)
-- **ห้ามแตะ** `IsoToWorld`/`WorldToIso`/`IsoToWorldF` · **grid = 43×43** (CLAUDE.md เขียน 20×12 = ล้าสมัย · scene จริง 43×43)
+- **ห้ามแตะ** `IsoToWorld`/`WorldToIso`/`IsoToWorldF` · **grid = 43×43** (CLAUDE.md แก้เป็น 43×43 แล้ว — หมายเหตุ "20×12 ล้าสมัย" เดิมไม่จำเป็นอีก)
 - cross-manager ผ่าน **`EventManager.Instance` เท่านั้น** (query `.Instance` อ่านอย่างเดียวได้) · ห้าม hardcode ค่า gameplay (→ SO/SerializeField)
 - ทุก setup = `[MenuItem]` **idempotent** (รันซ้ำไม่สร้างซ้ำ) + ใส่ใน `RunAllSetups.cs`
 - enum ต่อท้ายเท่านั้น (ห้ามแทรกกลาง) · เพิ่ม field ใน SaveData/struct ต้องมี default (SO asset ไม่อยู่ใน SaveData = ปลอดภัย)
@@ -32,10 +86,10 @@
 | # | งาน | สถานะ |
 |---|-----|-------|
 | 1 | **Crisis UI** (กรอบสนิม A/B/C + ยืนยัน) | ✅ **CODE COMPLETE** (รอ user รัน setup + compile) |
-| 2 | **Quiz Explanation UI** (หน้าอธิบายหลังตอบ) | ✅ **CODE COMPLETE** (รอ user รัน setup + compile) — เพิ่ม `QuizExplanationSetup.cs` + RunAllSetups แล้ว (2026-07-13) |
+| 2 | **Quiz Explanation UI** (หน้าอธิบายหลังตอบ) | ❌ **ลบทิ้งแล้ว 2026-07-20** — `QuizExplanationPopupController` + `QuizExplanationSetup` ไม่เคยถูก instantiate เลย (GUID ไม่มีในซีน · ไม่มี auto-spawn) และมันหาควิซผ่าน `QuizManager.GetById` ซึ่งไม่มี id ของ v6.3 · **ตอนนี้เฉลยแสดงในตัว `QuizPopupController` เอง** |
 | 3 | **Decor spawner** (โปรยของนอกกริด) | 🔶 **CODE COMPLETE** — `DecorSpawner.cs`+`DecorSetup.cs`+RunAllSetups เสร็จ · รอ asset PNG ลง `Assets/Sprites/Decor/` (2026-07-13) |
 | 4 | **iPad Touch** (input/gesture/responsive/WebGL save) | 🔶 **CODE COMPLETE (v1)** — touch กล้อง 2 นิ้ว (แพน+พินช์) + WebGL save flush · ไฮบริดคงเมาส์/คีย์บอร์ด · Canvas responsive อยู่แล้ว · รอเทสต์บน iPad จริง (2026-07-13) |
-| 5 | **WebGL build + itch.io** | 🔶 **CODE READY** — `WebGLBuilder.cs` เสร็จ · build ต้อง**ปิด Unity**ก่อนรัน batch · push รอ itch credential (user/slug + `butler login`) (2026-07-13) |
+| 5 | **WebGL build + itch.io** | ✅ **เสร็จแล้ว 2026-07-20** — build 122 MB (Brotli) → push ขึ้น `rutxkrps/nuclear-remind-2026:html` สำเร็จ · butler login ไว้แล้วที่เครื่องนี้ (เครื่องใหม่ต้อง login ใหม่) · **ยังต้อง**ปิด Unity ก่อนรัน batch |
 
 ### Decision ที่ผู้ใช้ยืนยันแล้ว
 - **#2 badge คะแนน** = "Badge อย่างเดียว (ไม่แตะ balance)" → เพิ่ม `scoreDelta` โชว์ +N เขียว/−N แดง · Knowledge จริงคงเดิม (ถูก+8/ผิด+3)
@@ -183,7 +237,16 @@
 1. ~~**จบ #2**: เขียน `QuizExplanationSetup.cs` + เพิ่มใน `RunAllSetups.cs`~~ ✅ เสร็จ 2026-07-13 → **รอ compile ในเอดิเตอร์ + รันเมนู "Setup Quiz Explanation UI"**
 2. ~~**#3 Decor**: DecorSpawner + DecorSetup + RunAllSetups~~ ✅ โค้ดเสร็จ 2026-07-13 → **คัดลอก 8 PNG ลง `Assets/Sprites/Decor/` แล้วรันเมนู "Setup Decor"** (ไม่มี asset = spawner เปล่า ไม่พัง)
 3. ~~**#4 Touch**~~ ✅ v1 เสร็จ 2026-07-13 (default: ไฮบริด · 2 นิ้ว=กล้อง · 1 นิ้ว=แตะวาง) → **เทสต์บน iPad จริง** ปรับ `pinchZoomSpeed`/`enableTouch` ใน CameraController Inspector ได้ · (ยังไม่ทำ: ปุ่มลอย cancel/help, safe-area — ทำเพิ่มถ้าเทสต์แล้วขาด)
-4. **#5**: ~~WebGLBuilder~~ ✅ โค้ดเสร็จ 2026-07-13 → **ปิด Unity → รัน "Build WebGL" (หรือ batch -executeMethod ...WebGLBuilder.Build)** → `butler login` → `butler push Build/WebGL <user>/<game>:html5` (ต้องรอ user/slug + login itch)
+4. **#5**: ✅ **ทำครบแล้ว 2026-07-20** — ขั้นตอนที่ใช้จริง (ทำซ้ำได้):
+   ```powershell
+   # 1) ปิด Unity Editor ให้สนิทก่อน (project lock)
+   & "C:\Program Files\Unity\Hub\Editor\6000.3.6f1\Editor\Unity.exe" -quit -batchmode `
+     -projectPath "C:\Users\UsEr\NSC2026" `
+     -executeMethod NuclearReMind.EditorTools.WebGLBuilder.Build -logFile build.log
+   # 2) push (channel คือ html ไม่ใช่ html5 ตามที่คอมเมนต์ในโค้ดเขียนไว้)
+   butler push Build/WebGL rutxkrps/nuclear-remind-2026:html --userversion "2026.07.20-<sha>"
+   ```
+   ⚠ คอมเมนต์ใน `WebGLBuilder.cs` ยังเขียน `:html5` — **ของจริงที่อัปคือ `:html`**
 
 > ⚠ repo hygiene: `QuizExplanationPopupController.cs.meta` มาจาก pull แบบ untracked (source machine commit `.cs` แต่ไม่ commit `.meta`) — ต้อง `git add` .meta ทั้งของไฟล์นี้ + 3 ไฟล์ใหม่ (QuizExplanationSetup/DecorSetup/DecorSpawner) ให้สองเครื่อง GUID ตรงกัน
 > เมื่อจบแต่ละงาน: **ปิด Unity → รัน compile batch → error CS ต้อง = 0** (หรือ focus เอดิเตอร์ที่เปิดอยู่ให้ recompile) แล้วให้ผู้ใช้รันเมนู setup ที่เกี่ยวข้อง (+ RunAllSetups) เพื่อ apply UI ในซีน
