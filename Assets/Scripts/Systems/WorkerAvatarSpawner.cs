@@ -37,10 +37,23 @@ namespace NuclearReMind
         {
             try
             {
-                // WorkerManager auto-spawns on the same AfterSceneLoad pass; order between the two hooks
-                // isn't guaranteed, so if it isn't up yet a later sceneLoaded (or the lazy TryInit below)
-                // covers it. Guard on EventManager too — MainMenu has no core systems.
-                if (EventManager.Instance == null || WorkerManager.Instance == null) return;
+                // ★ Do NOT gate on WorkerManager here. It auto-spawns from its own sceneLoaded callback,
+                // and the order between the two callbacks is whatever order Unity happened to run the
+                // RuntimeInitializeOnLoadMethod hooks in at startup — not something this can rely on.
+                //
+                // Gating on it meant that whenever WorkerManager's callback ran second, this returned and
+                // nothing ever called AutoSpawn again: sceneLoaded fires once per load, so the spawner was
+                // simply absent for the rest of the run and no worker avatars walked around. That is the
+                // Restart bug — the first load got a second chance from the AfterSceneLoad hook itself,
+                // a reload only ever gets the one callback.
+                //
+                // The old comment claimed "a later sceneLoaded covers it". There is no later sceneLoaded.
+                // TryInit() below is the real safety net: it retries every frame until WorkerManager
+                // appears, so spawning early costs nothing and spawning never is fatal.
+                //
+                // EventManager is still checked because MainMenu has no core systems — and being
+                // DontDestroyOnLoad it is always up by the time a reload lands here.
+                if (EventManager.Instance == null) return;
                 if (FindFirstObjectByType<WorkerAvatarSpawner>() != null) return;
                 new GameObject("WorkerAvatarSpawner (auto)").AddComponent<WorkerAvatarSpawner>();
             }
