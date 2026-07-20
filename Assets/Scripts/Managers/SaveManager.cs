@@ -167,6 +167,7 @@ namespace NuclearReMind
             {
                 save.dataRecoveryProgress = DataRecovery.Instance.Progress;
                 save.dataRecoveryRecords = DataRecovery.Instance.RecordsRecovered;
+                save.dataRecoveryDecoding = DataRecovery.Instance.IsDecoding;
             }
 
             // สรุปการเล่น (STORY.md §④) — Hope ต่ำสุด/Decree/Triage หายทันทีถ้าไม่จด (ไม่มีระบบไหนเก็บไว้)

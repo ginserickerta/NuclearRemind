@@ -29,6 +29,33 @@ namespace NuclearReMind
         public int RecordsRecovered { get; private set; }   // 0..4
         public int TotalRecords => Order.Length;
 
+        /// <summary>
+        /// True while the lab is working on the next record. Decryption used to run on its own the moment
+        /// the lab was standing — the player never chose it and often never noticed it — so it is now
+        /// started deliberately, one record at a time, the same way research is (owner's call 2026-07-21;
+        /// STORY.md §3 updated to match). Clears itself when a record lands, so each one is its own decision.
+        /// </summary>
+        public bool IsDecoding { get; private set; }
+
+        /// <summary>Can the player press "ถอดรหัส" right now? Mirrors the conditions TickDay would refuse on.</summary>
+        public bool CanStartDecoding
+        {
+            get
+            {
+                if (IsDecoding || RecordsRecovered >= Order.Length) return false;
+                var lab = ResearchLab.Instance;
+                return lab != null && !lab.IsRuined;
+            }
+        }
+
+        /// <summary>Begin decrypting the next record. Returns false when the lab is ruined or nothing is left.</summary>
+        public bool StartDecoding()
+        {
+            if (!CanStartDecoding) return false;
+            IsDecoding = true;
+            return true;
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -83,6 +110,7 @@ namespace NuclearReMind
 
             Progress = save.dataRecoveryProgress;
             RecordsRecovered = Mathf.Clamp(save.dataRecoveryRecords, 0, Order.Length);
+            IsDecoding = save.dataRecoveryDecoding; // default false → an old save resumes idle, not mid-decode
 
             for (int i = 0; i < RecordsRecovered; i++)
             {
@@ -94,7 +122,8 @@ namespace NuclearReMind
 
         private void HandleDayEnded(int day)
         {
-            if (day <= 1) return; // Day 1 = tutorial
+            if (day <= 1) return;   // Day 1 = tutorial
+            if (!IsDecoding) return; // the player has to ask for this now — see IsDecoding
             TickDay();
         }
 
@@ -150,6 +179,7 @@ namespace NuclearReMind
         {
             var rec = GetRecord(Order[RecordsRecovered]);
             RecordsRecovered++;
+            IsDecoding = false; // one press, one record — the next has to be chosen again
             if (rec == null) return;
 
             if (!string.IsNullOrEmpty(rec.unlocksLead))

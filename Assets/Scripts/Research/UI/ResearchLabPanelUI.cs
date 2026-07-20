@@ -470,14 +470,34 @@ namespace NuclearReMind
         private void AddRecordActiveRow(DataRecovery dr, GameConfigSO cfg, ResearchLab lab)
         {
             var row = MakeRowShell(72f, 1f);
-            var t = Txt("T", row.transform, $"⏳ กำลังถอดรหัสบันทึกของ Elara #{dr.RecordsRecovered + 1}", 15, CText, TextAnchor.UpperLeft, FontStyle.Bold);
-            SetTL(t.rectTransform, new Vector2(14f, -10f), new Vector2(400f, 22f));
-            AddBadge(row.transform, "กู้บันทึก", Hex("#2a1230"), CPink, Hex("#993556"), 14f + EstWidth("⏳ กำลังถอดรหัสบันทึกของ Elara #0", 15f));
+            bool decoding = dr.IsDecoding;
 
-            var m = Txt("M", row.transform,
-                "ถอดรหัสอัตโนมัติเมื่อห้องวิจัยทำงาน — นักวิจัยที่ว่างจากโครงการช่วยให้เร็วขึ้น", 12, CDim,
-                TextAnchor.UpperLeft, FontStyle.Italic);
+            string head = decoding
+                ? $"⏳ กำลังถอดรหัสบันทึกของ Elara #{dr.RecordsRecovered + 1}"
+                : $"บันทึกของ Elara #{dr.RecordsRecovered + 1}";
+            var t = Txt("T", row.transform, head, 15, CText, TextAnchor.UpperLeft, FontStyle.Bold);
+            SetTL(t.rectTransform, new Vector2(14f, -10f), new Vector2(400f, 22f));
+            AddBadge(row.transform, "กู้บันทึก", Hex("#2a1230"), CPink, Hex("#993556"), 14f + EstWidth(head, 15f));
+
+            // Decryption is a deliberate act now, so the row has to say what pressing it costs and what
+            // is stalling it — an idle bar with no explanation reads as a bug (owner's report 2026-07-21).
+            string sub = decoding
+                ? "นักวิจัยที่ว่างจากโครงการช่วยให้เร็วขึ้น"
+                : (lab != null && lab.IsRuined
+                    ? "ห้องวิจัยพัง — ซ่อมก่อนถึงจะถอดรหัสได้"
+                    : "กดถอดรหัสเพื่อเริ่ม — ใช้ห้องวิจัยร่วมกับงานวิจัย นักวิจัยที่ว่างช่วยให้เร็วขึ้น");
+            var m = Txt("M", row.transform, sub, 12, CDim, TextAnchor.UpperLeft, FontStyle.Italic);
             SetTL(m.rectTransform, new Vector2(14f, -32f), new Vector2(720f, 18f));
+
+            if (!decoding)
+            {
+                var btn = RoundBtn("Decode", row.transform, "ถอดรหัส", 14, CHead, CText, CHeadLine, 4);
+                var brt = (RectTransform)btn.transform;
+                brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 1f);
+                brt.anchoredPosition = new Vector2(-12f, -10f); brt.sizeDelta = new Vector2(96f, 32f);
+                btn.onClick.AddListener(() => { DataRecovery.Instance?.StartDecoding(); Refresh(); });
+                if (!dr.CanStartDecoding) { var cg = btn.gameObject.AddComponent<CanvasGroup>(); cg.alpha = 0.4f; }
+            }
 
             float frac = cfg.dataRecoveryTarget > 0f ? dr.Progress / cfg.dataRecoveryTarget : 0f;
             AddBar(row.transform, new Vector2(14f, 10f), 856f, frac, CPink);

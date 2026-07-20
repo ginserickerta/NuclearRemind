@@ -63,6 +63,7 @@ namespace NuclearReMind
         // ===== Data Recovery (STORY.md §3 — บันทึก Elara 4 ใบ) — default 0: เซฟเก่า = ยังไม่กู้ใบไหน =====
         public float dataRecoveryProgress = 0f;      // ความคืบหน้าใบถัดไป (0..dataRecoveryTarget)
         public int dataRecoveryRecords = 0;          // กู้ได้กี่ใบแล้ว (0..4) — restore ต้อง replay UnlockLead ด้วย
+        public bool dataRecoveryDecoding = false;    // กำลังถอดรหัสอยู่ไหม (ผู้เล่นกดเอง) — default false: เซฟเก่า = ไม่ได้ถอดอยู่
 
         // ===== Run stats (STORY.md §④ สรุปการเล่น) — เก็บเฉพาะค่าที่หายไปถ้าไม่จด =====
         public float statLowestHope = -1f;           // ★ default −1 ไม่ใช่ 0 — 0 = "Hope เคยตกถึงศูนย์" ในเซฟเก่า
