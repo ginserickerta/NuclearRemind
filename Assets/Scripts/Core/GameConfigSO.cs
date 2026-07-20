@@ -316,6 +316,21 @@ namespace NuclearReMind
         public float growthFoodCost = 20f;
         public int growthAmount = 1;
 
+        // Population ceiling by Shelter/Habitat level (CONFIG.md "★ Shelter (เพดานประชากร)").
+        // L1 is free at game start ("เริ่มมี"), so the city always has at least shelterCapL1 —
+        // which equals startPopulation, i.e. the city starts full and only grows after an upgrade.
+        public int shelterCapL1 = 14;
+        public int shelterCapL2 = 20;
+        public int shelterCapL3 = 28;
+
+        /// <summary>Population ceiling for a Shelter level. Levels above 3 clamp to L3.</summary>
+        public int ShelterCapForLevel(int level)
+        {
+            if (level >= 3) return shelterCapL3;
+            if (level == 2) return shelterCapL2;
+            return shelterCapL1;
+        }
+
         // ─────────────────────────────────────────
         //  Access helper
         // ─────────────────────────────────────────

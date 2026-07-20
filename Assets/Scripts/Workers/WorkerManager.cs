@@ -128,6 +128,28 @@ namespace NuclearReMind
             }
         }
 
+        /// <summary>
+        /// Population ceiling from the best Shelter/Habitat currently standing (CONFIG.md ★ Shelter:
+        /// L1 14 · L2 20 · L3 28). L1 is free at game start, so this never drops below shelterCapL1.
+        /// Levels are read straight off BuildingRegistry — read-only query, no mutation.
+        /// </summary>
+        public int ShelterCap
+        {
+            get
+            {
+                int cap = _cfg.ShelterCapForLevel(1);
+                var registry = BuildingRegistry.Instance;
+                if (registry == null) return cap;
+
+                foreach (var kvp in registry.PlacedBuildings)
+                {
+                    if (kvp.Value == null || kvp.Value.buildingType != BuildingType.Habitat) continue;
+                    cap = Mathf.Max(cap, _cfg.ShelterCapForLevel(registry.GetLevel(kvp.Key)));
+                }
+                return cap;
+            }
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -311,6 +333,7 @@ namespace NuclearReMind
                 ReportResourceHope(rm.Current.food, rm.Current.water);
             }
 
+            TryGrowPopulation();               // before TickShifts so a newcomer gets a shift the same day
             ShiftSystem.TickShifts(_workers, ctx.labBusy, _cfg);
             TickStrikes();
             CommitDay();
@@ -332,6 +355,55 @@ namespace NuclearReMind
 
             if (_blackoutToday)
                 Hope.Report("power.blackout", "ไฟดับ", _cfg.hopePowerBlackout, HopeCategory.Power);
+        }
+
+        /// <summary>
+        /// Newcomers arrive (GDD §5 "กลไกเติมประชากร" · CONFIG.md ★ POPULATION GROWTH):
+        ///     if (food > pop * 5 && pop < shelterCap)  if (Random() &lt; 0.25) { pop += 1; food -= 20; }
+        /// Deliberately NOT gated on Hope — v5.2 dropped that (Hope now starts at 70, the old ≥50 gate
+        /// would have been free). Food is read post-consumption, so a city that only just fed itself
+        /// does not recruit.
+        ///
+        /// This is the ONLY place workers are added after Initialize(). The v4.1 implementation lived in
+        /// PopulationManager.HandleDayEnded, which early-returns whenever WorkerManager exists — i.e. always,
+        /// in the live game. So population could only ever shrink until this was written.
+        /// </summary>
+        private void TryGrowPopulation()
+        {
+            var rm = ResourceManager.Instance;
+            if (rm == null || EventManager.Instance == null) return;
+
+            int pop = AliveCount;
+            int cap = ShelterCap;
+            if (pop >= cap) return;                                        // shelter is full — upgrade to grow
+            if (rm.Current.food <= pop * _cfg.growthFoodRatio) return;     // needs a real surplus, not just "fed"
+
+            var rng = _dayRng ?? (_dayRng = new System.Random());
+            if (rng.NextDouble() >= _cfg.growthChance) return;             // 25%/day
+
+            int added = 0;
+            for (int i = 0; i < _cfg.growthAmount && AliveCount < cap; i++)
+            {
+                int id = NextWorkerId();
+                _workers.Add(new Worker
+                {
+                    id = id,
+                    displayName = NamePool[(id - 1) % NamePool.Length],
+                });
+                added++;
+            }
+            if (added == 0) return;
+
+            EventManager.Instance.RaiseResourceDelta(ResourceType.Food, -_cfg.growthFoodCost * added);
+        }
+
+        /// <summary>Next free worker id — max existing + 1, so ids stay unique even after deaths.</summary>
+        private int NextWorkerId()
+        {
+            int max = 0;
+            for (int i = 0; i < _workers.Count; i++)
+                if (_workers[i].id > max) max = _workers[i].id;
+            return max + 1;
         }
 
         /// <summary>Commit the ledger, run threshold events, sync HUD. Public so tests can drive full days.</summary>
