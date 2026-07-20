@@ -291,7 +291,58 @@ namespace NuclearReMind
             delta.water  += wm.SumEfficiency(WorkerJobs.Water) * cfg.waterPerWaterWorker * dayFraction;
             delta.iron   += wm.SumEfficiency(WorkerJobs.Mine)  * cfg.ironPerMineWorker   * dayFraction;
             delta.energy += wm.SumEfficiency(WorkerJobs.Power) * cfg.powerPerPowerWorker * dayFraction;
+
+            AddDeuteriumDelta(ref delta, dayFraction);
             return delta;
+        }
+
+        /// <summary>
+        /// Deuterium extraction (CONFIG.md "การสกัดดิวเทอเรียม" / ResearchLab_System_Spec).
+        ///
+        /// This is per-BUILDING, not per-job, which is why the v6.3 cutover lost it: production moved to
+        /// the job-based path above and the deuterium term stayed behind in the legacy per-building loop,
+        /// which ComputeProductionDelta no longer reaches. Extraction stayed researchable, switchable and
+        /// saveable the whole time — it just silently produced nothing, so a player who researched the
+        /// note, upgraded the plant and flipped the switch still watched the counter sit at 0 forever.
+        ///
+        /// Gates (all three, per plant): the `deuterium` note researched · the plant at deuteriumMinLevel
+        /// or above · the player's switch on. Water is the feedstock at deuteriumWaterPerUnit : 1 and is
+        /// never drawn below deuteriumWaterReserve, so extraction can never starve the city or the reactor.
+        ///
+        /// Rate comes straight from CONFIG (4.0/day at Lv2, 8.0 at Lv3) with no worker term — the spec
+        /// lists staffing nowhere in this formula, and inventing one here would risk reproducing the exact
+        /// silence this fixes. Tie it to Water Plant staffing only if the design says so.
+        /// </summary>
+        private void AddDeuteriumDelta(ref ResourceData delta, float dayFraction)
+        {
+            var dex = DeuteriumExtraction.Instance;
+            var reg = BuildingRegistry.Instance;
+            if (dex == null || reg == null) return;
+
+            // Running stock: what is banked plus what this same tick already produced, so the reserve
+            // floor is measured against the water that will actually exist.
+            float runW = Current.water + delta.water;
+
+            foreach (var kvp in reg.PlacedBuildings)
+            {
+                var data = kvp.Value;
+                if (data == null) continue;
+
+                int level = reg.GetLevel(kvp.Key);
+                if (!dex.IsExtracting(kvp.Key, data, level)) continue;
+                if (!IsOperational(kvp.Key)) continue; // still a building site
+
+                float wantD  = DeuteriumExtraction.RateFor(data, level) * dayFraction;
+                float availW = Mathf.Max(0f, runW - deuteriumWaterReserve);
+                float maxD   = deuteriumWaterPerUnit > 0f ? availW / deuteriumWaterPerUnit : wantD;
+                float gotD   = Mathf.Min(wantD, maxD);
+                if (gotD <= 0f) continue;
+
+                float usedW = gotD * deuteriumWaterPerUnit;
+                runW            -= usedW;
+                delta.water     -= usedW;
+                delta.deuterium += gotD;
+            }
         }
 
         /// <summary>
