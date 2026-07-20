@@ -244,12 +244,16 @@ namespace NuclearReMind
             if (VerboseTrace) Debug.Log($"[Cards] {message}");
         }
 
-        private void TraceNothingFired(int day, in CardWorldState state)
+        /// <summary>
+        /// Per-card "why not" table for one day. Public so the Editor tools can print the same text on
+        /// demand instead of keeping a second copy that would drift — the same reason Describe() lives
+        /// next to IsTriggered.
+        /// </summary>
+        public string BuildTriggerReport(int day, in CardWorldState state)
         {
-            if (!VerboseTrace) return;
-
+            EnsureCatalog();
             var sb = new System.Text.StringBuilder();
-            sb.Append($"[Cards] วันที่ {day}: ไม่มีการ์ดขึ้น (โหลดได้ {_catalog.Count}/8 ใบ)");
+            sb.Append($"วันที่ {day}: ไม่มีการ์ดขึ้น (โหลดได้ {_catalog.Count}/8 ใบ)");
             foreach (var cardId in CardIds.All)
             {
                 sb.Append('\n').Append("  ").Append(cardId).Append(" — ");
@@ -263,7 +267,27 @@ namespace NuclearReMind
                 sb.Append(CardTriggers.IsTriggered(cardId, state) ? "เข้าเงื่อนไข!" : "ยังไม่ถึงเกณฑ์")
                   .Append("  ▸ ").Append(CardTriggers.Describe(cardId, state));
             }
-            Debug.Log(sb.ToString());
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Day-end reports kept in memory so a play session can be exported in one go. The Console alone
+        /// was not enough to answer "which thresholds are actually out of reach": the interesting lines
+        /// scroll away behind everything else the game logs, and there is no way to hand them over.
+        /// Bounded so a long session cannot grow without limit.
+        /// </summary>
+        public static readonly List<string> TraceHistory = new List<string>();
+        private const int TraceHistoryMax = 200;
+
+        private void TraceNothingFired(int day, in CardWorldState state)
+        {
+            if (!VerboseTrace) return;
+
+            string report = BuildTriggerReport(day, state);
+            Debug.Log("[Cards] " + report);
+
+            TraceHistory.Add(report);
+            if (TraceHistory.Count > TraceHistoryMax) TraceHistory.RemoveAt(0);
         }
 
         private bool IsEligible(CrisisCardSO card, int day, in CardWorldState state)
