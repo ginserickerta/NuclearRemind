@@ -124,10 +124,26 @@ namespace NuclearReMind
             EventManager.Instance.OnSpeedChanged += HandleSpeedChanged;
             EventManager.Instance.OnKnowledgeChanged += HandleKnowledgeChanged;
             EventManager.Instance.OnWorkerPoolChanged += HandleWorkerPoolChanged;
+            HookWorkerManager();
+        }
+
+        // WorkerManager auto-spawns AfterSceneLoad, so it may not exist yet at OnEnable — Start() retries.
+        // Guarded by a flag because both entry points can run for the same enable cycle.
+        private bool _workersHooked;
+
+        private void HookWorkerManager()
+        {
+            if (_workersHooked || WorkerManager.Instance == null) return;
+            WorkerManager.Instance.OnWorkersChanged += RefreshPopulationText;
+            _workersHooked = true;
         }
 
         private void OnDisable()
         {
+            if (_workersHooked && WorkerManager.Instance != null)
+                WorkerManager.Instance.OnWorkersChanged -= RefreshPopulationText;
+            _workersHooked = false;
+
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnResourceChanged -= HandleResourceChanged;
             EventManager.Instance.OnPopulationChanged -= HandlePopulationChanged;
@@ -154,6 +170,11 @@ namespace NuclearReMind
 
             if (gameOverPanel != null) gameOverPanel.SetActive(false);
             if (livePhaseBanner != null) livePhaseBanner.SetActive(false);
+
+            // WorkerManager exists by now even if it didn't at OnEnable; paint the real count once so the
+            // HUD never shows the stale PopulationData defaults on day 1.
+            HookWorkerManager();
+            RefreshPopulationText();
 
             // sync หลอด Knowledge ครั้งแรก: OnKnowledgeChanged raise เฉพาะตอนมี delta → ค่าเริ่มเกม (startKnowledge)
             // ไม่ถูก raise → Slider ค้างค่า default ของ Unity (value=1,max=1 = เต็มหลอด) ทั้งที่ค่าเป็น 0
@@ -343,18 +364,27 @@ namespace NuclearReMind
 
         private void RefreshPopulationText()
         {
+            // ★ v6.3: WorkerManager owns population now — PopulationData is the retired v4.1 record and
+            //   nothing writes to it any more, so it latches at its start values (the HUD showed "10/80"
+            //   forever: 10 = legacy start count, 80 = the old additive shelter formula). Same fix shape as
+            //   Hope above: read the live system when it exists, fall back to the record when it doesn't.
+            var wm = WorkerManager.Instance;
+            int total = wm != null ? wm.AliveCount : _lastPop.total;
+            int cap   = wm != null ? wm.ShelterCap : _lastPop.shelterCap;
+            int crew  = wm != null ? total : _lastPop.workers; // v5.2 killed classes — everyone is a worker
+
             // legacy บรรทัดเดียว (เผื่อยัง wire อยู่บางซีน — ปกติ null หลังรัน Setup HUD ใหม่)
             if (populationText != null)
             {
                 string idlePart = _idleWorkers >= 0 ? $"  ·  ว่าง {_idleWorkers}" : "";
-                populationText.text = $"ประชากร {_lastPop.total}/{_lastPop.shelterCap}  ·  W{_lastPop.workers} E{_lastPop.engineers} M{_lastPop.medics} F{_lastPop.farmers}{idlePart}";
+                populationText.text = $"ประชากร {total}/{cap}  ·  W{crew} E{_lastPop.engineers} M{_lastPop.medics} F{_lastPop.farmers}{idlePart}";
             }
 
             // แถว icon ต่อคลาส (เรียงบนลงล่าง: รวม → worker → engineer → medic → farmer)
-            if (popTotalText != null)  popTotalText.text  = $"{_lastPop.total}/{_lastPop.shelterCap}";
+            if (popTotalText != null)  popTotalText.text  = $"{total}/{cap}";
             if (popWorkerText != null) popWorkerText.text = _idleWorkers >= 0
-                                                              ? $"{_lastPop.workers}  ·  ว่าง {_idleWorkers}"
-                                                              : $"{_lastPop.workers}";
+                                                              ? $"{crew}  ·  ว่าง {_idleWorkers}"
+                                                              : $"{crew}";
             if (popEngineerText != null) popEngineerText.text = $"{_lastPop.engineers}";
             if (popMedicText != null)    popMedicText.text    = $"{_lastPop.medics}";
             if (popFarmerText != null)   popFarmerText.text   = $"{_lastPop.farmers}";
