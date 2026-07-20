@@ -92,11 +92,38 @@ namespace NuclearReMind
         void Start()
         {
             Debug.Log("[GameManager] Initialized");
+            BeginRun();
+        }
+
+        /// <summary>
+        /// Everything a fresh run needs. Split out of Start() because this object is DontDestroyOnLoad:
+        /// Unity does not call Start again on an object that survived the load, so on Restart the run
+        /// state simply carried over — dying on day 6 and restarting resumed on day 6 and ticked straight
+        /// to day 7, with CurrentState still GameOver.
+        /// </summary>
+        private void BeginRun()
+        {
             // normalize timeScale (อาจค้างจาก play session ก่อน) + แจ้ง UI ให้ highlight ความเร็วเริ่มต้น
-            Time.timeScale = GameSpeed;
+            SetState(GameState.Playing);   // also restores timeScale and broadcasts the state
             EventManager.Instance.RaiseSpeedChanged(Time.timeScale);
             ApplyMetaProgress(); // §9: คืน Knowledge/Codex จากรอบก่อน
             BeginDay(1);
+        }
+
+        // Set by Restart, consumed on the first Update after the reload — see HandleSceneReloaded.
+        private bool _pendingRun;
+
+        private void HandleSceneReloaded(UnityEngine.SceneManagement.Scene s,
+                                         UnityEngine.SceneManagement.LoadSceneMode m)
+        {
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= HandleSceneReloaded;
+
+            // Deliberately NOT calling BeginRun() here. Every auto-spawned manager (WorkerManager,
+            // ReactorController, ResearchLab, CardManager, …) re-creates itself from its own sceneLoaded
+            // callback, and the order between those callbacks is not defined. Raising OnDayStarted now
+            // would reach whichever ones happened to be built already. Waiting for the next Update puts it
+            // after every Awake/OnEnable/Start in the new scene, so day 1 reaches all of them.
+            _pendingRun = true;
         }
 
         // CORE% ถึง 100% ระหว่างทาง → ชนะสมบูรณ์ (True Ending, Q ≥ 1.0)
@@ -225,6 +252,13 @@ namespace NuclearReMind
             // the player again. Mastery/Codex are NOT lost — those live in MetaProgress by design.
             CodexQuizManager.ResetForRun();
             Time.timeScale = 1f;
+
+            // This object survives the reload, so nothing would otherwise reset the run: CurrentDay,
+            // CurrentState and the day timer all carried straight over. Re-run BeginRun once the new
+            // scene is up.
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= HandleSceneReloaded;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += HandleSceneReloaded;
+
             var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
             SceneFader.FadeToScene(scene.buildIndex); // เฟดจอดำ → reload → เฟดสว่าง
         }
@@ -269,6 +303,13 @@ namespace NuclearReMind
 
         void Update()
         {
+            if (_pendingRun)
+            {
+                _pendingRun = false;
+                BeginRun();
+                return; // don't advance the clock on the frame the run is (re)started
+            }
+
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 SetState(CurrentState == GameState.Paused
