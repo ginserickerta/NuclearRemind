@@ -462,6 +462,18 @@ namespace NuclearReMind.EditorTools
             dBody.lineSpacing = 1.3f;
             dBody.horizontalOverflow = HorizontalWrapMode.Wrap;
 
+            // รูปการ์ดสำเร็จรูปเต็มใบ — เต็มช่อง detail, preserveAspect (record ที่มีสกินรูปโชว์รูปแทนข้อความ)
+            var dImageGO = new GameObject("RecordDetailImage", typeof(RectTransform));
+            dImageGO.transform.SetParent(detailPane.transform, false);
+            var diRect = dImageGO.GetComponent<RectTransform>();
+            diRect.anchorMin = Vector2.zero; diRect.anchorMax = Vector2.one;
+            diRect.offsetMin = new Vector2(10, 10);
+            diRect.offsetMax = new Vector2(-10, -10);
+            var dImage = dImageGO.AddComponent<Image>();
+            dImage.preserveAspect = true;
+            dImage.raycastTarget = false;
+            dImageGO.SetActive(false);
+
             panel.SetActive(false);
 
             // ปุ่มเปิดแผง Records เรียบสีเข้มเดิม (RecordsToggleButton) ถอดออกแล้ว — ใช้ปุ่มสไปรต์ใหม่แทน
@@ -477,6 +489,7 @@ namespace NuclearReMind.EditorTools
             rec.detailTitle = dTitle;
             rec.detailAuthor = dAuthor;
             rec.detailBody = dBody;
+            rec.detailImage = dImage;
             EditorUtility.SetDirty(rec);
         }
 

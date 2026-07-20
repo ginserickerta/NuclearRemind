@@ -110,8 +110,9 @@ namespace NuclearReMind
             if (record == null) return;
             _current = record;
 
-            // มีรูปเต็มใบสำหรับ record นี้ → โชว์รูป + ซ่อนข้อความ (baked แล้ว) · ไม่มี (elara_01) → กรอบเดิม + text
-            Sprite full = Resources.Load<Sprite>("StoryUI/RecordCards/record_" + record.recordId);
+            // มีรูปเต็มใบสำหรับ record นี้ → โชว์รูป + ซ่อนข้อความ (baked แล้ว) · ไม่มี → กรอบเดิม + text
+            // ★ ไฟล์ชื่อตรงกับ recordId: record_01 / record_02 / record_03 / record_final (ไม่มี prefix ซ้ำ)
+            Sprite full = Resources.Load<Sprite>("StoryUI/RecordCards/" + record.recordId);
             bool useImage = full != null && _cardImg != null;
 
             if (_cardImg != null)

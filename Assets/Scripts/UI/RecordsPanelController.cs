@@ -27,6 +27,8 @@ namespace NuclearReMind
         public Text detailTitle;
         public Text detailAuthor;
         public Text detailBody;
+        // ★ รูปการ์ดสำเร็จรูปเต็มใบ (record ที่มีสกินรูปจะโชว์รูปนี้แทน แล้วซ่อน 3 text ด้านบน)
+        public Image detailImage;
 
         private readonly List<GameObject> _entryButtons = new List<GameObject>();
 
@@ -99,9 +101,57 @@ namespace NuclearReMind
         public void ShowRecord(RecordCardSO record)
         {
             if (record == null) return;
-            if (detailTitle != null) detailTitle.text = record.archiveTitle;
-            if (detailAuthor != null) detailAuthor.text = record.authorLabel;
-            if (detailBody != null) detailBody.text = record.bodyTH;
+
+            EnsureDetailImage();
+
+            // ★ record ที่มีสกินรูปสำเร็จรูป → โชว์รูปเต็มใบ (ข้อความ baked ในรูปแล้ว) · ไม่มี → ข้อความล้วนแบบเดิม
+            //   path เดียวกับป๊อปอัพตอนกู้บันทึก (RecordCardUI) → หน้าตากลมกลืนเป็นชุดเดียว
+            Sprite full = Resources.Load<Sprite>("StoryUI/RecordCards/" + record.recordId);
+            bool useImage = full != null && detailImage != null;
+
+            if (detailImage != null)
+            {
+                detailImage.gameObject.SetActive(useImage);
+                if (useImage)
+                {
+                    detailImage.sprite = full;
+                    detailImage.preserveAspect = true;
+                    detailImage.color = Color.white;
+                }
+            }
+
+            if (detailTitle != null)  detailTitle.gameObject.SetActive(!useImage);
+            if (detailAuthor != null) detailAuthor.gameObject.SetActive(!useImage);
+            if (detailBody != null)   detailBody.gameObject.SetActive(!useImage);
+
+            if (!useImage) // เขียนข้อความเฉพาะโหมดไม่มีรูป
+            {
+                if (detailTitle != null) detailTitle.text = record.archiveTitle;
+                if (detailAuthor != null) detailAuthor.text = record.authorLabel;
+                if (detailBody != null) detailBody.text = record.bodyTH;
+            }
+        }
+
+        // สร้าง Image เต็มช่องรายละเอียดตอนรันไทม์ ถ้า setup ยังไม่ได้ wire —
+        // ทำให้แผงย้อนอ่านโชว์รูปได้ทันทีในบิลด์เก่าโดยไม่ต้องรัน Setup Story UI ซ้ำ
+        private void EnsureDetailImage()
+        {
+            if (detailImage != null) return;
+            if (detailBody == null) return;
+            var pane = detailBody.transform.parent as RectTransform;
+            if (pane == null) return;
+
+            var go = new GameObject("RecordDetailImage", typeof(RectTransform));
+            go.transform.SetParent(pane, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(10f, 10f);
+            rt.offsetMax = new Vector2(-10f, -10f);
+
+            detailImage = go.AddComponent<Image>();
+            detailImage.preserveAspect = true;
+            detailImage.raycastTarget = false;
+            go.SetActive(false);
         }
 
         private void RefreshList()
@@ -161,11 +211,13 @@ namespace NuclearReMind
                 }
             }
 
-            // ยังไม่กู้บันทึกเลย → บอกผู้เล่นแทนจอว่าง
+            // ยังไม่กู้บันทึกเลย → บอกผู้เล่นแทนจอว่าง (ซ่อนรูป โชว์ข้อความ)
             if (count == 0 && detailBody != null)
             {
-                if (detailTitle != null) detailTitle.text = "ยังไม่มีบันทึกที่กู้คืน";
-                if (detailAuthor != null) detailAuthor.text = "";
+                if (detailImage != null) detailImage.gameObject.SetActive(false);
+                if (detailTitle != null) { detailTitle.gameObject.SetActive(true); detailTitle.text = "ยังไม่มีบันทึกที่กู้คืน"; }
+                if (detailAuthor != null) { detailAuthor.gameObject.SetActive(true); detailAuthor.text = ""; }
+                detailBody.gameObject.SetActive(true);
                 detailBody.text = "ระบบกู้คืนข้อมูลจะดึงบันทึกเก่าของเครือข่าย Veltara ขึ้นมาเองเมื่อเมืองก้าวหน้า";
             }
         }
