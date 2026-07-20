@@ -74,7 +74,9 @@ namespace NuclearReMind
 
         public float Core { get; set; }               // settable: save/load restore + tests
         public float Heat { get; set; }
-        public float Fuel { get; set; }               // topped up by the Extractor; test-settable
+        // Headless fallback for CurrentFuel only. In a real session the reactor reads (and spends) the
+        // deuterium ledger on ResourceManager, which CONFIG.md starts at 0 — this field is never consulted.
+        public float Fuel { get; set; }
         public bool IsBoosting { get; private set; }
         public int ToroidalLv { get; private set; }
         public int PoloidalLv { get; private set; }
@@ -102,7 +104,7 @@ namespace NuclearReMind
             _cfg = cfg;
             Core = cfg.startCore;   // 30
             Heat = cfg.startHeat;   // 20
-            Fuel = cfg.fuelNeed;    // assume the Extractor is supplying fuel (fe = 1)
+            Fuel = cfg.fuelNeed;    // headless default = one day of demand; the live game reads the ledger
             Tritium = 0f;
             IsBoosting = false;
             ToroidalLv = 0;
@@ -199,14 +201,20 @@ namespace NuclearReMind
             // ── CORE ──
             float gain;
             float tritium = CurrentTritium;
-            if (Fuel <= 0f) gain = 0f;                                           // K01: no fuel, no gain
+            float fuel = CurrentFuel;
+            if (fuel <= 0f) gain = 0f;                                           // K01: no fuel, no gain
             else if (Core >= _cfg.methodBCoreGate && tritium < _cfg.methodBTritiumMin)
                 gain = 0f;                                                       // ★ Method B gate — stalls at 80
             else
             {
                 float baseGain = IsBoosting ? _cfg.boostCoreGain : _cfg.coreGainBase;
-                float fe = Mathf.Min(1f, Fuel / _cfg.fuelNeed) + m.FuelEfficiencyBonus();
+                float fe = Mathf.Min(1f, fuel / _cfg.fuelNeed) + m.FuelEfficiencyBonus();
                 gain = baseGain * fe;
+
+                // Burn what the day's run actually drew: the full demand when it was met, otherwise
+                // whatever was in the tank. fe is the fraction of demand satisfied, so a partly-fuelled
+                // day both advances less and costs less.
+                ConsumeFuel(Mathf.Min(fuel, _cfg.fuelNeed));
                 if (Core >= _cfg.methodBCoreGate)
                 {
                     float cost = IsBoosting ? _cfg.boostTritiumCost : _cfg.idleTritiumCost;
@@ -221,6 +229,30 @@ namespace NuclearReMind
             LastGain = gain;
 
             EventManager.Instance?.RaiseReactorStateChanged(Core, Heat);
+        }
+
+        // ── fuel: the deuterium ledger, mirroring the tritium pair below ──
+        //
+        // Fuel used to be set once in Initialize and never written again by anything in the project, so
+        // fe = min(1, Fuel/fuelNeed) was permanently 1 and CORE climbed every single day whether or not
+        // the player had produced, allocated or spent a unit of deuterium. Extraction and the reactor
+        // were simply two systems that had never been introduced to each other.
+        private float CurrentFuel => ResourceManager.Instance != null
+            ? ResourceManager.Instance.Current.deuterium
+            : Fuel;
+
+        /// <summary>
+        /// Burn deuterium through the ledger. Unlike ConsumeTritium this does NOT decrement the local
+        /// field when no ResourceManager exists: with no ledger there is nothing refilling it either, so
+        /// draining it would leave the reactor permanently dry after one tick. Headless callers therefore
+        /// treat Fuel as "fuel available per day" and set it themselves — which is exactly how the EditMode
+        /// reactor tests already use it, several of which tick more than once and assert on gain.
+        /// </summary>
+        private void ConsumeFuel(float amount)
+        {
+            if (amount <= 0f) return;
+            if (ResourceManager.Instance == null || EventManager.Instance == null) return;
+            EventManager.Instance.RaiseResourceDelta(ResourceType.Deuterium, -amount);
         }
 
         // tritium is Zone B's stock when it exists, else a local field (test injection)
