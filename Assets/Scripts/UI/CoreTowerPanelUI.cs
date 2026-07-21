@@ -277,23 +277,18 @@ namespace NuclearReMind
 
             // เชื้อเพลิง/วิศวกร — ล็อกจนกว่าเตาปลดล็อก (Day 11) · Tritium เพิ่มล็อกถึงวันพายุ (Day 25)
             bool tritUnlocked = d.isUnlocked && day >= CoreTowerManager.StormStartDay;
-            // ★ v6.3: the reactor drinks straight from the shared stock — there is no per-turn fuel
-            //   allocation, and CoreTowerManager ignores the adjust event (V63Live guard). The +/-
-            //   buttons therefore LIED: pressing them changed a dead "planned" number while the core
-            //   ignored it, which read as "ใส่เชื้อเพลิงแล้ว % ไม่ขึ้น". Hide them on the live path and
-            //   show the real tank instead; the legacy scene keeps the old behaviour untouched.
+            // ★ v6.3: Deuterium +/- is the FUEL THROTTLE — how much the reactor may drink per day
+            //   (0..fuelNeed, lands on ReactorController.AdjustFuelFeed via the allocation event).
+            //   The readout is "ป้อน/คลัง". Tritium has no manual control on the live path (it burns
+            //   automatically past the Method B gate) so only its buttons hide; the tank shows real stock.
             bool v63 = ReactorController.Instance != null;
-            SetButtonShown(_deutMinus, !v63); SetButtonShown(_deutPlus, !v63);
             SetButtonShown(_tritMinus, !v63); SetButtonShown(_tritPlus, !v63);
-            if (!v63)
-            {
-                SetInteractable(_deutMinus, d.isUnlocked); SetInteractable(_deutPlus, d.isUnlocked);
-                SetInteractable(_tritMinus, tritUnlocked); SetInteractable(_tritPlus, tritUnlocked);
-            }
+            SetInteractable(_deutMinus, d.isUnlocked); SetInteractable(_deutPlus, d.isUnlocked);
             SetInteractable(_engMinus, d.isUnlocked);  SetInteractable(_engPlus, d.isUnlocked);
+            if (!v63) { SetInteractable(_tritMinus, tritUnlocked); SetInteractable(_tritPlus, tritUnlocked); }
 
             if (_deutTxt != null)
-                _deutTxt.text = v63 ? $"{res.deuterium:0}" : $"{ct.PlannedDeuterium:0}";
+                _deutTxt.text = v63 ? $"{ct.FuelFeedPerDay:0}/{res.deuterium:0}" : $"{ct.PlannedDeuterium:0}";
             if (_tritTxt != null)
                 _tritTxt.text = v63 ? (tritUnlocked ? $"{res.tritium:0}" : "ล็อก")
                                     : (tritUnlocked ? $"{ct.PlannedTritium:0}" : "ล็อก");
@@ -422,9 +417,9 @@ namespace NuclearReMind
             var d2Icon = SpriteImg("fuel_d2", rx, 478, 54, deriveH: true, boxH: 0); d2Icon.raycastTarget = false;
             UIGlowPulse.Attach(d2Icon.gameObject, CDeut, min: 0.10f, max: 0.55f, dist: 5f, spd: 2.1f);
             Label("DeutL", rx + 168, 496, 20, CText, TextAnchor.MiddleCenter, FontStyle.Bold, 200, "Deuterium");
-            _deutMinus = SpriteButton("btn_minus", rx + 68, 522, 46, 52); _deutMinus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, -5)); Pop(_deutMinus);
+            _deutMinus = SpriteButton("btn_minus", rx + 68, 522, 46, 52); _deutMinus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, -1)); Pop(_deutMinus);
             _deutTxt = Label("DeutV", rx + 155, 548, 26, CGold, TextAnchor.MiddleCenter, FontStyle.Bold, 90);
-            _deutPlus  = SpriteButton("btn_plus", rx + 200, 522, 46, 52); _deutPlus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, 5)); Pop(_deutPlus);
+            _deutPlus  = SpriteButton("btn_plus", rx + 200, 522, 46, 52); _deutPlus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, 1)); Pop(_deutPlus);
             // Tritium
             var t3Icon = SpriteImg("fuel_t3", rx, 592, 54, deriveH: true, boxH: 0); t3Icon.raycastTarget = false;
             UIGlowPulse.Attach(t3Icon.gameObject, CTrit, min: 0.10f, max: 0.55f, dist: 5f, spd: 2.3f);
@@ -492,8 +487,8 @@ namespace NuclearReMind
                     if (m == null || m.btn == null) continue;
                     int mode = m.mode; m.btn.onClick.AddListener(() => SelectMode(mode));
                 }
-            if (_deutMinus  != null) _deutMinus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, -5));
-            if (_deutPlus   != null) _deutPlus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, 5));
+            if (_deutMinus  != null) _deutMinus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, -1));
+            if (_deutPlus   != null) _deutPlus.onClick.AddListener(() => Adjust(ReactorAllocation.Deuterium, 1));
             if (_tritMinus  != null) _tritMinus.onClick.AddListener(() => Adjust(ReactorAllocation.Tritium, -5));
             if (_tritPlus   != null) _tritPlus.onClick.AddListener(() => Adjust(ReactorAllocation.Tritium, 5));
             if (_engMinus   != null) _engMinus.onClick.AddListener(() => AdjustCool(-1));

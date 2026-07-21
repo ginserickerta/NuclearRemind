@@ -22,6 +22,8 @@ heat_warn           = 90.0     # UI เตือน + ปลด SCRAM
 knowledge_q_max_bonus = 0.20   # ★ 2026-07-22 — Knowledge สเกล Q: gain × (1 + knowledge/100 × ค่านี้)
                                #   บวกอย่างเดียว ไม่มีวันต่ำกว่า ×1.0 → ไม่แตะพื้น 🔒 boost_core_gain
                                #   K20 เริ่มเกม +4% · K100 +20% (แทน KnowBonus v4.1 ที่ไม่เคยถูกต่อ)
+manual_cool_water_cost  = 20.0 # ★ 2026-07-22 — ปุ่ม "หล่อเย็นเพิ่ม": จ่ายน้ำครั้งเดียว → ลด HEAT ทันที
+manual_cool_heat_reduce = 8.0  #   เตาเย็น (HEAT 0) กดไม่ได้ ไม่เสียน้ำฟรี · น้ำไม่พอ = แจ้งเหตุผล
 
 # cooling — 🔒 บั๊ก #1: v4.1 ใช้ water/10 ไม่มีเพดาน → HEAT=0 ตลอดเกม
 cooling = 6 + min(water/12, 7) + coolWorkers*3 + min(toroidalLv, 3)*9

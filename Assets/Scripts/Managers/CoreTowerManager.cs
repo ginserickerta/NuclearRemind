@@ -195,7 +195,7 @@ namespace NuclearReMind
 
         private void HandleDayStarted(int day, bool timed)
         {
-            if (V63Live) { MirrorV63(); return; } // ★ v6.3: no Day-11 unlock, no allocation — mirror only
+            if (V63Live) { _manualCoolWaterToday = 0f; MirrorV63(); return; } // ★ v6.3: reset today's manual-cool spend, mirror only
 
             _simmedFrac = 0f; // เริ่มวันใหม่ → รีเซ็ตความคืบเรียลไทม์ (เดินใหม่ทั้งวัน)
 
@@ -574,7 +574,26 @@ namespace NuclearReMind
 
         private void HandleAllocationAdjust(ReactorAllocation kind, int delta)
         {
-            if (V63Live) return; // ★ v6.3: no per-turn allocation — cooling reads the shared water pool (§26)
+            // ★ v6.3 (2026-07-22): this used to be a bare `return` — every fuel/cooling button on the
+            //   Core Tower panel silently did nothing. The two controls that mean something on the live
+            //   path now land on the real reactor; the rest genuinely have no v6.3 equivalent.
+            if (V63Live)
+            {
+                var r = ReactorController.Instance;
+                switch (kind)
+                {
+                    case ReactorAllocation.Deuterium:      // ± daily fuel feed (0..fuelNeed)
+                        r.AdjustFuelFeed(delta);
+                        break;
+                    case ReactorAllocation.CoolingWater:   // "หล่อเย็นเพิ่ม" — spend water, drop HEAT now
+                        ManualCoolV63(r);
+                        break;
+                    // Tritium/CoolingEngineer: no per-turn allocation in v6.3 — tritium burns
+                    // automatically past the Method B gate; cooling crew is the "cool" job.
+                }
+                MirrorV63();
+                return;
+            }
             if (!Current.isUnlocked) return; // เตายังไม่ปลดล็อก (ก่อน Day 11) → จัดสรรไม่ได้
             var rm = ResourceManager.Instance;
             switch (kind)
@@ -596,9 +615,38 @@ namespace NuclearReMind
             EventManager.Instance.RaiseTowerProgressChanged(Current); // ให้ UI รีเฟรช
         }
 
+        // ★ v6.3 manual cooling — the tangible version of "หล่อเย็นเพิ่ม": pay water once, HEAT drops on
+        //   the spot. Guards keep it honest: a cold core refuses (no wasted water on nothing), an empty
+        //   tank refuses with the reason. Values live in CONFIG.md (rule #2).
+        private float _manualCoolWaterToday;
+
+        private void ManualCoolV63(ReactorController r)
+        {
+            var cfg = GameConfigSO.Instance;
+            var rm = ResourceManager.Instance;
+            if (r.Heat <= 0f)
+            {
+                EventManager.Instance.RaiseNotice("เตายังเย็นอยู่ — ยังไม่ต้องหล่อเย็นเพิ่ม");
+                return;
+            }
+            if (rm == null || rm.Current.water < cfg.manualCoolWaterCost)
+            {
+                EventManager.Instance.RaiseNotice($"น้ำไม่พอ — หล่อเย็นเพิ่มใช้น้ำ {cfg.manualCoolWaterCost:0}");
+                return;
+            }
+            EventManager.Instance.RaiseResourceDelta(ResourceType.Water, -cfg.manualCoolWaterCost);
+            _manualCoolWaterToday += cfg.manualCoolWaterCost;
+            ReduceHeat(cfg.manualCoolHeatReduce); // v63 branch lands on the real reactor + mirrors
+            EventManager.Instance.RaiseNotice($"หล่อเย็นเพิ่ม — ความร้อน −{cfg.manualCoolHeatReduce:0} (น้ำ −{cfg.manualCoolWaterCost:0})");
+        }
+
         /// <summary>กำลังหล่อเย็นตามการจัดสรรปัจจุบัน (preview ให้ UI) — สูตรเดียวกับ AdvanceTurn</summary>
         public float PreviewCooling()
         {
+            // v6.3: the reactor's own formula (base + water pool + cool crew + coils + mastery) — the
+            // legacy plan numbers below belong to the retired allocation system and read as nonsense.
+            if (V63Live) return ReactorController.Instance.PreviewCooling();
+
             int coolEng = hasPoloidalCoils ? Mathf.Clamp(_planCoolEng, 0, TotalEngineers) : 0;
             int decree = DecreeManager.Instance != null ? DecreeManager.Instance.CoolingLaborBonus : 0;
             return baseCooling + PreviewWaterUsed() / 10f + coolEng * 4f + Mathf.Min(coolingTowerLevel, 3) * 10f + decree;
@@ -607,9 +655,16 @@ namespace NuclearReMind
         /// <summary>น้ำที่จะถูกใช้หล่อเย็นจริงเทิร์นนี้ (clamp กับคลัง) — preview ให้ UI</summary>
         public float PreviewWaterUsed()
         {
+            // v6.3: passive cooling reads the pool without consuming — the honest number here is the
+            // water actually SPENT today on manual cooling presses.
+            if (V63Live) return _manualCoolWaterToday;
+
             float stock = ResourceManager.Instance != null ? ResourceManager.Instance.Current.water : 0f;
             return Mathf.Clamp(_planCoolWater, 0f, stock);
         }
+
+        /// <summary>Daily fuel feed passthrough for the panel (v6.3 fuel throttle).</summary>
+        public float FuelFeedPerDay => V63Live ? ReactorController.Instance.FuelFeedPerDay : PlannedDeuterium;
 
         // ───────────────────────── Coils (V4 §6 — ส่วนต่อขยาย CORE TOWER) ─────────────────────────
 

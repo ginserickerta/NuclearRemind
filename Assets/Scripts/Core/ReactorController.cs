@@ -201,7 +201,7 @@ namespace NuclearReMind
             // ── CORE ──
             float gain;
             float tritium = CurrentTritium;
-            float fuel = CurrentFuel;
+            float fuel = Mathf.Min(CurrentFuel, FuelFeedPerDay); // throttle: the player-set daily feed caps the draw
             if (fuel <= 0f) gain = 0f;                                           // K01: no fuel, no gain
             else if (Core >= _cfg.methodBCoreGate && tritium < _cfg.methodBTritiumMin)
                 gain = 0f;                                                       // ★ Method B gate — stalls at 80
@@ -252,6 +252,38 @@ namespace NuclearReMind
         private float _accruedToday;
         private float _uiRaiseTimer;
 
+        // ── fuel throttle (★ 2026-07-22) ──
+        // The panel's Deuterium +/- used to route into the legacy allocation path that v6.3 ignores —
+        // the buttons changed a dead number. They now set THIS: how much deuterium the reactor may draw
+        // per day (0..fuelNeed). Full feed by default; 0 = reactor deliberately off (saves fuel, no gain).
+        // Not saved — a loaded game starts back at full feed, which is the safe default.
+        private float _fuelBudget = -1f; // -1 = full (fuelNeed)
+        public float FuelFeedPerDay => _fuelBudget < 0f ? (_cfg != null ? _cfg.fuelNeed : 6f) : _fuelBudget;
+
+        public void AdjustFuelFeed(float delta)
+        {
+            if (_cfg == null) return;
+            _fuelBudget = Mathf.Clamp(FuelFeedPerDay + delta, 0f, _cfg.fuelNeed);
+            EventManager.Instance?.RaiseReactorStateChanged(Core, Heat); // panel refresh
+        }
+
+        /// <summary>
+        /// Cooling power from the CURRENT state — the same formula DailyTick uses, minus the storm-only
+        /// sensor headroom (display preview; the day-end tick stays authoritative).
+        /// </summary>
+        public float PreviewCooling()
+        {
+            if (_cfg == null) return 0f;
+            var m = MasteryRegistry.Instance;
+            float water = ResourceManager.Instance != null ? ResourceManager.Instance.Current.water : 0f;
+            int coolWorkers = WorkerManager.Instance != null ? WorkerManager.Instance.GetWorkers(WorkerJobs.Cool).Count : 0;
+            return _cfg.coolingBase
+                + Mathf.Min(water / _cfg.coolingWaterDiv, _cfg.coolingWaterCap)
+                + coolWorkers * _cfg.coolPerWorker
+                + Mathf.Min(ToroidalLv, _cfg.toroidalCoolMaxLv) * _cfg.coolPerToroidalLv
+                + m.CoolingBonus();
+        }
+
         /// <summary>
         /// Today's expected CORE gain from the CURRENT state — display approximation for the realtime
         /// trickle (same gates as DailyTick: no fuel → 0, Method B tritium gate, soft floor).
@@ -260,7 +292,7 @@ namespace NuclearReMind
         {
             if (_cfg == null) return 0f;
             var m = MasteryRegistry.Instance;
-            float fuel = CurrentFuel;
+            float fuel = Mathf.Min(CurrentFuel, FuelFeedPerDay);
             float tritium = CurrentTritium;
             if (fuel <= 0f) return 0f;
             if (Core >= _cfg.methodBCoreGate && tritium < _cfg.methodBTritiumMin) return 0f;
