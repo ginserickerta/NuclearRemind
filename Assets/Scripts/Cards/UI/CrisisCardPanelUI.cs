@@ -41,6 +41,7 @@ namespace NuclearReMind
 
         private Font _font;
         private Sprite _optFrame;
+        private Sprite _panelFrame;
         private bool _shown, _legacyDisabled;
         private GameObject _backdrop, _root;
         private Text _title, _body;
@@ -98,7 +99,8 @@ namespace NuclearReMind
         private void Awake()
         {
             _font = LoadFont();
-            _optFrame = Resources.Load<Sprite>("CardUI/opt_frame"); // null → flat colour, as before
+            _optFrame = Resources.Load<Sprite>("CardUI/opt_frame");     // null → flat colour, as before
+            _panelFrame = Resources.Load<Sprite>("CardUI/panel_frame"); // metal panel skin (null → flat + outline)
         }
 
         private void OnEnable()
@@ -250,7 +252,7 @@ namespace NuclearReMind
                 btn.interactable = !locked;
                 var lbl = btn.GetComponentInChildren<Text>();
                 if (lbl != null) { lbl.alignment = TextAnchor.MiddleLeft; if (locked) lbl.color = CLockText; }
-                var le = btn.gameObject.AddComponent<LayoutElement>(); le.minHeight = 84f; le.preferredHeight = 84f;
+                var le = btn.gameObject.AddComponent<LayoutElement>(); le.minHeight = RowH; le.preferredHeight = RowH;
                 _optRows.Add(btn.gameObject);
             }
 
@@ -259,15 +261,16 @@ namespace NuclearReMind
 
         // Layout constants — the panel is rebuilt per card, so these are the single source of truth.
         private const float PanelWidth = 760f;
-        private const float PadSide    = 28f;
-        private const float TitleTop   = 24f;
+        // Insets are wide enough to clear the ~30px metal border of the frame skin (panel_frame).
+        private const float PadSide    = 44f;
+        private const float TitleTop   = 40f;
         private const float TitleH     = 50f;
-        private const float BodyTop    = 82f;   // TitleTop + TitleH + 8
+        private const float BodyTop    = 98f;   // TitleTop + TitleH + 8
         private const float BodyGap    = 30f;   // breathing room between the body and the first option
-        private const float RowH       = 84f;
+        private const float RowH       = 140f;  // option-row height — text size is unchanged, only the frame grows
         private const float RowGap     = 10f;
-        private const float PadBottom  = 24f;
-        private const float PanelMaxH  = 860f;
+        private const float PadBottom  = 40f;
+        private const float PanelMaxH  = 880f;
 
         /// <summary>
         /// Short cards used to leave ~200px of dead space because the body reserved a fixed 238px
@@ -323,19 +326,19 @@ namespace NuclearReMind
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(PanelWidth, 720f); // provisional — FitPanelToContent sets the real height
-            var outline = _root.AddComponent<Outline>();
-            outline.effectColor = CBorder; outline.effectDistance = new Vector2(2f, -2f);
+            ApplyPanelSkin(_root);
 
             // Anchor() takes offsetMin (left, BOTTOM) then offsetMax (right, TOP). Both rows used to pass
             // them the other way round, giving the title a height of -50 and dropping it out of view.
+            // Insets use the PadSide/TitleTop consts so they track the frame border in one place.
             _title = MakeText("Title", _root.transform, "", 30, CTitle, TextAnchor.UpperLeft);
-            Anchor(_title.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(28f, -74f), new Vector2(-28f, -24f));
+            Anchor(_title.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(PadSide, -(TitleTop + TitleH)), new Vector2(-PadSide, -TitleTop));
 
             _body = MakeText("Body", _root.transform, "", 19, CText, TextAnchor.UpperLeft);
-            Anchor(_body.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(28f, -320f), new Vector2(-28f, -82f));
+            Anchor(_body.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(PadSide, -320f), new Vector2(-PadSide, -BodyTop));
 
             var optRoot = NewUI("Options", _root.transform, new Color(0f, 0f, 0f, 0f));
-            Anchor(optRoot, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(28f, 24f), new Vector2(-28f, -330f));
+            Anchor(optRoot, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(PadSide, PadBottom), new Vector2(-PadSide, -330f));
             var vlg = optRoot.AddComponent<VerticalLayoutGroup>();
             vlg.spacing = 10f; vlg.padding = new RectOffset(0, 0, 0, 0);
             vlg.childControlWidth = true; vlg.childControlHeight = false;
@@ -365,6 +368,28 @@ namespace NuclearReMind
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = aMin; rt.anchorMax = aMax;
             rt.offsetMin = offMin; rt.offsetMax = offMax;
+        }
+
+        // Skin the panel background: the metal frame sprite (nine-sliced) when the art is present, else
+        // the flat colour + Outline the card shipped with. ppuMultiplier 3 renders the 90px art border at
+        // ~30px on screen; the sprite carries the interior fill, so its tint stays white.
+        private void ApplyPanelSkin(GameObject root)
+        {
+            var img = root.GetComponent<Image>();
+            if (img == null) return;
+            if (_panelFrame != null)
+            {
+                img.sprite = _panelFrame;
+                img.type = Image.Type.Sliced;
+                img.pixelsPerUnitMultiplier = 3f;
+                img.color = Color.white;
+            }
+            else
+            {
+                img.color = CPanel;
+                var outline = root.AddComponent<Outline>();
+                outline.effectColor = CBorder; outline.effectDistance = new Vector2(2f, -2f);
+            }
         }
 
         private Text MakeText(string name, Transform parent, string text, int size, Color color, TextAnchor anchor)

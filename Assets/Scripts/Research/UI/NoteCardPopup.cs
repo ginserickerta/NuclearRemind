@@ -37,6 +37,7 @@ namespace NuclearReMind
         private const float PanelHeight = 460f;
 
         private Font _font;
+        private Sprite _panelFrame;
         private GameObject _backdrop, _root;
         private Text _eyebrow, _title, _body, _btnLabel;
         private bool _shown;
@@ -86,7 +87,11 @@ namespace NuclearReMind
             return fallback;
         }
 
-        private void Awake() => _font = UIFonts.Body;
+        private void Awake()
+        {
+            _font = UIFonts.Body;
+            _panelFrame = Resources.Load<Sprite>("CardUI/panel_frame"); // metal panel skin (null → flat + outline)
+        }
 
         private void OnEnable()
         {
@@ -214,22 +219,22 @@ namespace NuclearReMind
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(PanelWidth, PanelHeight);
-            var outline = _root.AddComponent<Outline>();
-            outline.effectColor = CBorder; outline.effectDistance = new Vector2(2f, -2f);
+            ApplyPanelSkin(_root);
 
             // Anchor() takes offsetMin as (left, BOTTOM) and offsetMax as (right, TOP) — passing them the
             // other way round yields a negative height and the row vanishes. This bit CrisisCardPanelUI.
+            // 44px side insets and the shifted-down tops clear the ~30px metal border of the frame skin.
             _eyebrow = MakeText("Eyebrow", _root.transform, "", 15, CEyebrow, TextAnchor.UpperLeft);
-            Anchor(_eyebrow.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(30f, -50f), new Vector2(-30f, -24f));
+            Anchor(_eyebrow.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(44f, -66f), new Vector2(-44f, -40f));
 
             _title = MakeText("Title", _root.transform, "", 28, CTitle, TextAnchor.UpperLeft);
-            Anchor(_title.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(30f, -98f), new Vector2(-30f, -52f));
+            Anchor(_title.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(44f, -114f), new Vector2(-44f, -68f));
 
             _body = MakeText("Body", _root.transform, "", 19, CText, TextAnchor.UpperLeft);
-            Anchor(_body.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(30f, -(PanelHeight - 92f)), new Vector2(-30f, -108f));
+            Anchor(_body.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(44f, -(PanelHeight - 100f)), new Vector2(-44f, -124f));
 
             var btn = MakeButton("Continue", _root.transform, "ต่อไป", CBtn, Advance);
-            Anchor(btn.gameObject, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-110f, 24f), new Vector2(110f, 68f));
+            Anchor(btn.gameObject, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-110f, 40f), new Vector2(110f, 84f));
             _btnLabel = btn.GetComponentInChildren<Text>();
         }
 
@@ -254,6 +259,28 @@ namespace NuclearReMind
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = aMin; rt.anchorMax = aMax;
             rt.offsetMin = offMin; rt.offsetMax = offMax;
+        }
+
+        // Skin the panel background: the metal frame sprite (nine-sliced) when the art is present, else
+        // the flat colour + Outline the popup shipped with. ppuMultiplier 3 renders the 90px art border at
+        // ~30px on screen; the sprite carries the interior fill, so its tint stays white.
+        private void ApplyPanelSkin(GameObject root)
+        {
+            var img = root.GetComponent<Image>();
+            if (img == null) return;
+            if (_panelFrame != null)
+            {
+                img.sprite = _panelFrame;
+                img.type = Image.Type.Sliced;
+                img.pixelsPerUnitMultiplier = 3f;
+                img.color = Color.white;
+            }
+            else
+            {
+                img.color = CPanel;
+                var outline = root.AddComponent<Outline>();
+                outline.effectColor = CBorder; outline.effectDistance = new Vector2(2f, -2f);
+            }
         }
 
         private Text MakeText(string name, Transform parent, string text, int size, Color color, TextAnchor anchor)

@@ -4,6 +4,11 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// ★ SUPERSEDED (2026-07-21) by QuizCardPanelUI — the v6.3 code-built quiz popup in the crisis-card
+    /// visual language auto-spawns and disables this scene-authored controller on Start, so it no longer
+    /// shows. Kept compiled because MakeShuffledIndices is still covered by QuizShuffleTests and because the
+    /// scene still references the component; do not delete without clearing both.
+    ///
     /// Popup สำหรับ Decision Quiz — แสดงคำถาม + 3 ตัวเลือกตาม EventManager.OnQuizShown
     /// ควิซตอบบังคับ (ไม่มีปุ่มข้าม): ปุ่มยืนยันใช้ได้ต่อเมื่อเลือกคำตอบแล้ว
     /// ตอบเสร็จ → ไฮไลต์ข้อถูก(เขียว)/ข้อที่เลือกผิด(แดง) + explainText 1 ย่อหน้า + ปุ่มปิด

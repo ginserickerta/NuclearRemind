@@ -110,10 +110,9 @@ namespace NuclearReMind
 
         // Retire the legacy scene-placed codex window so the old C-toggle stops.
         //
-        // ★ QuizPopupController is deliberately LEFT ENABLED. It is the scene-authored quiz popup (category
-        // bar, speaker, Codex-reward footer, shuffled options, outline highlighting) and it is now the
-        // v6.3 prompt: it submits to CodexQuizManager and can be skipped. Disabling it here would silently
-        // kill the centre-screen quiz again.
+        // ★ The scene-authored QuizPopupController is now disabled by QuizCardPanelUI (the v6.3 code-built
+        // quiz popup in the crisis-card visual language), so nothing here needs to touch it. The centre-
+        // screen quiz still fires on OnQuizShown and still submits to CodexQuizManager — only its UI changed.
         private void DisableLegacy()
         {
             if (_legacyDisabled) return;
