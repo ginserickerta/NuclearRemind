@@ -16,12 +16,13 @@ namespace NuclearReMind.EditorTools
     {
         private const string Dir = "Assets/Resources/CardUI";
 
-        [MenuItem("NuclearReMind/UI/Bake Card Panels (Crisis + Quiz + Note)")]
+        [MenuItem("NuclearReMind/UI/Bake Card Panels (Crisis + Quiz + Note + Codex)")]
         public static void BakeAll()
         {
             BakeCrisis();
             BakeQuiz();
             BakeNote();
+            BakeCodex();
         }
 
         [MenuItem("NuclearReMind/UI/Bake Crisis Card Panel")]
@@ -35,6 +36,10 @@ namespace NuclearReMind.EditorTools
         [MenuItem("NuclearReMind/UI/Bake Note Card Popup")]
         public static void BakeNote()
             => Bake<NoteCardPopup>("NoteCardPopup", c => c.BuildForBake());
+
+        [MenuItem("NuclearReMind/UI/Bake Codex Panel")]
+        public static void BakeCodex()
+            => Bake<CodexPanelUI>("CodexPanel", c => c.BuildForBake());
 
         private static void Bake<T>(string name, System.Action<T> build) where T : Component
         {
