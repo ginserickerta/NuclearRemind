@@ -221,6 +221,12 @@ namespace NuclearReMind
         public float boostHeatPerDay = 14f;        // extra heat/day while boosting
         public float heatMeltdown = 100f;          // ≥ 100 → Game Over
         public float heatWarn = 90f;               // UI warn + SCRAM unlock
+        // ★ 2026-07-22 — Knowledge scales CORE (Q) gain: gain × (1 + knowledge/100 × this).
+        //   Additive-only by design (multiplier can never drop below 1.0), so the fragile 🔒
+        //   boost_core_gain = 3.0 floor is untouched and the sim-proven win path cannot regress.
+        //   K20 start → +4% · K100 → +20% — supersedes the v4.1 Expert-only KnowBonus that was
+        //   never wired into the v6.3 reactor.
+        public float knowledgeQMaxBonus = 0.20f;
 
         [Header("Reactor — cooling (LOCK · bug #1: capped, was uncapped water/10)")]
         public float coolingBase = 6f;

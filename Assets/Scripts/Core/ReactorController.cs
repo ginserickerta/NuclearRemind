@@ -209,7 +209,12 @@ namespace NuclearReMind
             {
                 float baseGain = IsBoosting ? _cfg.boostCoreGain : _cfg.coreGainBase;
                 float fe = Mathf.Min(1f, fuel / _cfg.fuelNeed) + m.FuelEfficiencyBonus();
-                gain = baseGain * fe;
+                // ★ Knowledge → Q: every knowledge point makes the core climb a little faster,
+                // ×1.0 (K0) up to ×1.20 (K100). Additive-only — never below the 🔒 sim-proven
+                // baseline. No ResourceManager (unit tests) → neutral 1.0.
+                float knowMult = 1f + (ResourceManager.Instance != null
+                    ? ResourceManager.Instance.Current.knowledge / 100f : 0f) * _cfg.knowledgeQMaxBonus;
+                gain = baseGain * fe * knowMult;
 
                 // Burn what the day's run actually drew: the full demand when it was met, otherwise
                 // whatever was in the tank. fe is the fraction of demand satisfied, so a partly-fuelled
