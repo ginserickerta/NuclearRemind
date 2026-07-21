@@ -6,10 +6,20 @@ namespace NuclearReMind
     /// <summary>
     /// Tooltip 3 ชั้น: ชั้น 1 ชื่อ+cost / ชั้น 2 description (gameplay) / ชั้น 3 nuclearKnowledge (ความรู้จริง)
     /// แสดง/ซ่อนตาม EventManager.OnBuildingSelected (raise จาก PlacementController ตอนเลือกอาคารวาง)
+    ///
+    /// ★ 2026-07-22 — three cosmetic upgrades, all code-side so the scene stays untouched:
+    ///   • background: metal frame sprite (Resources/CardUI/tooltip_frame, nine-sliced) replaces the
+    ///     scene's flat Image; missing sprite → the scene look stays as-is
+    ///   • open/close: shared UIPopIn animation instead of a raw SetActive snap
+    ///   • always on top: an override-sorting Canvas at order 900 — above every HUD panel, below the
+    ///     day-transition fade (1000), which must be able to cover everything
     /// </summary>
     public class TooltipController : MonoBehaviour
     {
         public static TooltipController Instance { get; private set; }
+
+        // Above all HUD panels; DayTransitionUI owns 1000 and must stay on top of even this.
+        private const int TopSortingOrder = 900;
 
         [Header("Panel")]
         public GameObject tooltipPanel;
@@ -46,18 +56,51 @@ namespace NuclearReMind
 
         private void Start()
         {
+            ApplySkin();
+            EnsureTopmost();
             if (tooltipPanel != null) tooltipPanel.SetActive(false);
+        }
+
+        // Metal frame background (nine-sliced). The sprite carries its own interior fill, so the
+        // Image tint goes white; no sprite in Resources → leave the scene-authored look alone.
+        private void ApplySkin()
+        {
+            if (tooltipPanel == null) return;
+            var img = tooltipPanel.GetComponent<Image>();
+            if (img == null) return;
+            var frame = Resources.Load<Sprite>("CardUI/tooltip_frame");
+            if (frame == null) return;
+            img.sprite = frame;
+            img.type = Image.Type.Sliced;
+            img.pixelsPerUnitMultiplier = 3f; // 95px art border → ~32px on screen
+            img.color = Color.white;
+        }
+
+        // Override-sorting canvas floats the tooltip above every sibling HUD panel regardless of
+        // hierarchy order. No GraphicRaycaster on purpose: the tooltip is display-only and must
+        // never swallow clicks meant for what's underneath it.
+        private void EnsureTopmost()
+        {
+            if (tooltipPanel == null) return;
+            var canvas = tooltipPanel.GetComponent<Canvas>();
+            if (canvas == null) canvas = tooltipPanel.AddComponent<Canvas>();
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = TopSortingOrder;
         }
 
         private void HandleBuildingSelected(BuildingData data)
         {
             if (data == null)
             {
-                if (tooltipPanel != null) tooltipPanel.SetActive(false);
+                // PlayClose animates the shrink-out and deactivates itself; a panel that is already
+                // hidden is deactivated immediately (no-op animation).
+                if (tooltipPanel != null) UIPopIn.PlayClose(tooltipPanel);
                 return;
             }
 
-            if (tooltipPanel != null) tooltipPanel.SetActive(true);
+            // PlayOpen (not SetActive): selecting building B while A's tooltip is mid-close must
+            // cancel the in-flight close, or the close coroutine would hide B's fresh tooltip.
+            if (tooltipPanel != null) UIPopIn.PlayOpen(tooltipPanel, self: true);
 
             if (nameCostText != null)
                 nameCostText.text = $"{data.buildingName}\nIron {data.ironCost} / Energy {data.energyCost} / Worker {data.workerRequired}";
