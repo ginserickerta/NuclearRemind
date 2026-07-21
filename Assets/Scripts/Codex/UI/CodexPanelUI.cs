@@ -146,6 +146,8 @@ namespace NuclearReMind
 
         /// <summary>Open the Codex from a HUD control (the quiz notification icon). Safe if already open.</summary>
         public void OpenFromHud() { if (!_shown) Open(); }
+        /// <summary>Toggle from the HUD CODEX button — same behaviour as the C key.</summary>
+        public void Toggle() { if (_shown) Hide(); else Open(); }
         public bool IsShown => _shown;
 
         private void Start()

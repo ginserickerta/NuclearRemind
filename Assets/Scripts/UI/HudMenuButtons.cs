@@ -35,7 +35,10 @@ namespace NuclearReMind
         /// <summary>เปิด/ปิดคลังความรู้ (ปุ่ม Codex · คีย์ C)</summary>
         public void ToggleCodex()
         {
-            if (CodexUIController.Instance != null) CodexUIController.Instance.Toggle();
+            // v6.3: the rebuilt CodexPanelUI owns the codex now. The legacy CodexUIController is
+            // disabled on spawn, so routing there made this button do nothing.
+            if (CodexPanelUI.Instance != null) { CodexPanelUI.Instance.Toggle(); return; }
+            if (CodexUIController.Instance != null) CodexUIController.Instance.Toggle(); // pre-cutover scene fallback
         }
 
         /// <summary>บันทึกเกม (คีย์ F5) — ยิงผ่าน EventManager</summary>
