@@ -230,11 +230,84 @@ namespace NuclearReMind
                         gain *= Mathf.Min(1f, remaining / _cfg.tritiumSoftFloor);
                 }
             }
-            Core = Mathf.Min(_cfg.coreWin, Core + gain);
+            // Reconcile with the realtime preview accrual (Update below): the authoritative day-end
+            // maths stays the single source of truth — apply only the remainder, so a full day is
+            // worth exactly `gain` no matter how much already trickled in on screen. The remainder
+            // can be slightly negative when conditions worsened mid-day (fuel drained, mode changed);
+            // the clamp keeps CORE sane and midnight self-corrects the display.
+            Core = Mathf.Clamp(Core + gain - _accruedToday, 0f, _cfg.coreWin);
+            _accruedToday = 0f;
             LastGain = gain;
 
             ReportHope(stormActive, gain);
             EventManager.Instance?.RaiseReactorStateChanged(Core, Heat);
+        }
+
+        // ─── realtime CORE display (same pattern as ResearchLab) ───
+        // The player fed the reactor and watched a % that only moved at midnight — it read as
+        // "fuel did nothing". This trickles today's expected gain across the day; DailyTick above
+        // reconciles so the daily total is EXACTLY the authoritative maths (economy untouched:
+        // fuel/tritium are still burned once, at day end). EditMode tests drive DailyTick directly
+        // and never run Update, so _accruedToday stays 0 there and every assertion is unchanged.
+        private float _accruedToday;
+        private float _uiRaiseTimer;
+
+        /// <summary>
+        /// Today's expected CORE gain from the CURRENT state — display approximation for the realtime
+        /// trickle (same gates as DailyTick: no fuel → 0, Method B tritium gate, soft floor).
+        /// </summary>
+        public float PreviewDailyGain()
+        {
+            if (_cfg == null) return 0f;
+            var m = MasteryRegistry.Instance;
+            float fuel = CurrentFuel;
+            float tritium = CurrentTritium;
+            if (fuel <= 0f) return 0f;
+            if (Core >= _cfg.methodBCoreGate && tritium < _cfg.methodBTritiumMin) return 0f;
+
+            float baseGain = IsBoosting ? _cfg.boostCoreGain : _cfg.coreGainBase;
+            float fe = Mathf.Min(1f, fuel / _cfg.fuelNeed) + m.FuelEfficiencyBonus();
+            float knowMult = 1f + (ResourceManager.Instance != null
+                ? ResourceManager.Instance.Current.knowledge / 100f : 0f) * _cfg.knowledgeQMaxBonus;
+            float gain = baseGain * fe * knowMult;
+
+            if (Core >= _cfg.methodBCoreGate)
+            {
+                // Approximate the soft floor with what would remain after today's burn.
+                float cost = IsBoosting ? _cfg.boostTritiumCost : _cfg.idleTritiumCost;
+                float remaining = Mathf.Max(0f, tritium - cost);
+                if (remaining < _cfg.tritiumSoftFloor)
+                    gain *= Mathf.Min(1f, remaining / _cfg.tritiumSoftFloor);
+            }
+            return gain;
+        }
+
+        private void Update()
+        {
+            if (_cfg == null) return;
+            var gm = GameManager.Instance;
+            if (gm == null || gm.dayLength <= 0f) return;
+            if (TimeManager.Instance != null && !TimeManager.Instance.IsRunning) return; // popups freeze the core too
+
+            float gain = PreviewDailyGain();
+            if (gain <= 0f || _accruedToday >= gain) return;
+
+            float step = Mathf.Min(gain * (Time.deltaTime / gm.dayLength), gain - _accruedToday);
+            // Never cross the win line from the display trickle — EndingSystem judges the win on the
+            // settled day-end state, and the realtime path must not preempt it mid-day.
+            step = Mathf.Min(step, Mathf.Max(0f, _cfg.coreWin - 0.05f - Core));
+            if (step <= 0f) return;
+
+            _accruedToday += step;
+            Core += step;
+
+            // Throttled HUD sync (~4/s): ReactorStateChanged → CoreTowerManager mirror → panel refresh.
+            _uiRaiseTimer -= Time.deltaTime;
+            if (_uiRaiseTimer <= 0f)
+            {
+                _uiRaiseTimer = 0.25f;
+                EventManager.Instance?.RaiseReactorStateChanged(Core, Heat);
+            }
         }
 
         private int _stalledDays;

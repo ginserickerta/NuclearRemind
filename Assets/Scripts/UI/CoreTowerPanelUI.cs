@@ -277,12 +277,26 @@ namespace NuclearReMind
 
             // เชื้อเพลิง/วิศวกร — ล็อกจนกว่าเตาปลดล็อก (Day 11) · Tritium เพิ่มล็อกถึงวันพายุ (Day 25)
             bool tritUnlocked = d.isUnlocked && day >= CoreTowerManager.StormStartDay;
-            SetInteractable(_deutMinus, d.isUnlocked); SetInteractable(_deutPlus, d.isUnlocked);
+            // ★ v6.3: the reactor drinks straight from the shared stock — there is no per-turn fuel
+            //   allocation, and CoreTowerManager ignores the adjust event (V63Live guard). The +/-
+            //   buttons therefore LIED: pressing them changed a dead "planned" number while the core
+            //   ignored it, which read as "ใส่เชื้อเพลิงแล้ว % ไม่ขึ้น". Hide them on the live path and
+            //   show the real tank instead; the legacy scene keeps the old behaviour untouched.
+            bool v63 = ReactorController.Instance != null;
+            SetButtonShown(_deutMinus, !v63); SetButtonShown(_deutPlus, !v63);
+            SetButtonShown(_tritMinus, !v63); SetButtonShown(_tritPlus, !v63);
+            if (!v63)
+            {
+                SetInteractable(_deutMinus, d.isUnlocked); SetInteractable(_deutPlus, d.isUnlocked);
+                SetInteractable(_tritMinus, tritUnlocked); SetInteractable(_tritPlus, tritUnlocked);
+            }
             SetInteractable(_engMinus, d.isUnlocked);  SetInteractable(_engPlus, d.isUnlocked);
-            SetInteractable(_tritMinus, tritUnlocked);  SetInteractable(_tritPlus, tritUnlocked);
 
-            if (_deutTxt != null) _deutTxt.text = $"{ct.PlannedDeuterium:0}";
-            if (_tritTxt != null) _tritTxt.text = tritUnlocked ? $"{ct.PlannedTritium:0}" : "ล็อก";
+            if (_deutTxt != null)
+                _deutTxt.text = v63 ? $"{res.deuterium:0}" : $"{ct.PlannedDeuterium:0}";
+            if (_tritTxt != null)
+                _tritTxt.text = v63 ? (tritUnlocked ? $"{res.tritium:0}" : "ล็อก")
+                                    : (tritUnlocked ? $"{ct.PlannedTritium:0}" : "ล็อก");
             // ★ v6.3: "วิศวกร" ช่องนี้กลายเป็นจำนวนคนหล่อเย็น (job cool) — จัดคนด้วยปุ่ม +/− ที่คลิกเตานี่เลย
             if (_engTxt != null)
                 _engTxt.text = WorkerManager.Instance != null
@@ -314,6 +328,7 @@ namespace NuclearReMind
         }
 
         private static void SetInteractable(Button b, bool on) { if (b != null) b.interactable = on; }
+        private static void SetButtonShown(Button b, bool on) { if (b != null && b.gameObject.activeSelf != on) b.gameObject.SetActive(on); }
         private static void SetBarFill(RectTransform fill, float frac)
         {
             if (fill != null) fill.anchorMax = new Vector2(1f, Mathf.Clamp01(frac));
