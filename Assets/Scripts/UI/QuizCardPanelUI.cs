@@ -122,7 +122,7 @@ namespace NuclearReMind
         private void Start()
         {
             if (_root == null) BuildPanel(); // a quiz may have arrived before Start on the spawn frame
-            if (!_shown) Hide();
+            if (!_shown && _backdrop != null) _backdrop.SetActive(false); // instant — no close animation on scene start
             DisableLegacy();
         }
 
@@ -161,6 +161,8 @@ namespace NuclearReMind
             Populate(quiz);
 
             _shown = true;
+            // UIPopIn animates the inner Panel (scale+fade, unscaled time — keeps working while paused).
+            UIPopIn.Ensure(_backdrop);
             _backdrop.SetActive(true);
             GameUIStack.Push(this);
             TimeManager.Instance?.Pause(PauseReason.QuizPopup); // นาฬิกาหยุด — popup ควิซ (§3)
@@ -169,7 +171,7 @@ namespace NuclearReMind
         private void Hide()
         {
             _shown = false;
-            if (_backdrop != null) _backdrop.SetActive(false);
+            if (_backdrop != null) UIPopIn.PlayClose(_backdrop); // shrink-out, then SetActive(false) itself
         }
 
         /// <summary>

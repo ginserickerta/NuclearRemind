@@ -108,7 +108,7 @@ namespace NuclearReMind
         private void Start()
         {
             if (_root == null) BuildPanel();
-            if (!_shown) HideRoot();
+            if (!_shown && _backdrop != null) _backdrop.SetActive(false); // instant — no close animation on scene start
         }
 
         private void HandleNoteCompleted(string noteId)
@@ -139,7 +139,10 @@ namespace NuclearReMind
 
             _note = note;
             _shown = true;
-            _backdrop.SetActive(true);
+            // PlayOpen, not SetActive: a queued note opens while the previous one's close animation is
+            // still running — PlayOpen cancels the in-flight close, a raw SetActive(true) would be a
+            // no-op and the close coroutine would then hide the new note (pause held on an empty screen).
+            UIPopIn.PlayOpen(_backdrop);
             GameUIStack.Push(this);
             TimeManager.Instance?.Pause(PauseReason.NotePopup); // นาฬิกาหยุด — popup Note (§3)
             Render();
@@ -196,7 +199,7 @@ namespace NuclearReMind
 
         private void HideRoot()
         {
-            if (_backdrop != null) _backdrop.SetActive(false);
+            if (_backdrop != null) UIPopIn.PlayClose(_backdrop); // shrink-out, then SetActive(false) itself
         }
 
         // ── GameUIStack ──

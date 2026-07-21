@@ -120,7 +120,7 @@ namespace NuclearReMind
         private void Start()
         {
             if (_root == null) BuildPanel(); // Show() may have built it already this frame
-            if (!_shown) Hide();
+            if (!_shown && _backdrop != null) _backdrop.SetActive(false); // instant — no close animation on scene start
             DisableLegacy();
         }
 
@@ -193,7 +193,9 @@ namespace NuclearReMind
         {
             _shown = true;
             IsShowing = true;
-            if (_backdrop != null) _backdrop.SetActive(true);
+            // UIPopIn animates the inner Panel (scale+fade, unscaled time — runs while the day clock
+            // is paused for the crisis); the dim backdrop itself stays put.
+            if (_backdrop != null) { UIPopIn.Ensure(_backdrop); _backdrop.SetActive(true); }
             GameUIStack.Push(this);
         }
 
@@ -202,7 +204,7 @@ namespace NuclearReMind
             _shown = false;
             IsShowing = false;
             _awaitingDialogue = false;
-            if (_backdrop != null) _backdrop.SetActive(false);
+            if (_backdrop != null) UIPopIn.PlayClose(_backdrop); // shrink-out, then SetActive(false) itself
             GameUIStack.Pop(this);
         }
 
