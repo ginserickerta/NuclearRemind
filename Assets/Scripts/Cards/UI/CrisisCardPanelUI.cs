@@ -49,6 +49,9 @@ namespace NuclearReMind
         [SerializeField] private GameObject _root;
         [SerializeField] private Text _title, _body;
         [SerializeField] private Transform _optContainer;
+        // Baked prefab's style template for one option row. Runtime CLONES this per option, so restyling
+        // it in the prefab restyles every option on every card. Null (code-built path) → MakeButton.
+        [SerializeField] private GameObject _optTemplate;
         private readonly List<GameObject> _optRows = new List<GameObject>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -103,14 +106,42 @@ namespace NuclearReMind
             rt.localScale = Vector3.one;
         }
 
-        /// <summary>Editor baker only: build the whole panel under this object so it can be saved as a prefab.</summary>
+        /// <summary>
+        /// Editor baker only: build the whole panel under this object — with sample content and A/B/C
+        /// rows so the prefab previews exactly like the in-game card — then save as a prefab.
+        /// Row A doubles as the runtime style template (_optTemplate); B and C are preview-only samples
+        /// that Populate clears. The backdrop ships ACTIVE for preview; Start() hides it before the
+        /// first rendered frame.
+        /// </summary>
         public void BuildForBake()
         {
             _font = LoadFont();
             _optFrame = Resources.Load<Sprite>("CardUI/opt_frame");
             _panelFrame = Resources.Load<Sprite>("CardUI/panel_frame");
             BuildPanel();
-            if (_backdrop != null) _backdrop.SetActive(false); // prefab ships hidden — Show() opens it
+
+            if (_title != null) _title.text = "⚠ ตัวอย่างวิกฤต (ข้อความจริงมาจาก CrisisCardSO)";
+            if (_body != null) _body.text = "คำอธิบายสถานการณ์ของการ์ด — เกมเติมข้อความจริงให้ทุกครั้งที่การ์ดขึ้น "
+                                          + "แก้ได้เฉพาะ สี/ฟอนต์/ขนาด ส่วนตัวหนังสือมาจากไฟล์การ์ด";
+
+            _optTemplate = BakeSampleRow("OptTemplate (แก้แถวนี้ = ทุกปุ่ม)",
+                "A. ตัวเลือกตัวอย่าง\n<size=15><color=#9EA69A>ราคา/ผลของตัวเลือก</color></size>", false);
+            BakeSampleRow("SampleB (พรีวิว — เกมลบทิ้ง)",
+                "B. ตัวเลือกตัวอย่าง\n<size=15><color=#9EA69A>ราคา/ผลของตัวเลือก</color></size>", false);
+            BakeSampleRow("SampleC (พรีวิว — เกมลบทิ้ง)",
+                "[ล็อก] C. ตัวเลือกที่ยังไม่วิจัย\n<size=15><color=#7F7F76>ต้องวิจัย: note_id</color></size>", true);
+
+            FitPanelToContent(3);
+        }
+
+        private GameObject BakeSampleRow(string name, string text, bool locked)
+        {
+            var btn = MakeButton(name, _optContainer, text, locked ? CLocked : COpt, null);
+            btn.interactable = !locked;
+            var lbl = btn.GetComponentInChildren<Text>();
+            if (lbl != null) { lbl.alignment = TextAnchor.MiddleLeft; if (locked) lbl.color = CLockText; }
+            var le = btn.gameObject.AddComponent<LayoutElement>(); le.minHeight = RowH; le.preferredHeight = RowH;
+            return btn.gameObject;
         }
 
         private static Canvas FindBestCanvas()
@@ -155,6 +186,7 @@ namespace NuclearReMind
         private void Start()
         {
             if (_root == null) BuildPanel(); // Show() may have built it already this frame
+            if (_optTemplate != null) _optTemplate.SetActive(false); // prefab template row is a stencil, never shown
             if (!_shown && _backdrop != null) _backdrop.SetActive(false); // instant — no close animation on scene start
             DisableLegacy();
         }
@@ -266,8 +298,7 @@ namespace NuclearReMind
             // stays a decision screen rather than a wall of text with buttons underneath.
             if (_body != null) _body.text = card.description ?? "";
 
-            foreach (var go in _optRows) Destroy(go);
-            _optRows.Clear();
+            ClearOptionRows();
 
             var db = KnowledgeDB.Instance;
             if (card.options == null) return;
@@ -285,11 +316,30 @@ namespace NuclearReMind
                     ? $"[ล็อก] {head}\n<size=15><color=#7F7F76>ต้องวิจัย: {opt.requiredNoteId}</color></size>"
                     : (string.IsNullOrEmpty(sub) ? head : $"{head}\n<size=15><color=#9EA69A>{sub}</color></size>");
 
-                var btn = MakeButton("Opt", _optContainer, text, locked ? CLocked : COpt, locked ? (UnityEngine.Events.UnityAction)null : () => Choose(idx));
+                Button btn;
+                if (_optTemplate != null)
+                {
+                    // Authored-prefab path: clone the template row — its layout, frame sprite, label
+                    // styling and LayoutElement height all come from the prefab, not from code.
+                    var row = Instantiate(_optTemplate, _optContainer);
+                    row.SetActive(true);
+                    btn = row.GetComponent<Button>();
+                    if (btn == null) btn = row.AddComponent<Button>();
+                    btn.onClick.RemoveAllListeners();
+                    if (!locked) btn.onClick.AddListener(() => Choose(idx));
+                    var img = row.GetComponent<Image>();
+                    if (img != null && locked) img.color = img.sprite != null ? CFrameLock : CLocked;
+                    var l = btn.GetComponentInChildren<Text>();
+                    if (l != null) { l.text = text; if (locked) l.color = CLockText; }
+                }
+                else
+                {
+                    btn = MakeButton("Opt", _optContainer, text, locked ? CLocked : COpt, locked ? (UnityEngine.Events.UnityAction)null : () => Choose(idx));
+                    var lbl = btn.GetComponentInChildren<Text>();
+                    if (lbl != null) { lbl.alignment = TextAnchor.MiddleLeft; if (locked) lbl.color = CLockText; }
+                    var le = btn.gameObject.AddComponent<LayoutElement>(); le.minHeight = RowH; le.preferredHeight = RowH;
+                }
                 btn.interactable = !locked;
-                var lbl = btn.GetComponentInChildren<Text>();
-                if (lbl != null) { lbl.alignment = TextAnchor.MiddleLeft; if (locked) lbl.color = CLockText; }
-                var le = btn.gameObject.AddComponent<LayoutElement>(); le.minHeight = RowH; le.preferredHeight = RowH;
                 _optRows.Add(btn.gameObject);
             }
 
@@ -310,6 +360,34 @@ namespace NuclearReMind
         private const float PanelMaxH  = 880f;
 
         /// <summary>
+        /// Destroy every option row — including sample rows a baked prefab carries for preview —
+        /// but never the template itself (it is the stencil the next card clones).
+        /// </summary>
+        private void ClearOptionRows()
+        {
+            foreach (var go in _optRows) if (go != null) Destroy(go);
+            _optRows.Clear();
+            if (_optContainer == null) return;
+            for (int i = _optContainer.childCount - 1; i >= 0; i--)
+            {
+                var c = _optContainer.GetChild(i).gameObject;
+                if (c != _optTemplate) Destroy(c);
+            }
+        }
+
+        // Row height for the fit maths: the authored template's LayoutElement wins over the code const,
+        // so resizing the row in the prefab automatically resizes the whole card.
+        private float RowHeight()
+        {
+            if (_optTemplate != null)
+            {
+                var le = _optTemplate.GetComponent<LayoutElement>();
+                if (le != null && le.preferredHeight > 0f) return le.preferredHeight;
+            }
+            return RowH;
+        }
+
+        /// <summary>
         /// Short cards used to leave ~200px of dead space because the body reserved a fixed 238px
         /// and the options were pinned to the bottom. Measure the body instead and shrink to fit.
         /// </summary>
@@ -327,7 +405,7 @@ namespace NuclearReMind
             bodyRT.offsetMin = new Vector2(PadSide, -(BodyTop + bodyH));
 
             float optTop = BodyTop + bodyH + BodyGap;
-            float optH   = optionCount * RowH + Mathf.Max(0, optionCount - 1) * RowGap;
+            float optH   = optionCount * RowHeight() + Mathf.Max(0, optionCount - 1) * RowGap;
             float wanted = optTop + optH + PadBottom;
 
             // Very long cards keep the old behaviour: cap the height and let the body absorb the loss.

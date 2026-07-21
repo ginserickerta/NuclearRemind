@@ -53,6 +53,9 @@ namespace NuclearReMind
         [SerializeField] private GameObject _codexFooter, _explainRow;
         [SerializeField] private Text _codexText;
         [SerializeField] private Transform _optContainer;
+        // Baked prefab's style template for one option row — runtime clones it per option, so restyling
+        // it in the prefab restyles every option of every quiz. Null (code-built path) → MakeButton.
+        [SerializeField] private GameObject _optTemplate;
         [SerializeField] private Button _confirmBtn, _skipBtn;
         [SerializeField] private Text _confirmLabel, _skipLabel;
 
@@ -110,14 +113,40 @@ namespace NuclearReMind
             rt.localScale = Vector3.one;
         }
 
-        /// <summary>Editor baker only: build the whole panel under this object so it can be saved as a prefab.</summary>
+        /// <summary>
+        /// Editor baker only: build the whole panel under this object — with sample content and A/B/C
+        /// rows so the prefab previews exactly like the in-game quiz — then save as a prefab.
+        /// Row A doubles as the runtime style template (_optTemplate); B and C are preview-only samples
+        /// that Populate clears. The backdrop ships ACTIVE for preview; Start() hides it before the
+        /// first rendered frame.
+        /// </summary>
         public void BuildForBake()
         {
             _font = UIFonts.Body;
             _optFrame = Resources.Load<Sprite>("CardUI/opt_frame");
             _panelFrame = Resources.Load<Sprite>("CardUI/panel_frame");
             BuildPanel();
-            if (_backdrop != null) _backdrop.SetActive(false); // prefab ships hidden — a quiz opens it
+
+            if (_eyebrow != null) _eyebrow.text = "เครื่องปฏิกรณ์ (หมวดควิซ — เกมเติมให้)";
+            if (_title != null) _title.text = "หัวข้อควิซตัวอย่าง";
+            if (_question != null) _question.text = "คำถามตัวอย่าง — ข้อความจริงมาจาก QuizQuestionSO "
+                                                  + "แก้ได้เฉพาะ สี/ฟอนต์/ขนาด?";
+            if (_codexText != null) _codexText.text = "ปลดล็อก Codex : ตัวอย่าง";
+            if (_codexFooter != null) _codexFooter.SetActive(true);
+
+            _optTemplate = BakeSampleRow("OptTemplate (แก้แถวนี้ = ทุกปุ่ม)", "A. ตัวเลือกตัวอย่าง");
+            BakeSampleRow("OptSampleB (พรีวิว — เกมลบทิ้ง)", "B. ตัวเลือกตัวอย่าง");
+            BakeSampleRow("OptSampleC (พรีวิว — เกมลบทิ้ง)", "C. ตัวเลือกตัวอย่าง");
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_root.GetComponent<RectTransform>());
+        }
+
+        private GameObject BakeSampleRow(string name, string text)
+        {
+            var btn = MakeButton(name, _optContainer, text, COpt, null);
+            var le = btn.gameObject.AddComponent<LayoutElement>();
+            le.minHeight = 92f; le.preferredHeight = 92f;
+            return btn.gameObject;
         }
 
         private static Canvas FindBestCanvas()
@@ -156,6 +185,7 @@ namespace NuclearReMind
         {
             if (_root == null) BuildPanel(); // a quiz may have arrived before Start on the spawn frame
             HookListeners();                 // prefab path: onClick added in code is NOT serialized — rebind
+            if (_optTemplate != null) _optTemplate.SetActive(false); // prefab template row is a stencil, never shown
             if (!_shown && _backdrop != null) _backdrop.SetActive(false); // instant — no close animation on scene start
             DisableLegacy();
         }
@@ -302,16 +332,33 @@ namespace NuclearReMind
             int count = quiz.options != null ? quiz.options.Length : 0;
             _displayToOriginal = MakeShuffledIndices(count);
 
-            foreach (var b in _optButtons) Destroy(b.gameObject);
-            _optButtons.Clear();
+            ClearOptionRows();
 
             for (int i = 0; i < count; i++)
             {
                 int slot = i;
                 string label = $"{(char)('A' + i)}. {quiz.options[_displayToOriginal[i]]}";
-                var btn = MakeButton("Opt", _optContainer, label, COpt, () => Select(slot));
-                var le = btn.gameObject.AddComponent<LayoutElement>();
-                le.minHeight = 92f; le.preferredHeight = 92f;
+                Button btn;
+                if (_optTemplate != null)
+                {
+                    // Authored-prefab path: clone the template row — layout, frame sprite, label styling
+                    // and LayoutElement height all come from the prefab, not from code.
+                    var row = Instantiate(_optTemplate, _optContainer);
+                    row.SetActive(true);
+                    btn = row.GetComponent<Button>();
+                    if (btn == null) btn = row.AddComponent<Button>();
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(() => Select(slot));
+                    btn.interactable = true;
+                    var l = btn.GetComponentInChildren<Text>();
+                    if (l != null) l.text = label;
+                }
+                else
+                {
+                    btn = MakeButton("Opt", _optContainer, label, COpt, () => Select(slot));
+                    var le = btn.gameObject.AddComponent<LayoutElement>();
+                    le.minHeight = 92f; le.preferredHeight = 92f;
+                }
                 _optButtons.Add(btn);
             }
 
@@ -322,6 +369,22 @@ namespace NuclearReMind
             if (_skipLabel != null) _skipLabel.text = "ไว้ทีหลัง — อยู่ใน Codex (กด C)";
 
             LayoutRebuilder.ForceRebuildLayoutImmediate(_root.GetComponent<RectTransform>());
+        }
+
+        /// <summary>
+        /// Destroy every option row — including sample rows a baked prefab carries for preview —
+        /// but never the template itself (it is the stencil the next quiz clones).
+        /// </summary>
+        private void ClearOptionRows()
+        {
+            foreach (var b in _optButtons) if (b != null) Destroy(b.gameObject);
+            _optButtons.Clear();
+            if (_optContainer == null) return;
+            for (int i = _optContainer.childCount - 1; i >= 0; i--)
+            {
+                var c = _optContainer.GetChild(i).gameObject;
+                if (c != _optTemplate) Destroy(c);
+            }
         }
 
         private void SetConfirmEnabled(bool on)
@@ -488,7 +551,8 @@ namespace NuclearReMind
         {
             var go = NewUI(name, parent, bg);
             var img = go.GetComponent<Image>();
-            if (_optFrame != null && (name == "Opt"))
+            bool isOptionRow = name.StartsWith("Opt"); // "Opt" (runtime) + "OptTemplate"/"OptSample…" (bake)
+            if (_optFrame != null && isOptionRow)
             {
                 // Same nine-slice frame the crisis card uses. 1600x666 art, 150px border → scale the
                 // border down so the corner bolts do not overlap on a ~92px row.
@@ -499,12 +563,11 @@ namespace NuclearReMind
             }
             var btn = go.AddComponent<Button>();
             if (onClick != null) btn.onClick.AddListener(onClick);
-            bool isOption = name == "Opt";
-            var label = AddTextTo(go.transform, "Label", isOption ? 18 : 17, CText,
-                isOption ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter);
+            var label = AddTextTo(go.transform, "Label", isOptionRow ? 18 : 17, CText,
+                isOptionRow ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter);
             label.text = text;
             Stretch(label.gameObject, Vector2.zero, Vector2.one);
-            float pad = (_optFrame != null && isOption) ? 34f : 14f; // clear the corner bolts on framed rows
+            float pad = (_optFrame != null && isOptionRow) ? 34f : 14f; // clear the corner bolts on framed rows
             label.rectTransform.offsetMin = new Vector2(pad, 0f);
             label.rectTransform.offsetMax = new Vector2(-pad, 0f);
             return btn;

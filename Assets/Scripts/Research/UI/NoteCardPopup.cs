@@ -98,13 +98,21 @@ namespace NuclearReMind
             rt.localScale = Vector3.one;
         }
 
-        /// <summary>Editor baker only: build the whole panel under this object so it can be saved as a prefab.</summary>
+        /// <summary>
+        /// Editor baker only: build the whole panel under this object — with sample content so the
+        /// prefab previews exactly like the in-game popup — then save as a prefab. The backdrop ships
+        /// ACTIVE for preview; Start() hides it before the first rendered frame.
+        /// </summary>
         public void BuildForBake()
         {
             _font = UIFonts.Body;
             _panelFrame = Resources.Load<Sprite>("CardUI/panel_frame");
             BuildPanel();
-            if (_backdrop != null) _backdrop.SetActive(false); // prefab ships hidden — a finished note opens it
+            if (_eyebrow != null) _eyebrow.text = "วิจัยสำเร็จ";
+            if (_title != null) _title.text = "หัวข้อโน้ตตัวอย่าง (ข้อความจริงมาจาก ResearchNoteSO)";
+            if (_body != null) _body.text = "เนื้อหาความรู้ของโน้ต — เกมเติมข้อความจริงให้ทุกครั้ง "
+                                          + "แก้ได้เฉพาะ สี/ฟอนต์/ขนาด/ตำแหน่ง";
+            if (_btnLabel != null) _btnLabel.text = "ปิด";
         }
 
         private static Canvas FindBestCanvas()
