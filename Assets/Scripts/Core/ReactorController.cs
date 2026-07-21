@@ -103,7 +103,7 @@ namespace NuclearReMind
         {
             _cfg = cfg;
             Core = cfg.startCore;   // 30
-            Heat = cfg.startHeat;   // 20
+            Heat = cfg.startHeat;   // 0 — reactor starts cold (CONFIG.md heat_start)
             Fuel = cfg.fuelNeed;    // headless default = one day of demand; the live game reads the ledger
             Tritium = 0f;
             IsBoosting = false;

@@ -308,7 +308,7 @@ namespace NuclearReMind
         public float startWater = 90f;
         public float startLabMat = 100f;
         public float startCore = 30f;
-        public float startHeat = 20f;
+        public float startHeat = 0f;    // ★ 2026-07-21: was 20 — reactor starts cold, heat builds from running it
         public float startHope = 70f;
         public float startKnowledge = 20f;         // Auren already knows the basics — head start on the Novice tier (<30)
 

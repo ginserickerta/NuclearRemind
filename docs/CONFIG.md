@@ -16,7 +16,7 @@ core_gain_base      = 1.05     # Idle/Normal
 boost_core_gain     = 3.0      # 🔒 ห้ามต่ำกว่า 2.6 (2.3 = แพ้ 100% ทุก playstyle)
 mode_heat           = 9.0      # ความร้อนพื้นฐาน/วัน
 boost_heat          = 14.0     # ★ เพิ่มจาก mode_heat ตอน Boost
-heat_start          = 20.0
+heat_start          = 0.0      # ★ 2026-07-21: เดิม 20 — เตาเริ่มเย็น ความร้อนมาจากการเดินเครื่องเอง
 heat_meltdown       = 100.0    # = Game Over
 heat_warn           = 90.0     # UI เตือน + ปลด SCRAM
 
@@ -228,7 +228,7 @@ food             = 40
 water            = 90
 lab_mat          = 100
 core             = 30.0
-heat             = 20.0
+heat             = 0.0     # ★ 2026-07-21: เดิม 20 (ตาม heat_start)
 fuel             = 0.0
 tritium          = 0.0
 hope             = 70.0
