@@ -57,7 +57,6 @@ namespace NuclearReMind
         private void Start()
         {
             ApplySkin();
-            EnsureTopmost();
             if (tooltipPanel != null) tooltipPanel.SetActive(false);
         }
 
@@ -79,9 +78,13 @@ namespace NuclearReMind
         // Override-sorting canvas floats the tooltip above every sibling HUD panel regardless of
         // hierarchy order. No GraphicRaycaster on purpose: the tooltip is display-only and must
         // never swallow clicks meant for what's underneath it.
+        //
+        // ★ Must run AFTER the panel is active, on every show: Unity silently drops overrideSorting
+        //   set on a disabled Canvas, so a one-time setup in Start() (where the panel is hidden)
+        //   never sticks — which is exactly the bug this replaced.
         private void EnsureTopmost()
         {
-            if (tooltipPanel == null) return;
+            if (tooltipPanel == null || !tooltipPanel.activeInHierarchy) return;
             var canvas = tooltipPanel.GetComponent<Canvas>();
             if (canvas == null) canvas = tooltipPanel.AddComponent<Canvas>();
             canvas.overrideSorting = true;
@@ -101,6 +104,7 @@ namespace NuclearReMind
             // PlayOpen (not SetActive): selecting building B while A's tooltip is mid-close must
             // cancel the in-flight close, or the close coroutine would hide B's fresh tooltip.
             if (tooltipPanel != null) UIPopIn.PlayOpen(tooltipPanel, self: true);
+            EnsureTopmost(); // after activation — see note on the method
 
             if (nameCostText != null)
                 nameCostText.text = $"{data.buildingName}\nIron {data.ironCost} / Energy {data.energyCost} / Worker {data.workerRequired}";
