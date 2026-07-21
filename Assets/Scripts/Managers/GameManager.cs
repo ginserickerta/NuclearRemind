@@ -224,8 +224,11 @@ namespace NuclearReMind
         private void ApplyMetaProgress()
         {
             MetaProgress.Load();
-            if (MetaProgress.KnowledgeBank > 0)
-                EventManager.Instance.RaiseResourceDelta(ResourceType.Knowledge, MetaProgress.KnowledgeBank);
+            // ★ 2026-07-22 — the KnowledgeBank no longer tops up the ledger: every run starts at
+            //   exactly startKnowledge (20, CONFIG.md). Carrying a banked K100 in gave +20% Q from
+            //   day 1 (knowledge→Q multiplier) and skipped the Novice tier entirely. "ความรู้ไม่มีวันหาย"
+            //   lives on as the persistent Codex unlocks restored below; the bank itself still records
+            //   the player's best for the end-of-run summary.
             CodexManager.Instance?.RestoreUnlocked(MetaProgress.UnlockedCodex);
         }
 
