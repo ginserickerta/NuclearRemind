@@ -45,13 +45,16 @@ namespace NuclearReMind
         private Sprite _optFrame;
         private Sprite _panelFrame;
         private bool _shown, _revealed, _legacyDisabled;
-        private GameObject _backdrop, _root;
-        private Text _eyebrow, _title, _question, _explain;
-        private GameObject _codexFooter, _explainRow;
-        private Text _codexText;
-        private Transform _optContainer;
-        private Button _confirmBtn, _skipBtn;
-        private Text _confirmLabel, _skipLabel;
+        // [SerializeField] so a baked prefab keeps the refs — the runtime instantiate then skips
+        // BuildPanel and the authored layout wins. Option rows stay runtime-built (per-quiz content).
+        [SerializeField] private GameObject _backdrop;
+        [SerializeField] private GameObject _root;
+        [SerializeField] private Text _eyebrow, _title, _question, _explain;
+        [SerializeField] private GameObject _codexFooter, _explainRow;
+        [SerializeField] private Text _codexText;
+        [SerializeField] private Transform _optContainer;
+        [SerializeField] private Button _confirmBtn, _skipBtn;
+        [SerializeField] private Text _confirmLabel, _skipLabel;
 
         private readonly List<Button> _optButtons = new List<Button>();
         private QuizQuestionSO _quiz;
@@ -77,14 +80,44 @@ namespace NuclearReMind
                 if (FindFirstObjectByType<QuizCardPanelUI>() != null) return;
                 var canvas = FindBestCanvas();
                 if (canvas == null) return;
-                var go = new GameObject("QuizCardPanelUI (auto)");
-                go.transform.SetParent(canvas.transform, false);
-                go.AddComponent<QuizCardPanelUI>();
+                // authored prefab (hand-edited in the Editor) wins; no prefab → code-build as before.
+                var prefab = Resources.Load<GameObject>("CardUI/QuizCardPanel");
+                if (prefab != null)
+                {
+                    var go = Instantiate(prefab, canvas.transform, false);
+                    go.name = "QuizCardPanelUI (prefab)";
+                    StretchToCanvas(go);
+                }
+                else
+                {
+                    var go = new GameObject("QuizCardPanelUI (auto)");
+                    go.transform.SetParent(canvas.transform, false);
+                    go.AddComponent<QuizCardPanelUI>();
+                }
             }
             catch (System.Exception e)
             {
                 Debug.LogError($"[QuizCardPanelUI] AutoSpawn ล้มเหลว — {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
             }
+        }
+
+        private static void StretchToCanvas(GameObject go)
+        {
+            var rt = go.transform as RectTransform;
+            if (rt == null) return;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            rt.localScale = Vector3.one;
+        }
+
+        /// <summary>Editor baker only: build the whole panel under this object so it can be saved as a prefab.</summary>
+        public void BuildForBake()
+        {
+            _font = UIFonts.Body;
+            _optFrame = Resources.Load<Sprite>("CardUI/opt_frame");
+            _panelFrame = Resources.Load<Sprite>("CardUI/panel_frame");
+            BuildPanel();
+            if (_backdrop != null) _backdrop.SetActive(false); // prefab ships hidden — a quiz opens it
         }
 
         private static Canvas FindBestCanvas()
@@ -122,8 +155,17 @@ namespace NuclearReMind
         private void Start()
         {
             if (_root == null) BuildPanel(); // a quiz may have arrived before Start on the spawn frame
+            HookListeners();                 // prefab path: onClick added in code is NOT serialized — rebind
             if (!_shown && _backdrop != null) _backdrop.SetActive(false); // instant — no close animation on scene start
             DisableLegacy();
+        }
+
+        // Idempotent: safe after BuildPanel too. Only the two static footer buttons need it — option
+        // rows are created fresh per quiz and get their listeners at creation time.
+        private void HookListeners()
+        {
+            if (_confirmBtn != null) { _confirmBtn.onClick.RemoveAllListeners(); _confirmBtn.onClick.AddListener(Confirm); }
+            if (_skipBtn != null)    { _skipBtn.onClick.RemoveAllListeners();    _skipBtn.onClick.AddListener(Close); }
         }
 
         // Retire the scene-authored QuizPopupController so the old popup never shows. Hiding its panel as

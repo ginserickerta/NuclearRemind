@@ -38,8 +38,12 @@ namespace NuclearReMind
 
         private Font _font;
         private Sprite _panelFrame;
-        private GameObject _backdrop, _root;
-        private Text _eyebrow, _title, _body, _btnLabel;
+        // [SerializeField] so a baked prefab keeps the refs — the runtime instantiate then skips
+        // BuildPanel and the authored layout wins (same pattern as the other card panels).
+        [SerializeField] private GameObject _backdrop;
+        [SerializeField] private GameObject _root;
+        [SerializeField] private Text _eyebrow, _title, _body, _btnLabel;
+        [SerializeField] private Button _continueBtn;
         private bool _shown;
 
         private ResearchNoteSO _note;
@@ -64,14 +68,43 @@ namespace NuclearReMind
                 if (FindFirstObjectByType<NoteCardPopup>() != null) return;
                 var canvas = FindBestCanvas();
                 if (canvas == null) return;
-                var go = new GameObject("NoteCardPopup (auto)");
-                go.transform.SetParent(canvas.transform, false);
-                go.AddComponent<NoteCardPopup>();
+                // authored prefab (hand-edited in the Editor) wins; no prefab → code-build as before.
+                var prefab = Resources.Load<GameObject>("CardUI/NoteCardPopup");
+                if (prefab != null)
+                {
+                    var go = Instantiate(prefab, canvas.transform, false);
+                    go.name = "NoteCardPopup (prefab)";
+                    StretchToCanvas(go);
+                }
+                else
+                {
+                    var go = new GameObject("NoteCardPopup (auto)");
+                    go.transform.SetParent(canvas.transform, false);
+                    go.AddComponent<NoteCardPopup>();
+                }
             }
             catch (System.Exception e)
             {
                 Debug.LogError($"[NoteCardPopup] AutoSpawn ล้มเหลว — {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
             }
+        }
+
+        private static void StretchToCanvas(GameObject go)
+        {
+            var rt = go.transform as RectTransform;
+            if (rt == null) return;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            rt.localScale = Vector3.one;
+        }
+
+        /// <summary>Editor baker only: build the whole panel under this object so it can be saved as a prefab.</summary>
+        public void BuildForBake()
+        {
+            _font = UIFonts.Body;
+            _panelFrame = Resources.Load<Sprite>("CardUI/panel_frame");
+            BuildPanel();
+            if (_backdrop != null) _backdrop.SetActive(false); // prefab ships hidden — a finished note opens it
         }
 
         private static Canvas FindBestCanvas()
@@ -108,6 +141,8 @@ namespace NuclearReMind
         private void Start()
         {
             if (_root == null) BuildPanel();
+            // prefab path: onClick added in code is NOT serialized — rebind (idempotent after BuildPanel too)
+            if (_continueBtn != null) { _continueBtn.onClick.RemoveAllListeners(); _continueBtn.onClick.AddListener(Advance); }
             if (!_shown && _backdrop != null) _backdrop.SetActive(false); // instant — no close animation on scene start
         }
 
@@ -238,6 +273,7 @@ namespace NuclearReMind
 
             var btn = MakeButton("Continue", _root.transform, "ต่อไป", CBtn, Advance);
             Anchor(btn.gameObject, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-110f, 40f), new Vector2(110f, 84f));
+            _continueBtn = btn;
             _btnLabel = btn.GetComponentInChildren<Text>();
         }
 

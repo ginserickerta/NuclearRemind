@@ -43,9 +43,12 @@ namespace NuclearReMind
         private Sprite _optFrame;
         private Sprite _panelFrame;
         private bool _shown, _legacyDisabled;
-        private GameObject _backdrop, _root;
-        private Text _title, _body;
-        private Transform _optContainer;
+        // [SerializeField] so a baked prefab keeps the refs — the runtime instantiate then skips
+        // BuildPanel entirely and the authored layout wins (same pattern as CoreTowerPanelUI).
+        [SerializeField] private GameObject _backdrop;
+        [SerializeField] private GameObject _root;
+        [SerializeField] private Text _title, _body;
+        [SerializeField] private Transform _optContainer;
         private readonly List<GameObject> _optRows = new List<GameObject>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -73,9 +76,41 @@ namespace NuclearReMind
             if (FindFirstObjectByType<CrisisCardPanelUI>() != null) return;
             var canvas = FindBestCanvas();
             if (canvas == null) return;
-            var go = new GameObject("CrisisCardPanelUI (auto)");
-            go.transform.SetParent(canvas.transform, false);
-            go.AddComponent<CrisisCardPanelUI>();
+            // authored prefab (hand-edited in the Editor) wins; no prefab → code-build as before.
+            var prefab = Resources.Load<GameObject>("CardUI/CrisisCardPanel");
+            if (prefab != null)
+            {
+                var go = Instantiate(prefab, canvas.transform, false);
+                go.name = "CrisisCardPanelUI (prefab)";
+                StretchToCanvas(go);
+            }
+            else
+            {
+                var go = new GameObject("CrisisCardPanelUI (auto)");
+                go.transform.SetParent(canvas.transform, false);
+                go.AddComponent<CrisisCardPanelUI>();
+            }
+        }
+
+        // The prefab root carries a RectTransform (so the prefab previews nicely); stretch it over the
+        // canvas so the backdrop's 0..1 anchors cover the whole screen like the code-built path does.
+        private static void StretchToCanvas(GameObject go)
+        {
+            var rt = go.transform as RectTransform;
+            if (rt == null) return;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            rt.localScale = Vector3.one;
+        }
+
+        /// <summary>Editor baker only: build the whole panel under this object so it can be saved as a prefab.</summary>
+        public void BuildForBake()
+        {
+            _font = LoadFont();
+            _optFrame = Resources.Load<Sprite>("CardUI/opt_frame");
+            _panelFrame = Resources.Load<Sprite>("CardUI/panel_frame");
+            BuildPanel();
+            if (_backdrop != null) _backdrop.SetActive(false); // prefab ships hidden — Show() opens it
         }
 
         private static Canvas FindBestCanvas()
