@@ -231,6 +231,16 @@ namespace NuclearReMind
         //   (เดิมปุ่มวิ่งเข้า allocation path ที่ v6.3 ปิดไว้ = กดแล้วไม่มีอะไรเกิดเลย)
         public float manualCoolWaterCost = 20f;
         public float manualCoolHeatReduce = 8f;
+        // ★ 2026-07-22 — Idle/Overdrive are REAL modes again (the v6.3 cutover collapsed the panel's
+        //   4 mode buttons to base/boost, so Idle and Overdrive silently snapped back to Normal/Boost).
+        //   Idle: gain 0, mode heat 0, burns no fuel/tritium — a deliberate cooldown day (stall Hope
+        //   penalty still applies — no free choices). Overdrive: +40% over Boost, but heat 9+32=41/day
+        //   (vs Boost 23) only survivable with researched cooling coils, and tritium 13/day outruns
+        //   even mastery Zone B (8/day) so it burns stock. Additive-only: Normal/Boost paths and the
+        //   🔒 boost_core_gain = 3.0 floor are byte-identical to the sim-proven build.
+        public float odCoreGain = 4.2f;            // Overdrive CORE gain/day (Boost 3.0 × 1.4)
+        public float odHeatPerDay = 32f;           // extra heat/day while overdriving (Boost = 14)
+        public float odTritiumCost = 13f;          // reactor draw while overdriving (Boost = 9)
 
         [Header("Reactor — cooling (LOCK · bug #1: capped, was uncapped water/10)")]
         public float coolingBase = 6f;

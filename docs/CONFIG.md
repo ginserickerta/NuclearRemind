@@ -24,6 +24,12 @@ knowledge_q_max_bonus = 0.20   # ★ 2026-07-22 — Knowledge สเกล Q: ga
                                #   K20 เริ่มเกม +4% · K100 +20% (แทน KnowBonus v4.1 ที่ไม่เคยถูกต่อ)
 manual_cool_water_cost  = 20.0 # ★ 2026-07-22 — ปุ่ม "หล่อเย็นเพิ่ม": จ่ายน้ำครั้งเดียว → ลด HEAT ทันที
 manual_cool_heat_reduce = 8.0  #   เตาเย็น (HEAT 0) กดไม่ได้ ไม่เสียน้ำฟรี · น้ำไม่พอ = แจ้งเหตุผล
+# ★ 2026-07-22 — Idle/Overdrive กลับมาเป็นโหมดจริง (cutover เคยยุบเหลือ base/boost ทำปุ่มเด้งกลับ)
+#   Idle: gain 0 · mode_heat 0 · ไม่เผา fuel/tritium — วันพักเตาให้เย็น (Hope โดนโทษ stall ตามเดิม)
+#   บวกอย่างเดียว: เส้น Normal/Boost + 🔒 boost_core_gain ไม่ถูกแตะแม้แต่ตัวเดียว
+od_core_gain        = 4.2      # Overdrive = Boost × 1.4 — จบเกมเร็วขึ้นแลกความเสี่ยงจริง
+od_heat             = 32.0     # ร้อนรวม 9+32 = 41/วัน (Boost = 23) — อยู่รอดต้องมีคอยล์วิจัย confinement
+od_tritium_cost     = 13.0     # หลัง CORE≥80 กิน 13/วัน > Zone B mastery ผลิต 8/วัน → เผาคลังล้วนๆ
 
 # cooling — 🔒 บั๊ก #1: v4.1 ใช้ water/10 ไม่มีเพดาน → HEAT=0 ตลอดเกม
 cooling = 6 + min(water/12, 7) + coolWorkers*3 + min(toroidalLv, 3)*9

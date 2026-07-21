@@ -109,7 +109,7 @@ namespace NuclearReMind
         /// <summary>
         /// v6.3 mirror: rebuild TowerData from ReactorController and re-raise OnTowerProgressChanged so
         /// legacy HUD/save stay in sync. isUnlocked is always true (v6.3 has no Day-11 unlock — rule #1);
-        /// overclockMode collapses to Normal/Boost (v6.3 has only base 1.05 / boost 3.0).
+        /// overclockMode mirrors the reactor's real 4-mode state (Idle/Normal/Boost/Overdrive).
         /// </summary>
         private void MirrorV63()
         {
@@ -119,7 +119,7 @@ namespace NuclearReMind
             t.corePercent = r.Core;
             t.coreHeat = r.Heat;
             t.currentPhase = PhaseFor(r.Core);   // legacy HUD naming (Cold/Plasma/Ignition @50/80)
-            t.overclockMode = r.IsBoosting ? ModeBoost : ModeNormal;
+            t.overclockMode = r.Mode; // same 0..3 constants — full 4-mode reactor (2026-07-22)
             t.heatCap = HeatMeltdown;
             t.isUnlocked = true;
             t.scramCooldown = r.ScramCooldown;
@@ -528,12 +528,13 @@ namespace NuclearReMind
         {
             if (_modeLocked) return; // ล็อกช่วง Live — รอ Planning วันถัดไป (V4 §3)
 
-            // ★ v6.3 facade: only two real modes (base 1.05 / boost 3.0) — Idle/Normal → base,
-            //   Boost/Overdrive → boost. Selectable from Day 1 (no unlock gate — rule #1).
+            // ★ v6.3 facade (2026-07-22): all 4 modes are real on ReactorController now — the old
+            //   collapse to base/boost made the panel's Idle/Overdrive buttons snap back silently.
+            //   Selectable from Day 1 (no unlock gate — rule #1).
             if (V63Live)
             {
-                int norm = mode >= ModeBoost ? ModeBoost : ModeNormal;
-                ReactorController.Instance.SetBoosting(norm == ModeBoost);
+                int norm = Mathf.Clamp(mode, ModeIdle, ModeOverdrive);
+                ReactorController.Instance.SetMode(norm);
                 EventManager.Instance.RaiseOverclockModeChanged(norm);
                 MirrorV63();
                 return;

@@ -77,7 +77,12 @@ namespace NuclearReMind
         // Headless fallback for CurrentFuel only. In a real session the reactor reads (and spends) the
         // deuterium ledger on ResourceManager, which CONFIG.md starts at 0 — this field is never consulted.
         public float Fuel { get; set; }
-        public bool IsBoosting { get; private set; }
+        // ★ 2026-07-22 — full 4-mode reactor (Idle/Normal/Boost/Overdrive). The cutover had collapsed
+        //   the panel's mode buttons to a boolean, so Idle and Overdrive snapped back to Normal/Boost.
+        //   Same constants as CoreTowerManager (0..3) so the legacy panel/save round-trip unchanged.
+        public const int ModeIdle = 0, ModeNormal = 1, ModeBoost = 2, ModeOverdrive = 3;
+        public int Mode { get; private set; } = ModeNormal;
+        public bool IsBoosting => Mode >= ModeBoost;
         public int ToroidalLv { get; private set; }
         public int PoloidalLv { get; private set; }
         public float Tritium { get; set; }            // local fallback when no ZoneBController (tests)
@@ -106,7 +111,7 @@ namespace NuclearReMind
             Heat = cfg.startHeat;   // 0 — reactor starts cold (CONFIG.md heat_start)
             Fuel = cfg.fuelNeed;    // headless default = one day of demand; the live game reads the ledger
             Tritium = 0f;
-            IsBoosting = false;
+            Mode = ModeNormal;
             ToroidalLv = 0;
             PoloidalLv = 0;
             _scramCooldown = 0;
@@ -140,7 +145,15 @@ namespace NuclearReMind
         //  Mode / coils / SCRAM
         // ─────────────────────────────────────────
 
-        public void SetBoosting(bool boosting) => IsBoosting = boosting;
+        /// <summary>Legacy/test entry — maps onto the 4-mode state (false=Normal, true=Boost).</summary>
+        public void SetBoosting(bool boosting) => Mode = boosting ? ModeBoost : ModeNormal;
+
+        /// <summary>Set the reactor mode (0=Idle · 1=Normal · 2=Boost · 3=Overdrive).</summary>
+        public void SetMode(int mode)
+        {
+            Mode = Mathf.Clamp(mode, ModeIdle, ModeOverdrive);
+            EventManager.Instance?.RaiseReactorStateChanged(Core, Heat); // panel refresh
+        }
 
         /// <summary>Install a Toroidal coil (needs the confinement note; caps at toroidalCoolMaxLv).</summary>
         public bool InstallToroidal()
@@ -165,7 +178,7 @@ namespace NuclearReMind
             if (!CanScram) return false;
             Heat = Mathf.Max(0f, Heat - _cfg.scramHeatReduce);
             Core = Mathf.Max(0f, Core - _cfg.scramCorePenalty);
-            IsBoosting = false; // scram_force_idle
+            Mode = ModeNormal; // scram_force_idle: drop out of Boost/Overdrive
             _scramCooldown = _cfg.scramCooldownDays;
             EventManager.Instance?.RaiseResourceDelta(ResourceType.Water, -_cfg.scramWaterCost);
             WorkerManager.Instance?.Hope?.Report("scram", "กด SCRAM ฉุกเฉิน", -_cfg.scramHopePenalty, HopeCategory.Reactor);
@@ -191,8 +204,12 @@ namespace NuclearReMind
             if (sensorActive) cooling += _cfg.sensorHeatRoom;                    // Sensor headroom
             float poloidalDamp = PoloidalLv * _cfg.poloidalDampPerLv * m.PoloidalDampMult();
 
-            float boostHeat = IsBoosting ? _cfg.boostHeatPerDay * m.BoostHeatMult() : 0f;
-            float modeHeat = _cfg.modeHeatPerDay + boostHeat;
+            // Extra heat above base: Boost +14, Overdrive +32 (both damped by the boost-heat mastery).
+            // Idle generates no mode heat at all — the reactor is resting, cooling still applies.
+            float extraHeat = Mode == ModeOverdrive ? _cfg.odHeatPerDay * m.BoostHeatMult()
+                            : Mode == ModeBoost ? _cfg.boostHeatPerDay * m.BoostHeatMult()
+                            : 0f;
+            float modeHeat = Mode == ModeIdle ? 0f : _cfg.modeHeatPerDay + extraHeat;
             float stormHeat = stormActive ? _cfg.stormHeatPerDay : 0f;
 
             Heat = Mathf.Max(0f, Heat + modeHeat + stormHeat - cooling - poloidalDamp);
@@ -202,12 +219,15 @@ namespace NuclearReMind
             float gain;
             float tritium = CurrentTritium;
             float fuel = Mathf.Min(CurrentFuel, FuelFeedPerDay); // throttle: the player-set daily feed caps the draw
-            if (fuel <= 0f) gain = 0f;                                           // K01: no fuel, no gain
+            if (Mode == ModeIdle) gain = 0f;                                     // deliberate rest: burns nothing
+            else if (fuel <= 0f) gain = 0f;                                      // K01: no fuel, no gain
             else if (Core >= _cfg.methodBCoreGate && tritium < _cfg.methodBTritiumMin)
                 gain = 0f;                                                       // ★ Method B gate — stalls at 80
             else
             {
-                float baseGain = IsBoosting ? _cfg.boostCoreGain : _cfg.coreGainBase;
+                float baseGain = Mode == ModeOverdrive ? _cfg.odCoreGain
+                               : Mode == ModeBoost ? _cfg.boostCoreGain
+                               : _cfg.coreGainBase;
                 float fe = Mathf.Min(1f, fuel / _cfg.fuelNeed) + m.FuelEfficiencyBonus();
                 // ★ Knowledge → Q: every knowledge point makes the core climb a little faster,
                 // ×1.0 (K0) up to ×1.20 (K100). Additive-only — never below the 🔒 sim-proven
@@ -222,7 +242,9 @@ namespace NuclearReMind
                 ConsumeFuel(Mathf.Min(fuel, _cfg.fuelNeed));
                 if (Core >= _cfg.methodBCoreGate)
                 {
-                    float cost = IsBoosting ? _cfg.boostTritiumCost : _cfg.idleTritiumCost;
+                    float cost = Mode == ModeOverdrive ? _cfg.odTritiumCost
+                               : Mode == ModeBoost ? _cfg.boostTritiumCost
+                               : _cfg.idleTritiumCost;
                     ConsumeTritium(cost);
                     LastTritiumConsumed = Mathf.Min(cost, tritium); // what the core actually burned (0 if dry)
                     float remaining = CurrentTritium;
@@ -294,10 +316,13 @@ namespace NuclearReMind
             var m = MasteryRegistry.Instance;
             float fuel = Mathf.Min(CurrentFuel, FuelFeedPerDay);
             float tritium = CurrentTritium;
+            if (Mode == ModeIdle) return 0f;
             if (fuel <= 0f) return 0f;
             if (Core >= _cfg.methodBCoreGate && tritium < _cfg.methodBTritiumMin) return 0f;
 
-            float baseGain = IsBoosting ? _cfg.boostCoreGain : _cfg.coreGainBase;
+            float baseGain = Mode == ModeOverdrive ? _cfg.odCoreGain
+                           : Mode == ModeBoost ? _cfg.boostCoreGain
+                           : _cfg.coreGainBase;
             float fe = Mathf.Min(1f, fuel / _cfg.fuelNeed) + m.FuelEfficiencyBonus();
             float knowMult = 1f + (ResourceManager.Instance != null
                 ? ResourceManager.Instance.Current.knowledge / 100f : 0f) * _cfg.knowledgeQMaxBonus;
@@ -306,7 +331,9 @@ namespace NuclearReMind
             if (Core >= _cfg.methodBCoreGate)
             {
                 // Approximate the soft floor with what would remain after today's burn.
-                float cost = IsBoosting ? _cfg.boostTritiumCost : _cfg.idleTritiumCost;
+                float cost = Mode == ModeOverdrive ? _cfg.odTritiumCost
+                           : Mode == ModeBoost ? _cfg.boostTritiumCost
+                           : _cfg.idleTritiumCost;
                 float remaining = Mathf.Max(0f, tritium - cost);
                 if (remaining < _cfg.tritiumSoftFloor)
                     gain *= Mathf.Min(1f, remaining / _cfg.tritiumSoftFloor);
