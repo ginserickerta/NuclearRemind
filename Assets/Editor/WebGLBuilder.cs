@@ -28,7 +28,12 @@ namespace NuclearReMind.EditorTools
             // ── Player Settings (WebGL · iPad Safari) ──
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
             PlayerSettings.WebGL.decompressionFallback = true;   // iOS Safari บาง config อ่าน Brotli header ตรงไม่ได้ → ต้องมี fallback
-            PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly; // เดโม่: เล็ก/เร็ว
+            // ★ 2026-07-21: was ExplicitlyThrownExceptionsOnly ("เล็ก/เร็ว") — that setting turns any
+            // runtime NRE into undefined behaviour (silent freeze/glitch, no console error), which is
+            // exactly the class of fault reported on WebGL. Full-without-stacktrace costs a little size
+            // and makes every error readable in the browser console. Do not lower it again while the
+            // WebGL fault hunt is open. This line overrides ProjectSettings.asset at build time.
+            PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.FullWithoutStacktrace;
             PlayerSettings.WebGL.dataCaching = true;             // cache asset ใน IndexedDB — โหลดซ้ำไว
             PlayerSettings.runInBackground = true;
 
@@ -48,6 +53,10 @@ namespace NuclearReMind.EditorTools
                           $"push ต่อ: butler push {BuildPath} <user>/<game>:html5");
             else
                 Debug.LogError($"[WebGLBuilder] ❌ Build {s.result} · errors {s.totalErrors}");
+
+            // Batch runs need a real exit code — -quit alone reports success even for a failed build.
+            if (Application.isBatchMode)
+                EditorApplication.Exit(s.result == BuildResult.Succeeded ? 0 : 1);
         }
     }
 }

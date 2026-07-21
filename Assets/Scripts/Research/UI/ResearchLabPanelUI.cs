@@ -95,6 +95,9 @@ namespace NuclearReMind
             var go = new GameObject("ResearchLabPanelUI (auto)");
             go.transform.SetParent(canvas.transform, false);
             go.AddComponent<ResearchLabPanelUI>();
+            // Success is logged because on WebGL "the panel never spawned" and "the panel ignored the
+            // click" look identical from the player's seat — this line is how the two are told apart.
+            Debug.Log($"[ResearchLabPanelUI] AutoSpawn — scene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}, canvas={canvas.name}");
         }
 
         private static Canvas FindBestCanvas()
