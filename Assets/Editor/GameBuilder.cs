@@ -25,6 +25,14 @@ namespace NuclearReMind.EditorTools
         [MenuItem("NuclearReMind/Build/Build Windows (x64) + Run")]
         public static void BuildWindowsAndRun() => Build(run: true);
 
+        /// <summary>
+        /// Batch entry point — same build, no dialogs, real exit code so a CI/PowerShell driver can
+        /// tell success from failure (-quit alone reports 0 even for a failed build).
+        ///   Unity.exe -quit -batchmode -projectPath "..." -executeMethod NuclearReMind.EditorTools.GameBuilder.BuildWindowsBatch
+        /// ⚠ Unity Editor must be CLOSED (project lock).
+        /// </summary>
+        public static void BuildWindowsBatch() => Build(run: false);
+
         [MenuItem("NuclearReMind/Build/Reveal Builds Folder")]
         public static void RevealBuilds()
         {
@@ -38,6 +46,8 @@ namespace NuclearReMind.EditorTools
             string[] scenes = EnabledScenes();
             if (scenes.Length == 0)
             {
+                Debug.LogError("[GameBuilder] ไม่มี scene ใน Build Settings และหา MainMenu/Gamescene ไม่เจอ");
+                if (Application.isBatchMode) { EditorApplication.Exit(1); return; }
                 EditorUtility.DisplayDialog("Build Windows",
                     "ไม่มี scene ใน Build Settings และหา MainMenu/Gamescene ไม่เจอ — เปิด File → Build Settings เพิ่ม scene ก่อน", "OK");
                 return;
@@ -65,15 +75,19 @@ namespace NuclearReMind.EditorTools
             {
                 double mb = s.totalSize / (1024.0 * 1024.0);
                 Debug.Log($"[GameBuilder] ✅ build สำเร็จ — {mb:F1} MB · ใช้เวลา {s.totalTime.TotalSeconds:F0}s\n{exePath}");
-                if (!run)
+                if (!run && !Application.isBatchMode)
                     EditorUtility.RevealInFinder(exePath); // เปิดโฟลเดอร์ให้เห็นไฟล์ (โหมด Run เปิดเกมแทน)
             }
             else
             {
                 Debug.LogError($"[GameBuilder] ❌ build {s.result} — errors: {s.totalErrors} · ดู Console/log ด้านบน");
-                EditorUtility.DisplayDialog("Build Windows",
-                    $"Build ไม่สำเร็จ ({s.result}) — errors {s.totalErrors}\nดูรายละเอียดใน Console", "OK");
+                if (!Application.isBatchMode)
+                    EditorUtility.DisplayDialog("Build Windows",
+                        $"Build ไม่สำเร็จ ({s.result}) — errors {s.totalErrors}\nดูรายละเอียดใน Console", "OK");
             }
+
+            if (Application.isBatchMode)
+                EditorApplication.Exit(s.result == BuildResult.Succeeded ? 0 : 1);
         }
 
         // scene ที่ enabled ใน Build Settings · ไม่มีเลย → fallback หา MainMenu + Gamescene ในโปรเจกต์
