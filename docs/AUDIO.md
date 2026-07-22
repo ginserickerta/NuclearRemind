@@ -9,7 +9,9 @@
 > |---|---|---|
 > | bgm_menu.mp3 | Pixabay — lexin_music "Space Ambient Sci-Fi" (121842) | Pixabay License ✅ |
 > | bgm_game.mp3 | Pixabay — sharvarion "Sci-fi Ambient Music" (183269) | Pixabay License ✅ |
-> | sfx_click.mp3 / sfx_hover.mp3 / sfx_alert.mp3 | **Epidemic Sound** | ⚠ subscription — ต้องมีบัญชี ES ที่ active ครอบคลุมงานเผยแพร่ ตรวจก่อนส่ง NSC · ถ้าไม่ชัวร์เปลี่ยนเป็น Kenney CC0 ได้ (โครงพร้อมแล้ว แค่วางไฟล์ทับ) |
+> | sfx_click.wav / sfx_alert.wav | **Epidemic Sound** (แปลง WAV + ตัด silence) | ⚠ subscription — ต้องมีบัญชี ES ที่ active ครอบคลุมงานเผยแพร่ ตรวจก่อนส่ง NSC · ถ้าไม่ชัวร์เปลี่ยนเป็น Kenney CC0 ได้ (โครงพร้อมแล้ว แค่วางไฟล์ทับ) |
+>
+> เสียง hover ถูกลบ 2026-07-22 (เจ้าของตัดสินใจไม่ใช้)
 >
 > เงื่อนไขลิขสิทธิ์ (สำคัญกับ NSC): ปลอดภัยสุดคือ **CC0** (Kenney/OpenGameArt) หรือ **Pixabay Content License**
 > — ห้ามเสียงจาก YouTube rip / เกมอื่น / แหล่งไม่ระบุไลเซนส์

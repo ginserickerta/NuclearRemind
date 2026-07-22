@@ -10,8 +10,9 @@ namespace NuclearReMind
     ///   • BGM per scene — bgm_menu on MainMenu, bgm_game everywhere else (starts under the intro
     ///     cards, which run on Gamescene load). Crossfades between tracks, volume in PlayerPrefs.
     ///   • A small "เพลง − % +" widget, built in code on the main menu only, adjusts BGM volume.
-    ///   • Click + hover SFX on EVERY Button — a periodic sweep attaches UIButtonSfx to each one
+    ///   • Click SFX on EVERY Button — a periodic sweep attaches UIButtonSfx to each one
     ///     (same pattern as ThaiGlyphFixer), so no per-panel wiring and code-built popups get it too.
+    ///     (Hover SFX existed briefly and was cut 2026-07-22 — owner found it noisy.)
     ///   • PlayAlert() — the bottom-right alert feed (AlertController calls it on spawn).
     ///
     /// Auto-spawns on every scene including the menu; survives scene loads (DontDestroyOnLoad).
@@ -28,7 +29,6 @@ namespace NuclearReMind
         private const float CrossfadeDur = 1.5f;
         private const int SweepFrames = 10;
         private const float SfxVolume = 0.9f;
-        private const float HoverVolume = 0.45f; // hover fires often — keep it under the clicks
         private const float AlertMinGap = 0.25f; // a burst of alerts should not machine-gun the sting
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -40,7 +40,7 @@ namespace NuclearReMind
             go.AddComponent<AudioManager>();
         }
 
-        private AudioClip _bgmMenu, _bgmGame, _click, _hover, _alert;
+        private AudioClip _bgmMenu, _bgmGame, _click, _alert;
         private AudioSource _bgmA, _bgmB, _sfx;
         private AudioSource _activeBgm;
         private Coroutine _fade;
@@ -60,7 +60,6 @@ namespace NuclearReMind
             _bgmMenu = Resources.Load<AudioClip>("Audio/bgm_menu");
             _bgmGame = Resources.Load<AudioClip>("Audio/bgm_game");
             _click   = Resources.Load<AudioClip>("Audio/sfx_click");
-            _hover   = Resources.Load<AudioClip>("Audio/sfx_hover");
             _alert   = Resources.Load<AudioClip>("Audio/sfx_alert");
             _bgmVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefBgmVolume, DefaultBgmVolume));
 
@@ -147,7 +146,6 @@ namespace NuclearReMind
         // ─────────────────────────────────────────
 
         public void PlayClick() { if (_click != null) _sfx.PlayOneShot(_click, SfxVolume); }
-        public void PlayHover() { if (_hover != null) _sfx.PlayOneShot(_hover, HoverVolume); }
 
         public void PlayAlert()
         {
@@ -241,21 +239,16 @@ namespace NuclearReMind
     }
 
     /// <summary>
-    /// Per-button pointer SFX — attached automatically by AudioManager's sweep. Plays hover on
-    /// pointer-enter and click on pointer-click, only while the button is interactable.
+    /// Per-button pointer SFX — attached automatically by AudioManager's sweep. Plays click on
+    /// pointer-click while the button is interactable. (Hover sound removed by owner request.)
     /// </summary>
-    public class UIButtonSfx : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler
+    public class UIButtonSfx : MonoBehaviour, IPointerClickHandler
     {
         private Button _btn;
 
         private void Awake() => _btn = GetComponent<Button>();
 
         private bool Usable => _btn == null || (_btn.interactable && _btn.enabled);
-
-        public void OnPointerEnter(PointerEventData e)
-        {
-            if (Usable) AudioManager.Instance?.PlayHover();
-        }
 
         public void OnPointerClick(PointerEventData e)
         {
