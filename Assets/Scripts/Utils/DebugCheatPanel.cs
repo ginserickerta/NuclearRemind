@@ -271,6 +271,8 @@ namespace NuclearReMind
             GUILayout.EndHorizontal();
 
             if (GUILayout.Button("รักษาทุกคน (รังสี/หิว/ล้า → 0)")) wm.DebugHealAll();
+            GUILayout.Label($"⚕ โรงพยาบาล: เตียงตอนนี้ {wm.MedBayBeds} (0 = ยังไม่มีโรงพยาบาลที่สร้างเสร็จ) — " +
+                            $"รักษาตอนจบวัน {cfg.medBayCapacity} คน × รังสี −{cfg.medBayHeal:0}");
             GUILayout.Label("การ์ดวิกฤตประเมินตอนจบวัน — ยิงรังสีแล้วกด '⏭ ข้ามวัน' เพื่อดูการ์ด sick/triage");
         }
 

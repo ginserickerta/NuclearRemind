@@ -540,15 +540,24 @@ namespace NuclearReMind
         {
             _lastMedBayHealed = 0;
             if (ctx.medBayCapacity <= 0 || ctx.medBayHeal <= 0f) return;
+            int sickTreated = 0; // patients who were actually Sick/Dying (rad past the sick line)
             var patients = _workers
                 .Where(w => w.alive && w.radiation > 0f)
                 .OrderByDescending(w => w.radiation)
                 .Take(ctx.medBayCapacity);
             foreach (var w in patients)
             {
+                if (_cfg != null && w.radiation > _cfg.sickThreshold) sickTreated++;
                 w.radiation = Mathf.Max(0f, w.radiation - ctx.medBayHeal);
                 _lastMedBayHealed++;
             }
+
+            // ★ 2026-07-23: surface the treatment. Healing ran silently at day end, which read as
+            // "the hospital does nothing" — now a toast reports it, but only when someone treated
+            // was actually Sick/Dying, so routine low-dose decontamination doesn't spam a daily notice.
+            if (sickTreated > 0)
+                EventManager.Instance?.RaiseNotice(
+                    $"⚕ โรงพยาบาลรักษาผู้ป่วยรังสี {sickTreated} คน (รังสี −{ctx.medBayHeal:0})");
         }
 
         // A built, finished Hospital provides Med Bay beds (GDD §6). Without one, medBayCapacity stays 0 and
