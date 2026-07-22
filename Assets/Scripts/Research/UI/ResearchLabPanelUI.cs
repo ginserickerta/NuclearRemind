@@ -455,7 +455,7 @@ namespace NuclearReMind
             // title line
             string icon = done ? "<color=#97c459>✓</color> " : blocked ? "⛔ " : "";
             var title = Txt("Title", row.transform, icon + note.title, 17, done ? CMuted : CText, TextAnchor.UpperLeft, FontStyle.Bold);
-            SetTL(title.rectTransform, new Vector2(14f, -10f), new Vector2(650f, 24f));
+            SetTL(title.rectTransform, new Vector2(14f, -10f), new Vector2(430f, 24f)); // right column width — clear the action button
 
             float bx = 14f + EstWidth(note.title, 17f) + (done || blocked ? 26f : 6f);
             bx = AddBadge(row.transform, string.IsNullOrEmpty(note.category) ? "ความรู้" : note.category,
@@ -468,13 +468,13 @@ namespace NuclearReMind
             if (meta.Length > 0)
             {
                 var m = Txt("Meta", row.transform, meta, 13, CMuted, TextAnchor.UpperLeft, FontStyle.Normal);
-                SetTL(m.rectTransform, new Vector2(14f, y), new Vector2(860f, 18f));
+                SetTL(m.rectTransform, new Vector2(14f, y), new Vector2(460f, 18f));
                 y -= 18f;
             }
             if (hint != null)
             {
                 var hTxt = Txt("Hint", row.transform, hint, 13, CDim, TextAnchor.UpperLeft, FontStyle.Italic);
-                SetTL(hTxt.rectTransform, new Vector2(14f, y), new Vector2(860f, 18f));
+                SetTL(hTxt.rectTransform, new Vector2(14f, y), new Vector2(460f, 18f));
                 y -= 18f;
             }
 
@@ -541,7 +541,7 @@ namespace NuclearReMind
                     ? "ห้องวิจัยพัง — ซ่อมก่อนถึงจะถอดรหัสได้"
                     : "กดถอดรหัสเพื่อเริ่ม — ใช้ห้องวิจัยร่วมกับงานวิจัย นักวิจัยที่ว่างช่วยให้เร็วขึ้น");
             var m = Txt("M", row.transform, sub, 12, CDim, TextAnchor.UpperLeft, FontStyle.Italic);
-            SetTL(m.rectTransform, new Vector2(14f, -32f), new Vector2(860f, 18f));
+            SetTL(m.rectTransform, new Vector2(14f, -32f), new Vector2(440f, 18f));
 
             if (!decoding)
             {
@@ -565,7 +565,7 @@ namespace NuclearReMind
         {
             var row = MakeRowShell(h, 0.55f);
             var t = Txt("T", row.transform, text, 13, col, TextAnchor.MiddleLeft, FontStyle.Normal);
-            SetTL(t.rectTransform, new Vector2(14f, -(h - 20f) * 0.5f), new Vector2(940f, 20f));
+            SetTL(t.rectTransform, new Vector2(14f, -(h - 20f) * 0.5f), new Vector2(600f, 20f));
             _rows.Add(row);
         }
 
@@ -888,48 +888,60 @@ namespace NuclearReMind
             }
             _statEng = statTexts[0]; _statSlots = statTexts[1]; _statLabor = statTexts[2]; _statRec = statTexts[3];
 
-            // ═════ engineer assignment ═════
-            float ay = -80f;
-            var aHead = Txt("AH", _mainBlock.transform, "จัดวิศวกรเข้าห้องวิจัย", 14, CText, TextAnchor.UpperLeft, FontStyle.Bold);
-            SetTL(aHead.rectTransform, new Vector2(18f, ay), new Vector2(300f, 20f));
-            var aSub = Txt("AS", _mainBlock.transform, "ปุ่มลัด Q ลด / E เพิ่ม · งานวิจัยเดินเมื่อคนพอตามที่หัวข้อกำหนด", 11, CDim, TextAnchor.UpperRight, FontStyle.Normal);
-            SetTR(aSub.rectTransform, new Vector2(-18f, ay), new Vector2(320f, 18f));
+            // ═════ two-column body (★ 2026-07-23 owner layout): left = assign sidebar · right = projects ═════
+            const float SideW = 300f;   // left sidebar width (mockup ~30%)
+            const float ColGap = 14f;
+            float topY = -80f;          // everything below the stats row
+
+            var leftCol = Rounded("LeftCol", _mainBlock.transform, CSection, 6);
+            if (!ApplySlate(leftCol)) AddRoundBorder(leftCol, CSectionBd, 6);
+            var lcRt = leftCol.GetComponent<RectTransform>();
+            lcRt.anchorMin = new Vector2(0f, 0f); lcRt.anchorMax = new Vector2(0f, 1f); lcRt.pivot = new Vector2(0f, 1f);
+            lcRt.offsetMin = new Vector2(18f, 14f);
+            lcRt.offsetMax = new Vector2(18f + SideW, topY);
+
+            var aHead = Txt("AH", leftCol.transform, "จัดวิศวกรเข้าห้องวิจัย", 14, CText, TextAnchor.UpperLeft, FontStyle.Bold);
+            SetTL(aHead.rectTransform, new Vector2(14f, -12f), new Vector2(SideW - 28f, 20f));
 
             var minus = _sprBtnMinus != null
-                ? SpriteBtn("Minus", _mainBlock.transform, _sprBtnMinus)
-                : RoundBtn("Minus", _mainBlock.transform, "−", 20, CHead, CText, CHeadLine, 4);
+                ? SpriteBtn("Minus", leftCol.transform, _sprBtnMinus)
+                : RoundBtn("Minus", leftCol.transform, "−", 20, CHead, CText, CHeadLine, 4);
             var mnRt = (RectTransform)minus.transform;
             mnRt.anchorMin = mnRt.anchorMax = mnRt.pivot = new Vector2(0f, 1f);
-            mnRt.anchoredPosition = new Vector2(18f, ay - 26f);
+            mnRt.anchoredPosition = new Vector2(14f, -44f);
             mnRt.sizeDelta = _sprBtnMinus != null ? new Vector2(48f, 48f) : new Vector2(40f, 40f);
             minus.onClick.AddListener(() => EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, -1));
 
-            var disp = Rounded("Disp", _mainBlock.transform, CTrack, 6);
+            var disp = Rounded("Disp", leftCol.transform, CTrack, 6);
             var dRt = disp.GetComponent<RectTransform>();
             dRt.anchorMin = new Vector2(0f, 1f); dRt.anchorMax = new Vector2(1f, 1f); dRt.pivot = new Vector2(0.5f, 1f);
-            dRt.anchoredPosition = new Vector2(0f, ay - 26f);
-            dRt.sizeDelta = new Vector2(-132f, 40f); // symmetric 66px margins → clears the −/+ buttons
-            _engDisplay = Txt("V", disp.transform, "0", 18, CGold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            dRt.anchoredPosition = new Vector2(0f, -44f);
+            dRt.sizeDelta = new Vector2(-136f, 48f); // symmetric 68px margins → clears the −/+ buttons
+            _engDisplay = Txt("V", disp.transform, "0", 17, CGold, TextAnchor.MiddleCenter, FontStyle.Bold);
             StretchRT(_engDisplay.rectTransform);
             _engDisplay.supportRichText = true;
 
             var plus = _sprBtnPlus != null
-                ? SpriteBtn("Plus", _mainBlock.transform, _sprBtnPlus)
-                : RoundBtn("Plus", _mainBlock.transform, "+", 20, CHead, CText, CHeadLine, 4);
+                ? SpriteBtn("Plus", leftCol.transform, _sprBtnPlus)
+                : RoundBtn("Plus", leftCol.transform, "+", 20, CHead, CText, CHeadLine, 4);
             var plRt = (RectTransform)plus.transform;
             plRt.anchorMin = plRt.anchorMax = plRt.pivot = new Vector2(1f, 1f);
-            plRt.anchoredPosition = new Vector2(-18f, ay - 26f);
+            plRt.anchoredPosition = new Vector2(-14f, -44f);
             plRt.sizeDelta = _sprBtnPlus != null ? new Vector2(48f, 48f) : new Vector2(40f, 40f);
             plus.onClick.AddListener(() => EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, +1));
 
-            // warnings (toggled in Refresh — space reserved so the layout never jumps)
-            _laborWarn = WarnBox("LaborWarn", new Vector2(0f, ay - 74f), Hex("#2b1814"), Hex("#6b3020"), out _laborWarnText, Hex("#f0997b"));
-            _ratioWarn = WarnBox("RatioWarn", new Vector2(0f, ay - 104f), Hex("#2a1e08"), Hex("#854f0b"), out _ratioWarnText, CAmber);
+            var aSub = Txt("AS", leftCol.transform, "ปุ่มลัด Q ลด / E เพิ่ม · งานวิจัยเดินเมื่อคนพอตามที่หัวข้อกำหนด", 11, CDim, TextAnchor.UpperLeft, FontStyle.Normal);
+            SetTL(aSub.rectTransform, new Vector2(14f, -100f), new Vector2(SideW - 28f, 34f));
 
-            // ═════ projects header: title + filter tabs ═════
-            float py = ay - 140f;
-            var pHead = Txt("PH", _mainBlock.transform, "โครงการวิจัย", 14, CText, TextAnchor.UpperLeft, FontStyle.Bold);
-            SetTL(pHead.rectTransform, new Vector2(18f, py), new Vector2(220f, 20f));
+            // warnings live in the sidebar now (toggled in Refresh)
+            _laborWarn = WarnBox("LaborWarn", leftCol.transform, new Vector2(0f, -142f), Hex("#2b1814"), Hex("#6b3020"), out _laborWarnText, Hex("#f0997b"));
+            _ratioWarn = WarnBox("RatioWarn", leftCol.transform, new Vector2(0f, -196f), Hex("#2a1e08"), Hex("#854f0b"), out _ratioWarnText, CAmber);
+
+            // ═════ right column: projects header + filter tabs ═════
+            float rx = 18f + SideW + ColGap;
+            float py = topY - 6f;
+            var pHead = Txt("PH", _mainBlock.transform, "☰ โครงการวิจัย", 14, CText, TextAnchor.UpperLeft, FontStyle.Bold);
+            SetTL(pHead.rectTransform, new Vector2(rx + 4f, py - 10f), new Vector2(220f, 20f));
 
             (string id, string label, Sprite spr)[] tabs =
             {
@@ -957,7 +969,7 @@ namespace NuclearReMind
                 }
                 var trt = (RectTransform)b.transform;
                 trt.anchorMin = trt.anchorMax = trt.pivot = new Vector2(1f, 1f);
-                trt.anchoredPosition = new Vector2(tx, py + (spr != null ? 14f : 2f));
+                trt.anchoredPosition = new Vector2(tx, py + (spr != null ? 4f : -8f));
                 trt.sizeDelta = new Vector2(w, hTab);
                 tx -= w + 6f;
                 string fid = id;
@@ -965,18 +977,12 @@ namespace NuclearReMind
                 _tabs.Add((b, b.GetComponentInChildren<Text>(), b.GetComponent<Image>(), id));
             }
 
-            var legend = Txt("Legend", _mainBlock.transform,
-                "<color=#85b7eb>ความรู้</color> = ปลดความรู้หลัก + ความเชี่ยวชาญ · <color=#ed93b1>กู้บันทึก</color> = ถอดรหัสบันทึกของ Elara ทีละใบ",
-                11, CDim, TextAnchor.UpperLeft, FontStyle.Normal);
-            SetTL(legend.rectTransform, new Vector2(18f, py - 24f), new Vector2(860f, 16f));
-            legend.supportRichText = true;
-
-            // ═════ scrollable list (projects + mastery) ═════
+            // ═════ scrollable list (projects + mastery) — right column ═════
             var scrollGo = new GameObject("Scroll", typeof(RectTransform), typeof(ScrollRect));
             scrollGo.transform.SetParent(_mainBlock.transform, false);
             var scRt = scrollGo.GetComponent<RectTransform>();
             scRt.anchorMin = Vector2.zero; scRt.anchorMax = Vector2.one;
-            scRt.offsetMin = new Vector2(18f, 14f); scRt.offsetMax = new Vector2(-18f, py - 48f);
+            scRt.offsetMin = new Vector2(rx, 14f); scRt.offsetMax = new Vector2(-18f, py - 48f);
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(RectMask2D));
             viewport.transform.SetParent(scrollGo.transform, false);
@@ -1022,17 +1028,19 @@ namespace NuclearReMind
             _masteryContainer = mBox.transform;
         }
 
-        private GameObject WarnBox(string name, Vector2 topPos, Color bg, Color bd, out Text txt, Color fg)
+        // ★ 2026-07-23: parent-aware (warnings live in the assign sidebar now) + tall enough to wrap.
+        private GameObject WarnBox(string name, Transform parent, Vector2 topPos, Color bg, Color bd, out Text txt, Color fg)
         {
-            var box = Rounded(name, _mainBlock.transform, bg, 4);
+            var box = Rounded(name, parent, bg, 4);
             AddRoundBorder(box, bd, 4);
             var rt = box.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0f, 1f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = topPos; rt.offsetMin = new Vector2(18f, rt.offsetMin.y);
-            rt.sizeDelta = new Vector2(-36f, 26f);
-            txt = Txt("T", box.transform, "", 12, fg, TextAnchor.MiddleLeft, FontStyle.Normal);
+            rt.anchoredPosition = topPos;
+            rt.sizeDelta = new Vector2(-24f, 48f); // 12px side margins inside the sidebar
+            txt = Txt("T", box.transform, "", 11, fg, TextAnchor.MiddleLeft, FontStyle.Normal);
             StretchRT(txt.rectTransform);
-            txt.rectTransform.offsetMin = new Vector2(10f, 0f);
+            txt.rectTransform.offsetMin = new Vector2(10f, 2f);
+            txt.rectTransform.offsetMax = new Vector2(-8f, -2f);
             box.SetActive(false);
             return box;
         }
