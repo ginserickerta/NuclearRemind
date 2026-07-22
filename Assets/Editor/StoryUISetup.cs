@@ -495,6 +495,8 @@ namespace NuclearReMind.EditorTools
 
         // ─────────────────────────────────────────────
         //  4. แผงอนุสรณ์ (memorialData + ตึก wire โดย Story Setup เฟส 4)
+        //     หน้าตาจริงถูก re-skin ตอนรันโดย MemorialPanelController.ApplyTheme()
+        //     (กรอบโลหะ panel_frame + ฟอนต์ UIFonts.Body) — ที่นี่สร้างแค่โครง/ref
         // ─────────────────────────────────────────────
         private static void SetupMemorialPanel(Transform canvas, Font font)
         {
