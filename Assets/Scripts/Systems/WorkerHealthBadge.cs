@@ -30,8 +30,35 @@ namespace NuclearReMind
 
         private SpriteRenderer _face;
         private SpriteRenderer _bg;
+        private TextMesh _symbol; // ★ 2026-07-23: BMP glyph (☣/☠/⚰) for the sickness tier
         private WorkerStatus _last = (WorkerStatus)(-1);
         private bool _built;
+
+        // ★ Sickness statuses show a symbol instead of a drawn face — the owner wants an "emoji icon"
+        // over sick workers. True emoji are surrogate pairs TextMesh cannot draw (see class note), but
+        // ☣ U+2623 / ☠ U+2620 / ⚰ U+26B0 are BMP glyphs, so a TextMesh + OS symbol font renders them
+        // fine (same trick as WorkerNameTag). Empty string = keep the drawn face.
+        private const float SymbolScale = 0.05f;
+        private static Font _symbolFont;
+
+        private static string SymbolFor(WorkerStatus s)
+        {
+            switch (s)
+            {
+                case WorkerStatus.Sick:  return "☣";
+                case WorkerStatus.Dying: return "☠";
+                case WorkerStatus.Dead:  return "⚰";
+                default:                 return "";
+            }
+        }
+
+        private static Font SymbolFont()
+        {
+            if (_symbolFont != null) return _symbolFont;
+            _symbolFont = Font.CreateDynamicFontFromOSFont(
+                new[] { "Segoe UI Symbol", "Segoe UI", "Arial" }, 48);
+            return _symbolFont;
+        }
 
         /// <summary>Build the badge above the given body sprite. Call once right after AddComponent.</summary>
         public void Init(SpriteRenderer body)
@@ -61,6 +88,26 @@ namespace NuclearReMind
             _face.sortingLayerName = layer;
             _face.sortingOrder = BadgeOrder + 1;
 
+            // symbol glyph (☣/☠/⚰) — swapped in for the drawn face on the sickness tier
+            var sGo = new GameObject("BadgeSymbol");
+            sGo.transform.SetParent(transform, false);
+            sGo.transform.localScale = Vector3.one * SymbolScale;
+            _symbol = sGo.AddComponent<TextMesh>();
+            _symbol.anchor = TextAnchor.MiddleCenter;
+            _symbol.alignment = TextAlignment.Center;
+            _symbol.fontSize = 48;
+            _symbol.characterSize = 1f;
+            _symbol.text = "";
+            var symFont = SymbolFont();
+            var symMr = sGo.GetComponent<MeshRenderer>();
+            if (symFont != null)
+            {
+                _symbol.font = symFont;
+                symMr.sharedMaterial = symFont.material; // dynamic fonts need their own atlas material
+            }
+            symMr.sortingLayerName = layer;
+            symMr.sortingOrder = BadgeOrder + 1;
+
             // Ride the worker's depth instead of floating above the whole scene — otherwise the face
             // shows through a building the worker is standing behind.
             var view = GetComponentInParent<WorkerView>();
@@ -68,6 +115,7 @@ namespace NuclearReMind
             {
                 view.AddSortFollower(_bg, 1);
                 view.AddSortFollower(_face, 2);
+                view.AddSortFollower(symMr, 2);
             }
         }
 
@@ -78,10 +126,19 @@ namespace NuclearReMind
             _last = status;
 
             var c = StatusColor(status);
+            string glyph = SymbolFor(status);
+            bool useGlyph = glyph.Length > 0 && _symbol != null;
+
             if (_face != null)
             {
+                _face.enabled = !useGlyph; // sickness tier shows the symbol instead of the face
                 _face.sprite = Face(status);
                 _face.color = c;
+            }
+            if (_symbol != null)
+            {
+                _symbol.text = useGlyph ? glyph : "";
+                _symbol.color = c;
             }
             // tint the circle a touch toward the status color so color reads even at a glance
             if (_bg != null)
