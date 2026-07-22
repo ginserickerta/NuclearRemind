@@ -380,18 +380,22 @@ namespace NuclearReMind
                 populationText.text = $"ประชากร {total}/{cap}  ·  W{crew} E{_lastPop.engineers} M{_lastPop.medics} F{_lastPop.farmers}{idlePart}";
             }
 
-            // ★ 2026-07-22 (owner request): one clean population row — PopWorkerRow carries everything
-            //   ("total/cap · ว่าง N"). The separate total row and the repurposed ล้า/ป่วย/หิว rows
-            //   overlapped into unreadable garbage top-right; per-worker status lives in the K dashboard
-            //   (WorkerDashboardPanel), so the HUD keeps just the head-count line. Hidden here (not in
-            //   the setup script) so it holds for the already-authored scene without re-running Setup HUD.
-            if (popTotalText != null && popTotalText.gameObject.activeSelf) popTotalText.gameObject.SetActive(false);
+            // ★ 2026-07-22 (owner request, round 2): PopTotalRow ("total/cap") is back alongside
+            //   PopWorkerRow ("crew · ว่าง N"). Only the repurposed ล้า/ป่วย/หิว rows stay hidden —
+            //   they overlapped into unreadable garbage top-right, and per-worker status lives in
+            //   the K dashboard (WorkerDashboardPanel). Hidden here (not in the setup script) so it
+            //   holds for the already-authored scene without re-running Setup HUD.
+            if (popTotalText != null)
+            {
+                if (!popTotalText.gameObject.activeSelf) popTotalText.gameObject.SetActive(true);
+                popTotalText.text = $"{total}/{cap}";
+            }
             if (popEngineerText != null && popEngineerText.gameObject.activeSelf) popEngineerText.gameObject.SetActive(false);
             if (popMedicText != null && popMedicText.gameObject.activeSelf) popMedicText.gameObject.SetActive(false);
             if (popFarmerText != null && popFarmerText.gameObject.activeSelf) popFarmerText.gameObject.SetActive(false);
             if (popWorkerText != null) popWorkerText.text = _idleWorkers >= 0
-                                                              ? $"{total}/{cap}  ·  ว่าง {_idleWorkers}"
-                                                              : $"{total}/{cap}";
+                                                              ? $"{crew}  ·  ว่าง {_idleWorkers}"
+                                                              : $"{crew}";
         }
 
         // Knowledge 0–100 + ป้าย tier (Novice/Aware/Skilled/Expert) — อ่าน tier จาก ResourceManager (config-style query)
