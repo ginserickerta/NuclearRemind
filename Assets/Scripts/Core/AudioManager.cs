@@ -128,6 +128,12 @@ namespace NuclearReMind
 
         private void HandleBuildingPlaced(Cell cell, BuildingData data)
         {
+            // Player construction only. OnBuildingPlaced is shared by three raisers:
+            //   • OreDepositManager re-rolls every ore node at each day start (the hammer barrage bug)
+            //   • PrePlacedBuilding fires for map-authored buildings during scene warm-up
+            //   • PlacementController — the actual player placement this sting is for
+            if (data != null && data.isOreNode) return;
+            if (Time.timeSinceLevelLoad < 3f) return; // scene warm-up: pre-placed buildings registering
             if (_build != null) _sfx.PlayOneShot(_build, SfxVolume);
         }
 
