@@ -87,11 +87,14 @@ namespace NuclearReMind
             Refresh();
         }
 
-        // พ้น Day 1 (จบ tutorial ด้วยปุ่ม, debug end-day, หรือโหลดเซฟวัน 2+) → ซ่อนพาเนลถาวร
-        // Start() เช็ก CurrentDay แค่ครั้งเดียว ถ้าวันเปลี่ยนทีหลังต้องมี hook นี้ ไม่งั้นพาเนลค้าง (บั๊กที่เจอ)
+        // Day start decides the panel BOTH ways (day > 1 → hide · day 1 → show). Hiding-only was a trap
+        // on Restart: GameManager is DontDestroyOnLoad, so during the reload Start() still saw the OLD
+        // CurrentDay (the day the player died) and hid the panel; BeginRun reset to day 1 one frame later
+        // but nothing ever showed it again. Day 1 has no clock by design — its only exit is this panel's
+        // "เริ่ม Day 2" button — so a restarted run was stuck on day 1 forever ("เวลาไม่เดิน").
         private void HandleDayStarted(int day, bool timed)
         {
-            if (day > 1 && tutorialPanel != null) tutorialPanel.SetActive(false);
+            if (tutorialPanel != null) tutorialPanel.SetActive(day <= 1);
         }
 
         // ── ui ──
