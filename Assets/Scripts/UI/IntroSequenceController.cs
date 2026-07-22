@@ -215,10 +215,8 @@ namespace NuclearReMind
                 if (_group != null) _group.alpha = Mathf.Clamp01(_fade);
                 if (_fade <= 0f)
                 {
-                    // V01 "มืดสนิท เริ่มจากไฟก่อน" — BARKS.md says "เข้าเกมครั้งแรก", i.e. the moment the
-                    // intro clears into the city, not the end of day 1. Fire() is once-only, so the
-                    // day-end backstop in InnerVoiceDirector stays harmless if the intro never ran.
-                    InnerVoiceDirector.Instance?.Fire("V01");
+                    // ★ 2026-07-22: V01 ("มืดสนิท เริ่มจากไฟก่อน") no longer fires here — the owner cut
+                    // the opening dialogue box entirely; the new 7-card intro already covers the beat.
                     Destroy(gameObject);
                 }
                 return;

@@ -124,7 +124,9 @@ namespace NuclearReMind
         private void Start()
         {
             BuildPanel();
-            Hide();
+            // Instant hide — Hide() would play the close animation and flash the panel on scene load.
+            _shown = false;
+            if (_backdrop != null) _backdrop.SetActive(false);
         }
 
         private void Update()
@@ -160,7 +162,7 @@ namespace NuclearReMind
         private void Open()
         {
             _shown = true;
-            if (_backdrop != null) _backdrop.SetActive(true);
+            if (_backdrop != null) UIPopIn.PlayOpen(_backdrop); // pop-in like the card/quiz panels
             GameUIStack.Push(this);
             TimeManager.Instance?.Pause(PauseReason.LabPopup);
             Refresh();
@@ -169,7 +171,7 @@ namespace NuclearReMind
         private void Hide()
         {
             _shown = false;
-            if (_backdrop != null) _backdrop.SetActive(false);
+            if (_backdrop != null) UIPopIn.PlayClose(_backdrop); // shrink-out, then SetActive(false)
             GameUIStack.Pop(this);
             TimeManager.Instance?.Resume(PauseReason.LabPopup);
         }

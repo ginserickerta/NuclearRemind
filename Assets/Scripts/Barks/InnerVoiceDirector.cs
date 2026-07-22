@@ -9,9 +9,9 @@ namespace NuclearReMind
     /// runs. Assets live in Resources/InnerVoice (speaker = Auren) and fire via OnBarkFired, so the HUD
     /// shows them as the nameless ▸ prompt.
     ///
-    /// All 20 are wired. Callers outside this class: V01 (IntroSequenceController, on the fade into
-    /// gameplay), V02 (MemorialPanelController, first click), V04 (ResearchQueuePanel, first open),
-    /// V06 (CodexQuizManager.MarkExtractorRan, first extraction day).
+    /// 19/20 wired — V01 was cut 2026-07-22 (owner removed the game-start dialogue box; the intro
+    /// cards cover that beat). Callers outside this class: V02 (MemorialPanelController, first click),
+    /// V04 (ResearchQueuePanel, first open), V06 (CodexQuizManager.MarkExtractorRan, first extraction day).
     ///
     /// V06 "Extractor เดินครั้งแรก" was long thought blocked on a building that does not exist. It is
     /// not: v6.3 defines the extractor as a max-level Water Plant producing deuterium, which
@@ -84,7 +84,8 @@ namespace NuclearReMind
         // ── state milestones (checked each day, fire once) ──────────
         private void HandleDayEnded(int day)
         {
-            Fire("V01"); // first tick of the run — "มืดสนิท เริ่มจากไฟก่อน"
+            // ★ 2026-07-22: V01 backstop removed — the owner cut the game-start dialogue box
+            // (the 7-card intro covers that beat). V01 stays in the catalog but never fires.
 
             var reactor = ReactorController.Instance;
             if (reactor != null)

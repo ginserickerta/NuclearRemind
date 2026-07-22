@@ -25,7 +25,7 @@ namespace NuclearReMind
         private static RecordCardTester _instance;
 
         private readonly List<RecordCardSO> _records = new List<RecordCardSO>();
-        private bool _visible = true;
+        private bool _visible = false; // ★ 2026-07-22: hidden until F8 — no more auto-popup at game start
         private Rect _window = new Rect(16, 16, 340, 400);
         private Vector2 _scroll;
 
