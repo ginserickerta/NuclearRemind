@@ -116,6 +116,7 @@ namespace NuclearReMind
         {
             if (alertContainer != null)
             {
+                AudioManager.Instance?.PlayAlert(); // ★ 2026-07-22: notification sting (rate-limited inside)
                 var go = BuildEntry(message);
                 if (Application.isPlaying)
                     StartCoroutine(DismissAfter(go, key));

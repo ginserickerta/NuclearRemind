@@ -1,10 +1,18 @@
-# AUDIO — แผนเสียงทั้งเกม (ยังไม่ implement — รอเจ้าของเลือกเสียงก่อน)
+# AUDIO — แผนเสียงทั้งเกม
 
-> ★ 2026-07-22 สถานะ: **ค้างไว้ก่อน** — เจ้าของโปรเจกต์จะฟัง/คัดเสียงเอง แล้วโยนไฟล์ที่เลือกไว้โฟลเดอร์เดียว
-> จากนั้นค่อยทำ AudioManager + ต่อสายเข้าระบบ (คลิก/hover ผูกอัตโนมัติทุกปุ่ม) + ทำ `CREDITS.md` บันทึกไลเซนส์
+> ★ 2026-07-22 (คืน): **รอบแรก implement แล้ว** — `AudioManager` (Core/AudioManager.cs, auto-spawn ทุกซีน):
+> BGM เมนู + BGM ในเกม (crossfade · เริ่มใต้ intro · ปุ่ม เพลง −/+ ในเมนู · เซฟ PlayerPrefs) ·
+> click/hover อัตโนมัติทุกปุ่ม (sweep ใส่ `UIButtonSfx`) · sting ตอน Alert ขวาล่าง (rate-limit 0.25s)
 >
-> เงื่อนไขลิขสิทธิ์ (สำคัญกับ NSC): ใช้เฉพาะ **CC0** (Kenney/OpenGameArt) หรือ **Pixabay Content License**
-> (ฟรี เชิงพาณิชย์ได้ ไม่ต้องเครดิต) — ห้ามเสียงจาก YouTube rip / เกมอื่น / แหล่งไม่ระบุไลเซนส์
+> ไฟล์ใน `Assets/Resources/Audio/`:
+> | ไฟล์ | ที่มา | ไลเซนส์ |
+> |---|---|---|
+> | bgm_menu.mp3 | Pixabay — lexin_music "Space Ambient Sci-Fi" (121842) | Pixabay License ✅ |
+> | bgm_game.mp3 | Pixabay — sharvarion "Sci-fi Ambient Music" (183269) | Pixabay License ✅ |
+> | sfx_click.mp3 / sfx_hover.mp3 / sfx_alert.mp3 | **Epidemic Sound** | ⚠ subscription — ต้องมีบัญชี ES ที่ active ครอบคลุมงานเผยแพร่ ตรวจก่อนส่ง NSC · ถ้าไม่ชัวร์เปลี่ยนเป็น Kenney CC0 ได้ (โครงพร้อมแล้ว แค่วางไฟล์ทับ) |
+>
+> เงื่อนไขลิขสิทธิ์ (สำคัญกับ NSC): ปลอดภัยสุดคือ **CC0** (Kenney/OpenGameArt) หรือ **Pixabay Content License**
+> — ห้ามเสียงจาก YouTube rip / เกมอื่น / แหล่งไม่ระบุไลเซนส์
 
 ---
 
