@@ -38,7 +38,13 @@ cooling = 6 + min(water/12, 7) + coolWorkers*3 + min(toroidalLv, 3)*9
 poloidal_damp_per_lv     = 6.0
 poloidal_mastery_mult    = 1.15   # ถ้ามี Mastery("confinement")
 
-fuel_need           = 6.0      # fuelEfficiency = min(1, fuel/6)
+fuel_need           = 6.0      # NORMAL: fuelEfficiency = min(1, fuel/need) — ฐาน sim เดิม ไม่แตะ
+# ★ 2026-07-23 (เจ้าของ) — เตากิน Deuterium ตามโหมด: แรงขึ้น = ดื่มมากขึ้น
+#   Idle 0 · Normal 6 · Boost 9 · Overdrive 12
+#   Extractor เต็มเลเวล 1 โรง = 8/วัน → เดิน Boost เต็มประสิทธิภาพต้องสร้างสกัดเพิ่ม (ตั้งใจ)
+#   ⚠ ทำให้เส้นชนะ Boost ตึงขึ้นเล็กน้อย (fe 8/9≈0.89 ถ้าไม่ขยาย) — ควรยืนยันด้วย sim เมื่อมี
+fuel_need_boost     = 9.0
+fuel_need_od        = 12.0
 fuel_eff_bonus      = 0.08     # ต่อ Mastery (deuterium / tritium)
 ```
 

@@ -91,7 +91,21 @@ namespace NuclearReMind
         public float LastTritiumConsumed { get; private set; } // tritium the core burned this tick (q_dt_fuel gate)
         private int _scramCooldown;
 
-        public float FuelDemand => _cfg != null ? _cfg.fuelNeed : 6f;
+        /// <summary>
+        /// Deuterium the current mode wants per day (★ 2026-07-23: per-mode — Idle 0 · Normal 6 ·
+        /// Boost 9 · Overdrive 12). Full fuel efficiency needs the whole demand met.
+        /// </summary>
+        public float FuelDemand
+        {
+            get
+            {
+                if (_cfg == null) return 6f;
+                return Mode == ModeIdle ? 0f
+                     : Mode == ModeBoost ? _cfg.boostFuelNeed
+                     : Mode == ModeOverdrive ? _cfg.odFuelNeed
+                     : _cfg.fuelNeed;
+            }
+        }
         public bool IsWin => Core >= (_cfg != null ? _cfg.coreWin : 100f);
         public bool IsMeltdown => Heat >= (_cfg != null ? _cfg.heatMeltdown : 100f);
         public int ScramCooldown => _scramCooldown;
@@ -152,6 +166,7 @@ namespace NuclearReMind
         public void SetMode(int mode)
         {
             Mode = Mathf.Clamp(mode, ModeIdle, ModeOverdrive);
+            _fuelBudget = -1f; // the throttle was set against the old mode's demand — reset to full
             EventManager.Instance?.RaiseReactorStateChanged(Core, Heat); // panel refresh
         }
 
@@ -228,7 +243,7 @@ namespace NuclearReMind
                 float baseGain = Mode == ModeOverdrive ? _cfg.odCoreGain
                                : Mode == ModeBoost ? _cfg.boostCoreGain
                                : _cfg.coreGainBase;
-                float fe = Mathf.Min(1f, fuel / _cfg.fuelNeed) + m.FuelEfficiencyBonus();
+                float fe = Mathf.Min(1f, fuel / FuelDemand) + m.FuelEfficiencyBonus(); // per-mode demand
                 // ★ Knowledge → Q: every knowledge point makes the core climb a little faster,
                 // ×1.0 (K0) up to ×1.20 (K100). Additive-only — never below the 🔒 sim-proven
                 // baseline. No ResourceManager (unit tests) → neutral 1.0.
@@ -239,7 +254,7 @@ namespace NuclearReMind
                 // Burn what the day's run actually drew: the full demand when it was met, otherwise
                 // whatever was in the tank. fe is the fraction of demand satisfied, so a partly-fuelled
                 // day both advances less and costs less.
-                ConsumeFuel(Mathf.Min(fuel, _cfg.fuelNeed));
+                ConsumeFuel(Mathf.Min(fuel, FuelDemand));
                 if (Core >= _cfg.methodBCoreGate)
                 {
                     float cost = Mode == ModeOverdrive ? _cfg.odTritiumCost
@@ -279,13 +294,14 @@ namespace NuclearReMind
         // the buttons changed a dead number. They now set THIS: how much deuterium the reactor may draw
         // per day (0..fuelNeed). Full feed by default; 0 = reactor deliberately off (saves fuel, no gain).
         // Not saved — a loaded game starts back at full feed, which is the safe default.
-        private float _fuelBudget = -1f; // -1 = full (fuelNeed)
-        public float FuelFeedPerDay => _fuelBudget < 0f ? (_cfg != null ? _cfg.fuelNeed : 6f) : _fuelBudget;
+        private float _fuelBudget = -1f; // -1 = full (the current mode's demand)
+        // Clamped to the CURRENT mode's demand, so dropping Overdrive → Normal can never overfeed.
+        public float FuelFeedPerDay => _fuelBudget < 0f ? FuelDemand : Mathf.Min(_fuelBudget, FuelDemand);
 
         public void AdjustFuelFeed(float delta)
         {
             if (_cfg == null) return;
-            _fuelBudget = Mathf.Clamp(FuelFeedPerDay + delta, 0f, _cfg.fuelNeed);
+            _fuelBudget = Mathf.Clamp(FuelFeedPerDay + delta, 0f, FuelDemand);
             EventManager.Instance?.RaiseReactorStateChanged(Core, Heat); // panel refresh
         }
 
@@ -323,7 +339,7 @@ namespace NuclearReMind
             float baseGain = Mode == ModeOverdrive ? _cfg.odCoreGain
                            : Mode == ModeBoost ? _cfg.boostCoreGain
                            : _cfg.coreGainBase;
-            float fe = Mathf.Min(1f, fuel / _cfg.fuelNeed) + m.FuelEfficiencyBonus();
+            float fe = Mathf.Min(1f, fuel / FuelDemand) + m.FuelEfficiencyBonus(); // per-mode demand
             float knowMult = 1f + (ResourceManager.Instance != null
                 ? ResourceManager.Instance.Current.knowledge / 100f : 0f) * _cfg.knowledgeQMaxBonus;
             float gain = baseGain * fe * knowMult;

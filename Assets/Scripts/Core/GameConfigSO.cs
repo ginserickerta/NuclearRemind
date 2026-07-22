@@ -252,7 +252,13 @@ namespace NuclearReMind
         public float poloidalDampPerLv = 6f;       // poloidalDamp = poloidalLv × 6 (×1.15 mastery)
 
         [Header("Reactor — fuel / Method B gate (LOCK)")]
-        public float fuelNeed = 6f;                // fuelEfficiency = min(1, fuel/6)
+        public float fuelNeed = 6f;                // NORMAL fuelEfficiency = min(1, fuel/6) — sim baseline, unchanged
+        // ★ 2026-07-23 (owner): deuterium demand scales with mode — push harder, drink more.
+        //   Idle 0 · Normal 6 (= fuelNeed) · Boost 9 · Overdrive 12. One maxed extractor (8/day)
+        //   no longer fully feeds Boost (fe 8/9 ≈ 0.89) — building more extraction is the intended
+        //   answer, mirroring how Boost's tritium draw (9) outruns Zone B base production.
+        public float boostFuelNeed = 9f;           // Boost deuterium demand/day
+        public float odFuelNeed = 12f;             // Overdrive deuterium demand/day
         public float methodBCoreGate = 80f;        // core ≥ 80 && tritium < 5 → gain = 0
         public float methodBTritiumMin = 5f;
         public float tritiumSoftFloor = 6f;        // tritium < 6 → gain ×= tritium/6
