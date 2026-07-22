@@ -129,11 +129,22 @@ namespace NuclearReMind
             _sprTabAll     = Resources.Load<Sprite>("ResearchUI/btn_filter_all");
             _sprTabNotes   = Resources.Load<Sprite>("ResearchUI/btn_filter_notes");
             _sprTabRecords = Resources.Load<Sprite>("ResearchUI/btn_filter_records");
+
+            // ★ 2026-07-23 (owner): editable prefabs. When "Setup Research Lab Prefabs" has been run,
+            //   the whole panel + every row kind comes from Resources/ResearchUI/*.prefab so the owner
+            //   tunes position/size/color in the Editor. Missing prefab = code-built look (fallback).
+            _pfPanel        = Resources.Load<GameObject>("ResearchUI/ResearchLabPanel");
+            _pfRowNote      = Resources.Load<GameObject>("ResearchUI/Row_Note");
+            _pfRowRecActive = Resources.Load<GameObject>("ResearchUI/Row_RecordActive");
+            _pfRowRecDone   = Resources.Load<GameObject>("ResearchUI/Row_RecordDone");
+            _pfRowSimple    = Resources.Load<GameObject>("ResearchUI/Row_Simple");
+            _pfChip         = Resources.Load<GameObject>("ResearchUI/Chip_Mastery");
         }
 
         private Sprite _panelFrame;
         private Sprite _sprBox, _sprBtnStart, _sprBtnDecode, _sprBtnPlus, _sprBtnMinus;
         private Sprite _sprTabAll, _sprTabNotes, _sprTabRecords;
+        private GameObject _pfPanel, _pfRowNote, _pfRowRecActive, _pfRowRecDone, _pfRowSimple, _pfChip;
 
         /// <summary>Skin a code-drawn box with the slate plate (nine-slice). False = sprite missing.</summary>
         private bool ApplySlate(GameObject go, float ppuMult = 11f)
@@ -204,7 +215,8 @@ namespace NuclearReMind
 
         private void Start()
         {
-            BuildPanel();
+            // Prefab path first (owner-editable); the code-built panel is the fallback.
+            if (!TryBindPrefab()) BuildPanel();
             Hide();
         }
 
@@ -433,6 +445,7 @@ namespace NuclearReMind
 
         private void AddNoteRow(ResearchNoteSO note, int rank, ResearchLab lab, GameConfigSO cfg, WorkerManager wm)
         {
+            if (AddNoteRowPrefab(note, rank, lab, cfg, wm)) return; // owner-editable template first
             bool done = rank == 4;
             bool active = rank == 0;
             bool queued = rank == 1;
@@ -514,6 +527,7 @@ namespace NuclearReMind
 
         private void AddRecordDoneRow(string recTitle)
         {
+            if (AddRecordDoneRowPrefab(recTitle)) return;
             var row = MakeRowShell(38f, 1f);
             var t = Txt("T", row.transform, $"<color=#97c459>✓</color> {recTitle}", 15, CMuted, TextAnchor.MiddleLeft, FontStyle.Normal);
             SetTL(t.rectTransform, new Vector2(14f, -7f), new Vector2(650f, 24f));
@@ -523,6 +537,7 @@ namespace NuclearReMind
 
         private void AddRecordActiveRow(DataRecovery dr, GameConfigSO cfg, ResearchLab lab)
         {
+            if (AddRecordActiveRowPrefab(dr, cfg, lab)) return;
             var row = MakeRowShell(72f, 1f);
             bool decoding = dr.IsDecoding;
 
@@ -563,15 +578,204 @@ namespace NuclearReMind
 
         private void AddSimpleRow(string text, Color col, float h)
         {
+            if (AddSimpleRowPrefab(text, col, h)) return;
             var row = MakeRowShell(h, 0.55f);
             var t = Txt("T", row.transform, text, 13, col, TextAnchor.MiddleLeft, FontStyle.Normal);
             SetTL(t.rectTransform, new Vector2(14f, -(h - 20f) * 0.5f), new Vector2(600f, 20f));
             _rows.Add(row);
         }
 
-        private GameObject MakeRowShell(float height, float alpha)
+        // ─────────── prefab row fill (owner-editable templates) ───────────
+        // Mirrors the legacy Add*Row logic 1:1 but pours the live data into an instantiated template
+        // instead of constructing widgets, so the owner owns layout while code owns content. The
+        // legacy builders below stay as the no-prefab fallback — keep both in sync when logic changes.
+
+        private bool TryRow(GameObject pf, float height, float alpha, out GameObject row, out ResearchLabRowRefs r)
         {
-            var row = Rounded("Row", _listContainer, alpha < 1f ? Hex("#181510") : CSection, 6);
+            row = null; r = null;
+            if (pf == null || _listContainer == null) return false;
+            row = Instantiate(pf, _listContainer, false);
+            r = row.GetComponent<ResearchLabRowRefs>();
+            if (r == null) { Destroy(row); row = null; return false; }
+            if (r.badgeTemplate != null) r.badgeTemplate.SetActive(false); // template stays a template
+            if (r.layout != null) { r.layout.minHeight = height; r.layout.preferredHeight = height; }
+            if (alpha < 1f)
+            {
+                var cg = row.GetComponent<CanvasGroup>();
+                if (cg == null) cg = row.AddComponent<CanvasGroup>();
+                cg.alpha = alpha;
+            }
+            return true;
+        }
+
+        private float CloneBadge(ResearchLabRowRefs r, Transform parent, string text, Color bg, Color fg, Color bd, float x)
+        {
+            if (r == null || r.badgeTemplate == null) return AddBadge(parent, text, bg, fg, bd, x);
+            float w = EstWidth(text, 11f) + 16f;
+            var pill = Instantiate(r.badgeTemplate, parent, false);
+            pill.SetActive(true);
+            var rt = pill.GetComponent<RectTransform>();
+            rt.anchoredPosition = new Vector2(x, rt.anchoredPosition.y); // keep the template's own Y
+            rt.sizeDelta = new Vector2(w, rt.sizeDelta.y);
+            var img = pill.GetComponent<Image>();
+            if (img != null) img.color = bg;
+            var bdT = pill.transform.Find("Border");
+            if (bdT != null) { var bi = bdT.GetComponent<Image>(); if (bi != null) bi.color = bd; }
+            var t = pill.GetComponentInChildren<Text>();
+            if (t != null) { t.text = text; t.color = fg; }
+            return x + w + 5f;
+        }
+
+        private bool AddNoteRowPrefab(ResearchNoteSO note, int rank, ResearchLab lab, GameConfigSO cfg, WorkerManager wm)
+        {
+            bool done = rank == 4;
+            bool active = rank == 0;
+            bool queued = rank == 1;
+            bool blocked = rank == 3;
+
+            var cost = new StringBuilder();
+            if (note.costPower > 0) cost.Append($" · ไฟ {note.costPower}");
+            if (note.costIron > 0) cost.Append($" · เหล็ก {note.costIron}");
+            if (note.costLabMat > 0) cost.Append($" · วัสดุแล็บ {note.costLabMat}");
+            string meta = done ? "" : $"{note.researcherSlots} คน × {note.daysRequired} วัน{cost}";
+            string hint = (!done && !string.IsNullOrEmpty(note.leadHint)) ? $"ℹ \"{note.leadHint}\"" : null;
+            bool crit = note.noteId == "tritium";
+            bool bar = active;
+
+            float h = 52f + (meta.Length > 0 ? 18f : 0f) + (hint != null ? 18f : 0f) + (bar ? 15f : 0f);
+            if (!TryRow(_pfRowNote, h, blocked ? 0.55f : 1f, out var row, out var r)) return false;
+
+            string icon = done ? "<color=#97c459>✓</color> " : blocked ? "⛔ " : "";
+            if (r.title != null)
+            {
+                r.title.text = icon + note.title;
+                r.title.color = done ? CMuted : CText;
+            }
+
+            float bx = 14f + EstWidth(note.title, 17f) + (done || blocked ? 26f : 6f);
+            bx = CloneBadge(r, row.transform, string.IsNullOrEmpty(note.category) ? "ความรู้" : note.category,
+                Hex("#12283f"), CBlue, Hex("#185fa5"), bx);
+            if (crit && !done)
+                bx = CloneBadge(r, row.transform, "บังคับเพื่อชนะ", Hex("#501313"), Hex("#f09595"), Hex("#a32d2d"), bx);
+            if (queued) CloneBadge(r, row.transform, "▸ รอคิว", Hex("#2a1e08"), CAmber, Hex("#854f0b"), bx);
+
+            if (r.meta != null)
+            {
+                r.meta.gameObject.SetActive(meta.Length > 0);
+                if (meta.Length > 0) r.meta.text = meta;
+            }
+            if (r.hint != null)
+            {
+                r.hint.gameObject.SetActive(hint != null);
+                if (hint != null)
+                {
+                    r.hint.text = hint;
+                    // no meta line (never happens for hint-bearing rows today, but stay safe):
+                    // slide the hint up into the meta slot so the row doesn't gap.
+                    if (meta.Length == 0 && r.meta != null)
+                        r.hint.rectTransform.anchoredPosition = r.meta.rectTransform.anchoredPosition;
+                }
+            }
+
+            if (r.actionButton != null)
+            {
+                bool show = rank == 2;
+                r.actionButton.gameObject.SetActive(show);
+                if (show)
+                {
+                    string id = note.noteId;
+                    r.actionButton.onClick.AddListener(() => { ResearchLab.Instance?.TryStartResearch(id); Refresh(); });
+                    if (!lab.CanAfford(note))
+                    {
+                        var cg = r.actionButton.GetComponent<CanvasGroup>();
+                        if (cg == null) cg = r.actionButton.gameObject.AddComponent<CanvasGroup>();
+                        cg.alpha = 0.4f; // Notice explains on click
+                    }
+                }
+            }
+            if (r.blockedNote != null) r.blockedNote.gameObject.SetActive(blocked);
+
+            if (r.barTrack != null)
+            {
+                r.barTrack.SetActive(bar);
+                if (bar && r.barFill != null)
+                {
+                    float frac = note.daysRequired > 0 ? lab.ActiveJob.progress / note.daysRequired : 0f;
+                    bool stalled = wm != null && wm.GetWorkers(WorkerJobs.Lab).Count < note.researcherSlots * cfg.staffRatioMin;
+                    r.barFill.color = stalled ? Hex("#854f0b") : CGold;
+                    SetFill(r.barFill, frac);
+                    _activeBarFill = r.barFill;
+                    _activeBarDays = note.daysRequired;
+                }
+            }
+
+            _rows.Add(row);
+            return true;
+        }
+
+        private bool AddRecordDoneRowPrefab(string recTitle)
+        {
+            if (!TryRow(_pfRowRecDone, 38f, 1f, out var row, out var r)) return false;
+            if (r.title != null) r.title.text = $"<color=#97c459>✓</color> {recTitle}";
+            CloneBadge(r, row.transform, "กู้บันทึก", Hex("#2a1230"), CPink, Hex("#993556"), 14f + EstWidth(recTitle, 15f) + 26f);
+            _rows.Add(row);
+            return true;
+        }
+
+        private bool AddRecordActiveRowPrefab(DataRecovery dr, GameConfigSO cfg, ResearchLab lab)
+        {
+            if (!TryRow(_pfRowRecActive, 72f, 1f, out var row, out var r)) return false;
+            bool decoding = dr.IsDecoding;
+
+            string head = decoding
+                ? $"⏳ กำลังถอดรหัสบันทึกของ Elara #{dr.RecordsRecovered + 1}"
+                : $"บันทึกของ Elara #{dr.RecordsRecovered + 1}";
+            if (r.title != null) r.title.text = head;
+            CloneBadge(r, row.transform, "กู้บันทึก", Hex("#2a1230"), CPink, Hex("#993556"), 14f + EstWidth(head, 15f));
+
+            string sub = decoding
+                ? "นักวิจัยที่ว่างจากโครงการช่วยให้เร็วขึ้น"
+                : (lab != null && lab.IsRuined
+                    ? "ห้องวิจัยพัง — ซ่อมก่อนถึงจะถอดรหัสได้"
+                    : "กดถอดรหัสเพื่อเริ่ม — ใช้ห้องวิจัยร่วมกับงานวิจัย นักวิจัยที่ว่างช่วยให้เร็วขึ้น");
+            if (r.meta != null) r.meta.text = sub;
+
+            if (r.actionButton != null)
+            {
+                r.actionButton.gameObject.SetActive(!decoding);
+                if (!decoding)
+                {
+                    r.actionButton.onClick.AddListener(() => { DataRecovery.Instance?.StartDecoding(); Refresh(); });
+                    if (!dr.CanStartDecoding)
+                    {
+                        var cg = r.actionButton.GetComponent<CanvasGroup>();
+                        if (cg == null) cg = r.actionButton.gameObject.AddComponent<CanvasGroup>();
+                        cg.alpha = 0.4f;
+                    }
+                }
+            }
+
+            if (r.barTrack != null) r.barTrack.SetActive(true);
+            if (r.barFill != null)
+            {
+                float frac = cfg.dataRecoveryTarget > 0f ? dr.Progress / cfg.dataRecoveryTarget : 0f;
+                SetFill(r.barFill, frac);
+            }
+            _rows.Add(row);
+            return true;
+        }
+
+        private bool AddSimpleRowPrefab(string text, Color col, float h)
+        {
+            if (!TryRow(_pfRowSimple, h, 0.55f, out var row, out var r)) return false;
+            if (r.title != null) { r.title.text = text; r.title.color = col; }
+            _rows.Add(row);
+            return true;
+        }
+
+        private GameObject MakeRowShell(float height, float alpha, Transform parent = null)
+        {
+            var row = Rounded("Row", parent != null ? parent : _listContainer, alpha < 1f ? Hex("#181510") : CSection, 6);
             if (!ApplySlate(row))                  // ★ slate plate skin; border only on the fallback look
                 AddRoundBorder(row, CSectionBd, 6);
             var le = row.AddComponent<LayoutElement>();
@@ -658,13 +862,26 @@ namespace NuclearReMind
                     string label = !string.IsNullOrEmpty(v.quiz.topicTitle) ? v.quiz.topicTitle : v.quiz.quizId;
                     float w = EstWidth(label, 12f) + 20f;
                     if (x + w > maxW && x > 0f) { x = 0f; y -= rowH; }
-                    var chip = Rounded("Chip", _masteryContainer, Hex("#12283f"), 4);
-                    AddRoundBorder(chip, Hex("#185fa5"), 4);
-                    var rt = chip.GetComponent<RectTransform>();
-                    rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
-                    rt.anchoredPosition = new Vector2(x, y); rt.sizeDelta = new Vector2(w, 26f);
-                    var t = Txt("T", chip.transform, label, 12, CBlue, TextAnchor.MiddleCenter, FontStyle.Normal);
-                    StretchRT(t.rectTransform);
+                    GameObject chip;
+                    if (_pfChip != null) // ★ owner-editable chip template
+                    {
+                        chip = Instantiate(_pfChip, _masteryContainer, false);
+                        var rt = chip.GetComponent<RectTransform>();
+                        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
+                        rt.anchoredPosition = new Vector2(x, y); rt.sizeDelta = new Vector2(w, rt.sizeDelta.y);
+                        var ct = chip.GetComponentInChildren<Text>();
+                        if (ct != null) ct.text = label;
+                    }
+                    else
+                    {
+                        chip = Rounded("Chip", _masteryContainer, Hex("#12283f"), 4);
+                        AddRoundBorder(chip, Hex("#185fa5"), 4);
+                        var rt = chip.GetComponent<RectTransform>();
+                        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
+                        rt.anchoredPosition = new Vector2(x, y); rt.sizeDelta = new Vector2(w, 26f);
+                        var t = Txt("T", chip.transform, label, 12, CBlue, TextAnchor.MiddleCenter, FontStyle.Normal);
+                        StretchRT(t.rectTransform);
+                    }
                     _chips.Add(chip);
                     x += w + 6f;
                 }
@@ -703,6 +920,83 @@ namespace NuclearReMind
                 var ol = tab.bg.GetComponent<Outline>();
                 if (ol != null) ol.effectColor = on ? CHeadLine : CSectionBd;
             }
+        }
+
+        // ═══════════════ PREFAB BIND (owner-editable path) ═══════════════
+        /// <summary>
+        /// Instantiate Resources/ResearchUI/ResearchLabPanel.prefab and wire behaviour through its
+        /// ResearchLabPanelRefs. Layout/skin lives entirely in the prefab; this only adds listeners
+        /// and grabs the fields Refresh() writes to. Every hookup is null-guarded so a deleted
+        /// child costs one feature, not the panel.
+        /// </summary>
+        private bool TryBindPrefab()
+        {
+            if (_pfPanel == null) return false;
+            var inst = Instantiate(_pfPanel, transform, false);
+            var r = inst.GetComponent<ResearchLabPanelRefs>();
+            if (r == null)
+            {
+                Debug.LogError("[ResearchLabPanelUI] ResearchLabPanel.prefab ไม่มี ResearchLabPanelRefs — รัน Setup Research Lab Prefabs ใหม่");
+                Destroy(inst);
+                return false;
+            }
+
+            inst.name = "Backdrop (prefab)";
+            _backdrop = inst;
+            _root = r.card != null ? r.card : inst;
+            _edge = r.edge;
+
+            if (r.backdropButton != null) r.backdropButton.onClick.AddListener(Hide);
+            if (r.closeButton != null) r.closeButton.onClick.AddListener(Hide);
+            _statusPillBg = r.statusPillBg;
+            _statusPill = r.statusPillText;
+
+            // repair block
+            _repairBlock = r.repairBlock;
+            _repairLine = r.repairLine;
+            _repairBtn = r.repairButton;
+            if (_repairBtn != null) _repairBtn.onClick.AddListener(() => { ResearchLab.Instance?.StartRepair(); Refresh(); });
+            if (r.repairCrewMinus != null) r.repairCrewMinus.onClick.AddListener(() => EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, -1));
+            if (r.repairCrewPlus != null) r.repairCrewPlus.onClick.AddListener(() => EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, +1));
+            _repairEngDisplay = r.repairCrewDisplay;
+            _repairBarWrap = r.repairBarWrap;
+            _repairFill = r.repairBarFill;
+
+            // main block
+            _mainBlock = r.mainBlock;
+            if (r.statValues != null && r.statValues.Length >= 4)
+            {
+                _statEng = r.statValues[0];
+                _statSlots = r.statValues[1];
+                _statLabor = r.statValues[2];
+                _statRec = r.statValues[3];
+            }
+
+            // assign sidebar
+            if (r.crewMinus != null) r.crewMinus.onClick.AddListener(() => EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, -1));
+            if (r.crewPlus != null) r.crewPlus.onClick.AddListener(() => EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, +1));
+            _engDisplay = r.crewDisplay;
+            _laborWarn = r.laborWarn; _laborWarnText = r.laborWarnText;
+            _ratioWarn = r.ratioWarn; _ratioWarnText = r.ratioWarnText;
+
+            // filter tabs — same tuple shape RefreshTabs consumes; sprite tabs have no Text child,
+            // which is exactly what selects the brightness-toggle branch there.
+            _tabs.Clear();
+            BindTab(r.tabAll, "all");
+            BindTab(r.tabNotes, "notes");
+            BindTab(r.tabRecords, "records");
+
+            _listContainer = r.listContent;
+            _masteryHead = r.masteryHead;
+            _masteryContainer = r.masteryChips;
+            return true;
+        }
+
+        private void BindTab(Button b, string id)
+        {
+            if (b == null) return;
+            b.onClick.AddListener(() => { _filter = id; Refresh(); });
+            _tabs.Add((b, b.GetComponentInChildren<Text>(), b.GetComponent<Image>(), id));
         }
 
         // ═══════════════ BUILD (runtime uGUI — layout mirrors the mockup's DOM) ═══════════════
@@ -1045,6 +1339,246 @@ namespace NuclearReMind
             return box;
         }
 
+        // ═══════════════ PREFAB BAKE (called by Assets/Editor/ResearchLabPrefabSetup) ═══════════════
+        // These run in EDIT mode on a throwaway host object: build the exact same hierarchy the
+        // runtime fallback would, attach the Refs component, and hand the root to the editor script
+        // to save as a prefab. Listeners added during build are runtime-only and don't serialize —
+        // TryBindPrefab rewires them on load, so the baked prefab carries layout/skin only.
+
+        private void EnsureArt()
+        {
+            if (_font == null) Awake();
+        }
+
+        /// <summary>Build the full panel and index every element into ResearchLabPanelRefs.</summary>
+        public GameObject BakePanelSource()
+        {
+            EnsureArt();
+            BuildPanel();
+
+            var r = _backdrop.AddComponent<ResearchLabPanelRefs>();
+            Transform card = _root.transform;
+            Transform head = card.Find("Head");
+            Transform rb = _repairBlock != null ? _repairBlock.transform : null;
+            Transform mb = _mainBlock != null ? _mainBlock.transform : null;
+
+            r.backdropButton = _backdrop.GetComponent<Button>();
+            r.ring = card.parent != null ? card.parent.gameObject : null;
+            r.card = _root;
+            r.interior = card.Find("Interior") != null ? card.Find("Interior").gameObject : null;
+            r.edge = _edge;
+
+            r.head = head != null ? head.gameObject : null;
+            if (head != null)
+            {
+                r.headLine = head.Find("Line") != null ? head.Find("Line").gameObject : null;
+                r.flask = head.Find("Flask") != null ? head.Find("Flask").GetComponent<Text>() : null;
+                r.title = head.Find("Title") != null ? head.Find("Title").GetComponent<Text>() : null;
+                r.subtitle = head.Find("Sub") != null ? head.Find("Sub").GetComponent<Text>() : null;
+                r.closeButton = head.Find("Close") != null ? head.Find("Close").GetComponent<Button>() : null;
+            }
+            r.statusPillBg = _statusPillBg;
+            r.statusPillText = _statusPill;
+
+            r.repairBlock = _repairBlock;
+            if (rb != null)
+            {
+                r.repairHead = rb.Find("H") != null ? rb.Find("H").GetComponent<Text>() : null;
+                r.repairCrewMinus = rb.Find("CrewMinus") != null ? rb.Find("CrewMinus").GetComponent<Button>() : null;
+                r.repairCrewPlus = rb.Find("CrewPlus") != null ? rb.Find("CrewPlus").GetComponent<Button>() : null;
+                r.repairCrewHint = rb.Find("CrewHint") != null ? rb.Find("CrewHint").GetComponent<Text>() : null;
+            }
+            r.repairLine = _repairLine;
+            r.repairButton = _repairBtn;
+            r.repairCrewDisplay = _repairEngDisplay;
+            r.repairBarWrap = _repairBarWrap;
+            r.repairBarFill = _repairFill;
+
+            r.mainBlock = _mainBlock;
+            r.statCards = new GameObject[4];
+            r.statLabels = new Text[4];
+            r.statValues = new Text[4];
+            if (mb != null)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    var c = mb.Find($"Stat{i}");
+                    if (c == null) continue;
+                    r.statCards[i] = c.gameObject;
+                    r.statLabels[i] = c.Find("L") != null ? c.Find("L").GetComponent<Text>() : null;
+                    r.statValues[i] = c.Find("V") != null ? c.Find("V").GetComponent<Text>() : null;
+                }
+                var lc = mb.Find("LeftCol");
+                if (lc != null)
+                {
+                    r.leftCol = lc.gameObject;
+                    r.assignHead = lc.Find("AH") != null ? lc.Find("AH").GetComponent<Text>() : null;
+                    r.crewMinus = lc.Find("Minus") != null ? lc.Find("Minus").GetComponent<Button>() : null;
+                    r.crewPlus = lc.Find("Plus") != null ? lc.Find("Plus").GetComponent<Button>() : null;
+                    r.crewDisplayBox = lc.Find("Disp") != null ? lc.Find("Disp").gameObject : null;
+                    r.assignHint = lc.Find("AS") != null ? lc.Find("AS").GetComponent<Text>() : null;
+                }
+                r.projectsHead = mb.Find("PH") != null ? mb.Find("PH").GetComponent<Text>() : null;
+                r.tabAll = mb.Find("Tab_all") != null ? mb.Find("Tab_all").GetComponent<Button>() : null;
+                r.tabNotes = mb.Find("Tab_notes") != null ? mb.Find("Tab_notes").GetComponent<Button>() : null;
+                r.tabRecords = mb.Find("Tab_records") != null ? mb.Find("Tab_records").GetComponent<Button>() : null;
+                r.scroll = mb.Find("Scroll") != null ? mb.Find("Scroll").GetComponent<ScrollRect>() : null;
+            }
+            r.crewDisplay = _engDisplay;
+            r.laborWarn = _laborWarn; r.laborWarnText = _laborWarnText;
+            r.ratioWarn = _ratioWarn; r.ratioWarnText = _ratioWarnText;
+            r.listContent = _listContainer as RectTransform;
+            r.masteryHead = _masteryHead;
+            r.masteryChips = _masteryContainer as RectTransform;
+
+            return _backdrop;
+        }
+
+        private GameObject MakeBadgeTemplate(Transform parent)
+        {
+            var pill = Rounded("BadgeTemplate", parent, Hex("#12283f"), 3);
+            AddRoundBorder(pill, Hex("#185fa5"), 3);
+            var rt = pill.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(200f, -10f);
+            rt.sizeDelta = new Vector2(70f, 20f);
+            var t = Txt("T", pill.transform, "ป้าย", 11, CBlue, TextAnchor.MiddleCenter, FontStyle.Normal);
+            StretchRT(t.rectTransform);
+            pill.SetActive(false);
+            return pill;
+        }
+
+        /// <summary>Row template for research notes — every optional element present and indexed.</summary>
+        public GameObject BakeNoteRowTemplate()
+        {
+            EnsureArt();
+            var row = MakeRowShell(88f, 1f, transform);
+            row.name = "Row_Note";
+            var r = row.AddComponent<ResearchLabRowRefs>();
+            r.background = row.GetComponent<Image>();
+            r.layout = row.GetComponent<LayoutElement>();
+
+            var title = Txt("Title", row.transform, "หัวข้อวิจัย (ตัวอย่าง)", 17, CText, TextAnchor.UpperLeft, FontStyle.Bold);
+            SetTL(title.rectTransform, new Vector2(14f, -10f), new Vector2(430f, 24f));
+            r.title = title;
+
+            r.badgeTemplate = MakeBadgeTemplate(row.transform);
+
+            var m = Txt("Meta", row.transform, "2 คน × 3 วัน · เหล็ก 20", 13, CMuted, TextAnchor.UpperLeft, FontStyle.Normal);
+            SetTL(m.rectTransform, new Vector2(14f, -32f), new Vector2(460f, 18f));
+            r.meta = m;
+
+            var hTxt = Txt("Hint", row.transform, "ℹ \"เบาะแส (ตัวอย่าง)\"", 13, CDim, TextAnchor.UpperLeft, FontStyle.Italic);
+            SetTL(hTxt.rectTransform, new Vector2(14f, -50f), new Vector2(460f, 18f));
+            r.hint = hTxt;
+
+            var blockedT = Txt("Blocked", row.transform, "ขาด prerequisite", 12, CFaint, TextAnchor.UpperRight, FontStyle.Normal);
+            SetTR(blockedT.rectTransform, new Vector2(-12f, -12f), new Vector2(160f, 18f));
+            blockedT.gameObject.SetActive(false);
+            r.blockedNote = blockedT;
+
+            var btn = _sprBtnStart != null
+                ? SpriteBtn("Start", row.transform, _sprBtnStart)
+                : RoundBtn("Start", row.transform, "เริ่มวิจัย", 14, CHead, CText, CHeadLine, 4);
+            var brt = (RectTransform)btn.transform;
+            brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 1f);
+            brt.anchoredPosition = new Vector2(-12f, -6f);
+            brt.sizeDelta = _sprBtnStart != null ? new Vector2(170f, 58f) : new Vector2(96f, 32f);
+            r.actionButton = btn;
+
+            var fill = AddBar(row.transform, new Vector2(14f, 8f), 856f, 0.4f, CGold);
+            r.barFill = fill;
+            r.barTrack = fill.transform.parent.gameObject;
+            r.barTrack.SetActive(false);
+            return row;
+        }
+
+        /// <summary>Row template for the record currently being decoded.</summary>
+        public GameObject BakeRecordActiveRowTemplate()
+        {
+            EnsureArt();
+            var row = MakeRowShell(72f, 1f, transform);
+            row.name = "Row_RecordActive";
+            var r = row.AddComponent<ResearchLabRowRefs>();
+            r.background = row.GetComponent<Image>();
+            r.layout = row.GetComponent<LayoutElement>();
+
+            var t = Txt("T", row.transform, "บันทึกของ Elara #1", 15, CText, TextAnchor.UpperLeft, FontStyle.Bold);
+            SetTL(t.rectTransform, new Vector2(14f, -10f), new Vector2(400f, 22f));
+            r.title = t;
+
+            r.badgeTemplate = MakeBadgeTemplate(row.transform);
+
+            var m = Txt("M", row.transform, "กดถอดรหัสเพื่อเริ่ม — ใช้ห้องวิจัยร่วมกับงานวิจัย", 12, CDim, TextAnchor.UpperLeft, FontStyle.Italic);
+            SetTL(m.rectTransform, new Vector2(14f, -32f), new Vector2(440f, 18f));
+            r.meta = m;
+
+            var btn = _sprBtnDecode != null
+                ? SpriteBtn("Decode", row.transform, _sprBtnDecode)
+                : RoundBtn("Decode", row.transform, "ถอดรหัส", 14, CHead, CText, CHeadLine, 4);
+            var brt = (RectTransform)btn.transform;
+            brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 1f);
+            brt.anchoredPosition = new Vector2(-12f, -6f);
+            brt.sizeDelta = _sprBtnDecode != null ? new Vector2(170f, 58f) : new Vector2(96f, 32f);
+            r.actionButton = btn;
+
+            var fill = AddBar(row.transform, new Vector2(14f, 10f), 856f, 0.3f, CPink);
+            r.barFill = fill;
+            r.barTrack = fill.transform.parent.gameObject;
+            return row;
+        }
+
+        /// <summary>Row template for an already-recovered record.</summary>
+        public GameObject BakeRecordDoneRowTemplate()
+        {
+            EnsureArt();
+            var row = MakeRowShell(38f, 1f, transform);
+            row.name = "Row_RecordDone";
+            var r = row.AddComponent<ResearchLabRowRefs>();
+            r.background = row.GetComponent<Image>();
+            r.layout = row.GetComponent<LayoutElement>();
+
+            var t = Txt("T", row.transform, "<color=#97c459>✓</color> บันทึก (ตัวอย่าง)", 15, CMuted, TextAnchor.MiddleLeft, FontStyle.Normal);
+            SetTL(t.rectTransform, new Vector2(14f, -7f), new Vector2(650f, 24f));
+            r.title = t;
+
+            r.badgeTemplate = MakeBadgeTemplate(row.transform);
+            return row;
+        }
+
+        /// <summary>Row template for locked/hidden placeholder lines.</summary>
+        public GameObject BakeSimpleRowTemplate()
+        {
+            EnsureArt();
+            var row = MakeRowShell(34f, 1f, transform);
+            row.name = "Row_Simple";
+            var r = row.AddComponent<ResearchLabRowRefs>();
+            r.background = row.GetComponent<Image>();
+            r.layout = row.GetComponent<LayoutElement>();
+
+            // stretched + middle-left so any row height the code sets stays vertically centered
+            var t = Txt("T", row.transform, "[ล็อก] แถวข้อความ (ตัวอย่าง)", 13, CFaint, TextAnchor.MiddleLeft, FontStyle.Normal);
+            StretchRT(t.rectTransform);
+            t.rectTransform.offsetMin = new Vector2(14f, 0f);
+            t.rectTransform.offsetMax = new Vector2(-14f, 0f);
+            r.title = t;
+            return row;
+        }
+
+        /// <summary>Mastery chip template — cloned per earned quiz.</summary>
+        public GameObject BakeMasteryChipTemplate()
+        {
+            EnsureArt();
+            var chip = Rounded("Chip_Mastery", transform, Hex("#12283f"), 4);
+            AddRoundBorder(chip, Hex("#185fa5"), 4);
+            var rt = chip.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
+            rt.sizeDelta = new Vector2(120f, 26f);
+            var t = Txt("T", chip.transform, "ความเชี่ยวชาญ", 12, CBlue, TextAnchor.MiddleCenter, FontStyle.Normal);
+            StretchRT(t.rectTransform);
+            return chip;
+        }
+
         // ─────────── uGUI helpers ───────────
         // How hard to push sRGB hex toward linear (Linear color space washes UGUI colors out).
         // 1 = full .linear (playtest: too dark) · 0 = raw hex (too pale) · 0.5 = approved middle.
@@ -1076,6 +1610,9 @@ namespace NuclearReMind
             img.sprite = RoundedSprite.Get(radius);
             img.type = Image.Type.Sliced;
             img.color = col;
+            // RoundedSprite is runtime-generated (not an asset) — the tag re-applies it after the
+            // hierarchy round-trips through a baked prefab, where the sprite ref serializes to None.
+            go.AddComponent<RoundedCornerTag>().radius = radius;
             return go;
         }
 
@@ -1090,6 +1627,8 @@ namespace NuclearReMind
             img.type = Image.Type.Sliced;
             img.color = border;
             img.raycastTarget = false;
+            bd.AddComponent<RoundedCornerTag>().radius = radius + 1; // survive the prefab round-trip
+
             var rt = bd.GetComponent<RectTransform>();
             rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
             rt.offsetMin = new Vector2(-1f, -1f); rt.offsetMax = new Vector2(1f, 1f);
