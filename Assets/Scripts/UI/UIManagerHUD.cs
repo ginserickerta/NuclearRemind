@@ -442,6 +442,7 @@ namespace NuclearReMind
         {
             if (gameOverPanel == null) return;
 
+            EnsureEndingCard(); // ★ 2026-07-23: metal panel_frame + house font, same theme as every panel
             gameOverPanel.SetActive(true);
             if (restartButton != null) restartButton.gameObject.SetActive(true);
 
@@ -486,10 +487,146 @@ namespace NuclearReMind
             }
 
             // Knowledge Summary (Story Guide §4 true_ending onEnd): สรุปหัวข้อความรู้/Codex ที่ปลดล็อกรอบนี้
-            gameOverText.text = $"{msg}\n\nวันที่ {day} · Q {q:0.00} · Knowledge {knowledge}\n" +
-                                runSummary + achievements + "\n" +
-                                CollectKnowledgeSummary() +
-                                "ความรู้ที่คุณได้ — ไม่มีวันหาย เริ่มใหม่แล้วไปให้ไกลกว่าเดิม";
+            // ★ 2026-07-23: first line of msg becomes the card's colored title (win=gold ·
+            //   partial=amber · loss=red); the rest flows into the body text. Falls back to the
+            //   old single-blob text when the themed card could not be built.
+            int nl = msg.IndexOf('\n');
+            string title = nl > 0 ? msg.Substring(0, nl) : msg;
+            string bodyMsg = nl > 0 ? msg.Substring(nl + 1) : "";
+            string tail = $"\n\nวันที่ {day} · Q {q:0.00} · Knowledge {knowledge}\n" +
+                          runSummary + achievements + "\n" +
+                          CollectKnowledgeSummary() +
+                          "ความรู้ที่คุณได้ — ไม่มีวันหาย เริ่มใหม่แล้วไปให้ไกลกว่าเดิม";
+
+            if (_endTitle != null)
+            {
+                _endTitle.text = title;
+                _endTitle.color = endType switch
+                {
+                    GameEndType.TrueEnding   => EndGold,
+                    GameEndType.NormalEnding => EndAmber,
+                    _                        => EndRed,
+                };
+                gameOverText.text = bodyMsg + tail;
+            }
+            else
+            {
+                gameOverText.text = msg + tail;
+            }
+        }
+
+        // ─────────── Ending screen theme (★ 2026-07-23 — one look for all 3 endings) ───────────
+        // The ending was a bare text blob on a dark overlay in the old HUD font. Wrap it in the
+        // same metal panel_frame + UIFonts.Body every other panel uses. Built lazily on first
+        // game-over; reuses the serialized gameOverText/restartButton by re-parenting them.
+
+        private GameObject _endCard;
+        private Text _endTitle;
+
+        private static readonly Color EndText  = new Color(0.910f, 0.863f, 0.753f, 1f); // #e8dcc0 cream
+        private static readonly Color EndGold  = new Color(0.851f, 0.643f, 0.255f, 1f); // #d9a441
+        private static readonly Color EndAmber = new Color(0.937f, 0.627f, 0.153f, 1f); // #efa027
+        private static readonly Color EndRed   = new Color(0.878f, 0.353f, 0.282f, 1f); // #e05a48
+        private static readonly Color EndPlate = new Color(0.169f, 0.141f, 0.094f, 1f); // #2b2418
+        private static readonly Color EndLine  = new Color(0.420f, 0.353f, 0.247f, 1f); // #6b5a3f
+
+        private void EnsureEndingCard()
+        {
+            if (_endCard != null || gameOverPanel == null) return;
+
+            var font  = UIFonts.Body;
+            var frame = Resources.Load<Sprite>("CardUI/panel_frame");
+
+            var overlay = gameOverPanel.GetComponent<Image>();
+            if (overlay != null) overlay.color = new Color(0f, 0f, 0f, 0.85f);
+
+            const float W = 1160f, H = 850f;
+            _endCard = new GameObject("EndingCard", typeof(RectTransform));
+            _endCard.transform.SetParent(gameOverPanel.transform, false);
+            var cr = _endCard.GetComponent<RectTransform>();
+            cr.anchorMin = cr.anchorMax = new Vector2(0.5f, 0.5f);
+            cr.pivot = new Vector2(0.5f, 0.5f);
+            cr.sizeDelta = new Vector2(W, H);
+            var cardImg = _endCard.AddComponent<Image>();
+            if (frame != null)
+            {
+                cardImg.sprite = frame;
+                cardImg.type = Image.Type.Sliced;
+                cardImg.pixelsPerUnitMultiplier = 3f;
+                cardImg.color = Color.white;
+            }
+            else cardImg.color = new Color(0.09f, 0.10f, 0.13f, 0.97f);
+            float edge = frame != null ? 30f : 12f;
+            float innerW = W - edge * 2f - 36f;
+
+            var titleGO = new GameObject("Title", typeof(RectTransform));
+            titleGO.transform.SetParent(_endCard.transform, false);
+            _endTitle = titleGO.AddComponent<Text>();
+            _endTitle.font = font;
+            _endTitle.fontSize = 30;
+            _endTitle.fontStyle = FontStyle.Bold;
+            _endTitle.alignment = TextAnchor.MiddleCenter;
+            _endTitle.color = EndGold;
+            _endTitle.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _endTitle.verticalOverflow = VerticalWrapMode.Overflow;
+            var tr = _endTitle.rectTransform;
+            tr.anchorMin = tr.anchorMax = new Vector2(0.5f, 1f);
+            tr.pivot = new Vector2(0.5f, 1f);
+            tr.anchoredPosition = new Vector2(0f, -(edge + 14f));
+            tr.sizeDelta = new Vector2(innerW, 56f);
+
+            var divGO = new GameObject("TitleLine", typeof(RectTransform));
+            divGO.transform.SetParent(_endCard.transform, false);
+            var div = divGO.AddComponent<Image>();
+            div.color = EndLine;
+            div.raycastTarget = false;
+            var dr = divGO.GetComponent<RectTransform>();
+            dr.anchorMin = dr.anchorMax = new Vector2(0.5f, 1f);
+            dr.pivot = new Vector2(0.5f, 1f);
+            dr.anchoredPosition = new Vector2(0f, -(edge + 76f));
+            dr.sizeDelta = new Vector2(innerW, 2f);
+
+            if (gameOverText != null)
+            {
+                var br = gameOverText.rectTransform;
+                br.SetParent(_endCard.transform, false);
+                br.anchorMin = Vector2.zero;
+                br.anchorMax = Vector2.one;
+                br.pivot = new Vector2(0.5f, 0.5f);
+                br.offsetMin = new Vector2(edge + 18f, edge + 90f);      // clear the restart button
+                br.offsetMax = new Vector2(-(edge + 18f), -(edge + 88f)); // clear the title + divider
+                gameOverText.font = font;
+                gameOverText.alignment = TextAnchor.UpperCenter;
+                gameOverText.color = EndText;
+                gameOverText.lineSpacing = 1.15f;
+                gameOverText.horizontalOverflow = HorizontalWrapMode.Wrap;
+                // Long runs stack summary + achievements + codex list — shrink to fit the frame
+                // instead of spilling over the metal border.
+                gameOverText.verticalOverflow = VerticalWrapMode.Truncate;
+                gameOverText.resizeTextForBestFit = true;
+                gameOverText.resizeTextMinSize = 13;
+                gameOverText.resizeTextMaxSize = 21;
+            }
+
+            if (restartButton != null)
+            {
+                var rr = restartButton.GetComponent<RectTransform>();
+                rr.SetParent(_endCard.transform, false);
+                rr.anchorMin = rr.anchorMax = new Vector2(0.5f, 0f);
+                rr.pivot = new Vector2(0.5f, 0f);
+                rr.anchoredPosition = new Vector2(0f, edge + 16f);
+                rr.sizeDelta = new Vector2(250f, 54f);
+                var bi = restartButton.GetComponent<Image>();
+                if (bi != null) bi.color = EndPlate;
+                var bl = restartButton.GetComponentInChildren<Text>();
+                if (bl != null)
+                {
+                    bl.font = font;
+                    bl.fontSize = 20;
+                    bl.fontStyle = FontStyle.Bold;
+                    bl.color = EndGold;
+                }
+            }
         }
 
         // รวมชื่อหัวข้อ Codex ที่ปลดล็อกแล้ว เรียงตามลำดับนิยามใน allCodexEntries (คงที่)
