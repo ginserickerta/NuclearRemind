@@ -31,10 +31,30 @@ namespace NuclearReMind
         private const float SfxVolume = 0.9f;
         private const float AlertMinGap = 0.25f; // a burst of alerts should not machine-gun the sting
 
+        // Static hooks only (project pattern — see ReactorController.AutoSpawnHook): the game runs
+        // Enter Play Mode without domain reload, so anything subscribed to the STATIC
+        // SceneManager.sceneLoaded must not be an instance method — a destroyed instance's handler
+        // would linger across play sessions, throw on the next scene load, and starve the fresh
+        // manager of its scene event (= BGM never switches).
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoSpawn()
+        private static void AutoSpawnHook()
         {
-            if (Instance != null) return;
+            Ensure();
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoadedStatic;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoadedStatic;
+            if (Instance != null)
+                Instance.ApplySceneAudio(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        }
+
+        private static void OnSceneLoadedStatic(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
+        {
+            Ensure();
+            if (Instance != null) Instance.ApplySceneAudio(s.name);
+        }
+
+        private static void Ensure()
+        {
+            if (Instance != null) return; // Unity-null when destroyed → respawn
             var go = new GameObject("AudioManager (auto)");
             DontDestroyOnLoad(go);
             go.AddComponent<AudioManager>();
@@ -64,6 +84,12 @@ namespace NuclearReMind
             _build   = Resources.Load<AudioClip>("Audio/sfx_build");
             _bgmVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefBgmVolume, DefaultBgmVolume));
 
+            // One diagnostic line so a missing clip / zeroed volume is visible instead of just silent.
+            if (_bgmMenu == null || _bgmGame == null || _click == null || _alert == null || _build == null || _bgmVolume <= 0f)
+                Debug.LogWarning($"[AudioManager] menu:{(_bgmMenu ? "ok" : "MISSING")} game:{(_bgmGame ? "ok" : "MISSING")} " +
+                                 $"click:{(_click ? "ok" : "MISSING")} alert:{(_alert ? "ok" : "MISSING")} build:{(_build ? "ok" : "MISSING")} " +
+                                 $"bgmVolume:{_bgmVolume:0.00}" + (_bgmVolume <= 0f ? " ← เพลงถูกลดเหลือ 0 (ปุ่ม − ในเมนู)" : ""));
+
             _bgmA = gameObject.AddComponent<AudioSource>();
             _bgmB = gameObject.AddComponent<AudioSource>();
             foreach (var s in new[] { _bgmA, _bgmB })
@@ -76,18 +102,8 @@ namespace NuclearReMind
             _sfx.playOnAwake = false;
             _sfx.ignoreListenerPause = true;
 
-            UnityEngine.SceneManagement.SceneManager.sceneLoaded += HandleSceneLoaded;
             ApplySceneAudio(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
         }
-
-        private void OnDestroy()
-        {
-            if (Instance == this)
-                UnityEngine.SceneManagement.SceneManager.sceneLoaded -= HandleSceneLoaded;
-        }
-
-        private void HandleSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
-            => ApplySceneAudio(s.name);
 
         // ─────────────────────────────────────────
         //  BGM
