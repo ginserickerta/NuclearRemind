@@ -488,7 +488,7 @@ namespace NuclearReMind
                 var brt = (RectTransform)btn.transform;
                 brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 1f);
                 brt.anchoredPosition = new Vector2(-12f, -6f);
-                brt.sizeDelta = _sprBtnStart != null ? new Vector2(120f, 44f) : new Vector2(96f, 32f);
+                brt.sizeDelta = _sprBtnStart != null ? new Vector2(170f, 58f) : new Vector2(96f, 32f);
                 string id = note.noteId;
                 btn.onClick.AddListener(() => { ResearchLab.Instance?.TryStartResearch(id); Refresh(); });
                 if (!canAfford) { var cg = btn.gameObject.AddComponent<CanvasGroup>(); cg.alpha = 0.4f; } // Notice explains on click
@@ -551,7 +551,7 @@ namespace NuclearReMind
                 var brt = (RectTransform)btn.transform;
                 brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 1f);
                 brt.anchoredPosition = new Vector2(-12f, -6f);
-                brt.sizeDelta = _sprBtnDecode != null ? new Vector2(120f, 44f) : new Vector2(96f, 32f);
+                brt.sizeDelta = _sprBtnDecode != null ? new Vector2(170f, 58f) : new Vector2(96f, 32f);
                 btn.onClick.AddListener(() => { DataRecovery.Instance?.StartDecoding(); Refresh(); });
                 if (!dr.CanStartDecoding) { var cg = btn.gameObject.AddComponent<CanvasGroup>(); cg.alpha = 0.4f; }
             }
@@ -744,6 +744,20 @@ namespace NuclearReMind
             _root.GetComponent<Image>().raycastTarget = true; // absorb clicks so they don't hit the backdrop
             _edge = edge;
 
+            // ★ 2026-07-23 (owner): dark interior. The metal frame sprite's CENTER is light grey, so the
+            //   whole panel body rendered washed-out and every dark-theme color read wrong. A near-black
+            //   fill inset just inside the metal border restores the mockup's dark page; header/content
+            //   are created after this, so they draw on top.
+            if (skinned)
+            {
+                var interior = Flat("Interior", _root.transform, CCard);
+                var irt = interior.GetComponent<RectTransform>();
+                irt.anchorMin = Vector2.zero; irt.anchorMax = Vector2.one;
+                irt.offsetMin = new Vector2(edge - 2f, edge - 2f);
+                irt.offsetMax = new Vector2(-(edge - 2f), -(edge - 2f));
+                interior.GetComponent<Image>().raycastTarget = false;
+            }
+
             // ═════ header ═════
             var head = Flat("Head", _root.transform, CHead);
             var hrt = head.GetComponent<RectTransform>();
@@ -812,7 +826,8 @@ namespace NuclearReMind
                 : RoundBtn("CrewMinus", _repairBlock.transform, "−", 18, CHead, CText, CHeadLine, 4);
             var rmRt = (RectTransform)rMinus.transform;
             rmRt.anchorMin = rmRt.anchorMax = rmRt.pivot = new Vector2(0f, 1f);
-            rmRt.anchoredPosition = new Vector2(18f, -78f); rmRt.sizeDelta = new Vector2(36f, 36f);
+            rmRt.anchoredPosition = new Vector2(18f, -78f);
+            rmRt.sizeDelta = _sprBtnMinus != null ? new Vector2(44f, 44f) : new Vector2(36f, 36f);
             rMinus.onClick.AddListener(() => EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, -1));
 
             var rDisp = Rounded("CrewDisp", _repairBlock.transform, CTrack, 6);
@@ -828,7 +843,8 @@ namespace NuclearReMind
                 : RoundBtn("CrewPlus", _repairBlock.transform, "+", 18, CHead, CText, CHeadLine, 4);
             var rpRt = (RectTransform)rPlus.transform;
             rpRt.anchorMin = rpRt.anchorMax = rpRt.pivot = new Vector2(1f, 1f);
-            rpRt.anchoredPosition = new Vector2(-18f, -78f); rpRt.sizeDelta = new Vector2(36f, 36f);
+            rpRt.anchoredPosition = new Vector2(-18f, -78f);
+            rpRt.sizeDelta = _sprBtnPlus != null ? new Vector2(44f, 44f) : new Vector2(36f, 36f);
             rPlus.onClick.AddListener(() => EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, +1));
 
             var crewHint = Txt("CrewHint", _repairBlock.transform, "ปุ่มลัด Q ลด / E เพิ่ม", 10, CDim, TextAnchor.UpperLeft, FontStyle.Normal);
@@ -884,7 +900,8 @@ namespace NuclearReMind
                 : RoundBtn("Minus", _mainBlock.transform, "−", 20, CHead, CText, CHeadLine, 4);
             var mnRt = (RectTransform)minus.transform;
             mnRt.anchorMin = mnRt.anchorMax = mnRt.pivot = new Vector2(0f, 1f);
-            mnRt.anchoredPosition = new Vector2(18f, ay - 26f); mnRt.sizeDelta = new Vector2(40f, 40f);
+            mnRt.anchoredPosition = new Vector2(18f, ay - 26f);
+            mnRt.sizeDelta = _sprBtnMinus != null ? new Vector2(48f, 48f) : new Vector2(40f, 40f);
             minus.onClick.AddListener(() => EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, -1));
 
             var disp = Rounded("Disp", _mainBlock.transform, CTrack, 6);
@@ -901,7 +918,8 @@ namespace NuclearReMind
                 : RoundBtn("Plus", _mainBlock.transform, "+", 20, CHead, CText, CHeadLine, 4);
             var plRt = (RectTransform)plus.transform;
             plRt.anchorMin = plRt.anchorMax = plRt.pivot = new Vector2(1f, 1f);
-            plRt.anchoredPosition = new Vector2(-18f, ay - 26f); plRt.sizeDelta = new Vector2(40f, 40f);
+            plRt.anchoredPosition = new Vector2(-18f, ay - 26f);
+            plRt.sizeDelta = _sprBtnPlus != null ? new Vector2(48f, 48f) : new Vector2(40f, 40f);
             plus.onClick.AddListener(() => EventManager.Instance?.RaiseWorkerAssignRequested(_labCell, +1));
 
             // warnings (toggled in Refresh — space reserved so the layout never jumps)
@@ -927,7 +945,7 @@ namespace NuclearReMind
                 float w, hTab;
                 if (spr != null) // ★ baked metal filter plates (owner art) — text lives in the sprite
                 {
-                    hTab = 38f;
+                    hTab = 48f;
                     w = hTab * (spr.rect.width / spr.rect.height);
                     b = SpriteBtn($"Tab_{id}", _mainBlock.transform, spr);
                 }
@@ -939,7 +957,7 @@ namespace NuclearReMind
                 }
                 var trt = (RectTransform)b.transform;
                 trt.anchorMin = trt.anchorMax = trt.pivot = new Vector2(1f, 1f);
-                trt.anchoredPosition = new Vector2(tx, py + (spr != null ? 8f : 2f));
+                trt.anchoredPosition = new Vector2(tx, py + (spr != null ? 14f : 2f));
                 trt.sizeDelta = new Vector2(w, hTab);
                 tx -= w + 6f;
                 string fid = id;
