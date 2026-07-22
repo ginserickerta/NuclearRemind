@@ -105,6 +105,7 @@ namespace NuclearReMind
             }
             EventManager.Instance.OnDayStarted += HandleDayStarted;
             EventManager.Instance.OnDayEnded += HandleDayEnded;
+            EventManager.Instance.OnReactorStateChanged += HandleReactorState;
             Trace($"CardManager พร้อมแล้ว (GameObject '{name}') — subscribe OnDayEnded เรียบร้อย");
         }
 
@@ -113,6 +114,28 @@ namespace NuclearReMind
             if (EventManager.Instance == null) return;
             EventManager.Instance.OnDayStarted -= HandleDayStarted;
             EventManager.Instance.OnDayEnded -= HandleDayEnded;
+            EventManager.Instance.OnReactorStateChanged -= HandleReactorState;
+        }
+
+        /// <summary>
+        /// ★ 2026-07-23: immediate STATE trigger for the heat card. The day-end sweep alone had a
+        /// full day of lag — CardManager's OnDayEnded handler often runs BEFORE ReactorController's
+        /// DailyTick (subscription order), so it graded YESTERDAY's heat; the player watched the HUD
+        /// sit above 62 all day with no crisis (Editor.log: day 8 HUD 84 while the sweep saw 56).
+        /// The reactor raises OnReactorStateChanged whenever heat is committed, so the crisis now
+        /// fires the moment the gauge crosses the threshold — bound to state, not the calendar
+        /// (rule #1). Cheap guard first: this event also fires per-frame during the core trickle.
+        /// </summary>
+        private void HandleReactorState(float core, float heat)
+        {
+            var cfg = _cfg != null ? _cfg : GameConfigSO.Instance;
+            if (cfg == null || heat <= cfg.cardHeatThreshold) return;
+            if (_currentDay <= 1 || HasPending) return; // day 1 = tutorial, same as the day-end sweep
+            EnsureCatalog();
+            if (!_catalog.TryGetValue(CardIds.Heat, out var card) || card == null) return;
+            if (!IsEligible(card, _currentDay, CardWorldState.Snapshot())) return; // cooldown/onceOnly
+            Trace($"HEAT {heat:0.0} ทะลุเกณฑ์ {cfg.cardHeatThreshold} — เสนอการ์ด heat ทันที (ไม่รอจบวัน)");
+            Present(card);
         }
 
         private void HandleDayStarted(int day, bool timed) => _currentDay = day;
