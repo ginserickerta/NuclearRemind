@@ -118,9 +118,50 @@ namespace NuclearReMind
         {
             _font = LoadFont();
             _panelFrame = Resources.Load<Sprite>("CardUI/panel_frame"); // metal skin — same as the card/quiz panels
+
+            // ★ 2026-07-23 (owner art): pixel-art skin set for the lab — slate boxes + baked-text metal
+            //   buttons. Every Load is null-safe; a missing sprite falls back to the code-drawn look.
+            _sprBox        = Resources.Load<Sprite>("ResearchUI/box_slate");
+            _sprBtnStart   = Resources.Load<Sprite>("ResearchUI/btn_start");
+            _sprBtnDecode  = Resources.Load<Sprite>("ResearchUI/btn_decode");
+            _sprBtnPlus    = Resources.Load<Sprite>("ResearchUI/btn_plus");
+            _sprBtnMinus   = Resources.Load<Sprite>("ResearchUI/btn_minus");
+            _sprTabAll     = Resources.Load<Sprite>("ResearchUI/btn_filter_all");
+            _sprTabNotes   = Resources.Load<Sprite>("ResearchUI/btn_filter_notes");
+            _sprTabRecords = Resources.Load<Sprite>("ResearchUI/btn_filter_records");
         }
 
         private Sprite _panelFrame;
+        private Sprite _sprBox, _sprBtnStart, _sprBtnDecode, _sprBtnPlus, _sprBtnMinus;
+        private Sprite _sprTabAll, _sprTabNotes, _sprTabRecords;
+
+        /// <summary>Skin a code-drawn box with the slate plate (nine-slice). False = sprite missing.</summary>
+        private bool ApplySlate(GameObject go, float ppuMult = 11f)
+        {
+            if (_sprBox == null || go == null) return false;
+            var img = go.GetComponent<Image>();
+            if (img == null) return false;
+            img.sprite = _sprBox;
+            img.type = Image.Type.Sliced;
+            img.pixelsPerUnitMultiplier = ppuMult;
+            img.color = Color.white;
+            return true;
+        }
+
+        /// <summary>Button from a baked-art sprite (text/icon already in the image). preserveAspect keeps it undistorted.</summary>
+        private Button SpriteBtn(string name, Transform parent, Sprite sprite)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = sprite;
+            img.preserveAspect = true;
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.None;
+            UIClickPop.Attach(go);
+            return btn;
+        }
 
         private void OnEnable()
         {
@@ -441,10 +482,13 @@ namespace NuclearReMind
             if (rank == 2)
             {
                 bool canAfford = lab.CanAfford(note);
-                var btn = RoundBtn("Start", row.transform, "เริ่มวิจัย", 14, CHead, CText, CHeadLine, 4);
+                var btn = _sprBtnStart != null
+                    ? SpriteBtn("Start", row.transform, _sprBtnStart)   // ★ baked "เริ่มวิจัย" metal plate
+                    : RoundBtn("Start", row.transform, "เริ่มวิจัย", 14, CHead, CText, CHeadLine, 4);
                 var brt = (RectTransform)btn.transform;
                 brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 1f);
-                brt.anchoredPosition = new Vector2(-12f, -10f); brt.sizeDelta = new Vector2(96f, 32f);
+                brt.anchoredPosition = new Vector2(-12f, -6f);
+                brt.sizeDelta = _sprBtnStart != null ? new Vector2(120f, 44f) : new Vector2(96f, 32f);
                 string id = note.noteId;
                 btn.onClick.AddListener(() => { ResearchLab.Instance?.TryStartResearch(id); Refresh(); });
                 if (!canAfford) { var cg = btn.gameObject.AddComponent<CanvasGroup>(); cg.alpha = 0.4f; } // Notice explains on click
@@ -501,10 +545,13 @@ namespace NuclearReMind
 
             if (!decoding)
             {
-                var btn = RoundBtn("Decode", row.transform, "ถอดรหัส", 14, CHead, CText, CHeadLine, 4);
+                var btn = _sprBtnDecode != null
+                    ? SpriteBtn("Decode", row.transform, _sprBtnDecode) // ★ baked "ถอดรหัส" metal plate
+                    : RoundBtn("Decode", row.transform, "ถอดรหัส", 14, CHead, CText, CHeadLine, 4);
                 var brt = (RectTransform)btn.transform;
                 brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 1f);
-                brt.anchoredPosition = new Vector2(-12f, -10f); brt.sizeDelta = new Vector2(96f, 32f);
+                brt.anchoredPosition = new Vector2(-12f, -6f);
+                brt.sizeDelta = _sprBtnDecode != null ? new Vector2(120f, 44f) : new Vector2(96f, 32f);
                 btn.onClick.AddListener(() => { DataRecovery.Instance?.StartDecoding(); Refresh(); });
                 if (!dr.CanStartDecoding) { var cg = btn.gameObject.AddComponent<CanvasGroup>(); cg.alpha = 0.4f; }
             }
@@ -525,7 +572,8 @@ namespace NuclearReMind
         private GameObject MakeRowShell(float height, float alpha)
         {
             var row = Rounded("Row", _listContainer, alpha < 1f ? Hex("#181510") : CSection, 6);
-            AddRoundBorder(row, CSectionBd, 6);
+            if (!ApplySlate(row))                  // ★ slate plate skin; border only on the fallback look
+                AddRoundBorder(row, CSectionBd, 6);
             var le = row.AddComponent<LayoutElement>();
             le.minHeight = height; le.preferredHeight = height;
             if (alpha < 1f) { var cg = row.AddComponent<CanvasGroup>(); cg.alpha = alpha; }
@@ -642,8 +690,16 @@ namespace NuclearReMind
             foreach (var tab in _tabs)
             {
                 bool on = tab.id == _filter;
+
+                // ★ sprite tabs (baked art): active = full brightness · inactive = dimmed plate
+                if (tab.bg != null && tab.bg.sprite != null && tab.lbl == null)
+                {
+                    tab.bg.color = on ? Color.white : new Color(0.55f, 0.55f, 0.55f, 0.9f);
+                    continue;
+                }
+
                 tab.bg.color = on ? CSectionBd : CSection;
-                tab.lbl.color = on ? CText : CDim;
+                if (tab.lbl != null) tab.lbl.color = on ? CText : CDim;
                 var ol = tab.bg.GetComponent<Outline>();
                 if (ol != null) ol.effectColor = on ? CHeadLine : CSectionBd;
             }
@@ -751,7 +807,9 @@ namespace NuclearReMind
 
             // ★ repair-crew assign row — visible while ruined (the main block's −/+ is hidden then).
             //   Routed through the same RaiseWorkerAssignRequested path (cap-clamped by WAM).
-            var rMinus = RoundBtn("CrewMinus", _repairBlock.transform, "−", 18, CHead, CText, CHeadLine, 4);
+            var rMinus = _sprBtnMinus != null
+                ? SpriteBtn("CrewMinus", _repairBlock.transform, _sprBtnMinus)
+                : RoundBtn("CrewMinus", _repairBlock.transform, "−", 18, CHead, CText, CHeadLine, 4);
             var rmRt = (RectTransform)rMinus.transform;
             rmRt.anchorMin = rmRt.anchorMax = rmRt.pivot = new Vector2(0f, 1f);
             rmRt.anchoredPosition = new Vector2(18f, -78f); rmRt.sizeDelta = new Vector2(36f, 36f);
@@ -765,7 +823,9 @@ namespace NuclearReMind
             _repairEngDisplay = Txt("V", rDisp.transform, "คนซ่อม 0 / 2", 15, CText, TextAnchor.MiddleCenter, FontStyle.Bold);
             StretchRT(_repairEngDisplay.rectTransform);
 
-            var rPlus = RoundBtn("CrewPlus", _repairBlock.transform, "+", 18, CHead, CText, CHeadLine, 4);
+            var rPlus = _sprBtnPlus != null
+                ? SpriteBtn("CrewPlus", _repairBlock.transform, _sprBtnPlus)
+                : RoundBtn("CrewPlus", _repairBlock.transform, "+", 18, CHead, CText, CHeadLine, 4);
             var rpRt = (RectTransform)rPlus.transform;
             rpRt.anchorMin = rpRt.anchorMax = rpRt.pivot = new Vector2(1f, 1f);
             rpRt.anchoredPosition = new Vector2(-18f, -78f); rpRt.sizeDelta = new Vector2(36f, 36f);
@@ -800,6 +860,7 @@ namespace NuclearReMind
             for (int i = 0; i < 4; i++)
             {
                 var card = Rounded($"Stat{i}", _mainBlock.transform, CStatCard, 6);
+                ApplySlate(card); // ★ "4 ช่อง" slate plate (owner art) — falls back to the flat card
                 var srt = card.GetComponent<RectTransform>();
                 srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0f, 1f);
                 srt.anchoredPosition = new Vector2(18f + i * (cardW + 7f), -12f);
@@ -818,7 +879,9 @@ namespace NuclearReMind
             var aSub = Txt("AS", _mainBlock.transform, "ปุ่มลัด Q ลด / E เพิ่ม · งานวิจัยเดินเมื่อคนพอตามที่หัวข้อกำหนด", 11, CDim, TextAnchor.UpperRight, FontStyle.Normal);
             SetTR(aSub.rectTransform, new Vector2(-18f, ay), new Vector2(320f, 18f));
 
-            var minus = RoundBtn("Minus", _mainBlock.transform, "−", 20, CHead, CText, CHeadLine, 4);
+            var minus = _sprBtnMinus != null
+                ? SpriteBtn("Minus", _mainBlock.transform, _sprBtnMinus)
+                : RoundBtn("Minus", _mainBlock.transform, "−", 20, CHead, CText, CHeadLine, 4);
             var mnRt = (RectTransform)minus.transform;
             mnRt.anchorMin = mnRt.anchorMax = mnRt.pivot = new Vector2(0f, 1f);
             mnRt.anchoredPosition = new Vector2(18f, ay - 26f); mnRt.sizeDelta = new Vector2(40f, 40f);
@@ -833,7 +896,9 @@ namespace NuclearReMind
             StretchRT(_engDisplay.rectTransform);
             _engDisplay.supportRichText = true;
 
-            var plus = RoundBtn("Plus", _mainBlock.transform, "+", 20, CHead, CText, CHeadLine, 4);
+            var plus = _sprBtnPlus != null
+                ? SpriteBtn("Plus", _mainBlock.transform, _sprBtnPlus)
+                : RoundBtn("Plus", _mainBlock.transform, "+", 20, CHead, CText, CHeadLine, 4);
             var plRt = (RectTransform)plus.transform;
             plRt.anchorMin = plRt.anchorMax = plRt.pivot = new Vector2(1f, 1f);
             plRt.anchoredPosition = new Vector2(-18f, ay - 26f); plRt.sizeDelta = new Vector2(40f, 40f);
@@ -848,17 +913,35 @@ namespace NuclearReMind
             var pHead = Txt("PH", _mainBlock.transform, "โครงการวิจัย", 14, CText, TextAnchor.UpperLeft, FontStyle.Bold);
             SetTL(pHead.rectTransform, new Vector2(18f, py), new Vector2(220f, 20f));
 
-            (string id, string label)[] tabs = { ("all", "ทั้งหมด"), ("notes", "ความรู้"), ("records", "กู้บันทึก") };
+            (string id, string label, Sprite spr)[] tabs =
+            {
+                ("all", "ทั้งหมด", _sprTabAll),
+                ("notes", "ความรู้", _sprTabNotes),
+                ("records", "กู้บันทึก", _sprTabRecords),
+            };
             float tx = -18f;
             for (int i = tabs.Length - 1; i >= 0; i--)
             {
-                var (id, label) = tabs[i];
-                float w = EstWidth(label, 12f) + 24f;
-                var b = RoundBtn($"Tab_{id}", _mainBlock.transform, label, 12, CSection, CDim, CSectionBd, 4);
+                var (id, label, spr) = tabs[i];
+                Button b;
+                float w, hTab;
+                if (spr != null) // ★ baked metal filter plates (owner art) — text lives in the sprite
+                {
+                    hTab = 38f;
+                    w = hTab * (spr.rect.width / spr.rect.height);
+                    b = SpriteBtn($"Tab_{id}", _mainBlock.transform, spr);
+                }
+                else
+                {
+                    hTab = 24f;
+                    w = EstWidth(label, 12f) + 24f;
+                    b = RoundBtn($"Tab_{id}", _mainBlock.transform, label, 12, CSection, CDim, CSectionBd, 4);
+                }
                 var trt = (RectTransform)b.transform;
                 trt.anchorMin = trt.anchorMax = trt.pivot = new Vector2(1f, 1f);
-                trt.anchoredPosition = new Vector2(tx, py + 2f); trt.sizeDelta = new Vector2(w, 24f);
-                tx -= w + 5f;
+                trt.anchoredPosition = new Vector2(tx, py + (spr != null ? 8f : 2f));
+                trt.sizeDelta = new Vector2(w, hTab);
+                tx -= w + 6f;
                 string fid = id;
                 b.onClick.AddListener(() => { _filter = fid; Refresh(); });
                 _tabs.Add((b, b.GetComponentInChildren<Text>(), b.GetComponent<Image>(), id));
