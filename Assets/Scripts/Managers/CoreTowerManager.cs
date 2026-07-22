@@ -831,8 +831,13 @@ namespace NuclearReMind
         {
             if (V63Live) // ★ v6.3: write through to the live reactor
             {
-                ReactorController.Instance.Core = Mathf.Clamp(percent, 0f, GameConfigSO.Instance.coreWin);
-                MirrorV63();
+                var r = ReactorController.Instance;
+                r.Core = Mathf.Clamp(percent, 0f, GameConfigSO.Instance.coreWin);
+                // ★ 2026-07-23: raise the REACTOR event, not just the tower mirror — phase-bound UI
+                //   (build hotbar's hidden hospital slot, Zone B row) listens to OnReactorStateChanged.
+                //   Without this, a debug core jump past 60/80 didn't reveal anything until the next
+                //   day started. MirrorV63 re-syncs from this event, so no separate call needed.
+                EventManager.Instance.RaiseReactorStateChanged(r.Core, r.Heat);
                 return;
             }
             if (!Current.isUnlocked) DebugUnlockNow();
@@ -849,8 +854,11 @@ namespace NuclearReMind
         {
             if (V63Live) // ★ v6.3: write through to the live reactor
             {
-                ReactorController.Instance.Heat = Mathf.Max(0f, heat);
-                MirrorV63();
+                var r = ReactorController.Instance;
+                r.Heat = Mathf.Max(0f, heat);
+                // Same reason as DebugSetCore: heat listeners (crisis card immediate trigger,
+                // panel gauges) ride OnReactorStateChanged — the mirror alone reaches neither.
+                EventManager.Instance.RaiseReactorStateChanged(r.Core, r.Heat);
                 return;
             }
             if (!Current.isUnlocked) DebugUnlockNow();
