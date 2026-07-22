@@ -19,6 +19,8 @@ boost_heat          = 14.0     # ★ เพิ่มจาก mode_heat ตอ�
 heat_start          = 0.0      # ★ 2026-07-21: เดิม 20 — เตาเริ่มเย็น ความร้อนมาจากการเดินเครื่องเอง
 heat_meltdown       = 100.0    # = Game Over
 heat_warn           = 90.0     # UI เตือน + ปลด SCRAM
+knowledge_per_note  = 5.0      # ★ 2026-07-23 (เจ้าของ) — วิจัยโน้ตเสร็จ = ความรู้ +5 (ใหญ่กว่าอ่าน Codex +2)
+                               #   8 โน้ต × 5 = 40 · รวม start 20 + Codex 22 + แล็บรายวัน → Expert(80) ต้องเล่นครบระบบ
 knowledge_q_max_bonus = 0.20   # ★ 2026-07-22 — Knowledge สเกล Q: gain × (1 + knowledge/100 × ค่านี้)
                                #   บวกอย่างเดียว ไม่มีวันต่ำกว่า ×1.0 → ไม่แตะพื้น 🔒 boost_core_gain
                                #   K20 เริ่มเกม +4% · K100 +20% (แทน KnowBonus v4.1 ที่ไม่เคยถูกต่อ)

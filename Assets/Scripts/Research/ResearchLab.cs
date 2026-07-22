@@ -379,6 +379,12 @@ namespace NuclearReMind
             WorkerManager.Instance?.Hope.Report("research.complete", $"วิจัยสำเร็จ: {note.title}",
                 GameConfigSO.Instance.hopeResearchComplete, HopeCategory.Research);
 
+            // ★ 2026-07-23 (owner): completing a note IS learning — grant Knowledge (+5, CONFIG.md).
+            // Biggest single K source by design: bigger than a Codex read (+2), and each note also
+            // feeds the knowledge→Q multiplier (+1% core speed per note at the 0.20 cap).
+            EventManager.Instance?.RaiseResourceDelta(ResourceType.Knowledge,
+                GameConfigSO.Instance.knowledgePerResearchNote);
+
             // ★ NoteCardPopup รับ event นี้ → เด้ง knowledgeBody + บท NPC (ห้ามผ่าน BarkManager)
             EventManager.Instance?.RaiseResearchNoteCompleted(note.noteId);
 

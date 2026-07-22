@@ -227,6 +227,10 @@ namespace NuclearReMind
         //   K20 start → +4% · K100 → +20% — supersedes the v4.1 Expert-only KnowBonus that was
         //   never wired into the v6.3 reactor.
         public float knowledgeQMaxBonus = 0.20f;
+        // ★ 2026-07-23 (owner) — completing a research note grants Knowledge. Sized above the +2
+        //   Codex read: 8 notes × 5 = 40 total, so research + codex + lab output reaches the
+        //   Expert tier (80) only with broad engagement, never automatically.
+        public float knowledgePerResearchNote = 5f;
         // ★ 2026-07-22 — ปุ่ม "หล่อเย็นเพิ่ม" (v6.3): จ่ายน้ำครั้งเดียว → ลด HEAT ทันที เห็นผลตรงหน้า
         //   (เดิมปุ่มวิ่งเข้า allocation path ที่ v6.3 ปิดไว้ = กดแล้วไม่มีอะไรเกิดเลย)
         public float manualCoolWaterCost = 20f;
