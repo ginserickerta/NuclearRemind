@@ -40,7 +40,7 @@ namespace NuclearReMind
             go.AddComponent<AudioManager>();
         }
 
-        private AudioClip _bgmMenu, _bgmGame, _click, _alert;
+        private AudioClip _bgmMenu, _bgmGame, _click, _alert, _build;
         private AudioSource _bgmA, _bgmB, _sfx;
         private AudioSource _activeBgm;
         private Coroutine _fade;
@@ -61,6 +61,7 @@ namespace NuclearReMind
             _bgmGame = Resources.Load<AudioClip>("Audio/bgm_game");
             _click   = Resources.Load<AudioClip>("Audio/sfx_click");
             _alert   = Resources.Load<AudioClip>("Audio/sfx_alert");
+            _build   = Resources.Load<AudioClip>("Audio/sfx_build");
             _bgmVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefBgmVolume, DefaultBgmVolume));
 
             _bgmA = gameObject.AddComponent<AudioSource>();
@@ -99,6 +100,19 @@ namespace NuclearReMind
 
             if (isMenu) BuildVolumeWidget();
             else if (_volumeWidget != null) Destroy(_volumeWidget);
+
+            // EventManager is scene-local (the menu destroys it) — re-hook after every load.
+            // Unsubscribe first so a reload never double-subscribes on the same instance.
+            if (EventManager.Instance != null)
+            {
+                EventManager.Instance.OnBuildingPlaced -= HandleBuildingPlaced;
+                EventManager.Instance.OnBuildingPlaced += HandleBuildingPlaced;
+            }
+        }
+
+        private void HandleBuildingPlaced(Cell cell, BuildingData data)
+        {
+            if (_build != null) _sfx.PlayOneShot(_build, SfxVolume);
         }
 
         private void PlayBgm(AudioClip clip)
