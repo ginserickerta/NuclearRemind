@@ -590,6 +590,33 @@ namespace NuclearReMind
             }
         }
 
+        // ───────── Debug / bypass (DebugCheatPanel — test rig; callers compile out of release) ─────────
+
+        /// <summary>
+        /// Debug: force radiation on up to `count` alive workers (lowest dose first) and recalc
+        /// statuses immediately, so the radiation table (>sickThreshold Sick · >dyingThreshold Dying)
+        /// shows without waiting for the day tick. Gameplay radiation still goes through the daily tick.
+        /// </summary>
+        public void DebugSetRadiation(int count, float radiation)
+        {
+            foreach (var w in _workers.Where(x => x.alive).OrderBy(x => x.radiation).Take(Mathf.Max(0, count)))
+                w.radiation = Mathf.Clamp(radiation, 0f, 100f);
+            RecalcStatus();
+        }
+
+        /// <summary>Debug: wipe radiation/hunger/fatigue on everyone alive — instant full heal.</summary>
+        public void DebugHealAll()
+        {
+            foreach (var w in _workers)
+            {
+                if (!w.alive) continue;
+                w.radiation = 0f;
+                w.hunger = 0f;
+                w.fatigue = 0f;
+            }
+            RecalcStatus();
+        }
+
         /// <summary>radiation > 80 → 20%/day death roll (GDD §17). rng injected for determinism.</summary>
         private void ProcessDeaths(WorkerTickContext ctx)
         {

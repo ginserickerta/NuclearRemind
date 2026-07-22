@@ -81,6 +81,7 @@ namespace NuclearReMind
             DrawResourceSection();
             DrawCoreSection();
             DrawPopulationSection();
+            DrawSicknessSection();
             DrawEndingSection();
 
             GUILayout.Space(6);
@@ -239,6 +240,38 @@ namespace NuclearReMind
             if (GUILayout.Button("Hope 1")) pop.DebugSetHope(1f);
             if (GUILayout.Button("ปลดฝึกทุกคลาส")) pop.DebugUnlockAllTraining();
             GUILayout.EndHorizontal();
+        }
+
+        // ───────────────────────── สถานะป่วย / รังสี ─────────────────────────
+        // Bypass for the radiation-status table (CONFIG: rad > sickThreshold = Sick 0% eff ·
+        // rad > dyingThreshold = Dying + 20%/day death roll). Numbers come from GameConfigSO,
+        // never hardcoded — the buttons push a hair past each threshold.
+        private void DrawSicknessSection()
+        {
+            GUILayout.Label("สถานะป่วย / รังสี (Bypass)", _hdr);
+            var wm = WorkerManager.Instance;
+            var cfg = GameConfigSO.Instance;
+            if (wm == null || cfg == null) { GUILayout.Label("(ยังไม่มี WorkerManager v6.3 — เข้า Gamescene ก่อน)"); return; }
+
+            float sickRad = cfg.sickThreshold + 5f;   // เกณฑ์ +5 ให้เกินชัวร์
+            float dyingRad = cfg.dyingThreshold + 5f;
+            GUILayout.Label($"ตอนนี้: ป่วย {wm.SickCount} · ใกล้ตาย {wm.DyingCount}   (เกณฑ์: รังสี >{cfg.sickThreshold:0} ป่วย · >{cfg.dyingThreshold:0} ใกล้ตาย)");
+
+            GUILayout.Label($"ยิงรังสี {sickRad:0} → ป่วยทันที (เลือกคนโดสต่ำสุดก่อน)");
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("1 คน")) wm.DebugSetRadiation(1, sickRad);
+            if (GUILayout.Button("3 คน (การ์ด sick)")) wm.DebugSetRadiation(3, sickRad);
+            if (GUILayout.Button("5 คน (การ์ด triage)")) wm.DebugSetRadiation(5, sickRad);
+            GUILayout.EndHorizontal();
+
+            GUILayout.Label($"ยิงรังสี {dyingRad:0} → ใกล้ตายทันที (เสี่ยงตาย {cfg.deathChance:P0}/วัน)");
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("1 คน")) wm.DebugSetRadiation(1, dyingRad);
+            if (GUILayout.Button("3 คน")) wm.DebugSetRadiation(3, dyingRad);
+            GUILayout.EndHorizontal();
+
+            if (GUILayout.Button("รักษาทุกคน (รังสี/หิว/ล้า → 0)")) wm.DebugHealAll();
+            GUILayout.Label("การ์ดวิกฤตประเมินตอนจบวัน — ยิงรังสีแล้วกด '⏭ ข้ามวัน' เพื่อดูการ์ด sick/triage");
         }
 
         // ───────────────────────── บังคับจบเกม ─────────────────────────
