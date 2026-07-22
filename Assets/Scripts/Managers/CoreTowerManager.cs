@@ -520,8 +520,12 @@ namespace NuclearReMind
 
         /// <summary>ล็อกโหมดเตา (เรียกตอนเข้าเฟส Live) — เปลี่ยนโหมดไม่ได้จนกว่าจะ Planning วันถัดไป (V4 §3)</summary>
         public void LockMode() => _modeLocked = true;
-        /// <summary>ปลดล็อกโหมด (เรียกตอนเริ่มวัน/Planning)</summary>
-        public void UnlockMode() => _modeLocked = false;
+        /// <summary>ปลดล็อกโหมด (เรียกตอนเริ่มวัน/Planning) — วันใหม่ = สิทธิ์เปลี่ยนโหมด 1 ครั้งกลับมา</summary>
+        public void UnlockMode() { _modeLocked = false; _modeChangedToday = false; }
+
+        // ★ 2026-07-23 (owner): one mode change per day. GameManager.BeginDay calls UnlockMode
+        //   every morning, so that is also where the daily allowance resets.
+        private bool _modeChangedToday;
 
         /// <summary>ตั้งโหมดเร่งเครื่อง — ได้ตั้งแต่ปลดล็อก (Day 11/30%) ช่วง Planning · Live ล็อก (§9)</summary>
         public void SetOverclockMode(int mode)
@@ -534,7 +538,31 @@ namespace NuclearReMind
             if (V63Live)
             {
                 int norm = Mathf.Clamp(mode, ModeIdle, ModeOverdrive);
-                ReactorController.Instance.SetMode(norm);
+                var r = ReactorController.Instance;
+                if (norm == r.Mode) return; // same mode — no cost, no daily allowance spent
+
+                // ★ 2026-07-23 (owner): switching is a priced decision — once per day, and the switch
+                //   charges the TARGET mode's deuterium up front (Idle 2 · Normal 6 · Boost 9 · OD 12).
+                //   Before this, mode flips were free and unlimited even with an empty tank.
+                if (_modeChangedToday)
+                {
+                    EventManager.Instance.RaiseNotice("เปลี่ยนโหมดเตาได้วันละ 1 ครั้ง — เปลี่ยนได้อีกครั้งพรุ่งนี้");
+                    MirrorV63(); // snap the panel back to the real mode
+                    return;
+                }
+                float cost = r.ModeSwitchCost(norm);
+                float have = ResourceManager.Instance != null ? ResourceManager.Instance.Current.deuterium : 0f;
+                if (have < cost)
+                {
+                    EventManager.Instance.RaiseNotice(
+                        $"ดิวเทอเรียมไม่พอเปลี่ยนโหมด — ต้องใช้ {cost:0} (มี {have:0})");
+                    MirrorV63();
+                    return;
+                }
+                if (cost > 0f) EventManager.Instance.RaiseResourceDelta(ResourceType.Deuterium, -cost);
+                _modeChangedToday = true;
+
+                r.SetMode(norm);
                 EventManager.Instance.RaiseOverclockModeChanged(norm);
                 MirrorV63();
                 return;

@@ -263,6 +263,10 @@ namespace NuclearReMind
         //   answer, mirroring how Boost's tritium draw (9) outruns Zone B base production.
         public float boostFuelNeed = 9f;           // Boost deuterium demand/day
         public float odFuelNeed = 12f;             // Overdrive deuterium demand/day
+        // ★ 2026-07-23 (owner): switching modes is a real decision now — one change per day, and the
+        //   switch itself charges the TARGET mode's deuterium up front (Idle 2 · Normal 6 · Boost 9 ·
+        //   Overdrive 12). Idle has no daily burn, so its whole price is this spin-down cost.
+        public float idleFuelNeed = 2f;            // Idle switch cost (no daily burn in Idle)
         public float methodBCoreGate = 80f;        // core ≥ 80 && tritium < 5 → gain = 0
         public float methodBTritiumMin = 5f;
         public float tritiumSoftFloor = 6f;        // tritium < 6 → gain ×= tritium/6

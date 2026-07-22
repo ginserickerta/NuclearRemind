@@ -106,6 +106,21 @@ namespace NuclearReMind
                      : _cfg.fuelNeed;
             }
         }
+
+        /// <summary>
+        /// ★ 2026-07-23: deuterium charged UP FRONT when switching TO a mode (Idle 2 · Normal 6 ·
+        /// Boost 9 · Overdrive 12). Owner rule: one change per day, and picking a mode costs that
+        /// mode's deuterium immediately — before, switching was free and the resource only mattered
+        /// at day end, so an empty tank never stopped the player from flipping modes.
+        /// </summary>
+        public float ModeSwitchCost(int mode)
+        {
+            if (_cfg == null) return 0f;
+            return mode == ModeIdle ? _cfg.idleFuelNeed
+                 : mode == ModeBoost ? _cfg.boostFuelNeed
+                 : mode == ModeOverdrive ? _cfg.odFuelNeed
+                 : _cfg.fuelNeed;
+        }
         public bool IsWin => Core >= (_cfg != null ? _cfg.coreWin : 100f);
         public bool IsMeltdown => Heat >= (_cfg != null ? _cfg.heatMeltdown : 100f);
         public int ScramCooldown => _scramCooldown;
