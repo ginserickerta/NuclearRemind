@@ -55,6 +55,7 @@ namespace NuclearReMind
         private string _filter = "all"; // all / notes / records
 
         private GameObject _backdrop, _root, _repairBlock, _mainBlock, _repairBarWrap;
+        private float _edge; // content inset that clears the metal frame border (0 on the fallback look)
         private Text _statusPill, _repairLine, _repairEngDisplay;
         private Image _statusPillBg, _repairFill;
         private Button _repairBtn;
@@ -113,7 +114,13 @@ namespace NuclearReMind
             return fallback;
         }
 
-        private void Awake() => _font = LoadFont();
+        private void Awake()
+        {
+            _font = LoadFont();
+            _panelFrame = Resources.Load<Sprite>("CardUI/panel_frame"); // metal skin — same as the card/quiz panels
+        }
+
+        private Sprite _panelFrame;
 
         private void OnEnable()
         {
@@ -420,13 +427,13 @@ namespace NuclearReMind
             if (meta.Length > 0)
             {
                 var m = Txt("Meta", row.transform, meta, 13, CMuted, TextAnchor.UpperLeft, FontStyle.Normal);
-                SetTL(m.rectTransform, new Vector2(14f, y), new Vector2(720f, 18f));
+                SetTL(m.rectTransform, new Vector2(14f, y), new Vector2(860f, 18f));
                 y -= 18f;
             }
             if (hint != null)
             {
                 var hTxt = Txt("Hint", row.transform, hint, 13, CDim, TextAnchor.UpperLeft, FontStyle.Italic);
-                SetTL(hTxt.rectTransform, new Vector2(14f, y), new Vector2(720f, 18f));
+                SetTL(hTxt.rectTransform, new Vector2(14f, y), new Vector2(860f, 18f));
                 y -= 18f;
             }
 
@@ -490,7 +497,7 @@ namespace NuclearReMind
                     ? "ห้องวิจัยพัง — ซ่อมก่อนถึงจะถอดรหัสได้"
                     : "กดถอดรหัสเพื่อเริ่ม — ใช้ห้องวิจัยร่วมกับงานวิจัย นักวิจัยที่ว่างช่วยให้เร็วขึ้น");
             var m = Txt("M", row.transform, sub, 12, CDim, TextAnchor.UpperLeft, FontStyle.Italic);
-            SetTL(m.rectTransform, new Vector2(14f, -32f), new Vector2(720f, 18f));
+            SetTL(m.rectTransform, new Vector2(14f, -32f), new Vector2(860f, 18f));
 
             if (!decoding)
             {
@@ -511,7 +518,7 @@ namespace NuclearReMind
         {
             var row = MakeRowShell(h, 0.55f);
             var t = Txt("T", row.transform, text, 13, col, TextAnchor.MiddleLeft, FontStyle.Normal);
-            SetTL(t.rectTransform, new Vector2(14f, -(h - 20f) * 0.5f), new Vector2(820f, 20f));
+            SetTL(t.rectTransform, new Vector2(14f, -(h - 20f) * 0.5f), new Vector2(940f, 20f));
             _rows.Add(row);
         }
 
@@ -538,12 +545,15 @@ namespace NuclearReMind
             return x + w + 5f;
         }
 
+        // width is a legacy hint — the bar now STRETCHES to the row with bottomLeft.x side margins,
+        // so it fits every panel width (★ 2026-07-23 resize).
         private Image AddBar(Transform parent, Vector2 bottomLeft, float width, float frac, Color fill)
         {
             var track = Rounded("BarTrack", parent, CTrack, 3);
             var rt = track.GetComponent<RectTransform>();
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0f);
-            rt.anchoredPosition = bottomLeft; rt.sizeDelta = new Vector2(width, 6f);
+            rt.anchorMin = new Vector2(0f, 0f); rt.anchorMax = new Vector2(1f, 0f); rt.pivot = new Vector2(0.5f, 0f);
+            rt.offsetMin = new Vector2(bottomLeft.x, bottomLeft.y);
+            rt.offsetMax = new Vector2(-bottomLeft.x, bottomLeft.y + 6f);
             var f = Rounded("Fill", track.transform, fill, 3);
             var frt = f.GetComponent<RectTransform>();
             frt.anchorMin = Vector2.zero; frt.anchorMax = new Vector2(Mathf.Clamp01(frac), 1f);
@@ -615,7 +625,7 @@ namespace NuclearReMind
             if (earned == 0)
             {
                 var t = Txt("None", _masteryContainer, "ยังไม่มี — ตอบคำถามใน Codex ให้ถูกเพื่อปลดความเชี่ยวชาญ", 13, CFaint, TextAnchor.UpperLeft, FontStyle.Italic);
-                SetTL(t.rectTransform, Vector2.zero, new Vector2(820f, 20f));
+                SetTL(t.rectTransform, Vector2.zero, new Vector2(940f, 20f));
                 _chips.Add(t.gameObject);
             }
             if (_masteryHead != null)
@@ -648,26 +658,41 @@ namespace NuclearReMind
             bd.transition = Selectable.Transition.None;
             bd.onClick.AddListener(Hide);
 
-            const float W = 920f, H = 700f; // wider + shorter per playtest feedback
+            // ★ 2026-07-23 (owner): bigger + on-theme — 1060×800 with the metal panel_frame skin the
+            //   crisis/quiz/note panels wear. The old mockup card/ring stays as the no-sprite fallback.
+            const float W = 1060f, H = 800f;
+            bool skinned = _panelFrame != null;
+            // Content insets clear the ~30px metal border when the frame skin is on.
+            float edge = skinned ? 28f : 0f;
 
             // box-shadow ring (mockup: box-shadow 0 0 0 4px #171310) — a rounded rect 8px larger behind the card
             var ring = Rounded("Ring", _backdrop.transform, CRing, 10);
             var ringRt = ring.GetComponent<RectTransform>();
             ringRt.anchorMin = ringRt.anchorMax = ringRt.pivot = new Vector2(0.5f, 0.5f);
             ringRt.sizeDelta = new Vector2(W + 8f, H + 8f);
+            if (skinned) ring.GetComponent<Image>().enabled = false; // the metal frame is its own border
 
             _root = Rounded("Card", ring.transform, CCard, 8);
-            AddRoundBorder(_root, CCardBorder, 8);
+            if (skinned)
+            {
+                var cardImg = _root.GetComponent<Image>();
+                cardImg.sprite = _panelFrame;
+                cardImg.type = Image.Type.Sliced;
+                cardImg.pixelsPerUnitMultiplier = 3f;
+                cardImg.color = Color.white;
+            }
+            else AddRoundBorder(_root, CCardBorder, 8);
             var rt = _root.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(W, H);
             _root.GetComponent<Image>().raycastTarget = true; // absorb clicks so they don't hit the backdrop
+            _edge = edge;
 
             // ═════ header ═════
             var head = Flat("Head", _root.transform, CHead);
             var hrt = head.GetComponent<RectTransform>();
             hrt.anchorMin = new Vector2(0f, 1f); hrt.anchorMax = Vector2.one; hrt.pivot = new Vector2(0.5f, 1f);
-            hrt.anchoredPosition = Vector2.zero; hrt.sizeDelta = new Vector2(0f, 62f);
+            hrt.anchoredPosition = new Vector2(0f, -edge); hrt.sizeDelta = new Vector2(-edge * 2f, 62f);
             var headLine = Flat("Line", head.transform, CHeadLine);
             var hlRt = headLine.GetComponent<RectTransform>();
             hlRt.anchorMin = Vector2.zero; hlRt.anchorMax = new Vector2(1f, 0f); hlRt.pivot = new Vector2(0.5f, 0f);
@@ -704,7 +729,7 @@ namespace NuclearReMind
             _repairBlock = Flat("RepairBlock", _root.transform, CSection);
             var rt = _repairBlock.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0f, 1f); rt.anchorMax = Vector2.one; rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0f, -62f); rt.sizeDelta = new Vector2(0f, 158f);
+            rt.anchoredPosition = new Vector2(0f, -62f - _edge); rt.sizeDelta = new Vector2(-_edge * 2f, 158f);
             var line = Flat("Line", _repairBlock.transform, CSectionBd);
             var lrt = line.GetComponent<RectTransform>();
             lrt.anchorMin = Vector2.zero; lrt.anchorMax = new Vector2(1f, 0f); lrt.pivot = new Vector2(0.5f, 0f);
@@ -764,13 +789,14 @@ namespace NuclearReMind
             _mainBlock.transform.SetParent(_root.transform, false);
             var mrt = _mainBlock.GetComponent<RectTransform>();
             mrt.anchorMin = Vector2.zero; mrt.anchorMax = Vector2.one;
-            mrt.offsetMin = Vector2.zero; mrt.offsetMax = new Vector2(0f, -62f); // below header
+            mrt.offsetMin = new Vector2(_edge, _edge); mrt.offsetMax = new Vector2(-_edge, -62f - _edge); // below header, inside the frame
+            float iw = W - _edge * 2f; // width the absolute children actually have
 
             // ═════ stats grid (4 cards) ═════
             string[] labels = { "วิศวกรในห้องวิจัย", "ช่องวิจัย (คิว)", "แรงงานว่างในเมือง", "บันทึกที่กู้" };
             Color[] valueCols = { CText, CGold, CText, CPink };
             var statTexts = new Text[4];
-            float cardW = (W - 36f - 21f) / 4f;
+            float cardW = (iw - 36f - 21f) / 4f;
             for (int i = 0; i < 4; i++)
             {
                 var card = Rounded($"Stat{i}", _mainBlock.transform, CStatCard, 6);
@@ -841,7 +867,7 @@ namespace NuclearReMind
             var legend = Txt("Legend", _mainBlock.transform,
                 "<color=#85b7eb>ความรู้</color> = ปลดความรู้หลัก + ความเชี่ยวชาญ · <color=#ed93b1>กู้บันทึก</color> = ถอดรหัสบันทึกของ Elara ทีละใบ",
                 11, CDim, TextAnchor.UpperLeft, FontStyle.Normal);
-            SetTL(legend.rectTransform, new Vector2(18f, py - 24f), new Vector2(720f, 16f));
+            SetTL(legend.rectTransform, new Vector2(18f, py - 24f), new Vector2(860f, 16f));
             legend.supportRichText = true;
 
             // ═════ scrollable list (projects + mastery) ═════
