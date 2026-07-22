@@ -77,6 +77,8 @@ namespace NuclearReMind
         /// Parse one authored line in the crisis-card format: `Kova: "…"`. The surrounding quotes are
         /// stripped because the dialogue box draws its own speech frame. A line with no `Name:` prefix is
         /// kept verbatim as a System line rather than being dropped.
+        /// ★ 2026-07-23: `Name(emotion): "…"` picks the portrait face — e.g. `Dorn(sad): "…"`.
+        /// Unknown/absent emotion falls back to Neutral, so old content parses exactly as before.
         /// </summary>
         public static DialogueLine FromPrefixedLine(string raw)
         {
@@ -87,10 +89,22 @@ namespace NuclearReMind
             string body = raw;
             if (colon > 0)
             {
-                var candidate = Parse(raw.Substring(0, colon));
+                string prefix = raw.Substring(0, colon).Trim();
+
+                // optional `(emotion)` suffix on the name — split it off before matching the speaker
+                var emotion = Emotion.Neutral;
+                int paren = prefix.IndexOf('(');
+                if (paren > 0 && prefix.EndsWith(")"))
+                {
+                    emotion = ParseEmotion(prefix.Substring(paren + 1, prefix.Length - paren - 2));
+                    prefix = prefix.Substring(0, paren).Trim();
+                }
+
+                var candidate = Parse(prefix);
                 if (candidate != Speaker.System)      // only treat it as a prefix if the name is real
                 {
                     line.speaker = candidate;
+                    line.emotion = emotion;
                     body = raw.Substring(colon + 1);
                 }
             }
@@ -102,6 +116,28 @@ namespace NuclearReMind
 
             line.textTH = body.Trim();
             return line;
+        }
+
+        /// <summary>Emotion-name → enum for the `Name(emotion):` tag. Unknown = Neutral (never throws).</summary>
+        public static Emotion ParseEmotion(string raw)
+        {
+            if (string.IsNullOrEmpty(raw)) return Emotion.Neutral;
+            switch (raw.Trim().ToUpperInvariant())
+            {
+                case "HAPPY":      return Emotion.Happy;
+                case "WORRIED":    return Emotion.Worried;
+                case "SERIOUS":
+                case "ANGRY":      return Emotion.Serious;   // Dorn's angry art rides the Serious slot
+                case "EXPLAIN":    return Emotion.Explain;
+                case "EXCITED":    return Emotion.Excited;
+                case "WELDING":    return Emotion.Welding;
+                case "SAD":        return Emotion.Sad;
+                case "PROUD":      return Emotion.Proud;
+                case "THINKING":   return Emotion.Thinking;
+                case "SURPRISED":  return Emotion.Surprised;
+                case "DETERMINED": return Emotion.Determined;
+                default:           return Emotion.Neutral;
+            }
         }
 
         // อักษรย่อบน placeholder portrait (จนกว่าจะมีภาพจริงมาสลับ)

@@ -134,7 +134,9 @@ namespace NuclearReMind
         {
             speaker = ToSpeaker(b.speaker),
             textTH = b.text,
-            emotion = b.speaker == BarkSpeaker.Auren ? Emotion.Thinking : Emotion.Neutral,
+            // ★ 2026-07-23: barks carry their own portrait emotion now (BarkSO.emotion, default
+            // Neutral). Auren keeps the Thinking override — the inner voice has no other face.
+            emotion = b.speaker == BarkSpeaker.Auren ? Emotion.Thinking : b.emotion,
         };
 
         private static Speaker ToSpeaker(BarkSpeaker s)

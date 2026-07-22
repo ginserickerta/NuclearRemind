@@ -55,14 +55,16 @@ namespace NuclearReMind.EditorTools
 
             // ── DORN ────────────────────────────────────────────────
             // "เท่าตัว" ไม่ใช่ "สามเท่า" — เงื่อนไขจริงคือ spoilHighMult (2×) ตัวเลขในบทต้องตรงกับกลไก
-            W("D01", BarkSpeaker.Dorn, "ข้าวเน่าเร็วกว่าปกติเท่าตัว ผมทำนามาสามสิบปี ไม่เคยเจอแบบนี้", 95, Once, true);
-            W("D02", BarkSpeaker.Dorn, "ยุ้งจะว่างในสามวัน ยังไม่มีใครหาทางแก้ได้เลยเหรอ", 85, 2, false);
-            W("D03", BarkSpeaker.Dorn, "คุณจะเอารังสีมายิงใส่ข้าวที่คนต้องกินเนี่ยนะ", 90, Once, true);
-            W("D04", BarkSpeaker.Dorn, "ผมยังไม่สบายใจ แต่ยุ้งไม่ว่างแล้ว ก็เอาเถอะ", 70, Once, true);
-            W("D05", BarkSpeaker.Dorn, "ข้าวสายพันธุ์นี้โตในดินที่ผมคิดว่าปลูกอะไรไม่ขึ้นแล้ว", 70, Once, true);
-            W("D06", BarkSpeaker.Dorn, "ยุ้งว่างเปล่า ผมไม่มีอะไรให้ใครแล้ว", 95, 1, false);
-            W("D07", BarkSpeaker.Dorn, "คนในฟาร์มเหลือน้อยเกินไป ผมทำคนเดียวไม่ไหว", 75, 3, false);
-            W("D08", BarkSpeaker.Dorn, "ผมเคยกลัวของพวกนี้ ตอนนี้ผมเป็นคนเปิดเครื่องเอง", 60, Once, true);
+            // ★ 2026-07-23: emotion ต่อบรรทัด (อาร์ตชุดใหม่ 5 หน้า) — worried/sad=น้ำตาซึม ·
+            //   serious=โกรธตะโกน · proud=ชูกำปั้น · happy=ยิ้ม
+            W("D01", BarkSpeaker.Dorn, "ข้าวเน่าเร็วกว่าปกติเท่าตัว ผมทำนามาสามสิบปี ไม่เคยเจอแบบนี้", 95, Once, true, Emotion.Worried);
+            W("D02", BarkSpeaker.Dorn, "ยุ้งจะว่างในสามวัน ยังไม่มีใครหาทางแก้ได้เลยเหรอ", 85, 2, false, Emotion.Serious);
+            W("D03", BarkSpeaker.Dorn, "คุณจะเอารังสีมายิงใส่ข้าวที่คนต้องกินเนี่ยนะ", 90, Once, true, Emotion.Serious);
+            W("D04", BarkSpeaker.Dorn, "ผมยังไม่สบายใจ แต่ยุ้งไม่ว่างแล้ว ก็เอาเถอะ", 70, Once, true, Emotion.Sad);
+            W("D05", BarkSpeaker.Dorn, "ข้าวสายพันธุ์นี้โตในดินที่ผมคิดว่าปลูกอะไรไม่ขึ้นแล้ว", 70, Once, true, Emotion.Happy);
+            W("D06", BarkSpeaker.Dorn, "ยุ้งว่างเปล่า ผมไม่มีอะไรให้ใครแล้ว", 95, 1, false, Emotion.Sad);
+            W("D07", BarkSpeaker.Dorn, "คนในฟาร์มเหลือน้อยเกินไป ผมทำคนเดียวไม่ไหว", 75, 3, false, Emotion.Worried);
+            W("D08", BarkSpeaker.Dorn, "ผมเคยกลัวของพวกนี้ ตอนนี้ผมเป็นคนเปิดเครื่องเอง", 60, Once, true, Emotion.Proud);
 
             // ── CITIZEN ─────────────────────────────────────────────
             W("C01", BarkSpeaker.Citizen, "หอคอยจะเสร็จเมื่อไหร่ครับ มีใครรู้บ้างไหม", 60, Once, true);
@@ -77,7 +79,8 @@ namespace NuclearReMind.EditorTools
             Debug.Log("[BarksSetup] สร้าง/อัปเดต BarkSO 42 ใบ ที่ " + Folder);
         }
 
-        private static void W(string barkId, BarkSpeaker speaker, string text, int priority, int cooldownDays, bool onceOnly)
+        private static void W(string barkId, BarkSpeaker speaker, string text, int priority, int cooldownDays, bool onceOnly,
+                              Emotion emotion = Emotion.Neutral)
         {
             string path = $"{Folder}/{barkId}.asset";
             var b = AssetDatabase.LoadAssetAtPath<BarkSO>(path);
@@ -90,6 +93,7 @@ namespace NuclearReMind.EditorTools
             b.priority = priority;
             b.cooldownDays = cooldownDays;
             b.onceOnly = onceOnly;
+            b.emotion = emotion;
 
             if (isNew) AssetDatabase.CreateAsset(b, path);
             else EditorUtility.SetDirty(b);

@@ -115,7 +115,7 @@ namespace NuclearReMind.EditorTools
 "นักวิจัยคัดเฉพาะสายพันธุ์ที่ทนทาน/ผลผลิตสูงไว้ใช้ถาวร\n" +
 "(ข้าว กข6 ของไทย มาจากวิธีนี้)\n\n" +
 "→ ปลดล็อก: Co-60 Chamber · Mutation Lab";
-                n.completionSpeaker = "DORN";
+                n.completionSpeaker = "DORN(angry)";
                 n.completionLine = "คุณจะเอารังสีมายิงใส่ข้าวที่คนต้องกิน แล้วบอกว่ามันปลอดภัยเนี่ยนะ";
             });
 
@@ -193,7 +193,7 @@ namespace NuclearReMind.EditorTools
 "ปัญหาคือเราดึงคนออกจากฟาร์มไปทำอย่างอื่น แล้วลืมว่ายุ้งไม่เติมตัวเอง\n\n" +
 "คลังเสบียงที่ปิดสนิทและมีระบบหมุนเวียน ช่วยยืดเวลาให้เราแก้ตัวได้\n\n" +
 "→ ปลดล็อก: Granary (อัตราเน่า ×0.6 · เปิดคลังสำรองได้ตอนวิกฤต)";
-                n.completionSpeaker = "DORN";
+                n.completionSpeaker = "DORN(serious)";
                 n.completionLine = "ผมพูดมาสามอาทิตย์แล้วว่ายุ้งมันไม่เติมตัวเอง";
             });
 

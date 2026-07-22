@@ -20,3 +20,4 @@ MonoBehaviour:
   priority: 95
   cooldownDays: 99
   onceOnly: 1
+  emotion: 2

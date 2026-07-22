@@ -229,13 +229,25 @@ namespace NuclearReMind
             if (note == null || string.IsNullOrEmpty(note.completionLine)) return;
             if (EventManager.Instance == null) return;
 
+            // ★ 2026-07-23: completionSpeaker may carry an emotion tag — "DORN(sad)" — same syntax as
+            // crisis-card lines. Plain names parse exactly as before (Neutral).
+            string spRaw = note.completionSpeaker ?? "";
+            var emotion = Emotion.Neutral;
+            int paren = spRaw.IndexOf('(');
+            if (paren > 0 && spRaw.TrimEnd().EndsWith(")"))
+            {
+                string tag = spRaw.TrimEnd();
+                emotion = SpeakerMeta.ParseEmotion(tag.Substring(paren + 1, tag.Length - paren - 2));
+                spRaw = spRaw.Substring(0, paren);
+            }
+
             EventManager.Instance.RaiseStoryDialogueShown(new[]
             {
                 new DialogueLine
                 {
-                    speaker = SpeakerMeta.Parse(note.completionSpeaker),
+                    speaker = SpeakerMeta.Parse(spRaw),
                     textTH  = note.completionLine,
-                    emotion = Emotion.Neutral,
+                    emotion = emotion,
                 },
             });
         }

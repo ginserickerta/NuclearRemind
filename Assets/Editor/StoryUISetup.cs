@@ -357,21 +357,22 @@ namespace NuclearReMind.EditorTools
                 Load(MiraPath("surprised")),   // 10 Surprised
                 Load(MiraPath("determined")),  // 11 Determined
             };
-            // Dorn 5 อารมณ์ (ชาวสวน · ซ้าย)
+            // Dorn 5 อารมณ์ (ชาวสวน · ซ้าย) — ★ 2026-07-23 อาร์ตชุดใหม่ (เจ้าของ): เนื้อหาไฟล์เปลี่ยนความหมาย
+            //   neutral=สงบ · happy=ยิ้มหลับตา · proud=ชูกำปั้น(มุ่งมั่น) · serious=โกรธตะโกน · thinking=น้ำตาซึม(เศร้า/กังวล)
             dlg.dornEmotionSprites = new Sprite[]
             {
                 Load(DornPath("neutral")),     // 0 Neutral
                 Load(DornPath("happy")),       // 1 Happy
-                Load(DornPath("serious")),     // 2 Worried
-                Load(DornPath("serious")),     // 3 Serious
+                Load(DornPath("thinking")),    // 2 Worried → หน้ากังวลน้ำตาซึม
+                Load(DornPath("serious")),     // 3 Serious → เดือด (บท serious ของดอร์นคือฉากปะทะทั้งนั้น)
                 Load(DornPath("neutral")),     // 4 Explain
                 Load(DornPath("happy")),       // 5 Excited
                 null,                          // 6 Welding
-                Load(DornPath("serious")),     // 7 Sad
-                Load(DornPath("proud")),       // 8 Proud → อุ้มตะกร้า (พอใจ)
-                Load(DornPath("thinking")),    // 9 Thinking
-                Load(DornPath("thinking")),    // 10 Surprised → กังขา (ใกล้สุด)
-                Load(DornPath("serious")),     // 11 Determined
+                Load(DornPath("thinking")),    // 7 Sad → น้ำตาซึม
+                Load(DornPath("proud")),       // 8 Proud → ชูกำปั้น
+                Load(DornPath("neutral")),     // 9 Thinking
+                Load(DornPath("neutral")),     // 10 Surprised
+                Load(DornPath("proud")),       // 11 Determined → ชูกำปั้น
             };
             EditorUtility.SetDirty(dlg);
         }

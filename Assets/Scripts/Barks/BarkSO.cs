@@ -22,5 +22,8 @@ namespace NuclearReMind
         public int priority = 50;           // higher wins when more than one fires
         public int cooldownDays = 2;        // may repeat after this many days
         public bool onceOnly;               // said at most once per game
+        // ★ 2026-07-23: portrait face for the dialogue popup (BarkDialogueRouter). Default Neutral,
+        // so every asset saved before this field existed keeps its old behavior (save-compat rule).
+        public Emotion emotion = Emotion.Neutral;
     }
 }
