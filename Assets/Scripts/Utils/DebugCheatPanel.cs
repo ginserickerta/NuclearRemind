@@ -255,7 +255,7 @@ namespace NuclearReMind
 
             float sickRad = cfg.sickThreshold + 5f;   // เกณฑ์ +5 ให้เกินชัวร์
             float dyingRad = cfg.dyingThreshold + 5f;
-            GUILayout.Label($"ตอนนี้: ป่วย {wm.SickCount} · ใกล้ตาย {wm.DyingCount}   (เกณฑ์: รังสี >{cfg.sickThreshold:0} ป่วย · >{cfg.dyingThreshold:0} ใกล้ตาย)");
+            GUILayout.Label($"ตอนนี้: ☣ ป่วย {wm.SickCount} · ☠ ใกล้ตาย {wm.DyingCount}   (เกณฑ์: รังสี >{cfg.sickThreshold:0} ป่วย · >{cfg.dyingThreshold:0} ใกล้ตาย)");
 
             GUILayout.Label($"ยิงรังสี {sickRad:0} → ป่วยทันที (เลือกคนโดสต่ำสุดก่อน)");
             GUILayout.BeginHorizontal();

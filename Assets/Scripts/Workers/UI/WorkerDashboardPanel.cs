@@ -342,14 +342,17 @@ namespace NuclearReMind
 
         private static string StatusLabel(Worker w)
         {
+            // Sickness icons are BMP glyphs (☣ U+2623 · ☠ U+2620 · ⚰ U+26B0) — the same class as the
+            // ☢/✔ already used in JobLabel. True emoji (🤒 U+1F912 …) are surrogate pairs that legacy
+            // uGUI Text cannot draw (see WorkerHealthBadge), so BMP symbols are the only safe icons.
             switch (w.status)
             {
-                case WorkerStatus.Dying:     return "ใกล้ตาย";
-                case WorkerStatus.Sick:      return "ป่วย";
+                case WorkerStatus.Dying:     return "☠ ใกล้ตาย";
+                case WorkerStatus.Sick:      return "☣ ป่วย";
                 case WorkerStatus.Hungry:    return "หิว";
                 case WorkerStatus.Exhausted: return "หมดแรง";
                 case WorkerStatus.Tired:     return "ล้า";
-                case WorkerStatus.Dead:      return "เสียชีวิต";
+                case WorkerStatus.Dead:      return "⚰ เสียชีวิต";
                 default:                     return "ปกติ";
             }
         }
