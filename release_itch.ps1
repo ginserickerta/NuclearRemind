@@ -1,4 +1,4 @@
-<#
+﻿<#
   release_itch.ps1 — build NUCLEAR Re:Mind แล้วอัปขึ้น itch.io ทั้ง 2 แบบในคำสั่งเดียว
 
     WebGL (เล่นบนเว็บ)  Build\WebGL      → rutxkrps/nuclear-remind-2026:html
