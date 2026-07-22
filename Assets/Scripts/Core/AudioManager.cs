@@ -83,6 +83,15 @@ namespace NuclearReMind
             _alert   = Resources.Load<AudioClip>("Audio/sfx_alert");
             _build   = Resources.Load<AudioClip>("Audio/sfx_build");
             _bgmVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefBgmVolume, DefaultBgmVolume));
+            // Auto-heal a zeroed slider: there is no designed mute feature, so a saved ~0 almost
+            // certainly means someone bottomed the − button while testing — and then the game is
+            // silent forever with the only recovery widget living in the menu scene.
+            if (_bgmVolume < 0.05f)
+            {
+                Debug.LogWarning($"[AudioManager] ค่าเสียงเพลงที่เซฟไว้ = {_bgmVolume:0.00} — รีเซ็ตกลับ {DefaultBgmVolume:0.00}");
+                _bgmVolume = DefaultBgmVolume;
+                PlayerPrefs.SetFloat(PrefBgmVolume, _bgmVolume);
+            }
 
             // One diagnostic line so a missing clip / zeroed volume is visible instead of just silent.
             if (_bgmMenu == null || _bgmGame == null || _click == null || _alert == null || _build == null || _bgmVolume <= 0f)
@@ -139,8 +148,13 @@ namespace NuclearReMind
 
         private void PlayBgm(AudioClip clip)
         {
-            if (clip == null) return;
+            if (clip == null)
+            {
+                Debug.LogWarning("[AudioManager] BGM clip เป็น null — ไฟล์ใน Resources/Audio ยังไม่ถูก import?");
+                return;
+            }
             if (_activeBgm != null && _activeBgm.clip == clip) return;
+            Debug.Log($"[AudioManager] BGM → {clip.name} (loadState {clip.loadState}, vol {_bgmVolume:0.00})");
 
             var from = _activeBgm;
             var to = _activeBgm == _bgmA ? _bgmB : _bgmA;
