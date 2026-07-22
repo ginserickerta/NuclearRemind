@@ -118,6 +118,7 @@ namespace NuclearReMind
             {
                 AudioManager.Instance?.PlayAlert(); // ★ 2026-07-22: notification sting (rate-limited inside)
                 var go = BuildEntry(message);
+                UIPopIn.PlayOpen(go, self: true);   // ★ 2026-07-23: pop-in, same motion language as the panels
                 if (Application.isPlaying)
                     StartCoroutine(DismissAfter(go, key));
             }
@@ -175,7 +176,8 @@ namespace NuclearReMind
         {
             yield return new WaitForSecondsRealtime(displayDuration); // real-time → ไม่ขึ้นกับ pause/ความเร็ว
             _activeKeys.Remove(key);
-            if (go != null) Destroy(go);
+            // ★ 2026-07-23: shrink-out instead of vanishing; destroy once the close animation lands.
+            if (go != null) UIPopIn.PlayClose(go, () => { if (go != null) Destroy(go); });
         }
     }
 }
