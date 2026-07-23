@@ -27,7 +27,8 @@ $root   = "C:\Users\UsEr\NSC2026"
 $unity  = "C:\Program Files\Unity\Hub\Editor\6000.3.6f1\Editor\Unity.exe"
 $webDir = Join-Path $root "Build\WebGL"
 $winDir = Join-Path $root "Builds\Windows"
-$stamp  = Get-Date -Format "yyyy.MM.dd-HHmm"
+# InvariantCulture so the year is Gregorian (2026), not the Thai Buddhist year (2569)
+$stamp  = (Get-Date).ToString("yyyy.MM.dd-HHmm", [System.Globalization.CultureInfo]::InvariantCulture)
 
 function Say($msg) { Write-Host "`n=== $msg" -ForegroundColor Cyan }
 function Die($msg) { Write-Host "`nหยุด: $msg" -ForegroundColor Red; exit 1 }
@@ -55,13 +56,27 @@ function Invoke-UnityBuild($method, $logName, $label) {
   Say "build $label ... (นานหลายนาที · log: $logName)"
   $log = Join-Path $root $logName
   if (Test-Path $log) { Remove-Item $log -Force }
-  & $unity -quit -batchmode -nographics -projectPath $root -executeMethod $method -logFile $log
-  $code = $LASTEXITCODE
-  if ($code -ne 0) {
-    $errs = Select-String -Path $log -Pattern 'error CS|BuildFailedException|Build .*Failed' -ErrorAction SilentlyContinue |
-            Select-Object -First 15
+
+  # Unity batch relaunches itself once: the process we start returns an exit code EARLY while the
+  # real worker keeps building. Trusting that exit code reports a false failure mid-build. So we
+  # launch, then WAIT for every Unity process to be gone, and judge success from the log instead.
+  Start-Process -FilePath $unity -ArgumentList @(
+    '-quit','-batchmode','-nographics','-projectPath', $root, '-executeMethod', $method, '-logFile', $log
+  )
+  Start-Sleep -Seconds 5
+  $waited = 0
+  while (@(Get-Process Unity -ErrorAction SilentlyContinue).Count -gt 0) {
+    Start-Sleep -Seconds 3; $waited += 3
+    if ($waited -ge 2700) { Die "build $label เกิน 45 นาที — ดู $log" } # 45-min guard
+  }
+  Start-Sleep -Seconds 2 # let the log flush
+
+  $ok   = Select-String -Path $log -Pattern 'Build succeeded|✅ build สำเร็จ' -ErrorAction SilentlyContinue
+  $errs = Select-String -Path $log -Pattern 'error CS|BuildFailedException|Build .*(Failed|Cancelled)' -ErrorAction SilentlyContinue |
+          Select-Object -First 15
+  if (-not $ok) {
     if ($errs) { $errs | ForEach-Object { Write-Host $_.Line -ForegroundColor Yellow } }
-    Die "build $label ไม่สำเร็จ (exit $code) — ดู $log"
+    Die "build $label ไม่สำเร็จ (ไม่พบ 'Build succeeded' ใน log) — ดู $log"
   }
   Write-Host "build $label สำเร็จ" -ForegroundColor Green
 }
