@@ -5,6 +5,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สร้างไฟล์ asset บันทึกกู้ข้อมูล (RecordCardSO) ทั้ง 4 ใบ จาก docs/STORY.md
+    /// ลง Resources/Records — แต่ละใบปลดล็อกหัวข้อวิจัยล่วงหน้าให้ระบบ DataRecovery ใช้
     /// Generates the 4 Data-Recovery RecordCardSO assets (GDD §24 / STORY.md §3) into
     /// Assets/Resources/Records/ so DataRecovery auto-loads them.
     ///
@@ -17,6 +19,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string Folder = "Assets/Resources/Records";
 
+        // เมนูนี้: สร้าง/อัปเดต asset บันทึกกู้ข้อมูล 4 ใบจาก STORY.md — รันซ้ำได้ (คง GUID เดิม)
         [MenuItem("NuclearReMind/Setup Data Records")]
         public static void Apply()
         {

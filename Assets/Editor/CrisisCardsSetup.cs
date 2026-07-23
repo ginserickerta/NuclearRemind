@@ -6,6 +6,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สร้างไฟล์ asset การ์ดวิกฤต (CrisisCardSO) ทั้ง 8 ใบ จากเอกสาร docs/CARDS.md
+    /// ลง Resources/CrisisCards ให้ CardManager โหลดตอนรันเกม — ข้อความคัดลอกตรงตามเอกสาร ห้ามแต่งใหม่
     /// Generates the 8 CrisisCardSO assets (GDD §25 / CARDS.md) into Assets/Resources/CrisisCards/
     /// so CardManager auto-loads them at runtime.
     ///
@@ -19,6 +21,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string Folder = "Assets/Resources/CrisisCards";
 
+        // เมนูนี้: สร้าง/อัปเดต asset การ์ดวิกฤต 8 ใบจาก CARDS.md — รันซ้ำได้ (คง GUID เดิม)
         [MenuItem("NuclearReMind/Setup Crisis Cards")]
         public static void Apply()
         {

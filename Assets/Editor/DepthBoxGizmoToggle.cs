@@ -5,6 +5,8 @@ using NuclearReMind;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สวิตช์เปิด/ปิดการวาดกล่อง depth-sort ของอาคาร (gizmo) ตอนกด Play —
+    /// ใช้ดีบักว่าคนงานถูกวาดหน้า/หลังอาคารผิดเพราะกล่องอยู่ผิดที่ หรือกฎการเรียงผิด
     /// Toggle for BuildingDepthSort's runtime collider gizmos.
     ///
     /// The four depth boxes are computed at runtime from the sprite's bounds, so the numbers sitting in
@@ -19,6 +21,7 @@ namespace NuclearReMind.EditorTools
         private const string Path = "NuclearReMind/Tools/Show Depth Boxes";
         private const string Key = "nrm_show_depth_boxes";
 
+        // เมนูนี้: เปิด/ปิดการวาดกล่อง depth-sort (เขียว/ฟ้า/ส้ม) ใน Game view — ต้องเปิด Gizmos ด้วย
         [MenuItem(Path)]
         private static void Toggle()
         {

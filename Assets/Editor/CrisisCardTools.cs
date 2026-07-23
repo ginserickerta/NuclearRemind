@@ -5,6 +5,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: เครื่องมือดีบักท่อส่งการ์ดวิกฤต (ใช้ตอนกด Play) — เทียบสภาพโลกกับเกณฑ์ trigger,
+    /// เปิด/ปิด trace สิ้นวัน, ล้างการ์ดค้าง และบังคับแสดงการ์ดเพื่อแยกว่าปัญหาอยู่ที่เงื่อนไขหรือ UI
     /// Play-mode diagnostics for the crisis-card pipeline (GDD §25 / CARDS.md).
     ///
     /// Two questions this answers, which look identical from inside the game and have opposite fixes:
@@ -18,6 +20,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string Root = "NuclearReMind/Crisis Cards/";
 
+        // เมนูนี้: พิมพ์สภาพโลกปัจจุบันเทียบเกณฑ์ trigger ของการ์ดทุกใบ ลง Console
         [MenuItem(Root + "Log World State vs Triggers", priority = 0)]
         private static void LogWorldState()
         {
@@ -41,6 +44,7 @@ namespace NuclearReMind.EditorTools
             Debug.Log(sb.ToString());
         }
 
+        // เมนูนี้: เปิด/ปิดการ log trace ตอนจบวันของ CardManager
         [MenuItem(Root + "Toggle Day-End Trace", priority = 1)]
         private static void ToggleTrace()
         {
@@ -48,6 +52,7 @@ namespace NuclearReMind.EditorTools
             Debug.Log($"[Cards] day-end trace = {(CardManager.VerboseTrace ? "เปิด" : "ปิด")}");
         }
 
+        // เมนูนี้: ล้างการ์ดที่ค้างรอคำตอบ (ปลดบล็อกให้การ์ดใบใหม่ขึ้นได้)
         [MenuItem(Root + "Clear Stuck Card", priority = 2)]
         private static void ClearStuck()
         {
@@ -58,6 +63,8 @@ namespace NuclearReMind.EditorTools
         }
 
         // ── Force Present: one entry per card, in CARDS.md order ──
+        // เมนูกลุ่ม Force Present: บังคับแสดงการ์ดใบที่เลือกทันที (ข้ามเงื่อนไข/cooldown) — ใช้ทดสอบเส้นทาง UI
+
         [MenuItem(Root + "Force Present/1 · heat",     priority = 20)] private static void F1() => Force(CardIds.Heat);
         [MenuItem(Root + "Force Present/2 · sick",     priority = 21)] private static void F2() => Force(CardIds.Sick);
         [MenuItem(Root + "Force Present/3 · spoil",    priority = 22)] private static void F3() => Force(CardIds.Spoil);

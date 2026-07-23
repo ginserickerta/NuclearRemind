@@ -8,6 +8,8 @@ using UnityEngine.Tilemaps;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: ตั้งค่าโทนภาพ "Ashfall Dawn" (เฟส A) — เปลี่ยน URP เป็น HDR, สร้างโปรไฟล์เกรดสี,
+    /// ตั้ง Volume/กล้อง/ไฟ 2D และพื้น ให้ทั้งซีนเป็นโทนรุ่งอรุณหลังหายนะ (งานภาพล้วน ไม่แตะเกมเพลย์)
     /// ASHFALL DAWN — Phase A of docs/RENDER_PLAN.md (post-apocalyptic dawn look).
     /// Pure visual layer: no gameplay, no SaveData, no sorting math touched.
     ///
@@ -95,6 +97,7 @@ namespace NuclearReMind.EditorTools
         private static readonly Color GroundTint = new Color32(0xA6, 0xAC, 0xA0, 0xFF); // grey-green, less yellow (reference is cool stone)
         private static readonly Color CameraBg   = new Color32(0x0B, 0x0E, 0x12, 0xFF);
 
+        // เมนูนี้: ปรับโทนสี + แสงทั้งซีนเป็นลุค "รุ่งอรุณเถ้าถ่าน" (เกรดสี HDR + ไฟ 2D + พื้นติดแสง) — รันซ้ำได้
         [MenuItem("NuclearReMind/Setup Ashfall Render (Phase A)")]
         public static void Apply()
         {

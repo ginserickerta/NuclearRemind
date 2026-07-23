@@ -6,6 +6,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: เครื่องมือดีบักการ์ดวิกฤต (ใช้ตอนกด Play) — ดูรายงาน "ทำไมการ์ดยังไม่ขึ้น",
+    /// เซฟ/ล้างประวัติ trigger ลงไฟล์ และบังคับโชว์การ์ดทีละใบเพื่อทดสอบหน้าจอ
     /// Play-mode diagnostics for the crisis-card triggers (GDD §25 / CONFIG.md 🔒 CARDS).
     ///
     /// Six of the eight cards were reported as "never appear". The thresholds are 🔒 and cannot be
@@ -22,6 +24,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string Root = "NuclearReMind/Cards/";
 
+        // เมนูนี้: พิมพ์รายงานสถานะ trigger ของการ์ดทุกใบ ณ ตอนนี้ ลง Console
         [MenuItem(Root + "Log Card States (now)", false, 10)]
         private static void LogNow()
         {
@@ -34,6 +37,7 @@ namespace NuclearReMind.EditorTools
             Debug.Log("[CardTools] สถานะการ์ด ณ ตอนนี้\n" + cm.BuildTriggerReport(day, CardWorldState.Snapshot()));
         }
 
+        // เมนูนี้: บันทึกประวัติ trigger ของทั้งเซสชันเป็นไฟล์ card-trace.log ที่รากโปรเจกต์
         [MenuItem(Root + "Save Card Trace to file", false, 11)]
         private static void SaveTrace()
         {
@@ -58,6 +62,7 @@ namespace NuclearReMind.EditorTools
             EditorUtility.RevealInFinder(path);
         }
 
+        // เมนูนี้: ล้างประวัติ trace เริ่มบันทึกรอบใหม่
         [MenuItem(Root + "Clear Card Trace", false, 12)]
         private static void ClearTrace()
         {
@@ -65,6 +70,7 @@ namespace NuclearReMind.EditorTools
             Debug.Log("[CardTools] ล้างประวัติแล้ว — เริ่มบันทึกรอบใหม่ได้");
         }
 
+        // เมนูนี้: เปิด/ปิดโหมด trace ละเอียด (log ทุกวัน ไม่ใช่เฉพาะวันที่การ์ดไม่ขึ้น)
         [MenuItem(Root + "Verbose Trace", false, 30)]
         private static void ToggleVerbose()
         {
@@ -85,6 +91,7 @@ namespace NuclearReMind.EditorTools
         // render. It proves NOTHING about whether the trigger can ever fire in a real run — that is what
         // "Log Card States" and the trace file are for. Keep the two questions apart: a card that force-
         // shows fine but never appears in play has a threshold problem, not a UI problem.
+        // เมนูกลุ่ม Force Show: บังคับโชว์การ์ดใบที่เลือกทันที (ทดสอบหน้าจอ/ข้อความ — ไม่พิสูจน์ว่า trigger จริงทำงาน)
         [MenuItem(Root + "Force Show/1 · heat", false, 50)]      private static void F1() => Force(CardIds.Heat);
         [MenuItem(Root + "Force Show/2 · sick", false, 51)]      private static void F2() => Force(CardIds.Sick);
         [MenuItem(Root + "Force Show/3 · spoil", false, 52)]     private static void F3() => Force(CardIds.Spoil);

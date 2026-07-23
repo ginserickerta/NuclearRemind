@@ -5,6 +5,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สร้างไฟล์ asset บทพูดสั้น (BarkSO) 42 บรรทัด จากเอกสาร docs/BARKS.md
+    /// ลงโฟลเดอร์ Resources/Barks ให้ BarkManager โหลดไปใช้ในเกม — ข้อความคัดลอกตรงตามเอกสาร ห้ามแต่งใหม่
     /// Generates the 42 speaker BarkSO assets (BARKS.md — Kova 14 · Mira 14 · Dorn 8 · Citizen 6) into
     /// Assets/Resources/Barks/ so BarkManager auto-loads them. Text/priority/cooldown/once are VERBATIM
     /// from BARKS.md — ห้ามแต่งใหม่. The 20 Inner-Voice (V##) lines are milestone/event one-shots, not
@@ -16,6 +18,7 @@ namespace NuclearReMind.EditorTools
         private const string Folder = "Assets/Resources/Barks";
         private const int Once = 99; // cooldown placeholder for onceOnly barks
 
+        // เมนูนี้: สร้าง/อัปเดต asset บทพูด 42 ใบจาก BARKS.md — รันซ้ำได้ (คง GUID เดิม)
         [MenuItem("NuclearReMind/Setup Barks")]
         public static void Apply()
         {

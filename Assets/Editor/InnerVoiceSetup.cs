@@ -5,6 +5,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สร้างไฟล์ asset "เสียงในใจ" ของ Auren (BarkSO) 20 บรรทัด V01–V20 จาก docs/BARKS.md
+    /// ลง Resources/InnerVoice ให้ InnerVoiceDirector โหลดไปใช้ — ข้อความคัดลอกตรงตามเอกสาร ห้ามแต่งใหม่
     /// Generates the 20 Inner-Voice BarkSO assets (BARKS.md §Inner Voice, V01–V20, speaker = Auren)
     /// into Assets/Resources/InnerVoice/ so InnerVoiceDirector auto-loads them. Text VERBATIM from
     /// BARKS.md — ห้ามแต่งใหม่. Idempotent (keeps GUIDs). Run: menu NuclearReMind > Setup Inner Voice.
@@ -13,6 +15,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string Folder = "Assets/Resources/InnerVoice";
 
+        // เมนูนี้: สร้าง/อัปเดต asset เสียงในใจ 20 บรรทัดจาก BARKS.md — รันซ้ำได้ (คง GUID เดิม)
         [MenuItem("NuclearReMind/Setup Inner Voice")]
         public static void Apply()
         {

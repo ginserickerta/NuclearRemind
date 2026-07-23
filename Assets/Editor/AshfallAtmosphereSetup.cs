@@ -7,6 +7,8 @@ using UnityEngine.Rendering.Universal;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สร้างบรรยากาศ "Ashfall Dawn" (เฟส B) ในซีน — ควันปล่องเหนือ CORE TOWER,
+    /// ฝุ่นเถ้าลอยทั่วเมือง, หมอกพื้น 4 ก้อน และไฟเตาปฏิกรณ์กะพริบ (งานภาพล้วน ไม่แตะเกมเพลย์)
     /// ASHFALL DAWN — Phase B of docs/RENDER_PLAN.md: atmosphere.
     /// Pure visual layer (no gameplay). Idempotent — deletes and rebuilds its own root.
     ///
@@ -43,6 +45,7 @@ namespace NuclearReMind.EditorTools
         private static readonly Color HazeColor  = new Color(0.54f, 0.58f, 0.63f, 0.22f); // #8A94A0 @ low alpha
         private const float ChimneyYOffset = 2.3f; // above the core tower sprite
 
+        // เมนูนี้: สร้างเอฟเฟกต์บรรยากาศทั้งชุด (ควัน/เถ้า/หมอก/ไฟกะพริบ) ลงซีน Gamescene — รันซ้ำได้ปลอดภัย
         [MenuItem("NuclearReMind/Setup Ashfall Atmosphere (Phase B)")]
         public static void Apply()
         {

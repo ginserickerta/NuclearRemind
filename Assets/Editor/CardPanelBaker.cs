@@ -4,6 +4,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: อบ (bake) แผงการ์ดที่โค้ดสร้างสด — การ์ดวิกฤต / ควิซ / โน้ตวิจัย / Codex —
+    /// ออกมาเป็น prefab ใน Resources/CardUI ให้แก้หน้าตาด้วยมือใน Editor ได้ (ลบ prefab = กลับไปใช้โค้ดสร้างสด)
     /// Bake the three code-built card panels (CrisisCardPanelUI / QuizCardPanelUI / NoteCardPopup)
     /// into prefabs the owner can restyle by hand in the Editor — same pattern as CoreTowerPanelBaker.
     ///
@@ -16,6 +18,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string Dir = "Assets/Resources/CardUI";
 
+        // เมนูนี้: bake แผงการ์ดทั้ง 4 แบบ (วิกฤต+ควิซ+โน้ต+Codex) เป็น prefab ในคลิกเดียว
         [MenuItem("NuclearReMind/UI/Bake Card Panels (Crisis + Quiz + Note + Codex)")]
         public static void BakeAll()
         {
@@ -25,18 +28,22 @@ namespace NuclearReMind.EditorTools
             BakeCodex();
         }
 
+        // เมนูนี้: bake เฉพาะแผงการ์ดวิกฤต (Crisis Card) เป็น prefab
         [MenuItem("NuclearReMind/UI/Bake Crisis Card Panel")]
         public static void BakeCrisis()
             => Bake<CrisisCardPanelUI>("CrisisCardPanel", c => c.BuildForBake());
 
+        // เมนูนี้: bake เฉพาะแผงการ์ดควิซ (Quiz) เป็น prefab
         [MenuItem("NuclearReMind/UI/Bake Quiz Card Panel")]
         public static void BakeQuiz()
             => Bake<QuizCardPanelUI>("QuizCardPanel", c => c.BuildForBake());
 
+        // เมนูนี้: bake เฉพาะป๊อปอัปโน้ตวิจัย (Note Card) เป็น prefab
         [MenuItem("NuclearReMind/UI/Bake Note Card Popup")]
         public static void BakeNote()
             => Bake<NoteCardPopup>("NoteCardPopup", c => c.BuildForBake());
 
+        // เมนูนี้: bake เฉพาะแผง Codex (สารานุกรมความรู้) เป็น prefab
         [MenuItem("NuclearReMind/UI/Bake Codex Panel")]
         public static void BakeCodex()
             => Bake<CodexPanelUI>("CodexPanel", c => c.BuildForBake());

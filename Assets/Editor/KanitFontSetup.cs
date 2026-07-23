@@ -4,12 +4,17 @@ using UnityEngine.UI;
 
 namespace NuclearReMind.Editor
 {
+    /// <summary>
+    /// [TH] หน้าที่: เปลี่ยนฟอนต์ข้อความ UI ทั้งซีนและ prefab ให้เป็นฟอนต์ Kanit (รองรับภาษาไทย)
+    /// โดยเลือกน้ำหนัก Regular/SemiBold/Bold ให้อัตโนมัติตามสไตล์ข้อความเดิม
+    /// </summary>
     public static class KanitFontSetup
     {
         private const string Regular  = "Assets/Resources/Fonts/Kanit-Regular.ttf";
         private const string Bold     = "Assets/Resources/Fonts/Kanit-Bold.ttf";
         private const string SemiBold = "Assets/Resources/Fonts/Kanit-SemiBold.ttf";
 
+        // เมนูนี้: เปลี่ยนฟอนต์ Text ทุกตัวในซีน + prefab เป็น Kanit (ไทย) ตามน้ำหนักที่เหมาะสม
         [MenuItem("NuclearReMind/Apply Kanit Font (Scene + Prefabs)")]
         public static void ApplyAll()
         {
