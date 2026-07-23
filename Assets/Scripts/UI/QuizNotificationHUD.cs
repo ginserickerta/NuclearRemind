@@ -5,6 +5,10 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ไอคอนแจ้งเตือนควิซมุมขวาล่าง HUD + badge แดงนับจำนวนควิซที่พร้อมตอบ
+    /// เมื่อความรู้ถูกใช้จริงจนควิซปลด → ไอคอนโผล่ + เด้ง 1 ครั้ง · กดแล้วเปิด Codex ไปตอบ
+    /// ไม่บังคับ ไม่มีตัวจับเวลา — ผู้เล่นเลือกตอบเองตามกติกา QUIZZES.md
+    ///
     /// Small quiz notification icon + badge (bottom-right HUD) — mirrors RecordNotificationHUD. When a quiz
     /// becomes answerable (its knowledge was used and the reveal delay has passed, QUIZZES.md pacing), the
     /// icon appears with a red badge counting how many are ready and a one-shot pulse; clicking it opens the
@@ -48,6 +52,7 @@ namespace NuclearReMind
         private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
             => AutoSpawn();
 
+        // สร้างตัวเองลง HUDCanvas อัตโนมัติ (เฉพาะซีนเกม — เมนูหลักไม่มีระบบหลัก)
         private static void AutoSpawn()
         {
             try
@@ -104,6 +109,7 @@ namespace NuclearReMind
         private void HandleDayStarted(int day, bool timed) => Refresh();
         private void HandleQuizAnswered(string quizId, bool correct) => Refresh();
 
+        // นับควิซที่พร้อมตอบจาก CodexQuizManager → โชว์/ซ่อนไอคอน + อัปเดตเลข badge + เด้งเมื่อมีข้อใหม่
         private void Refresh()
         {
             if (_iconRoot == null) return;
@@ -123,6 +129,7 @@ namespace NuclearReMind
         }
 
         // ── build the icon (bottom-right, above the record icon) ──
+        // สร้างไอคอน "?" + badge แดงด้วยโค้ด (มุมขวาล่าง เหนือไอคอนบันทึก) — เริ่มต้นซ่อนไว้
         private void Build()
         {
             // Parent the icon straight to the Canvas so its bottom-right anchoring is relative to the full

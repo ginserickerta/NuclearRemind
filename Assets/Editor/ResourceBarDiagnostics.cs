@@ -8,6 +8,7 @@ using NuclearReMind;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: เครื่องมือ Editor วินิจฉัยหลอดทรัพยากรบน HUD ว่าทำไมไม่ขยับ พร้อมซ่อม fillRect ที่หลุดให้
     /// ไล่เช็กหลอดทรัพยากรทุกอัน (foodBar…tritiumBar ของ UIManagerHUD) ว่าทำไม fill ไม่ขยับ
     ///   • fillRect ของ Slider หลุด (None) → ซ่อมอัตโนมัติ (หา child "Fill Area/Fill")
     ///   • Fill Image หาย/ถูกปิด/alpha 0
@@ -17,6 +18,7 @@ namespace NuclearReMind.EditorTools
     /// </summary>
     public static class ResourceBarDiagnostics
     {
+        // เมนูนี้: ตรวจหลอดทรัพยากรทุกหลอดแล้วรายงานลง Console + ซ่อม fillRect ที่หลุดอัตโนมัติ
         [MenuItem("NuclearReMind/HUD/Diagnose Resource Bars")]
         public static void Diagnose()
         {

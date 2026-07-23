@@ -3,6 +3,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ทำให้ sprite หมอก/ฝุ่นเถ้าลอยเอื่อย ๆ รอบจุดเกิดด้วย Perlin noise
+    /// ไม่มี allocation ไม่ใช้ physics · เป็นชั้นภาพล้วน ไม่มีผลต่อ gameplay
+    ///
     /// Slow ambient drift for fog/haze sprites (RENDER_PLAN §7.3).
     /// Perlin wander around the spawn position — no allocation, no physics.
     /// Visual layer only.

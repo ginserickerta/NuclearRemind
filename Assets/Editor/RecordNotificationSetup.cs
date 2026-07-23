@@ -7,6 +7,7 @@ using NuclearReMind;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้างไอคอนแจ้งเตือนบันทึกใหม่ (badge มุมขวาล่าง) บน HUD
     /// ระบบบันทึกใหม่ (แทนการ์ดเด้งกลางจอ): สร้าง "ไอคอนบันทึกมุมขวาล่าง + notification badge" บน HUDCanvas
     /// แล้ว wire RecordNotificationHUD — มีบันทึกใหม่เข้ามาเด้ง badge · กดเปิดแผง Records (เรียงล่าสุดบนสุด)
     ///
@@ -19,6 +20,7 @@ namespace NuclearReMind.EditorTools
         private const string ScenePath = "Assets/Scenes/Gamescene.unity";
         private const string IconSpritePath = "Assets/Sprites/UI/side_save.png"; // reuse ไอคอนปุ่ม Records เดิม
 
+        // เมนูนี้: สร้างไอคอนบันทึก + badge แจ้งเตือนบน HUDCanvas (รันซ้ำได้)
         [MenuItem("NuclearReMind/Setup Record Notification (HUD Icon)")]
         public static void Apply()
         {

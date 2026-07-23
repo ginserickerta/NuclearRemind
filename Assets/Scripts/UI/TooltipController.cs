@@ -60,6 +60,7 @@ namespace NuclearReMind
             if (tooltipPanel != null) tooltipPanel.SetActive(false);
         }
 
+        // เปลี่ยนพื้นหลังเป็นกรอบโลหะ tooltip_frame (9-slice) — ไม่มีรูปใน Resources ก็คงหน้าตาเดิมจากซีน
         // Metal frame background (nine-sliced). The sprite carries its own interior fill, so the
         // Image tint goes white; no sprite in Resources → leave the scene-authored look alone.
         private void ApplySkin()
@@ -75,6 +76,7 @@ namespace NuclearReMind
             img.color = Color.white;
         }
 
+        // ใส่ Canvas override-sorting ให้ tooltip ลอยเหนือทุกแผง HUD — ต้องเรียก "หลังแผง active" ทุกครั้งที่โชว์
         // Override-sorting canvas floats the tooltip above every sibling HUD panel regardless of
         // hierarchy order. No GraphicRaycaster on purpose: the tooltip is display-only and must
         // never swallow clicks meant for what's underneath it.
@@ -91,6 +93,7 @@ namespace NuclearReMind
             canvas.sortingOrder = TopSortingOrder;
         }
 
+        // เลือกอาคารตอนจะวาง → เปิด tooltip + เติมข้อความ 3 ชั้น · data null = ยกเลิกเลือก → หุบปิด
         private void HandleBuildingSelected(BuildingData data)
         {
             if (data == null)

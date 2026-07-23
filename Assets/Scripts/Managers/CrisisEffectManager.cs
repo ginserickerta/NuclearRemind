@@ -67,6 +67,7 @@ namespace NuclearReMind
         //  Food spoilage (CARDS.md การ์ด 3 · CONFIG.md spoil formula)
         // ─────────────────────────────────────────
 
+        // การ์ด "เสบียงเน่า" เกิดแล้ว → เปิดระบบอาหารเน่ารายวันตั้งแต่นี้ไป
         /// <summary>The spoil crisis fired — switch spoilage on from this day forward.</summary>
         public void ActivateSpoilage()
         {
@@ -75,6 +76,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ตัวคูณลดอัตราเน่าถาวรจากตัวเลือกการ์ด (Co-60 ×0.3 / ยุ้งฉาง ×0.6) — คูณซ้อนกันได้
         /// Permanent mitigation from a card option (Co-60 ×0.3 / Granary ×0.6). Multiplicative so two
         /// mitigations stack the way CONFIG.md writes them. Ignores 0/negative — an unauthored
         /// spoilMult field must never silently stop spoilage (rule #5: no free option).

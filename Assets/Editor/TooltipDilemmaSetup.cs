@@ -9,6 +9,7 @@ using UnityEngine.UI;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้าง UI คำอธิบายลอย (Tooltip 3 ชั้น) และหน้าต่างทางเลือกวิกฤต (Dilemma)
     /// สร้าง UI สำหรับ Tooltip 3 ชั้น และ Dilemma Popup แบบ placeholder
     /// และผูก reference เข้า TooltipController / DilemmaPopupController ให้อัตโนมัติ — รันครั้งเดียวจาก Editor
     /// </summary>
@@ -16,6 +17,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string ScenePath = "Assets/Scenes/Gamescene.unity";
 
+        // เมนูนี้: สร้าง UI Tooltip + Dilemma Popup ในซีนเกม แล้วผูก reference เข้า controller ให้
         [MenuItem("NuclearReMind/Setup Tooltip and Dilemma UI")]
         public static void SetupAll()
         {

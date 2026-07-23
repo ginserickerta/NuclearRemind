@@ -5,6 +5,7 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ติดตั้งรั้วกั้นเขต Zone A/B (ZoneBarrier) ในซีนเกม
     /// จัดการ GameObject "ZoneBarrier" (ZoneBarrierRenderer) ในซีน
     ///   • โมเดลใหม่ (2026-07): Zone B = แถบ NE (col ≥ columns-border) → เปิดรั้วเส้นตั้งลากแนว NW↔SE
     ///   • ตั้ง barrierColumn = columns - zoneBorderThickness (ให้ตรงกับ IsoGroundPainter.IsZoneA)
@@ -17,6 +18,7 @@ namespace NuclearReMind.EditorTools
         private const string ScenePath = "Assets/Scenes/Gamescene.unity";
         private const string FenceSpritePath = "Assets/Sprites/Art/Fence/blast_barrier.png";
 
+        // เมนูนี้: สร้าง/ตั้งค่า ZoneBarrier ในซีน + wire สไปรต์แบริเออร์
         [MenuItem("NuclearReMind/Setup Zone Barrier (Fence + Gate)")]
         public static void SetupAll()
         {

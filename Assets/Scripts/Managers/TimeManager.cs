@@ -9,6 +9,7 @@ namespace NuclearReMind
     public enum PauseReason { Placement, QuizPopup, CrisisPopup, Manual, Demolition, StoryCard, LabPopup, QuizExplanation, NotePopup }
 
     /// <summary>
+    /// [TH] หน้าที่: สวิตช์หยุด/เดินนาฬิกาวันของเกม — popup แต่ละชนิดฝากเหตุหยุดไว้ ซ้อนกันได้ ปลดครบแล้วเวลาเดินต่อ
     /// จัดการ "นาฬิกาวัน" หยุด/เดิน ผ่าน pause-reason stack (V4 §15/§16)
     /// IsRunning == (ไม่มีเหตุหยุดใดเลย) — GameManager/ResourceManager เดินเวลาเฉพาะตอน IsRunning
     /// หยุดเฉพาะนาฬิกาวัน ไม่แตะ Time.timeScale → UI/ghost ยังเลื่อนได้ลื่น (V4 §15)

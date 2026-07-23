@@ -3,6 +3,11 @@ using UnityEngine;
 
 namespace NuclearReMind
 {
+    /// <summary>
+    /// [TH] หน้าที่: ผู้คุมวงจรหลักของเกม — สถานะเกม (เล่น/หยุด/แพ้/ชนะ) · นาฬิกาวัน 30 วัน
+    /// (Planning 30 วิ → Live 60 วิ) · ความเร็วเล่น 1×/2× · เริ่มเกมใหม่ (Restart) และเก็บความรู้ถาวร (MetaProgress)
+    /// ยิง OnDayStarted/OnDayProduction/OnDayEnded ผ่าน EventManager ให้ทุกระบบเดินตามจังหวะวัน
+    /// </summary>
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }
@@ -96,6 +101,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ตั้งต้นรอบเล่นใหม่ทั้งหมด (สถานะ Playing + คืนความรู้ถาวร + เริ่ม Day 1) — แยกจาก Start เพื่อรองรับ Restart
         /// Everything a fresh run needs. Split out of Start() because this object is DontDestroyOnLoad:
         /// Unity does not call Start again on an object that survived the load, so on Restart the run
         /// state simply carried over — dying on day 6 and restarting resumed on day 6 and ticked straight
@@ -113,6 +119,7 @@ namespace NuclearReMind
         // Set by Restart, consumed on the first Update after the reload — see HandleSceneReloaded.
         private bool _pendingRun;
 
+        // หลัง reload ซีน: ตั้งธงไว้ก่อน แล้วค่อยเริ่มรอบใหม่ใน Update ถัดไป (รอ manager ทุกตัวเกิดครบก่อน)
         private void HandleSceneReloaded(UnityEngine.SceneManagement.Scene s,
                                          UnityEngine.SceneManagement.LoadSceneMode m)
         {
@@ -141,6 +148,7 @@ namespace NuclearReMind
 
         // ───────────────────────────── Day Cycle ─────────────────────────────
 
+        // เริ่มวันใหม่: ตั้งเวลานับถอยหลัง (Day 1 = tutorial ไม่จับเวลา) แล้วประกาศ OnDayStarted
         private void BeginDay(int day)
         {
             CurrentDay = Mathf.Clamp(day, 1, MaxDay);
@@ -177,6 +185,7 @@ namespace NuclearReMind
             EndDay();
         }
 
+        // จบวัน: ยิงผลิต+บริโภค → ระบบสิ้นวันทั้งหมด → เช็คจบเกม → ขึ้นวันถัดไป
         private void EndDay()
         {
             DayTimerActive = false;
@@ -221,6 +230,7 @@ namespace NuclearReMind
 
         // ───────────────────────── MetaProgress (§9) + Restart (§14) ─────────────────────────
 
+        // คืนความรู้ถาวรจากรอบก่อน (Codex ที่ปลดล็อกแล้ว) ตอนเริ่มรอบใหม่
         private void ApplyMetaProgress()
         {
             MetaProgress.Load();
@@ -232,6 +242,7 @@ namespace NuclearReMind
             CodexManager.Instance?.RestoreUnlocked(MetaProgress.UnlockedCodex);
         }
 
+        // บันทึกความรู้ (Knowledge) ลงคลังถาวรตอนจบเกม/เริ่มใหม่
         private void CaptureMetaProgress()
         {
             int knowledge = ResourceManager.Instance != null
@@ -266,6 +277,7 @@ namespace NuclearReMind
             SceneFader.FadeToScene(scene.buildIndex); // เฟดจอดำ → reload → เฟดสว่าง
         }
 
+        // เปลี่ยนสถานะเกม + ตั้ง Time.timeScale ตาม (จบเกม/ชนะ = freeze ทั้ง simulation)
         public void SetState(GameState newState)
         {
             CurrentState = newState;

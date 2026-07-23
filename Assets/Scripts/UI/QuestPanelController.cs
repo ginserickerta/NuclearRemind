@@ -5,6 +5,9 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: แผงภารกิจประจำวัน (Day 2-30) — เด้งมุมจอตอนเริ่มวัน บอกผู้เล่นว่าวันนี้ควรโฟกัสอะไร
+    /// อ่านรายการภารกิจจาก QuestScheduleSO (data-driven — ไม่มีเลขวัน hardcode ในโค้ด) ไม่บล็อกการเล่น กดปิดได้
+    ///
     /// Day quest guidance panel (Day 2-30) — pops up at day start like the Day-1
     /// tutorial checklist, telling the player what to focus on today.
     /// Which days show a quest is pure data (QuestScheduleSO) — no day numbers in code.
@@ -33,6 +36,7 @@ namespace NuclearReMind
 
         private void OnEnable() => TrySubscribe();
 
+        // สมัครรับ event เริ่มวัน — EventManager อาจยังไม่เกิดตอน OnEnable ในบิลด์จริง จึงลองซ้ำจาก Start
         private void TrySubscribe()
         {
             if (_subscribed || EventManager.Instance == null) return;
@@ -62,7 +66,9 @@ namespace NuclearReMind
 
         private void HandleDayStarted(int day, bool timed) => ShowForDay(day);
 
-        /// <summary>Show the quest for the given day, or hide when that day has none.</summary>
+        /// <summary>
+        /// [TH] แสดงภารกิจของวันที่กำหนด (วันนั้นไม่มีภารกิจ = ซ่อนแผง) — ปรับความสูงแผงตามจำนวนบรรทัด
+        /// Show the quest for the given day, or hide when that day has none.</summary>
         public void ShowForDay(int day)
         {
             var entry = schedule != null ? schedule.ForDay(day) : null;
@@ -94,6 +100,7 @@ namespace NuclearReMind
             panel.SetActive(true);
         }
 
+        // ซ่อนแผงภารกิจ (ผูกกับปุ่มปิด)
         public void Hide()
         {
             if (panel != null) panel.SetActive(false);

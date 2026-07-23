@@ -7,6 +7,7 @@ using UnityEngine.Rendering.Universal;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ตั้งค่าความสวยของภาพ (Bloom + Vignette + แสงเตาปฏิกรณ์) ให้ซีนเกม
     /// "Full rendering" ชั้นสุดท้าย — เพิ่มมิติ/ความ "สวย" ให้ฉากด้วย 3 ส่วน (idempotent · รันซ้ำได้):
     ///   1. Bloom (DefaultVolumeProfile) — เดิม intensity 0 (ปิด) → เปิดให้ของเรืองแสง (เตาปฏิกรณ์) ฟุ้ง
     ///   2. Vignette — ขอบจอมืดลงเล็กน้อย จัดสายตาเข้ากลางเมือง (subtle framing)
@@ -40,6 +41,7 @@ namespace NuclearReMind.EditorTools
         private const int   AdditiveBlendStyle = 1;      // Renderer2D: index 1 = Additive (index 0 = Multiply ที่ global light ใช้)
         private const string ReactorLightName  = "Reactor Glow Light 2D";
 
+        // เมนูนี้: เปิด Bloom + Vignette ใน Volume Profile และเพิ่มแสง Point Light2D ที่ CORE TOWER
         [MenuItem("NuclearReMind/Setup Rendering (Bloom + Reactor Glow)")]
         public static void Apply()
         {

@@ -3,6 +3,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ป้ายชื่อคนงาน แสดงใต้เท้า sprite — เป็นลูกของ WorkerView จึงเดินตามตัวคนงานอัตโนมัติ
+    /// (จัดวางแบบเดียวกับ WorkerHealthBadge ที่ลอยเหนือหัว) · วาดข้อความ 2 ชั้น (เงาดำเยื้อง + ตัวจริงทับ)
+    /// เพราะ TextMesh ไม่มี outline ของตัวเอง — ทำให้อ่านชื่อออกทั้งบนพื้นสว่างและพื้นมืดของแมพ iso
     /// The worker's name, printed under their feet. Child of a WorkerView GO, so it follows the sprite
     /// for free — same arrangement as WorkerHealthBadge, which sits above the head.
     ///
@@ -28,7 +31,8 @@ namespace NuclearReMind
         private string _last;
         private bool _built;
 
-        /// <summary>Build the tag under the given body sprite. Call once right after AddComponent.</summary>
+        /// <summary>[TH] สร้างป้ายชื่อใต้ sprite ตัวคนงาน — เรียกครั้งเดียวหลัง AddComponent
+        /// Build the tag under the given body sprite. Call once right after AddComponent.</summary>
         public void Init(SpriteRenderer body)
         {
             if (_built) return;
@@ -51,6 +55,7 @@ namespace NuclearReMind
             }
         }
 
+        // สร้าง TextMesh หนึ่งชั้น (ใช้ทั้งตัวหนังสือจริงและชั้นเงาดำ)
         private TextMesh MakeText(string name, string layer, int order, Color color, Vector3 localOffset)
         {
             var go = new GameObject(name);
@@ -77,7 +82,8 @@ namespace NuclearReMind
             return tm;
         }
 
-        /// <summary>Set the shown name (no-op if unchanged — cheap to call every sync).</summary>
+        /// <summary>[TH] ตั้งชื่อที่แสดง — ชื่อเดิมไม่เปลี่ยนจะไม่ทำอะไร (เรียกซ้ำทุก sync ได้ ไม่แพง)
+        /// Set the shown name (no-op if unchanged — cheap to call every sync).</summary>
         public void SetName(string displayName)
         {
             if (!_built || displayName == _last) return;
@@ -86,7 +92,8 @@ namespace NuclearReMind
             if (_shadow != null) _shadow.text = displayName ?? "";
         }
 
-        /// <summary>Names are Latin now, so an OS UI font is enough — no project font asset required.</summary>
+        /// <summary>[TH] ฟอนต์ระบบ (OS) สำหรับชื่อ — ชื่อเป็นอักษรละติน จึงไม่ต้องมี font asset ในโปรเจกต์
+        /// Names are Latin now, so an OS UI font is enough — no project font asset required.</summary>
         private static Font NameFont()
         {
             if (_font != null) return _font;

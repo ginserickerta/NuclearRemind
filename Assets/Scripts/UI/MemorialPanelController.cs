@@ -51,6 +51,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] แต่งธีมแผงที่ setup ฝั่ง editor สร้างทิ้งไว้ในซีน: กรอบโลหะ panel_frame + ฟอนต์กลาง (UIFonts.Body)
+        /// + โทนทอง/ครีม ให้เข้าชุดกับแผงวิกฤต/ควิซ/วิจัย — รันครั้งเดียวตอน Start ไม่ต้องแก้ไฟล์ซีน
         /// Re-skin the panel the editor setup left in the scene: metal panel_frame (same sprite as the
         /// crisis/quiz/research panels), house font via UIFonts.Body, gold/cream palette, header divider.
         /// Runs once at Start so the scene file never needs a setup re-run; safe on inactive objects.
@@ -208,6 +210,7 @@ namespace NuclearReMind
             {
                 _firstOpenHandled = true;
 
+                // เปิดครั้งแรกของรอบเล่น: ยิงเสียงในใจ V02 + Hope +2 ผ่าน HopeLedger (กติกาข้อ 8 — ห้ามเขียน Hope ตรง)
                 // ★ STORY.md §② / BARKS.md V02 "หกชื่อ... พวกเขาอยู่ที่นี่ก่อนผม" — route through the
                 // Inner-Voice channel so it renders as the nameless ▸ line the spec asks for. The notice
                 // channel (prefixed "ความคิด:") is only the fallback for when the director isn't up.

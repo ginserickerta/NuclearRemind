@@ -6,6 +6,7 @@ using UnityEngine.UI;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้าง UI ระบบเนื้อเรื่องทั้งชุด (การ์ดเนื้อเรื่อง/บทสนทนา/แผง Records/อนุสรณ์)
     /// Setup UI ระบบเนื้อเรื่อง (เฟส 3 — Story Guide §2) รันผ่าน NuclearReMind / Setup Story UI
     /// สร้างบน "StoryCanvas" แยกจาก HUDCanvas → รัน Setup HUD Canvas ซ้ำแล้ว story UI ไม่โดนลบ
     /// ชิ้นส่วน:
@@ -18,6 +19,7 @@ namespace NuclearReMind.EditorTools
     /// </summary>
     public static class StoryUISetup
     {
+        // เมนูนี้: สร้าง StoryCanvas + UI เนื้อเรื่องครบชุดในซีนเกม (รันซ้ำได้)
         [MenuItem("NuclearReMind/Setup Story UI")]
         public static void Setup()
         {

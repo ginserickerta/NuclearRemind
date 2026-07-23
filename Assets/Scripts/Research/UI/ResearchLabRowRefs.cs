@@ -4,6 +4,10 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ที่รวม reference ของชิ้นส่วนใน prefab "แถว/ชิป" ของหน้าห้องวิจัย (ไม่มี logic)
+    /// component เดียวใช้ร่วมทุกชนิดแถว — prefab ไหนไม่ใช้ field ไหนก็ปล่อยว่าง
+    /// โค้ดเติมข้อความ/สี/การมองเห็นให้ตอนรัน ส่วนเจ้าของโปรเจกต์แต่งหน้าตาใน Editor ได้อิสระ
+    ///
     /// Serialized handle to every element of a Research Lab row/chip prefab
     /// (Resources/ResearchUI/Row_Note · Row_RecordActive · Row_RecordDone · Row_Simple ·
     /// Chip_Mastery — baked by NuclearReMind → Setup Research Lab Prefabs).

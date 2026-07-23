@@ -9,6 +9,7 @@ using NuclearReMind;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้าง/ซ่อมปุ่ม "บันทึก" ในแถบเมนูข้าง แล้วต่อสายให้เปิดแผง Records
     /// เมนูแยกเฉพาะ "ปุ่มบันทึก (Records)" — สร้าง/แก้ + wire onClick → HudMenuButtons.ToggleRecords
     /// (เปิดแผง Records "บันทึกที่กู้คืน") โดยไม่แตะปุ่มอื่นในแถบข้าง
     ///
@@ -22,6 +23,7 @@ namespace NuclearReMind.EditorTools
         private const string UIFolder = "Assets/Sprites/UI";
         private const string SpriteName = "side_save"; // สไปรต์ป้าย "บันทึก" (icon+ข้อความ baked)
 
+        // เมนูนี้: สร้างปุ่มบันทึกใหม่ + ผูก onClick เปิดแผง Records (ไม่แตะปุ่มอื่น)
         [MenuItem("NuclearReMind/UI/Setup Records Button")]
         public static void Apply()
         {

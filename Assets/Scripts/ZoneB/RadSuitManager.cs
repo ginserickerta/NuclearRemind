@@ -3,6 +3,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ชุดกันรังสี — คราฟต์จากวัสดุแล็บ ปลดล็อกเมื่อวิจัย nuclear_medicine
+    /// ใส่แล้วลดรังสีที่คนงานรับเหลือ ×0.4 — เปลี่ยนโซน B จาก "ตายใน ~3 วัน" เป็นหมุนเวียนคนได้จริง
+    /// ชุดเป็น "กองกลาง": ทุกเช้าคนงานโซน B ตามจำนวนชุดที่มีจะได้ใส่ก่อนโดนรังสีตอนจบวัน
+    ///
     /// Rad Suits (GDD §22 / CONFIG.md 🔒 RADIATION). Crafted from labMat, unlocked by the
     /// nuclear_medicine research (unlocksCommands craft_radsuit). A suit cuts a worker's dose ×0.4
     /// (WorkerManager applies radSuitMult when Worker.hasRadSuit), which is what turns Zone B from a
@@ -51,6 +55,7 @@ namespace NuclearReMind
         /// <summary>Whether crafting is allowed yet (nuclear_medicine gates the recipe).</summary>
         public bool CanCraft => KnowledgeDB.Instance.HasNote("nuclear_medicine") && SuitsMade < _cfg.suitTargetCount;
 
+        // [TH] คราฟต์ชุด 1 ตัว: จ่ายวัสดุแล็บ — ล้มเหลวถ้ายังไม่วิจัย / ครบโควตา / ของไม่พอ (ไม่มีของฟรี)
         /// <summary>
         /// Craft one suit: pay suit_cost labMat. Returns false if not researched, at the target count,
         /// or labMat can't cover it. (public for the F9 panel / tests.)
@@ -69,6 +74,7 @@ namespace NuclearReMind
             return true;
         }
 
+        // [TH] แจกชุดให้คนงานโซน B ตามจำนวนชุดที่มี — คนนอกโซนไม่ได้ใส่ (ชุดใช้เฉพาะในโซน)
         /// <summary>First SuitsMade Zone B workers wear a suit; everyone else has none (public for tests).</summary>
         public void EquipZoneBWorkers()
         {

@@ -3,6 +3,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: หัวใจของเกม — เตาปฏิกรณ์ฟิวชัน คำนวณ HEAT (ความร้อน) และ CORE (ความคืบหน้าหอคอย) ทุกสิ้นวัน
+    /// รับ tritium จาก ZoneBController · โบนัสความรู้จาก MasteryRegistry · ความร้อนพายุจาก StormSystem
+    /// CORE ≥ 100 = ชนะ · HEAT ≥ 100 = เตาหลอมละลาย · ไม่ตอบควิซ tritium → CORE ค้างที่ 80 (ประตู Method B)
     /// The reactor loop (GDD §26 / CONFIG.md 🔒 REACTOR) — the engine every other v6.3 system feeds:
     /// cooling (capped — bug #1), HEAT, CORE gain, and the ★ Method B tritium gate that makes Zone B
     /// the win condition. Consumes tritium from ZoneBController; reads cooling/fuel/poloidal/boost-heat
@@ -37,6 +40,7 @@ namespace NuclearReMind
         private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
             => AutoSpawn();
 
+        // สร้างระบบทั้งคลัสเตอร์อัตโนมัติตามลำดับ (ลำดับ spawn = ลำดับที่ event สิ้นวันจะยิง)
         private static void AutoSpawn()
         {
             try
@@ -92,6 +96,7 @@ namespace NuclearReMind
         private int _scramCooldown;
 
         /// <summary>
+        /// [TH] ปริมาณ deuterium ที่โหมดปัจจุบันต้องการต่อวัน (Idle 0 · Normal 6 · Boost 9 · Overdrive 12)
         /// Deuterium the current mode wants per day (★ 2026-07-23: per-mode — Idle 0 · Normal 6 ·
         /// Boost 9 · Overdrive 12). Full fuel efficiency needs the whole demand met.
         /// </summary>
@@ -108,6 +113,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ค่าเชื้อเพลิงที่ต้องจ่ายทันทีตอน "สลับโหมด" — สลับโหมดวันละครั้ง มีราคาเสมอ (ไม่มีทางเลือกฟรี)
         /// ★ 2026-07-23: deuterium charged UP FRONT when switching TO a mode (Idle 2 · Normal 6 ·
         /// Boost 9 · Overdrive 12). Owner rule: one change per day, and picking a mode costs that
         /// mode's deuterium immediately — before, switching was free and the resource only mattered
@@ -132,6 +138,7 @@ namespace NuclearReMind
             Initialize(GameConfigSO.Instance);
         }
 
+        // ตั้งค่าเริ่มต้นเตา (CORE 30 · HEAT 0 · โหมด Normal) — จุดเริ่มของ EditMode test ด้วย
         /// <summary>Bootstrap — also the EditMode-test entry point.</summary>
         public void Initialize(GameConfigSO cfg)
         {
@@ -160,6 +167,7 @@ namespace NuclearReMind
             EventManager.Instance.OnDayEnded -= HandleDayEnded;
         }
 
+        // สิ้นวัน: รวบรวมน้ำ/คนคุมหล่อเย็น/สถานะพายุ/เซนเซอร์ แล้วเรียก DailyTick
         private void HandleDayEnded(int day)
         {
             if (day <= 1) return; // Day 1 = tutorial
@@ -177,6 +185,7 @@ namespace NuclearReMind
         /// <summary>Legacy/test entry — maps onto the 4-mode state (false=Normal, true=Boost).</summary>
         public void SetBoosting(bool boosting) => Mode = boosting ? ModeBoost : ModeNormal;
 
+        // เปลี่ยนโหมดเตา (0=Idle · 1=Normal · 2=Boost · 3=Overdrive)
         /// <summary>Set the reactor mode (0=Idle · 1=Normal · 2=Boost · 3=Overdrive).</summary>
         public void SetMode(int mode)
         {
@@ -185,6 +194,7 @@ namespace NuclearReMind
             EventManager.Instance?.RaiseReactorStateChanged(Core, Heat); // panel refresh
         }
 
+        // ติดตั้งคอยล์ Toroidal (เพิ่มกำลังหล่อเย็น) — ต้องวิจัยโน้ต confinement ก่อน
         /// <summary>Install a Toroidal coil (needs the confinement note; caps at toroidalCoolMaxLv).</summary>
         public bool InstallToroidal()
         {
@@ -193,6 +203,7 @@ namespace NuclearReMind
             return true;
         }
 
+        // ติดตั้งคอยล์ Poloidal (ลดความร้อนสะสม) — ต้องวิจัยโน้ต confinement ก่อนเช่นกัน
         public bool InstallPoloidal()
         {
             if (!KnowledgeDB.Instance.HasNote("confinement") || PoloidalLv >= _cfg.toroidalCoolMaxLv) return false;
@@ -200,8 +211,10 @@ namespace NuclearReMind
             return true;
         }
 
+        // SCRAM ใช้ได้เมื่อ HEAT ≥ 90 และไม่ติด cooldown
         public bool CanScram => Heat >= _cfg.scramHeatThreshold && _scramCooldown <= 0;
 
+        // เบรกฉุกเฉิน: HEAT −40 แลกกับ CORE −10, น้ำ −30, Hope −3 และถูกบังคับออกจาก Boost
         /// <summary>Emergency brake (GDD SCRAM): HEAT −40, CORE −10, water −30, hope −3, force idle.</summary>
         public bool Scram()
         {
@@ -219,6 +232,7 @@ namespace NuclearReMind
         //  Daily tick (§26 formula — public for tests)
         // ─────────────────────────────────────────
 
+        // สูตรคำนวณรายวันของเตา (GDD §26) — HEAT ก่อน แล้วค่อย CORE
         public void DailyTick(float water, int coolWorkers, bool stormActive, bool sensorActive)
         {
             if (_scramCooldown > 0) _scramCooldown--;
@@ -226,6 +240,7 @@ namespace NuclearReMind
             LastTritiumConsumed = 0f;
 
             // ── HEAT ──
+            // กำลังหล่อเย็น = ฐาน + น้ำ (มีเพดาน — บั๊ก #1) + คนคุม + คอยล์ + โบนัส Mastery
             float cooling = _cfg.coolingBase
                 + Mathf.Min(water / _cfg.coolingWaterDiv, _cfg.coolingWaterCap)   // ★ capped (bug #1)
                 + coolWorkers * _cfg.coolPerWorker
@@ -246,6 +261,7 @@ namespace NuclearReMind
             LastCooling = cooling;
 
             // ── CORE ──
+            // ลำดับประตู: Idle=0 → ไม่มีเชื้อเพลิง=0 → ประตู Method B (core≥80 แต่ tritium ไม่พอ)=0 → คำนวณ gain จริง
             float gain;
             float tritium = CurrentTritium;
             float fuel = Mathf.Min(CurrentFuel, FuelFeedPerDay); // throttle: the player-set daily feed caps the draw
@@ -255,6 +271,7 @@ namespace NuclearReMind
                 gain = 0f;                                                       // ★ Method B gate — stalls at 80
             else
             {
+                // gain = ฐานตามโหมด × ประสิทธิภาพเชื้อเพลิง (fe) × ตัวคูณความรู้ (knowledge สูง = โตเร็วขึ้น)
                 float baseGain = Mode == ModeOverdrive ? _cfg.odCoreGain
                                : Mode == ModeBoost ? _cfg.boostCoreGain
                                : _cfg.coreGainBase;
@@ -270,6 +287,7 @@ namespace NuclearReMind
                 // whatever was in the tank. fe is the fraction of demand satisfied, so a partly-fuelled
                 // day both advances less and costs less.
                 ConsumeFuel(Mathf.Min(fuel, FuelDemand));
+                // ช่วง core ≥ 80: เตาเผา tritium ทุกวัน — เหลือน้อยกว่า soft floor แล้ว gain จะถูกหั่นตามสัดส่วน
                 if (Core >= _cfg.methodBCoreGate)
                 {
                     float cost = Mode == ModeOverdrive ? _cfg.odTritiumCost
@@ -313,6 +331,7 @@ namespace NuclearReMind
         // Clamped to the CURRENT mode's demand, so dropping Overdrive → Normal can never overfeed.
         public float FuelFeedPerDay => _fuelBudget < 0f ? FuelDemand : Mathf.Min(_fuelBudget, FuelDemand);
 
+        // ปุ่ม +/- deuterium บนแผงเตา: ตั้งงบเชื้อเพลิงที่ยอมให้เตาดึงต่อวัน (0 = ดับเตาโดยตั้งใจ)
         public void AdjustFuelFeed(float delta)
         {
             if (_cfg == null) return;
@@ -321,6 +340,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] พรีวิวกำลังหล่อเย็นจากสถานะปัจจุบัน (โชว์บน UI — ค่าจริงตัดสินตอนสิ้นวัน)
         /// Cooling power from the CURRENT state — the same formula DailyTick uses, minus the storm-only
         /// sensor headroom (display preview; the day-end tick stays authoritative).
         /// </summary>
@@ -338,6 +358,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] พรีวิว CORE ที่คาดว่าจะได้วันนี้ (ใช้ขับตัวเลขไหลบนจอ — ใช้ประตูเดียวกับ DailyTick)
         /// Today's expected CORE gain from the CURRENT state — display approximation for the realtime
         /// trickle (same gates as DailyTick: no fuel → 0, Method B tritium gate, soft floor).
         /// </summary>
@@ -372,6 +393,7 @@ namespace NuclearReMind
             return gain;
         }
 
+        // ทุกเฟรม: ค่อย ๆ ไหล CORE ที่คาดว่าจะได้วันนี้ขึ้นจอ (ตอนสิ้นวัน DailyTick จะปรับให้ตรงสูตรจริงเสมอ)
         private void Update()
         {
             if (_cfg == null) return;
@@ -403,6 +425,8 @@ namespace NuclearReMind
         private int _stalledDays;
 
         /// <summary>
+        /// [TH] ส่ง Hope entry ฝั่งเตาเข้า HopeLedger (กติกา #8 — ห้ามเขียน Hope ตรง):
+        /// เตาร้อนวิกฤต −3 · พายุ −1 · CORE คืบหน้า +1.6/% · หอคอยค้าง 3 วันติด −4
         /// The four reactor-side Hope sources from CONFIG.md's table. All four were documented with
         /// non-zero values in GameConfigSO and had no call site anywhere in the project, which is a large
         /// part of why Hope looked like it only ever went up: the recurring positives were wired and the
@@ -452,6 +476,7 @@ namespace NuclearReMind
             : Fuel;
 
         /// <summary>
+        /// [TH] เผา deuterium ผ่านบัญชีทรัพยากรกลาง (ResourceManager) — ยิงเป็น event ตามสถาปัตยกรรม
         /// Burn deuterium through the ledger. Unlike ConsumeTritium this does NOT decrement the local
         /// field when no ResourceManager exists: with no ledger there is nothing refilling it either, so
         /// draining it would leave the reactor permanently dry after one tick. Headless callers therefore

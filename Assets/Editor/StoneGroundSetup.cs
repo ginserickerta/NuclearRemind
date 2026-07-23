@@ -7,6 +7,8 @@ using UnityEngine.Tilemaps;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ปูลานหิน/ทางเดิน/หย่อมซากปรักหักพัง ลง Tilemap "StonePave" แยกชั้น
+    /// วางแบบ deterministic (ได้ผลเหมือนเดิมทุกครั้ง) — เป็นชั้นภาพอย่างเดียว ไม่มีผลต่อเกมเพลย์
     /// Paves the stone plazas / paths / rubble patches (docs/GROUND_PLAN.md §3-4) onto a dedicated
     /// "StonePave" Tilemap that sits ON TOP of "Ground" (same sorting layer, order +1).
     ///
@@ -54,6 +56,7 @@ namespace NuclearReMind.EditorTools
 
         private enum Kind { Plaza, Path, Patch }
 
+        // เมนูนี้: ระบายลานหินรอบ CORE TOWER + ทางเดิน 4 ทิศ + หย่อมหินเก่า ลง StonePave (รันซ้ำได้)
         [MenuItem("NuclearReMind/Setup Stone Ground (Plaza + Paths)")]
         public static void Apply()
         {

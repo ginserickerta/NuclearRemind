@@ -5,6 +5,7 @@ using UnityEngine;
 namespace NuclearReMind.Editor
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ตั้งค่าระบบประชากร (ธงฝึกอาชีพ + ระบบจัดสรรคนงาน) ให้ซีนเกม
     /// เฟส 3 (V4 §5) — ตั้งค่าระบบประชากร:
     ///   • ธงปลดล็อกฝึกคลาสบน Laboratory (Engineer + Farmer — Medic อยู่โรงพยาบาล ตามสเปกโรงวิจัย)
     ///   • ระบบจัดสรรคนงานรายอาคาร (Worker sprites): WorkerAssignmentManager + WorkerVisualSpawner + sprite คนงาน
@@ -14,6 +15,7 @@ namespace NuclearReMind.Editor
     {
         private const string Dir = "Assets/ScriptableObjects/Buildings/";
 
+        // เมนูนี้: ตั้งธงปลดล็อกฝึกอาชีพ + ติดตั้งระบบจัดสรรคนงานในซีนเกม
         [MenuItem("NuclearReMind/Setup Phase 3 Population")]
         public static void Apply()
         {

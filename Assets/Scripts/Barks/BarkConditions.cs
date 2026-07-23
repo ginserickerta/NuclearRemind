@@ -1,6 +1,8 @@
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ภาพถ่ายสถานะโลกที่เงื่อนไข bark ใช้อ่าน (เตา, คนป่วย, อาหาร, พายุ, กฤษฎีกา ฯลฯ)
+    /// [TH] ทุก field ดึงจากระบบที่รันอยู่จริง — ห้ามปลอมค่า ไม่งั้นบทพูดจะโกหกผู้เล่น
     /// Live snapshot the bark conditions read (BARKS.md). Built from the running systems.
     ///
     /// Every field here is populated from a live system EXCEPT mutationLabBuilt: the mutation lab exists
@@ -30,6 +32,7 @@ namespace NuclearReMind
         /// <summary>Decree asset id the citizens react to (C04) — Assets/ScriptableObjects/Decrees.</summary>
         public const string ChildLaborDecreeId = "Decree2_ChildLabor";
 
+        // [TH] เก็บค่าจากทุกระบบ (คนงาน/เตา/Zone B/พายุ/สปอยล์อาหาร/กฤษฎีกา) แบบกัน null ทุกตัว
         public static BarkWorldState Snapshot()
         {
             var s = new BarkWorldState();
@@ -118,6 +121,8 @@ namespace NuclearReMind
     }
 
     /// <summary>
+    /// [TH] หน้าที่: เงื่อนไขการยิง bark ทุกบรรทัดรวมไว้ที่เดียว แยกตามตัวละคร (K=Kova · M=Mira · D=Dorn · C=Citizen)
+    /// [TH] ทุกเงื่อนไขผูกกับ state จริง (กติกาข้อ 1) · เงื่อนไข "มีความรู้แล้ว" ถาม KnowledgeDB/MasteryRegistry ตรง
     /// The condition for each bark (BARKS.md — Kova/Mira/Dorn/Citizen tables), keyed by barkId. Bound
     /// to STATE not day (CLAUDE.md rule #1). hasNote / mastery conditions query KnowledgeDB /
     /// MasteryRegistry directly (read-only — allowed by the v6.3 exception). Inner-Voice (V##) barks are
@@ -125,6 +130,7 @@ namespace NuclearReMind
     /// </summary>
     public static class BarkConditions
     {
+        // [TH] เช็คว่า bark id นี้เข้าเงื่อนไขพูดหรือยัง จาก snapshot สถานะโลกปัจจุบัน
         public static bool IsMet(string barkId, in BarkWorldState s)
         {
             var db = KnowledgeDB.Instance;

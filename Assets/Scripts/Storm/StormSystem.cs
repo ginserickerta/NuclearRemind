@@ -3,6 +3,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: พายุรังสีปลายเกม — "แรงกดดัน" (Pressure) ไต่ขึ้นทุกวัน ยิ่ง Boost บ่อย / CORE สูง /
+    /// เปิด Zone B ยิ่งไต่เร็ว พอถึง 100 พายุแตก: เตาโดน +40 HEAT/วัน และทุกคนโดน +3 รังสี/วัน
+    /// นี่คือนาฬิกาที่ทั้งเกมวิ่งแข่ง — ต้องดัน CORE ให้จบก่อนพายุมา · ไม่ผูกกับวันที่ (กติกาข้อ 1)
+    ///
     /// The radiation storm (GDD §23 / CONFIG.md 🔒 STORM). Pressure climbs every day — faster the more
     /// the player has been boosting (escalating aggression), the higher CORE is, and while Zone B is
     /// open. At 100 the storm breaks: +40 HEAT/day into the reactor and +3 radiation/day on everyone.
@@ -34,6 +38,7 @@ namespace NuclearReMind
             Initialize(GameConfigSO.Instance);
         }
 
+        // [TH] ตั้งค่าเริ่มต้น (เป็นทางเข้าให้ EditMode test ด้วย)
         /// <summary>Bootstrap — also the EditMode-test entry point.</summary>
         public void Initialize(GameConfigSO cfg)
         {
@@ -65,6 +70,7 @@ namespace NuclearReMind
             TickDay(core, boosting, zoneBOpen);
         }
 
+        // [TH] คำนวณแรงกดดันที่เพิ่มวันนี้: ฐาน + จำนวนวันที่เคย Boost + สัดส่วน CORE + โบนัส (CORE≥80 / Zone B เปิด)
         /// <summary>§23 pressure rise — public for tests (state passed in, no live systems needed).</summary>
         public void TickDay(float core, bool boosting, bool zoneBOpen)
         {
@@ -81,6 +87,7 @@ namespace NuclearReMind
             if (Pressure >= _cfg.stormPressureMax) TriggerStorm();
         }
 
+        // [TH] แรงกดดันเต็ม 100 → พายุแตก ยิง event ให้ระบบอื่นรับผลกระทบ (เกิดครั้งเดียว)
         private void TriggerStorm()
         {
             if (IsStormActive) return;

@@ -223,6 +223,7 @@ namespace NuclearReMind
         private void DoScram()      => EventManager.Instance.RaiseScramRequested();
         private void Adjust(ReactorAllocation k, int d) => EventManager.Instance.RaiseReactorAllocationAdjust(k, d);
 
+        // [TH] ปุ่ม +/− วิศวกรหล่อเย็น: v6.3 เปลี่ยนเป็นจัดคนงานเข้า job "cool" ที่ CORE TOWER ผ่าน event เดียวกับคลิกอาคาร (path เก่าเก็บไว้เผื่อก่อน cutover)
         // ★ v6.3 cutover (worker-click fix): the old "cooling engineer" allocation buttons are dead under
         //   the reactor facade (per-turn allocation is gone in §26). Repurpose them to staff the "cool"
         //   job (workers at the CORE TOWER) via the same building-click assignment path — so cooling is
@@ -250,6 +251,7 @@ namespace NuclearReMind
         }
 
         // ═══════════════════════════ POPULATE ═══════════════════════════
+        // เติมค่าทั้งแผงจากสถานะเตาจริง: CORE%/ความร้อน/เชื้อเพลิง/คนหล่อเย็น/สถานะปุ่มโหมด+SCRAM
         private void Refresh()
         {
             if (_root == null) return;

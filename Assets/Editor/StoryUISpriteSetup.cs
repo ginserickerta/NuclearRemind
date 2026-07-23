@@ -5,6 +5,7 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ตั้งค่า import สไปรต์สกิน UI เนื้อเรื่อง/ควิซ (กรอบไม้/แผ่นโลหะ/ปุ่ม) ให้พร้อมใช้
     /// นำเข้าสไปรต์สกินของการ์ดบันทึก + ควิซ (Assets/Resources/StoryUI/*.png) ให้เป็น Sprite ที่ UI ใช้ได้
     ///   • frame_wood  = กรอบไม้ 9-slice (แผงการ์ดบันทึก) — มุมโลหะ + ร่องขอบไม่ยืด
     ///   • plate_inset = แผ่นจมโลหะสะอาด 9-slice (กล่องโจทย์/ตัวเลือก/footer ของควิซ)
@@ -29,6 +30,7 @@ namespace NuclearReMind.EditorTools
             }
         }
 
+        // เมนูนี้: ตั้งค่า import + 9-slice ให้สไปรต์ใน Resources/StoryUI ทุกไฟล์
         [MenuItem("NuclearReMind/Setup Story UI Sprites")]
         public static void Apply()
         {

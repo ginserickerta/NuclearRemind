@@ -5,6 +5,7 @@ using UnityEngine.Tilemaps;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor แก้บั๊กสีพื้นหายตอนกด Play — ปลดล็อก LockColor ใน Tile asset ทุกใบ
     /// แก้บั๊ก "สี tile หายตอนกด Play" — Tile asset ตั้ง flags = LockColor (m_Flags:1) ตั้งแต่สร้าง
     /// (ค่าเริ่มต้นของ ScriptableObject Tile) → SetColor ต่อช่องใช้ได้ตอน edit แต่พอ Play/refresh
     /// Tilemap ดึง flag จาก Tile asset กลับมา ล็อกสีเป็นขาว = tint (paint/gradient) รีเซ็ตหมด
@@ -16,6 +17,7 @@ namespace NuclearReMind.EditorTools
     /// </summary>
     public static class TileColorUnlock
     {
+        // เมนูนี้: เคลียร์ LockColor ทุก Tile asset ใต้ Assets/Sprites แล้วระบายพื้นใหม่
         [MenuItem("NuclearReMind/Fix: ปลดล็อกสี Tile (แก้สีหายตอน Play)")]
         public static void UnlockAndRefill()
         {

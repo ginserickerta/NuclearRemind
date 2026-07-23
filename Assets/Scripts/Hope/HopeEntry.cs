@@ -2,10 +2,15 @@ using System;
 
 namespace NuclearReMind
 {
-    /// <summary>Category of a hope source — drives grouping/colors in HopeBreakdownPanel (GDD §18).</summary>
+    /// <summary>
+    /// [TH] หน้าที่: หมวดของแหล่งที่มา Hope — ใช้จัดกลุ่ม/เลือกสีในแผง HopeBreakdownPanel
+    /// Category of a hope source — drives grouping/colors in HopeBreakdownPanel (GDD §18).
+    /// </summary>
     public enum HopeCategory { Worker, Food, Water, Power, Reactor, Storm, Research, Story, Card }
 
     /// <summary>
+    /// [TH] หน้าที่: รายการบวก/ลบ Hope 1 รายการที่ระบบใดระบบหนึ่งส่งเข้าบัญชี — Hope ห้ามเขียนตรงเด็ดขาด
+    /// [TH] ทุกระบบต้องส่ง HopeEntry เข้า HopeLedger เท่านั้น เพื่อ audit ย้อนหลังได้ว่าบวก/ลบเพราะอะไร
     /// One hope delta reported by a system (GDD §18). Hope is NEVER written directly —
     /// every system submits entries to the HopeLedger and the ledger applies the daily sum.
     /// </summary>

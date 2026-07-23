@@ -3,8 +3,13 @@ using UnityEngine;
 
 namespace NuclearReMind.Editor
 {
+    /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ติดตั้งระบบโครงข่ายไฟฟ้า — ตั้งระยะจ่ายไฟ (powerRange)
+    /// ใน BuildingData และสร้าง asset เสาส่งไฟ (PowerConduit) ให้ครบ
+    /// </summary>
     public static class PowerGridSetup
     {
+        // เมนูนี้: ตั้งค่า powerRange ของอาคาร + สร้าง PowerConduit asset ในคลิกเดียว
         [MenuItem("NuclearReMind/Setup Power Grid System")]
         public static void SetupPowerGrid()
         {

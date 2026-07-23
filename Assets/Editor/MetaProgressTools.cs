@@ -4,6 +4,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: เครื่องมือ Editor ดู/ล้าง "คลังความรู้ถาวร" (MetaProgress + Achievements)
+    /// ที่สะสมข้ามรอบเล่น — ใช้รีเซ็ตกลับเป็นผู้เล่นครั้งแรกตอนทดสอบสมดุลเกม
     /// Editor tools for the cross-run knowledge bank (MetaProgress + Achievements).
     ///
     /// Why this exists: the bank is deliberately permanent (STORY.md §④ "ความรู้ที่คุณได้ — ไม่มีวันหาย"),
@@ -18,6 +20,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string MenuRoot = "NuclearReMind/Meta Progress/";
 
+        // เมนูนี้: แสดงค่าคลังความรู้ถาวรปัจจุบัน (Knowledge/Codex/Mastery/Achievements)
         [MenuItem(MenuRoot + "Show Current", priority = 100)]
         public static void ShowCurrent()
         {
@@ -25,6 +28,7 @@ namespace NuclearReMind.EditorTools
             EditorUtility.DisplayDialog("คลังความรู้ถาวร (MetaProgress)", Describe(), "ปิด");
         }
 
+        // เมนูนี้: ล้างคลังความรู้ถาวรทั้งหมด (ใน PlayerPrefs) เพื่อทดสอบแบบผู้เล่นใหม่
         [MenuItem(MenuRoot + "Reset — เล่นใหม่แบบผู้เล่นครั้งแรก", priority = 101)]
         public static void ResetAll()
         {

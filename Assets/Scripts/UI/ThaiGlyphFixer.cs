@@ -6,6 +6,10 @@ using PhEngine.ThaiTextCare;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ตัวกวาดแก้ปัญหาสระ/วรรณยุกต์ไทยซ้อนทับกันทั้งเกม — legacy Text ของ Unity
+    /// วาดวรรณยุกต์ทับสระบน (เช่น เชื้อ) จึงแปลงทุกข้อความผ่าน ThaiTextCare (รหัส C90 PUA ของฟอนต์ที่ patch ไว้)
+    /// เป็น singleton สร้างตัวเองอัตโนมัติ กวาดทุก Text/TextMesh ใน LateUpdate — ไม่ต้องแก้โค้ดจุดอื่นเลย
+    ///
     /// Global Thai vowel/tone-mark de-overlapper (★ 2026-07-22).
     ///
     /// Unity's legacy Text ignores OpenType GPOS/GSUB, so Thai stacks like เชื้อ render the
@@ -49,6 +53,7 @@ namespace NuclearReMind
         private TextMesh[] _meshes = System.Array.Empty<TextMesh>();
         private int _frame;
 
+        // กวาดทุกเฟรม: refresh รายชื่อ label ทุก 10 เฟรม · label ที่ข้อความไม่เปลี่ยน (เช็ก reference) แทบไม่มีค่าใช้จ่าย
         private void LateUpdate()
         {
             if (_frame++ % RefreshFrames == 0)

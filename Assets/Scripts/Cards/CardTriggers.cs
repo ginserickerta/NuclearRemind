@@ -1,6 +1,8 @@
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ภาพถ่ายสถานะโลก ณ ตอนนั้น (heat, คนป่วย, อาหาร, พายุ ฯลฯ) ที่เงื่อนไขการ์ดใช้อ่าน
+    /// [TH] ดึงจากระบบที่รันอยู่จริง หรือเทสต์/แผง F9 ตั้งค่าเองได้
     /// Live world snapshot the card triggers read (GDD §25 / CONFIG.md 🔒 CARDS). Built from the
     /// running systems, or set by tests / the F9 panel.
     ///
@@ -23,7 +25,10 @@ namespace NuclearReMind
         public bool stormActive;      // Sprint 6 — false until then
         public int coolingWorkers;
 
-        /// <summary>Read the live systems (WorkerManager + ResourceManager + config). Null-safe.</summary>
+        /// <summary>
+        /// [TH] อ่านค่าจากระบบสด ๆ (WorkerManager/ResourceManager/Reactor/Storm/ZoneB) แบบกัน null ทุกตัว
+        /// Read the live systems (WorkerManager + ResourceManager + config). Null-safe.
+        /// </summary>
         public static CardWorldState Snapshot()
         {
             var s = new CardWorldState();
@@ -69,12 +74,15 @@ namespace NuclearReMind
     }
 
     /// <summary>
+    /// [TH] หน้าที่: เงื่อนไข trigger ของการ์ดทั้ง 8 ใบรวมไว้ที่เดียว — ทุกกฎผูกกับ "state" จริง
+    /// [TH] (เตาร้อน/คนป่วย/คนหิว ฯลฯ) ห้ามผูกกับวันที่ (กติกาข้อ 1) · เกณฑ์ตัวเลขอ่านจาก GameConfigSO
     /// The trigger CONDITION for each card, in one place (GDD §25 / CONFIG.md 🔒 CARDS). Every rule
     /// is bound to STATE, never the calendar (CLAUDE.md rule #1). Thresholds that also live in
     /// CONFIG.md are read from GameConfigSO, not hardcoded here.
     /// </summary>
     public static class CardTriggers
     {
+        // [TH] เช็คว่าการ์ดใบนี้เข้าเงื่อนไขเด้งหรือยัง เทียบ state ปัจจุบันกับเกณฑ์ใน config
         public static bool IsTriggered(string cardId, in CardWorldState s)
         {
             var cfg = GameConfigSO.Instance;
@@ -93,6 +101,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] สำหรับ debug: พิมพ์กฎเดียวกับ IsTriggered เป็นข้อความ "ค่าจริง / เกณฑ์" ให้ไล่ดูได้ว่าทำไมการ์ดไม่เด้ง
         /// Diagnostic: the same rule as IsTriggered, written out as "actual vs threshold".
         ///
         /// Kept next to IsTriggered on purpose — a log that reads thresholds from somewhere else would

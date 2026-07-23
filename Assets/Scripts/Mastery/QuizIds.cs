@@ -1,6 +1,8 @@
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ค่าคงที่รหัสควิซทั้ง 11 ข้อ — ใช้แทน string ลอย ๆ เพื่อให้ compiler ช่วยจับพิมพ์ผิด
+    ///
     /// The 11 quiz ids (GDD §21 / QUIZZES.md), as constants so the registry's bonus wiring and the
     /// availability switch reference compile-checked names instead of loose strings. Identifiers
     /// only — every numeric magnitude still comes from GameConfigSO (CLAUDE.md rule #2).

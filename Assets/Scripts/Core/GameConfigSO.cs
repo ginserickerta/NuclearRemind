@@ -3,6 +3,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ScriptableObject เก็บ "ตัวเลขทุกค่าของเกม" ไว้ที่เดียว (กติกา #2 — ห้าม hardcode)
+    /// ทุกค่า default ตรงกับ docs/CONFIG.md · ค่าที่ติด [LOCK] ห้ามแก้โดยไม่รัน nrm_sim.py ยืนยัน
+    /// ทุกระบบอ่านผ่าน GameConfigSO.Instance (query อ่านอย่างเดียว — เรียกตรงได้ตามข้อยกเว้น v6.3)
     /// Single source of truth for every gameplay number (GDD v6.3 rule #2 — no hardcoding).
     /// Every default below mirrors docs/CONFIG.md; the asset is the runtime source.
     /// Fields marked [LOCK] must never be changed without re-running nrm_sim.py (CONFIG.md 🔒).
@@ -359,6 +362,7 @@ namespace NuclearReMind
         public int shelterCapL2 = 20;
         public int shelterCapL3 = 28;
 
+        // เพดานประชากรตามเลเวล Shelter (เกิน L3 = ใช้ค่า L3)
         /// <summary>Population ceiling for a Shelter level. Levels above 3 clamp to L3.</summary>
         public int ShelterCapForLevel(int level)
         {
@@ -374,6 +378,7 @@ namespace NuclearReMind
         private static GameConfigSO _instance;
 
         /// <summary>
+        /// [TH] จุดเข้าถึงตอนรัน — โหลด GameConfig.asset จาก Resources ครั้งเดียว ถ้าไม่มีใช้ค่า default (ตรง CONFIG.md)
         /// Runtime access point. Loads Assets/Resources/GameConfig.asset once;
         /// falls back to CONFIG.md defaults (CreateInstance) so EditMode tests and
         /// headless sims never null-ref. Read-only query — direct access allowed (CLAUDE.md exception).

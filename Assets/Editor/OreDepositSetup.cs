@@ -7,6 +7,7 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ติดตั้งระบบแหล่งแร่โซน A/B (sprite + asset + wire ซีน) ในคลิกเดียว
     /// ติดตั้งระบบแหล่งแร่เหล็ก (V4 §5 — โซน A ปลอดภัย/โซน B เสี่ยงรังสี):
     ///   1. สร้าง sprite ก้อนแร่ A/B (วาดสีจริง — ล้อ EnsureWorkerSprite ไม่ผ่าน silhouette ให้แยกโซนออกด้วยตา)
     ///   2. สร้าง/อัปเดต BuildingData assets (OreDepositA/B — isOreNode + โควตา/ความเสี่ยง)
@@ -28,6 +29,7 @@ namespace NuclearReMind.EditorTools
         // ความหนากรอบ Zone B รอบนอก (ช่อง) — กริด 43×43 · border 7 → Zone A สี่เหลี่ยมกลาง 29×29
         private const int ZoneBorderThickness = 7;
 
+        // เมนูนี้: ติดตั้งแหล่งแร่โซน A/B ครบชุด (sprite + BuildingData + OreDepositManager ในซีน)
         [MenuItem("NuclearReMind/Setup Ore Deposits (Zone A-B)")]
         public static void SetupAll()
         {

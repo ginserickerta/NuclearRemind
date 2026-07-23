@@ -7,6 +7,7 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: เครื่องมือ Editor ช่วยเซฟค่าที่จัด object ตอนกด Play ไม่ให้หายเมื่อหยุดเล่น
     /// Play Mode Saver — เก็บค่าที่จัด/ปรับตอน Play Mode ไว้ แล้วเขียนกลับซีนหลังหยุดเล่น
     ///
     /// ปัญหา: Unity ตั้งใจให้การแก้ object ในซีนตอน Play หายหมดเมื่อกดหยุด
@@ -48,6 +49,7 @@ namespace NuclearReMind.EditorTools
         }
 
         // ── capture (ตอน Play) ─────────────────────────────────────────
+        // เมนูนี้: เก็บ snapshot ของ object ที่เลือกไว้ตอน Play (Ctrl+Shift+K) เพื่อเขียนกลับซีนหลังหยุดเล่น
         [MenuItem(MenuCapture)]
         private static void CaptureSelection()
         {
@@ -88,6 +90,7 @@ namespace NuclearReMind.EditorTools
         [MenuItem(MenuCapture, validate = true)]
         private static bool CaptureValidate() => EditorApplication.isPlaying;
 
+        // เมนูนี้: ยกเลิก snapshot ที่ค้างอยู่ (จะไม่เขียนค่ากลับตอนออก Play)
         [MenuItem(MenuClear)]
         private static void ClearPending()
         {

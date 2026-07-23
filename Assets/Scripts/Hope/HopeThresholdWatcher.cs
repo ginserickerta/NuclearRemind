@@ -4,6 +4,8 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: เฝ้าดูค่า Hope แล้วยิงเหตุการณ์ตามเส้นวิกฤต — ต่ำกว่า 60 บทพูดบ่น · ต่ำกว่า 40 สไตรค์
+    /// [TH] · ต่ำกว่า 25 คนอพยพ · แตะ 0 แพ้เกม — มี hysteresis กันเหตุการณ์ยิงซ้ำทุกวันตอน Hope แกว่งใกล้เส้น
     /// Hope threshold events (GDD §18) with hysteresis. Pure logic, no Unity scene dependency.
     ///
     ///   hope &lt; 60 → bark pool "hope_low" (BarkManager wires in Sprint 5)
@@ -29,10 +31,14 @@ namespace NuclearReMind
 
         public HopeThresholdWatcher(GameConfigSO cfg) => _cfg = cfg;
 
-        /// <summary>Run after every ledger commit with the new hope value.</summary>
+        /// <summary>
+        /// [TH] เรียกหลังปิดบัญชี Hope ทุกวัน — เช็คทีละเส้นจากเบาไปหนัก แล้วยิง event ที่ถึงเกณฑ์
+        /// Run after every ledger commit with the new hope value.
+        /// </summary>
         public void Evaluate(float hope)
         {
             // re-arm (hysteresis) — reset flag once hope is clear of threshold + margin
+            // [TH] ปลดล็อกธงใหม่เมื่อ Hope ฟื้นพ้นเส้น + ระยะเผื่อ (8) แล้วเท่านั้น
             if (_barkFired && hope > _cfg.hopeBarkLow + _cfg.hysteresisMargin) _barkFired = false;
             if (_strikeFired && hope > _cfg.hopeStrike + _cfg.hysteresisMargin) _strikeFired = false;
             if (_exodusFired && hope > _cfg.hopeExodus + _cfg.hysteresisMargin) _exodusFired = false;

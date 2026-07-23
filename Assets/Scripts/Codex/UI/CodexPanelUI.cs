@@ -5,6 +5,9 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: หน้าต่างสารานุกรม Codex (กดปุ่ม C) — โชว์ควิซ/ความรู้ทั้ง 11 หัวข้อใน 3 สถานะ
+    /// [TH]   เชี่ยวชาญแล้ว (คลิกอ่านเนื้อความรู้) · ตอบได้ (คลิกเปิดควิซ) · ล็อก (โชว์แถวหรี่ ไม่ซ่อน)
+    /// [TH] auto-spawn ลง HUDCanvas เอง · มี prefab ที่ author ไว้ก็ใช้แทนการ build จากโค้ด
     /// v6.3 Codex panel (GDD §21 / QUIZZES.md / CODEX.md) — the permanent window into the knowledge
     /// economy, rebuilt 2026-07-22 in the crisis-card visual language (metal panel frame, shared
     /// palette/fonts, UIPopIn animation, bakeable prefab).
@@ -144,9 +147,11 @@ namespace NuclearReMind
         // The quiz popup (QuizCardPanelUI) answers on our behalf — keep the list and header live.
         private void HandleQuizAnswered(string quizId, bool correct) { if (_shown) Refresh(); }
 
-        /// <summary>Open the Codex from a HUD control (the quiz notification icon). Safe if already open.</summary>
+        /// <summary>[TH] เปิด Codex จากปุ่ม/ไอคอนแจ้งเตือนบน HUD — เปิดอยู่แล้วก็ไม่พัง
+        /// Open the Codex from a HUD control (the quiz notification icon). Safe if already open.</summary>
         public void OpenFromHud() { if (!_shown) Open(); }
-        /// <summary>Toggle from the HUD CODEX button — same behaviour as the C key.</summary>
+        /// <summary>[TH] สลับเปิด/ปิดจากปุ่ม CODEX บน HUD — พฤติกรรมเดียวกับกดปุ่ม C
+        /// Toggle from the HUD CODEX button — same behaviour as the C key.</summary>
         public void Toggle() { if (_shown) Hide(); else Open(); }
         public bool IsShown => _shown;
 
@@ -413,6 +418,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ใช้ใน Editor เท่านั้น: build แผงทั้งอัน + แถวตัวอย่างครบ 3 สถานะ แล้วเซฟเป็น prefab
+        /// [TH] (แถวตัวอย่างถูก Refresh ล้างทิ้งตอนรันจริง)
         /// Editor baker only: build the whole panel under this object — with one sample row per state so
         /// the prefab previews like the real list — then save as a prefab. Sample rows are cleared by
         /// Refresh (it wipes ALL list children). Backdrop ships ACTIVE for preview; Start() hides it.

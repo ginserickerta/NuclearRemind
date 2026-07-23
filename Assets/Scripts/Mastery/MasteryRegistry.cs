@@ -4,6 +4,11 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ทะเบียนกลาง "ความเชี่ยวชาญ" — จำว่าควิซข้อไหนตอบถูกแล้ว และแปลงเป็นโบนัสให้ 6 ระบบ
+    /// (เตา · คนงาน · หมอ · ฟาร์ม · คลังอาหาร · Zone B) query ตรงแบบอ่านอย่างเดียวได้ (ข้อยกเว้น CLAUDE.md)
+    /// ติดตัวข้ามรอบเกม (MetaProgress) — แพ้แล้วเริ่มใหม่ ผู้เล่นยังเก่งขึ้นจริง
+    /// ตัวเลขโบนัสทุกตัวอ่านจาก GameConfigSO — คลาสนี้แค่เลือกว่าใช้ค่าไหน ไม่เคยกำหนดเลขเอง
+    ///
     /// Mastery singleton (GDD §21/§31) — the permanent set of quizzes answered correctly, and the
     /// typed bonus each grants. Six systems query it read-only: ReactorController · WorkerManager ·
     /// MedBay · Farm · FoodStorage · ZoneB. Direct calls are allowed by the CLAUDE.md v6.3 exception
@@ -42,6 +47,7 @@ namespace NuclearReMind
         public bool Has(string quizId) => !string.IsNullOrEmpty(quizId) && _earned.Contains(quizId);
         public int EarnedCount => _earned.Count;
 
+        // [TH] บันทึกว่าได้ mastery ข้อนี้แล้ว (เรียกจาก CodexQuizManager ตอนตอบถูก) — คืน true เฉพาะครั้งแรก
         /// <summary>
         /// Record a mastery as earned (CodexQuizManager calls this on a correct answer). Returns true
         /// the first time only. Persists to MetaProgress in play mode; stays in-memory in tests.
@@ -57,6 +63,7 @@ namespace NuclearReMind
         // ─────────────────────────────────────────
         //  Typed bonuses — the six systems (GDD §21)
         //  ★ answer vs no-answer differs ENTIRELY through these
+        //  [TH] โบนัสแยกตามระบบ — "ตอบควิซ vs ไม่ตอบ" ต่างกันทั้งหมดผ่านเมธอดกลุ่มนี้
         // ─────────────────────────────────────────
 
         // ReactorController --------------------------------------------------
@@ -88,6 +95,7 @@ namespace NuclearReMind
         public float SpoilMult() => Has(QuizIds.FoodIrradiation) ? Cfg.spoilMasteryMult : 1f;
 
         // ZoneB --------------------------------------------------------------
+        // [TH] ★ ตัวชี้แพ้ชนะของทั้งเกม: tritium/วัน ของ Zone B — ไม่ตอบควิซ = 3.0 (แพ้ 100%) · ตอบถูก = 8.0 (ชนะ)
         /// <summary>
         /// ★ THE game-deciding query. Zone B tritium/day: base 3.0 (lose 100%) → mastery 8.0 (win).
         /// This single 3→8 flip is the crispest proof that "answer vs no-answer differs" (§32 test).

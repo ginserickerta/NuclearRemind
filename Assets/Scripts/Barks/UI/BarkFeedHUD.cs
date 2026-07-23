@@ -5,6 +5,9 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: แถบ toast มุมล่างซ้ายสำหรับแสดง bark — "โควา: ..." / เสียงในใจ "▸ ..."
+    /// [TH] ซ้อนได้สูงสุด 3 ใบ จางหายเองตามเวลา (unscaled — โผล่ได้แม้เกมหยุด) ไม่บังคลิกใด ๆ
+    /// [TH] เป็นช่องสำรอง: ถ้ามีแผง dialogue (BarkDialogueRouter) ทำงานอยู่ แถบนี้จะเงียบ กันข้อความซ้ำ
     /// ★ v6.3 cutover (slice 6 Barks): the on-screen channel for OnBarkFired — until now BarkManager
     /// and InnerVoiceDirector spoke into the void (only tests listened). Bottom-left toast feed:
     ///
@@ -104,6 +107,7 @@ namespace NuclearReMind
         private void Update()
         {
             // age + fade on unscaled time; drop dead toasts
+            // [TH] นับอายุ toast ทุกเฟรม: หมดเวลาแล้วลบทิ้ง ใกล้หมดเวลาให้ค่อย ๆ จาง
             for (int i = _toasts.Count - 1; i >= 0; i--)
             {
                 float age = Time.unscaledTime - _toasts[i].bornAt;
@@ -119,6 +123,7 @@ namespace NuclearReMind
             }
         }
 
+        // [TH] รับ bark ที่ยิงเข้ามา: ถ้าแผง dialogue รับผิดชอบอยู่ให้เงียบ ไม่งั้นสร้าง toast (เต็ม 3 ใบ ลบใบเก่าสุด)
         private void HandleBarkFired(BarkSO bark)
         {
             if (bark == null || string.IsNullOrEmpty(bark.text)) return;
@@ -153,6 +158,8 @@ namespace NuclearReMind
         // ═══════════════ BUILD ═══════════════
 
         /// <summary>
+        /// [TH] ให้ feed มี Canvas ซ้อนของตัวเอง เพื่อกำหนดลำดับการวาดเองได้ (อยู่เหนือ HUD แต่ใต้แผงที่ผู้เล่นเปิด)
+        /// [TH] จงใจไม่ใส่ GraphicRaycaster — feed นี้ต้องไม่กินคลิกที่ควรไปถึงแผนที่ข้างใต้
         /// Give the feed its own nested Canvas so its draw order is a number we chose, not an accident.
         ///
         /// Without this the feed inherits HUDCanvas at order 0 and loses to every GameUIStack panel
@@ -202,6 +209,7 @@ namespace NuclearReMind
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
 
+        // [TH] สร้าง toast 1 ใบ: พื้นหลังทึบ + ข้อความ ทุกชิ้นปิด raycast ไม่ให้บังการคลิก
         private GameObject MakeToast(string line, Color textColor)
         {
             var go = new GameObject("Toast", typeof(RectTransform));

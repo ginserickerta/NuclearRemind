@@ -3,6 +3,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: เฝ้าดูเกมจริงวันละครั้ง แล้วบันทึกว่าผู้เล่น "ใช้ความรู้จริงแล้วหรือยัง"
+    /// (เงื่อนไข requiresApplied ของควิซ) — เช่น เดินเครื่องสกัดดิวทีเรียม, ติดคอยล์, รักษาคนไข้, ป้อน tritium
+    /// ควิซจะตอบได้ก็ต่อเมื่อได้ลงมือใช้ความรู้นั้นแล้วเท่านั้น — ไม่ผูกกับวันที่ (กติกาข้อ 1)
+    ///
     /// Feeds the quiz "requiresApplied" gate (QUIZZES.md) from real gameplay. Every v6.3 quiz is answerable
     /// only after the player has USED the knowledge, tracked in <see cref="MasteryAppliedState"/> and read by
     /// <see cref="QuizAvailability"/>. Pre-cutover only q_tritium_breeding was wired (ZoneBController); this
@@ -64,6 +68,8 @@ namespace NuclearReMind
             EventManager.Instance.OnGameOver -= HandleGameOver;
         }
 
+        // [TH] จบวัน: อ่านสถานะที่นิ่งแล้วของ เตา/คนงาน/ตึก → ตั้งธง "ใช้ความรู้แล้ว" ของแต่ละควิซ
+        //      แล้วเชิญผู้เล่นทำควิซข้อที่เพิ่งเปิด (ข้ามได้ — ควิซเป็นทางเลือกตาม QUIZZES.md)
         private void HandleDayEnded(int day)
         {
             var q = CodexQuizManager.Instance;
@@ -134,6 +140,7 @@ namespace NuclearReMind
                 EventManager.Instance?.RaiseQuizShown(fresh[i]);
         }
 
+        // [TH] จบเกมแบบชนะ → ตั้งธงให้ควิซ q_clean_energy
         // q_clean_energy — reaching a (winning) ending
         private void HandleGameOver(GameEndType endType)
         {

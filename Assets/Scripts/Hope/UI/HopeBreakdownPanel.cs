@@ -6,6 +6,8 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: แผงแจกแจง Hope — โชว์ค่าปัจจุบัน, รายการบวก/ลบของวันล่าสุด (มาจากอะไรบ้าง), และกราฟแนวโน้ม 7 วัน
+    /// [TH] อ่านจาก HopeLedger อย่างเดียว ไม่แก้ค่าอะไร — ทำให้ผู้เล่นเห็นว่าความหวังขึ้น/ลงเพราะอะไร
     /// Hope breakdown panel (GDD §18 UI — mandatory). Shows the current hope value,
     /// the last committed day's entries split into losses/gains, and a 7-day trend.
     ///
@@ -47,7 +49,10 @@ namespace NuclearReMind
                 WorkerManager.Instance.OnWorkersChanged -= Refresh;
         }
 
-        /// <summary>HUD hope button hooks this (onClick) — panel is closed by default.</summary>
+        /// <summary>
+        /// [TH] เปิด/ปิดแผง — ผูกกับปุ่ม Hope บน HUD (เริ่มเกมแผงปิดอยู่)
+        /// HUD hope button hooks this (onClick) — panel is closed by default.
+        /// </summary>
         public void TogglePanel()
         {
             if (panelRoot == null) return;
@@ -55,6 +60,7 @@ namespace NuclearReMind
             if (panelRoot.activeSelf) Refresh();
         }
 
+        // [TH] อัปเดตหัวเรื่อง (ค่า + ลูกศรขึ้น/ลง) + รายการแจกแจง + บรรทัดแนวโน้ม
         public void Refresh()
         {
             var wm = WorkerManager.Instance;
@@ -74,6 +80,7 @@ namespace NuclearReMind
                 trendText.text = $"รวม {FormatDelta(ledger.LastDelta)} · แนวโน้ม 7 วัน {BuildTrend(ledger.History)}";
         }
 
+        // [TH] สร้าง/รีไซเคิลแถวข้อความตามจำนวนรายการ — บวกสีเขียว ✓ · ลบสีแดง ✕
         private void RebuildRows(IReadOnlyList<HopeEntry> entries)
         {
             if (rowContainer == null || rowTemplate == null) return;
@@ -96,7 +103,10 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>Last 7 committed days as block glyphs (0-100 → ▁-█). Static for tests.</summary>
+        /// <summary>
+        /// [TH] แปลงประวัติ Hope 7 วันล่าสุดเป็นตัวอักษรแท่งกราฟ (0-100 → ▁ ถึง █)
+        /// Last 7 committed days as block glyphs (0-100 → ▁-█). Static for tests.
+        /// </summary>
         public static string BuildTrend(IReadOnlyList<float> history)
         {
             if (history == null || history.Count == 0) return "—";

@@ -7,6 +7,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: แผงทดสอบระบบ Sprint 1 (คนงาน/กะ/Hope/คลัง) ตอน Play — เครื่องมือ dev เท่านั้น
+    /// กด F9 เปิด/ปิด · จัดงานคนงาน + ชุด preset · ปุ่มกดดันคนงาน (หิว/ล้า/รังสี) · ข้ามวัน · ดู Hope breakdown สด
+    /// ถูกคอมไพล์ทิ้งใน release build (เหมือน DebugCheatPanel)
+    ///
     /// Play-mode test panel for the Sprint 1 systems (Worker/Shift/HopeLedger/Inventory view).
     /// Dev-only — compiled out of release builds (same pattern as DebugCheatPanel).
     ///

@@ -4,6 +4,9 @@ using UnityEngine.Rendering.Universal;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ทำให้ไฟ Light2D กะพริบแบบธรรมชาติ (แสงเตา/ไฟหน้าต่าง/เทียน) ด้วย Perlin noise
+    /// แต่ละดวงมี phase ของตัวเอง — ไฟไม่กะพริบพร้อมกัน · เป็นชั้นภาพล้วน ไม่มีผลต่อ gameplay
+    ///
     /// Cheap organic flicker for fire-ish Light2D (reactor glow, window embers, candles).
     /// Perlin-noise based — non-repeating, per-instance phase so lights never sync.
     /// Visual layer only (RENDER_PLAN §7.1). Spawners that clone a template light

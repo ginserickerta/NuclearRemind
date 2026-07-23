@@ -6,6 +6,7 @@ using UnityEngine.UI;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ตั้งเพดานคลังทรัพยากรใน ResourceManager + อัปเกรดแผงทรัพยากรบน HUD
     /// ตั้งเพดานคลังตาม GDD V4 §4 ลง ResourceManager ใน scene:
     ///   Energy/Water/Iron/Deuterium/Tritium = 9999 ("แทบไม่จำกัด") · Food = 500 (เกิน → วิกฤตเน่า) · Knowledge = 100
     ///
@@ -26,6 +27,7 @@ namespace NuclearReMind.EditorTools
         private const string ScenePath = "Assets/Scenes/Gamescene.unity";
         private const string LabPath = "Assets/ScriptableObjects/Buildings/Laboratory.asset";
 
+        // เมนูนี้: เขียนเพดานคลัง (9999/500/100) ลงซีน + เพิ่มแถว Deuterium/Tritium ในแผงทรัพยากร
         [MenuItem("NuclearReMind/Apply Resource Caps (V4 §4)")]
         public static void SetupAll()
         {

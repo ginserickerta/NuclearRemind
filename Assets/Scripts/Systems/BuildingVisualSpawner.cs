@@ -219,6 +219,8 @@ namespace NuclearReMind
             target.data = data;
         }
 
+        // ไฟส้มอุ่นประจำอาคาร (Light2D) — ให้หน้าต่างดู "มีไฟ" บนฉากเกรดมืด · clone จาก template ในซีน
+        // ข้ามแหล่งแร่ (ไม่มีอะไรให้ส่อง) + ชิ้นส่วน CORE TOWER (ซีนมี reactor glow ใหญ่อยู่แล้ว)
         // Warm ember light per building — makes windows read as "lit" against the dark grade.
         // Skips: ore piles (nothing to light) + core tower parts (scene already has the big reactor glow).
         private void AddWindowGlow(GameObject parent, Sprite sprite, BuildingData data)
@@ -283,6 +285,7 @@ namespace NuclearReMind
             }
         }
 
+        // (ชั่วคราว) ตัวช่วยวินิจฉัยระบบแสง 2D — ลบพร้อมบล็อกทดสอบด้านบนเมื่อยืนยันว่า WindowGlow เห็นจริง
         // TEMP diagnostic helpers — remove with the test block above
         private void SpawnTestLight(Vector3 pos, int blendStyle, string name)
         {

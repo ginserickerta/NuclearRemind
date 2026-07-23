@@ -1,6 +1,8 @@
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: รวม id การ์ดวิกฤตทั้ง 8 ใบเป็นค่าคงที่ (คอมไพเลอร์เช็คชื่อให้) — เก็บเฉพาะชื่อ
+    /// [TH] ตัวเลขทั้งหมด (เกณฑ์ trigger, cooldown) อยู่ใน GameConfigSO / asset การ์ด ตามกติกาข้อ 2
     /// The 8 Crisis Card ids (GDD §25 / CARDS.md / CONFIG.md 🔒 CARDS), as constants so triggers
     /// and the manager reference compile-checked names. Identifiers only — every number
     /// (thresholds, cooldowns) lives in GameConfigSO / the card asset (CLAUDE.md rule #2).

@@ -5,6 +5,7 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้างอนุสรณ์สถานในซีนเกม (asset + วางในฉาก + ต่อสาย UI)
     /// อนุสรณ์ทีมสร้างหอคอย (STORY.md §② MEMORIAL) — MemorialSO + BuildingData + PrePlacedBuilding
     /// + wire เข้า MemorialPanelController · คลิกได้ตั้งแต่ Day 1 · คลิกแรก +2 Hope และยิง Inner Voice V02
     ///
@@ -21,6 +22,7 @@ namespace NuclearReMind.EditorTools
         // ตำแหน่งเดิมจาก StorySetup.WireScene — ไม่ผูกสูตรขนาดกริด (เคาะไว้ที่ (17,17))
         private static readonly Vector2Int MemorialCell = new Vector2Int(17, 17);
 
+        // เมนูนี้: สร้างอนุสรณ์สถานในซีนเกม (asset + วางที่ช่อง 17,17 + ต่อสายเข้า UI)
         [MenuItem("NuclearReMind/Setup Memorial (STORY.md §2)")]
         public static void Setup()
         {

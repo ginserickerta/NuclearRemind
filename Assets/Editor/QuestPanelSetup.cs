@@ -7,6 +7,8 @@ using UnityEngine.UI;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้างแผงเควสรายวัน (Day 2-30) ใต้ HUDCanvas
+    /// พร้อมสร้าง QuestSchedule asset และต่อสาย QuestPanelController ให้อัตโนมัติ
     /// Quest Panel (Day 2-30) — day-guidance popup styled like the Day-1 tutorial checklist.
     /// Builds the panel under HUDCanvas, ensures the QuestSchedule asset exists
     /// (with sample entries on first creation), and wires QuestPanelController.
@@ -17,6 +19,7 @@ namespace NuclearReMind.EditorTools
         private const string AssetDir = "Assets/Resources/Quests";
         private const string AssetPath = AssetDir + "/QuestSchedule.asset";
 
+        // เมนูนี้: สร้างแผงเควสรายวันใน HUD (ลบของเก่าแล้วสร้างใหม่ — รันซ้ำได้)
         [MenuItem("NuclearReMind/Setup Quest Panel (Day 2-30)")]
         public static void Setup()
         {

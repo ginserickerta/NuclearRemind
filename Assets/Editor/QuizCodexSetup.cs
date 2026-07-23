@@ -6,6 +6,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้างเนื้อหาควิซ-Codex ทั้งชุด (11 ควิซ + 11 Codex + 11 Mastery)
+    /// เป็น ScriptableObject assets จากข้อความในเอกสาร QUIZZES.md / CODEX.md แบบคำต่อคำ
     /// Generates the Sprint 3 Codex-quiz content (GDD §21 / QUIZZES.md / CODEX.md):
     ///   • 11 MasteryBonusSO  → Assets/Resources/Mastery
     ///   • 11 CodexEntrySO    → Assets/Resources/Codex
@@ -36,6 +38,7 @@ namespace NuclearReMind.EditorTools
             public string entryId, titleTh, titleEn, iconName, bodyText;
         }
 
+        // เมนูนี้: สร้าง/อัปเดต asset ควิซ+Codex+Mastery ทั้ง 11 ชุดลง Resources (รันซ้ำได้ GUID ไม่เปลี่ยน)
         [MenuItem("NuclearReMind/Setup Quiz + Codex")]
         public static void Apply()
         {

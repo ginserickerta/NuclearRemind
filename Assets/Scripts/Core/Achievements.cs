@@ -5,6 +5,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ระบบ Achievement 3 อัน (ไม่เจอ Triage / ไม่ออก Decree / ไม่มีใครตาย)
+    /// ตัดสินตอนจบเกมจากข้อมูลที่ RunStats จับไว้ · เก็บถาวรข้ามรอบเล่นใน PlayerPrefs
+    /// (แยก key จาก MetaProgress เพราะ achievement ไม่ให้โบนัสเกมเพลย์ — เป็นแค่เกียรติยศ)
     /// The three achievements from STORY.md §④. Each is scored the moment the run ends, from the facts
     /// RunStats latched while it was playing.
     ///
@@ -26,6 +29,7 @@ namespace NuclearReMind
 
         public static readonly string[] All = { NoTriage, NoDecree, EveryoneHome };
 
+        // ชื่อ achievement ภาษาไทยสำหรับแสดงผล
         public static string TitleOf(string id) => id switch
         {
             NoTriage => "ไม่มีใครต้องเลือก",
@@ -34,6 +38,7 @@ namespace NuclearReMind
             _ => id,
         };
 
+        // คำอธิบายเงื่อนไขการได้รับ
         public static string HowEarned(string id) => id switch
         {
             NoTriage => "จบเกมโดยไม่เจอ Triage",
@@ -58,9 +63,11 @@ namespace NuclearReMind
             }
         }
 
+        // เช็คว่า achievement นี้ปลดล็อกแล้วหรือยัง
         public static bool IsUnlocked(string id) => Unlocked.Contains(id);
 
         /// <summary>
+        /// [TH] ตัดสิน achievement ตอนจบเกม (เฉพาะรอบที่จบแบบชนะ/ปกติเท่านั้น) แล้วเซฟอันที่ได้ใหม่ลง PlayerPrefs
         /// Score the finished run and persist anything newly earned. Returns the ids earned THIS run
         /// (whether or not they were already unlocked before), so the ending screen can list them.
         /// </summary>
@@ -91,6 +98,7 @@ namespace NuclearReMind
             PlayerPrefs.Save();
         }
 
+        // สร้างข้อความรายการ achievement ที่ได้รอบนี้สำหรับหน้าจบเกม
         /// <summary>Achievement lines for the ending card, or empty when none were earned this run.</summary>
         public static string BuildSummary(IReadOnlyList<string> earnedThisRun)
         {
@@ -105,6 +113,7 @@ namespace NuclearReMind
         public static int UnlockedCount => Unlocked.Count;
 
         /// <summary>
+        /// [TH] ล้าง achievement ทั้งหมด — ใช้คู่กับ MetaProgress.ResetAll ตอนรีเซ็ตความคืบหน้าถาวร
         /// Wipe every earned achievement (new game+ reset / testing as a fresh player).
         /// Pairs with MetaProgress.ResetAll — achievements live in their own key, so a meta wipe that
         /// skipped this would leave the player's permanent record half-cleared.

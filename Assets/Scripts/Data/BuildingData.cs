@@ -85,6 +85,7 @@ namespace NuclearReMind
         // DEVIATION from literal Improve spec: BuildingType is required by
         // PlacementController.OccupyFootprint() to mark Cell.buildingType,
         // and the enum already lives in GridManager.cs. Kept intentionally.
+        // [TH] ชนิดอาคาร (enum อยู่ใน GridManager.cs) — PlacementController ใช้ mark ช่องกริดตอนวางอาคาร
         public BuildingType buildingType;
 
         [Header("Cost")]
@@ -156,6 +157,7 @@ namespace NuclearReMind
         // plant still has to be big enough. These two make the early tier data instead of code: set
         // deuteriumMinLevel = 2 and the plant can extract from L2 at the lower rate below.
         // 0 = the old behaviour (max level only), so every other building is unaffected.
+        // [TH] สกัด Deuterium ได้ตั้งแต่เลเวลนี้ (อัตราต่ำกว่า — ดูฟิลด์ถัดไป) · 0 = ต้องเลเวลสูงสุดเท่านั้น (พฤติกรรมเดิม อาคารอื่นไม่กระทบ)
         public int deuteriumMinLevel = 0;
         public float deuteriumProductionMinLevel = 0f; // ผลิต/วัน ตั้งแต่ deuteriumMinLevel ถึงก่อนระดับสูงสุด
 

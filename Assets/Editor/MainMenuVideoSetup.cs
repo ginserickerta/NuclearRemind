@@ -8,6 +8,7 @@ using UnityEngine.Video;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ติดตั้งวิดีโอพื้นหลังให้ซีนเมนูหลัก (ไม่ได้รันในเกมจริง)
     /// ใส่ "คลิปวิดีโอเป็นพื้นหลัง" ให้ MainMenu — VideoPlayer → RenderTexture → RawImage เต็มจอ (หลังปุ่ม)
     ///   • VideoPlayer (MenuVideo): เล่นวน (loop) + playOnAwake + เงียบ (audio None)
     ///   • RawImage (VideoBackground): เต็มจอ อยู่เหนือ Background มืด แต่ใต้ปุ่มเมนู
@@ -20,6 +21,7 @@ namespace NuclearReMind.EditorTools
         private const string ClipPath = "Assets/Sprites/awsdfasd/805755078.153351.mp4";
         private const string RTPath = "Assets/Video/MenuBackground.renderTexture";
 
+        // เมนูนี้: ใส่วิดีโอวนเป็นพื้นหลังซีนเมนูหลัก (สร้าง VideoPlayer + RawImage ให้อัตโนมัติ)
         [MenuItem("NuclearReMind/Menu/Setup Main Menu Video Background")]
         public static void Apply()
         {

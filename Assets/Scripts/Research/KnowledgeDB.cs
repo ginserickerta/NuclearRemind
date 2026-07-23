@@ -4,6 +4,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ฐานข้อมูลความรู้กลางของเกม — จำว่าเบาะแส (lead) ไหนถูกปลดแล้ว
+    /// โน้ตวิจัยใบไหนเสร็จแล้ว และใช้ข้อมูลนี้ล็อก/ปลดล็อกสิ่งปลูกสร้าง
+    /// ระบบอื่น query แบบอ่านอย่างเดียว (HasNote/HasLead) ได้ตรง ๆ — โน้ตที่ยังไม่มีเบาะแสต้องถูกซ่อนเป็น ???
+    ///
     /// Central knowledge registry (GDD §19) — which leads are unlocked, which notes are
     /// completed, and what that gates. Plain class (no scene object); ResearchLab drives it.
     ///
@@ -22,6 +26,7 @@ namespace NuclearReMind
         /// <summary>Fresh DB for EditMode tests / game restart (meta progress is NOT stored here).</summary>
         public static void ResetForTest() => _instance = new KnowledgeDB();
 
+        // [TH] แผนที่ เบาะแส→โน้ต ตายตัวในโค้ด — ต้องครบทั้ง 8 ใบ ไม่งั้นเกมชนะไม่ได้แบบเงียบ ๆ (บั๊ก #11)
         /// <summary>
         /// ★ lead_map (bug #11) — every one of the 8 notes, no exceptions.
         /// storm_detection's lead comes from Record #3 only (STORY.md) — same map, different source.
@@ -47,6 +52,7 @@ namespace NuclearReMind
         //  Catalog
         // ─────────────────────────────────────────
 
+        // [TH] ลงทะเบียนโน้ตทั้งหมดเข้าแคตาล็อก (ตอนเล่นจริงโหลดอัตโนมัติจาก Resources)
         /// <summary>Register note assets (tests call this directly; play mode auto-loads from Resources).</summary>
         public void RegisterNotes(IEnumerable<ResearchNoteSO> notes)
         {
@@ -80,6 +86,7 @@ namespace NuclearReMind
         //  Leads (unlock once per game — GDD §25 table)
         // ─────────────────────────────────────────
 
+        // [TH] ปลดเบาะแส — คืน true เฉพาะครั้งแรก (ปลดได้ครั้งเดียวต่อเกม) แล้วยิง event แจ้งระบบอื่น
         /// <summary>Unlock a lead — returns true only the first time (once per game).</summary>
         public bool UnlockLead(string leadId)
         {
@@ -106,6 +113,7 @@ namespace NuclearReMind
             _completedNotes.Add(noteId);
         }
 
+        // [TH] เช็คว่าโน้ตใบนี้เริ่มวิจัยได้ไหม: มีเบาะแสแล้ว + โน้ตก่อนหน้าเสร็จแล้ว + ยังไม่เคยวิจัย
         /// <summary>Researchable = lead unlocked + prerequisites completed + not already done.</summary>
         public bool IsResearchable(ResearchNoteSO note)
         {
@@ -122,6 +130,7 @@ namespace NuclearReMind
         //  Building gate — SINGLE mechanism (Sprint 2 acceptance: no note = no Extractor)
         // ─────────────────────────────────────────
 
+        // [TH] ประตูเดียวของการล็อกสิ่งปลูกสร้าง: ตึกจะสร้างได้ก็ต่อเมื่อโน้ตที่มันต้องการวิจัยเสร็จแล้ว
         /// <summary>
         /// The one building gate: a building is locked while its BuildingData.requiredNoteId names
         /// a note that isn't completed. Buildings with no requiredNoteId are always free
@@ -136,6 +145,7 @@ namespace NuclearReMind
         public bool IsNoteGateOpen(string requiredNoteId) =>
             string.IsNullOrEmpty(requiredNoteId) || HasNote(requiredNoteId);
 
+        // [TH] ตรวจสุขภาพแผนที่ lead→note ว่าครบทุกโน้ต — test บังคับให้ผลลัพธ์ต้องว่างเปล่า
         /// <summary>
         /// bug #11 self-check: every catalog note's requiredLead must exist in LeadMap and
         /// map back to that note. Returns offending noteIds (empty = healthy). Tests assert empty.

@@ -2,10 +2,16 @@ using UnityEngine;
 
 namespace NuclearReMind
 {
-    /// <summary>Who speaks a bark (BARKS.md). Auren = the ▸ Inner Voice (no name shown).</summary>
+    /// <summary>
+    /// [TH] หน้าที่: ตัวละครผู้พูด bark — Kova วิศวกรเตา · Mira หมอ · Dorn ชาวนา · Citizen ชาวเมือง ·
+    /// [TH] Auren = เสียงในใจผู้เล่น (ไม่โชว์ชื่อ)
+    /// Who speaks a bark (BARKS.md). Auren = the ▸ Inner Voice (no name shown).
+    /// </summary>
     public enum BarkSpeaker { Kova, Mira, Dorn, Citizen, Auren }
 
     /// <summary>
+    /// [TH] หน้าที่: asset บทพูดสั้นของ NPC 1 บรรทัด — เก็บเฉพาะข้อความ + ค่าจูน (priority/cooldown/พูดครั้งเดียว)
+    /// [TH] เงื่อนไขการยิงเป็นโค้ดใน BarkConditions ผูกกับ state จริง ไม่ใช่วันที่
     /// One bark line (GDD §16 / BARKS.md). Bound to STATE not day — the condition itself is code in
     /// BarkConditions (keyed by barkId), so numbers can move without touching the line. This asset
     /// holds only the text + the tuning (priority / cooldown / once).

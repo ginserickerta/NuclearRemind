@@ -5,6 +5,8 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: บัญชีความหวังของเมือง — "ผู้เขียน Hope เพียงรายเดียว" ในทั้งเกม
+    /// [TH] แต่ละวัน: ระบบต่าง ๆ Report() รายการเข้ามา → ปิดวันรวมยอด → clamp 0-100 → เก็บ breakdown ให้ UI โชว์
     /// Hope Ledger (GDD §18) — the ONLY writer of Hope. Plain class per GDD spec;
     /// WorkerManager owns the runtime instance and commits it at end of day.
     ///
@@ -37,6 +39,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] รับรายการบวก/ลบ Hope 1 รายการ (รวมยอดต่อแหล่งมาก่อน เช่น คนหิว 4 คน = รายการเดียว −8)
         /// Submit one hope delta (GDD §18). Aggregate per source before reporting
         /// (e.g. 4 hungry workers = one entry, value −8) so the breakdown reads clean.
         /// </summary>
@@ -47,6 +50,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ปิดบัญชีสิ้นวัน: รวมยอดทุกรายการ → บวกเข้า Hope → clamp 0-100 → เก็บรายการไว้ให้ UI → ล้างสำหรับวันใหม่
         /// End-of-day commit (GDD §18): sum → apply → clamp(0,100) → keep breakdown → clear.
         /// Threshold events are the watcher's job — caller runs HopeThresholdWatcher after this.
         /// </summary>

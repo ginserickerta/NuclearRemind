@@ -5,6 +5,8 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: แดชบอร์ดคนงาน (กด K เปิด) — ตาราง 1 แถวต่อคน โชว์ค่าดิบ ล้า/หิว/รังสี/ประสิทธิภาพ + แถบสรุป
+    /// [TH] อ่านอย่างเดียว ไม่แก้เกม — แค่ทำให้ตัวเลขที่เกมใช้จริงมองเห็นได้ (รวม Σ ประสิทธิภาพต่องานที่ footer)
     /// Worker dashboard (GDD §17) — one row per worker plus a summary strip. Read-only: nothing here
     /// changes the game, it only makes the numbers the game already runs on visible.
     ///
@@ -139,6 +141,7 @@ namespace NuclearReMind
         // ─────────────────────────────────────────
 
         /// <summary>
+        /// [TH] เก็บ snapshot ค่าของแต่ละคนทุกเช้า แล้วเทียบกับเมื่อวานเพื่อโชว์ delta ต่อวัน (+7/−3) ในตาราง
         /// A day starts with last night's tick already applied, so comparing now against the snapshot
         /// taken at the previous day start yields exactly what that tick did to each worker.
         /// </summary>
@@ -185,6 +188,7 @@ namespace NuclearReMind
         //  refresh
         // ─────────────────────────────────────────
 
+        // [TH] อัปเดตทั้งแผง: หัวเรื่อง (จำนวนคน/คนตาย) → แถบสรุป → ตารางรายคน → footer กำลังผลิตจริง
         private void Refresh()
         {
             var wm = WorkerManager.Instance;
@@ -211,6 +215,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] แถบสรุป: นับจาก "ค่าดิบข้ามเกณฑ์" (คนเดียวติดได้หลายช่อง) และโชว์เทียบกับตัวเลขที่
+        /// [TH] ระบบการ์ดวิกฤตนับจริง (ป้ายสถานะคนละ 1 ป้าย) — ช่องว่างระหว่างสองเลขนี้คือเหตุที่การ์ดบางใบไม่ยอมเด้ง
         /// Threshold-crossing counts (a worker can land in several) + the label counts the crisis-card
         /// triggers actually read, shown side by side whenever they disagree.
         /// </summary>
@@ -256,6 +262,7 @@ namespace NuclearReMind
             return $"<color=#{col}>{label} {n}</color>";
         }
 
+        // [TH] เติมข้อมูลตารางรายคน: ชื่อ · งาน · ล้า · หิว · รังสี · ประสิทธิภาพ · สถานะ (แถวเกินจำนวนคนถูกซ่อน)
         private void RefreshRows(WorkerManager wm, GameConfigSO cfg, List<Worker> alive)
         {
             for (int i = 0; i < _rowRoots.Count; i++)
@@ -281,7 +288,10 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>"92 ▲ +7" — value, a marker when it has crossed a threshold, and last night's change.</summary>
+        /// <summary>
+        /// [TH] จัดรูปตัวเลข 1 ช่อง: ค่า + ลูกศรเตือนเมื่อข้ามเกณฑ์ + delta ของเมื่อคืน เช่น "92 ▲ +7"
+        /// "92 ▲ +7" — value, a marker when it has crossed a threshold, and last night's change.
+        /// </summary>
         private static string Metric(float value, float delta, float soft, float hard)
         {
             string mark = value > hard ? $" <color=#{ColorUtility.ToHtmlStringRGB(CBad)}>▲</color>"
@@ -293,6 +303,7 @@ namespace NuclearReMind
             return $"{value:0}{mark}{change}";
         }
 
+        // [TH] footer โชว์กติกาข้อ 7 ให้เห็นจริง: "เหมือง 5 คน → 3.2" คือกำลังผลิตจริงหลังหักคนหิว/ป่วย
         private void RefreshFooter(WorkerManager wm)
         {
             if (_footer == null) return;
@@ -375,6 +386,7 @@ namespace NuclearReMind
 
         // ═══════════════ BUILD ═══════════════
 
+        // [TH] ประกอบหน้าตาแผงด้วยโค้ดล้วน: ฉากหลัง + กรอบ + หัวเรื่อง + สรุป + ตาราง + footer
         private void BuildPanel()
         {
             _backdrop = NewUI("Backdrop", transform, CBackdrop);

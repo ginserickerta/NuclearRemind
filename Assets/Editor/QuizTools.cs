@@ -5,6 +5,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: เครื่องมือ Editor ตรวจระบบควิซตอนกด Play — ดูสถานะทุกข้อ
+    /// และสั่งเด้งควิซทันทีเพื่อแยกว่าปัญหาอยู่ที่เงื่อนไขปลดล็อกหรือที่ UI
     /// Play-mode diagnostics for the quiz pipeline (GDD §21 / QUIZZES.md).
     ///
     /// A quiz surfaces only after its knowledge has been USED (requiresApplied → QuizAvailability) plus
@@ -20,6 +22,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string Root = "NuclearReMind/Quizzes/";
 
+        // เมนูนี้: พิมพ์สถานะควิซทุกข้อลง Console (ตอบแล้ว/ตอบได้/ยังไม่ปลด)
         [MenuItem(Root + "Log Quiz States", priority = 0)]
         private static void LogStates()
         {
@@ -40,6 +43,7 @@ namespace NuclearReMind.EditorTools
             Debug.Log(sb.ToString());
         }
 
+        // เมนูนี้: สั่งเด้งควิซข้อแรกที่ตอบได้ตอนนี้ (ทดสอบเส้นทาง UI)
         [MenuItem(Root + "Force Prompt — first answerable", priority = 1)]
         private static void ForceFirstAnswerable()
         {
@@ -61,6 +65,7 @@ namespace NuclearReMind.EditorTools
         /// Presents a quiz regardless of availability. UI-only smoke test: it bypasses the requiresApplied
         /// gate, so it proves the panel renders — it does NOT prove the gate works.
         /// </summary>
+        // เมนูนี้: สั่งเด้งควิซข้อไหนก็ได้โดยข้ามเงื่อนไข (ทดสอบหน้าตาแผงเท่านั้น)
         [MenuItem(Root + "Force Prompt — any quiz (UI test)", priority = 2)]
         private static void ForceAny()
         {

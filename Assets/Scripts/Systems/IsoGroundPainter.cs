@@ -170,6 +170,10 @@ namespace NuclearReMind
         }
 
         // ── Grid-edge fray (docs/GROUND_PLAN "E") ──────────────────────────────
+        // [TH] ขอบกริดแบบ "แหว่งเนียน": เดิมเส้นขอบสนาม/apron เป็นเส้นตรงเป๊ะ ดูปลอมที่สุดบนพื้น —
+        // ใช้ jitter+dither ชุดเดียวกับรอยต่อโซน A/B ให้ขอบแตกลาย · ตั้งใจปรับ "ข้างเดียว":
+        // เฉพาะช่องนอกกริดเท่านั้นที่อาจถูกวาดเป็นสนาม ช่องในกริดไม่ถูกแตะ (พื้นที่สร้างได้ยังอ่านออก
+        // และพิสูจน์ได้ว่าไม่เปลี่ยนสีในกริด → เทสต์ EditMode เดิมยังผ่าน)
         // The playable/apron boundary used to be a raw rectangle test, so it drew a perfectly straight
         // diagonal line across the map — the single most artificial-looking thing on the ground.
         // Fix: reuse the jitter + dither idea already proven on the A/B boundary, so the edge frays.
@@ -184,6 +188,8 @@ namespace NuclearReMind
         private const float EdgeFrayJitter = 1f;   // wobble, in tiles — kills the straight line
 
         /// <summary>
+        /// [TH] เช็ค "ใน/นอกกริด" เชิงภาพเท่านั้น (pure · deterministic · เทสต์ได้) —
+        /// ตรรกะจริง (GridManager.IsInBounds / การวางอาคาร / การเดิน) ไม่เปลี่ยนแม้แต่น้อย
         /// Visual inside/outside test for the grid edge (pure · deterministic · testable).
         /// VISUAL ONLY — GridManager.IsInBounds, placement and pathing are untouched.
         /// </summary>

@@ -3,6 +3,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ปิดระบบเนื้อเรื่องรุ่นเก่า (StoryDirector / DilemmaManager) ตอนรันเกม
+    /// เพราะ v6.3 แทนที่ด้วย CardManager / DataRecovery / BarkManager / Codex แล้ว
+    /// ไฟล์เก่ายังถูกคอมไพล์อยู่ (กัน GUID ในซีนกับ SaveData พัง) แต่ถูก disable ทันทีที่โหลดซีน
+    ///
     /// ★ v6.3 cutover (Narrative): retires the legacy story pipeline at runtime.
     ///
     /// The scene still carries StoryDirector + DilemmaManager (their sources now live under
@@ -31,6 +35,7 @@ namespace NuclearReMind
         private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
             => Silence();
 
+        // [TH] หา component รุ่นเก่าในซีนแล้ว disable — OnDisable ของมันจะถอนตัวจาก EventManager เอง
         private static void Silence()
         {
             var director = Object.FindFirstObjectByType<StoryDirector>();

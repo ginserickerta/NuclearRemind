@@ -7,6 +7,7 @@ using UnityEngine.UI;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ปรับขนาด UI/ตัวอักษรทั้งเกมจากค่าเดียว (UiScale) ผ่าน CanvasScaler
     /// ขนาด UI ทั้งเกม — คุมจากค่าเดียว (UiScale)
     ///
     /// ทำไมไม่ไล่เพิ่ม fontSize ทีละตัว:
@@ -35,6 +36,7 @@ namespace NuclearReMind.EditorTools
         public static Vector2 ReferenceResolution =>
             new Vector2(DesignWidth / UiScale, DesignHeight / UiScale);
 
+        // เมนูนี้: เขียนค่า referenceResolution ใหม่ให้ CanvasScaler ทุกตัว (ซีนเกม + เมนูหลัก)
         [MenuItem("NuclearReMind/Apply UI Scale (Font Size)")]
         public static void Apply()
         {

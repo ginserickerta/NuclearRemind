@@ -5,6 +5,7 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้าง asset โน้ตวิจัยทั้ง 8 ใบ จากข้อความใน docs/NOTES.md แบบคำต่อคำ
     /// Generates the 8 ResearchNoteSO assets (GDD §19 / docs/NOTES.md) into
     /// Assets/Resources/ResearchNotes/ so KnowledgeDB auto-loads them at runtime.
     ///
@@ -16,6 +17,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string Folder = "Assets/Resources/ResearchNotes";
 
+        // เมนูนี้: สร้าง/อัปเดต ResearchNoteSO 8 ใบลง Resources/ResearchNotes (รันซ้ำได้ GUID ไม่เปลี่ยน)
         [MenuItem("NuclearReMind/Setup Research Notes")]
         public static void Apply()
         {

@@ -5,6 +5,8 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: มัดรวม "ข้อมูลเข้า" ของ tick รายวันของคนงาน (อาหารคงคลัง, พายุ, ความร้อนเตา ฯลฯ)
+    /// [TH] แยกออกมาเพื่อให้เทสต์/ซิมรัน 30 วันได้โดยไม่ต้องเปิดซีน Unity จริง
     /// Inputs for one worker daily tick — injected so EditMode tests / headless sims can run
     /// 30 days without a scene. WorkerManager fills this from live systems in play mode;
     /// reactor/storm/lab fields keep defaults until their sprints wire them in.
@@ -25,6 +27,9 @@ namespace NuclearReMind
     }
 
     /// <summary>
+    /// [TH] หน้าที่: ผู้จัดการประชากรแบบ "รายคน" — ดูแลความเหนื่อย/หิว/รังสีของคนงานทุกคน รัน tick รายวัน 7 ขั้น
+    /// [TH] เป็นเจ้าของ HopeLedger (ค่าความหวังห้ามเขียนตรง ทุกระบบต้องส่งรายการผ่าน Hope.Report เท่านั้น)
+    /// [TH] จุดสำคัญ: ผลผลิตอาคารต้องคูณ Σ GetEfficiency(คนงาน) ผ่าน SumEfficiency(job) ไม่ใช่นับจำนวนหัว
     /// Per-worker population system (GDD §17 / §17.5 / §18) — replaces PopulationManager's
     /// aggregate counters with individual fatigue/hunger/radiation state.
     ///
@@ -60,6 +65,7 @@ namespace NuclearReMind
         private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
             => AutoSpawn();
 
+        // [TH] สร้าง WorkerManager อัตโนมัติเมื่อโหลดซีนเกม (ถ้ายังไม่มีในซีน) — ไม่ต้องวางมือในทุกซีน
         private static void AutoSpawn()
         {
             try
@@ -75,6 +81,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] คลังชื่อคนงาน — แจกตามลำดับ (ไม่สุ่ม) เพราะชื่อถูกเซฟไว้กับตัวคนงาน ถ้าสุ่มใหม่ตอนโหลดเซฟ
+        /// [TH] บทพูด/ประกาศการตายเก่าจะชี้ไปหาคนที่ไม่มีอยู่จริง
         /// Worker names — short US/UK given names, one word each so they fit the name tag under a
         /// sprite at world scale. Handed out in order (i % length), never shuffled: the name is part of
         /// the saved Worker, and a run that renamed its people on reload would make every bark, death
@@ -102,7 +110,10 @@ namespace NuclearReMind
         /// <summary>Med Bay beds available right now — 0 when no finished Hospital exists.</summary>
         public int MedBayBeds => HospitalBeds();
 
-        /// <summary>Mean radiation over living workers (CONFIG.md avgRad). 0 when nobody is alive.</summary>
+        /// <summary>
+        /// [TH] ค่ารังสีเฉลี่ยของคนที่ยังมีชีวิต — ระบบอื่น (การ์ด/บทพูด) ใช้เป็นเงื่อนไข trigger
+        /// Mean radiation over living workers (CONFIG.md avgRad). 0 when nobody is alive.
+        /// </summary>
         public float AvgRadiation
         {
             get
@@ -129,6 +140,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] เพดานประชากรตามระดับที่พักอาศัยที่ดีที่สุดในเมือง (L1 14 · L2 20 · L3 28 คน)
         /// Population ceiling from the best Shelter/Habitat currently standing (CONFIG.md ★ Shelter:
         /// L1 14 · L2 20 · L3 28). L1 is free at game start, so this never drops below shelterCapL1.
         /// Levels are read straight off BuildingRegistry — read-only query, no mutation.
@@ -161,7 +173,10 @@ namespace NuclearReMind
             Initialize(GameConfigSO.Instance);
         }
 
-        /// <summary>Bootstrap from config — also the EditMode-test entry point (call with a test config).</summary>
+        /// <summary>
+        /// [TH] ตั้งต้นระบบจาก config: สร้าง HopeLedger + Watcher แล้วสร้างคนงานเริ่มเกมตามจำนวนใน CONFIG
+        /// Bootstrap from config — also the EditMode-test entry point (call with a test config).
+        /// </summary>
         public void Initialize(GameConfigSO cfg)
         {
             _cfg = cfg;
@@ -206,7 +221,10 @@ namespace NuclearReMind
         //  Job assignment (planning-phase API)
         // ─────────────────────────────────────────
 
-        /// <summary>Assign a worker to a job. Striking workers refuse; resting is cleared by choice.</summary>
+        /// <summary>
+        /// [TH] สั่งย้ายคนงานไปทำงานใหม่ — คนที่สไตรค์อยู่จะปฏิเสธ ส่วนคนที่พักอยู่จะถูกปลุกกลับมาทำงาน
+        /// Assign a worker to a job. Striking workers refuse; resting is cleared by choice.
+        /// </summary>
         public bool AssignJob(Worker w, string job)
         {
             if (w == null || !w.alive || w.strikeDaysLeft > 0) return false;
@@ -217,7 +235,10 @@ namespace NuclearReMind
             return true;
         }
 
-        /// <summary>Fill jobs by count from idle workers (scene bootstrap / tests) — e.g. สมดุล 3/2/2/4/3.</summary>
+        /// <summary>
+        /// [TH] จัดคนว่างลงงานทีละหลายตำแหน่งตามจำนวนที่ขอ (ใช้ตอนตั้งต้นซีน/เทสต์)
+        /// Fill jobs by count from idle workers (scene bootstrap / tests) — e.g. สมดุล 3/2/2/4/3.
+        /// </summary>
         public void AssignJobCounts(IDictionary<string, int> counts)
         {
             foreach (var kvp in counts)
@@ -259,7 +280,10 @@ namespace NuclearReMind
         //  Efficiency (GDD §17 — CRITICAL)
         // ─────────────────────────────────────────
 
-        /// <summary>Per-worker efficiency (GDD §17 formula, thresholds from CONFIG.md).</summary>
+        /// <summary>
+        /// [TH] คิดประสิทธิภาพรายคน (0–1): ตาย/ล้าจัด/รังสีเกิน 50 = 0 · ล้าปานกลางหรือหิว = โดนคูณลด
+        /// Per-worker efficiency (GDD §17 formula, thresholds from CONFIG.md).
+        /// </summary>
         public float GetEfficiency(Worker w)
         {
             if (w == null || !w.alive) return 0f;
@@ -271,6 +295,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] รวมประสิทธิภาพของทุกคนในงานนั้น — โค้ดผลิตทรัพยากร "ต้อง" ใช้ค่านี้คูณ ห้ามนับจำนวนหัวเด็ดขาด
+        /// [TH] (คนหิว/ป่วยทำงานได้น้อยลงจริง ๆ — นี่คือหัวใจที่ทำให้ระบบคนงานมีผลต่อเกม)
         /// Σ GetEfficiency over working staff of a job — the multiplier production code MUST use
         /// (GDD rule #7: never multiply headcount).
         /// </summary>
@@ -290,6 +316,7 @@ namespace NuclearReMind
         //  Day-cycle wiring (play mode)
         // ─────────────────────────────────────────
 
+        // [TH] เริ่มวันใหม่ — ล้างธงไฟดับของเมื่อวาน
         private void HandleDayStarted(int day, bool timed) => _blackoutToday = false;
 
         private void HandleResourceDepleted(ResourceType type)
@@ -297,6 +324,7 @@ namespace NuclearReMind
             if (type == ResourceType.Energy) _blackoutToday = true; // flag, not power<0 (bug #17)
         }
 
+        // [TH] จบวัน: รวบรวมสถานะจากระบบอื่น → รัน tick รายวัน → หักอาหาร/น้ำ → รายงาน Hope → โตประชากร → จัดกะ
         private void HandleDayEnded(int day)
         {
             if (day <= 1) return; // Day 1 = tutorial: teach systems, no attrition yet (matches ResourceManager)
@@ -341,7 +369,10 @@ namespace NuclearReMind
 
         private System.Random _dayRng;
 
-        /// <summary>Resource-level hope sources (CONFIG.md Hope Sources) — both stocks are post-consumption.</summary>
+        /// <summary>
+        /// [TH] รายงาน Hope จากสภาพทรัพยากร: อาหารล้น +, อาหารหมด −, น้ำไม่พอ −, ไฟดับ − (ผ่าน ledger เท่านั้น)
+        /// Resource-level hope sources (CONFIG.md Hope Sources) — both stocks are post-consumption.
+        /// </summary>
         private void ReportResourceHope(float foodAfter, float waterAfter)
         {
             int pop = AliveCount;
@@ -358,6 +389,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] กลไกคนใหม่เข้าเมือง: อาหารเหลือเกิน pop×5 และที่พักยังไม่เต็ม → สุ่ม 25%/วัน ได้คนเพิ่ม (จ่ายอาหาร 20)
+        /// [TH] เป็นจุดเดียวในเกมที่ประชากรเพิ่มได้หลังเริ่มเกม
         /// Newcomers arrive (GDD §5 "กลไกเติมประชากร" · CONFIG.md ★ POPULATION GROWTH):
         ///     if (food > pop * 5 && pop < shelterCap)  if (Random() &lt; 0.25) { pop += 1; food -= 20; }
         /// Deliberately NOT gated on Hope — v5.2 dropped that (Hope now starts at 70, the old ≥50 gate
@@ -406,7 +439,10 @@ namespace NuclearReMind
             return max + 1;
         }
 
-        /// <summary>Commit the ledger, run threshold events, sync HUD. Public so tests can drive full days.</summary>
+        /// <summary>
+        /// [TH] ปิดบัญชี Hope ประจำวัน: รวมยอด ledger → เช็คเส้นวิกฤต (สไตรค์/อพยพ/แพ้) → อัปเดต HUD
+        /// Commit the ledger, run threshold events, sync HUD. Public so tests can drive full days.
+        /// </summary>
         public void CommitDay()
         {
             Hope.OnDayEnd();
@@ -416,6 +452,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ค่าความหวังแบบสด = ยอดที่ปิดบัญชีแล้ว + รายการที่รายงานเข้ามาระหว่างวัน (ไว้โชว์บนแถบ HUD)
         /// Live running hope = committed Current + everything reported (not yet committed) today.
         /// The HUD bar shows this; it settles to Current at the end-of-day commit.
         /// </summary>
@@ -432,6 +469,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] รายงาน Hope แล้วสะท้อนขึ้น HUD ทันที (ไม่ต้องรอปิดวัน) — ใช้กับ feedback ที่ผู้เล่นควรเห็นเดี๋ยวนั้น
+        /// [TH] ตัวเลขยังเข้าบัญชีผ่าน ledger ตามปกติ ไม่มีการเขียน Hope ตรง
         /// Report a hope entry AND reflect it on the HUD immediately (raises OnMoraleChanged with the live
         /// running value). Use for player-visible instant feedback — e.g. the Memorial's +2 first-click
         /// bonus (STORY.md §②). The entry still commits normally at end of day; this only makes the change
@@ -449,6 +488,7 @@ namespace NuclearReMind
         // ─────────────────────────────────────────
 
         /// <summary>
+        /// [TH] tick รายวัน 7 ขั้นตามลำดับตายตัว (ห้ามสลับ): ล้า → หิว → รังสี → รักษา → สรุปสถานะ → ตาย → รายงาน Hope
         /// The fixed 7-step daily tick:
         /// 1 ApplyFatigue → 2 ApplyHunger → 3 ApplyRadiation → 4 MedBayHeal
         /// → 5 RecalcStatus → 6 ProcessDeaths → 7 ReportToHopeLedger
@@ -468,6 +508,7 @@ namespace NuclearReMind
 
         private int _deathsThisTick;
 
+        // [TH] ขั้น 1: สะสมความล้า — คนทำงานเพิ่ม คนพักลด (มี Barracks ลดเร็วขึ้น) · Boost เตาทำคนหล่อเย็นล้าหนักพิเศษ
         private void ApplyFatigue(WorkerTickContext ctx)
         {
             for (int i = 0; i < _workers.Count; i++)
@@ -482,7 +523,10 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>Hungriest eat first (GDD §17 — OrderByDescending, NEVER random). hunger +30/day unfed (bug #12).</summary>
+        /// <summary>
+        /// [TH] ขั้น 2: แจกอาหาร — คนหิวสุดได้กินก่อนเสมอ (ห้ามสุ่ม) ใครไม่ได้กิน ความหิว +30/วัน
+        /// Hungriest eat first (GDD §17 — OrderByDescending, NEVER random). hunger +30/day unfed (bug #12).
+        /// </summary>
         private void ApplyHunger(WorkerTickContext ctx)
         {
             var alive = _workers.Where(w => w.alive).ToList();
@@ -506,6 +550,8 @@ namespace NuclearReMind
             }
         }
 
+        // [TH] ขั้น 3: สะสมรังสีตามโซนงาน + เตาร้อนรั่ว + พายุ · ชุดกันรังสี/Mastery ALARA ช่วยคูณลด
+        // [TH] รังสีไม่ลดเองตามเวลา — ทางเดียวที่ลดได้คือโรงพยาบาล (Med Bay)
         private void ApplyRadiation(WorkerTickContext ctx)
         {
             for (int i = 0; i < _workers.Count; i++)
@@ -535,7 +581,10 @@ namespace NuclearReMind
         /// <summary>Patients healed on the last tick — the q_nuclear_medicine "applied" signal (QuizAppliedWatcher).</summary>
         public int LastMedBayHealed => _lastMedBayHealed;
 
-        /// <summary>Med Bay heals the most irradiated first, up to capacity (0 until a Hospital is built).</summary>
+        /// <summary>
+        /// [TH] ขั้น 4: โรงพยาบาลรักษาคนรังสีสูงสุดก่อน ตามจำนวนเตียง (ไม่มีโรงพยาบาล = ไม่มีการรักษาเลย)
+        /// Med Bay heals the most irradiated first, up to capacity (0 until a Hospital is built).
+        /// </summary>
         private void MedBayHeal(WorkerTickContext ctx)
         {
             _lastMedBayHealed = 0;
@@ -562,6 +611,7 @@ namespace NuclearReMind
 
         // A built, finished Hospital provides Med Bay beds (GDD §6). Without one, medBayCapacity stays 0 and
         // MedBayHeal is a no-op — which is why healing (and q_nuclear_medicine) was dormant before this wiring.
+        // [TH] นับเตียงโรงพยาบาล: ต้องมีโรงพยาบาลที่ "สร้างเสร็จแล้ว" อย่างน้อย 1 หลัง ไม่งั้นได้ 0 เตียง
         private int HospitalBeds()
         {
             var reg = BuildingRegistry.Instance;
@@ -577,7 +627,10 @@ namespace NuclearReMind
             return 0;
         }
 
-        /// <summary>Single status per worker, severity-ordered: Dying > Sick > Hungry > Exhausted > Tired.</summary>
+        /// <summary>
+        /// [TH] ขั้น 5: ติดป้ายสถานะคนละ 1 ป้าย ไล่จากหนักไปเบา: รังสี>80 ใกล้ตาย · รังสี>50 ป่วย · หิว · หมดแรง · ล้า
+        /// Single status per worker, severity-ordered: Dying > Sick > Hungry > Exhausted > Tired.
+        /// </summary>
         private void RecalcStatus()
         {
             for (int i = 0; i < _workers.Count; i++)
@@ -626,7 +679,10 @@ namespace NuclearReMind
             RecalcStatus();
         }
 
-        /// <summary>radiation > 80 → 20%/day death roll (GDD §17). rng injected for determinism.</summary>
+        /// <summary>
+        /// [TH] ขั้น 6: คนรังสีเกิน 80 ทอยลูกเต๋าตาย 20% ต่อวัน — rng ฉีดจากภายนอกได้เพื่อให้เทสต์ผลซ้ำได้
+        /// radiation > 80 → 20%/day death roll (GDD §17). rng injected for determinism.
+        /// </summary>
         private void ProcessDeaths(WorkerTickContext ctx)
         {
             var rng = ctx.rng ?? (_dayRng ?? (_dayRng = new System.Random()));
@@ -645,7 +701,10 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>Aggregate per-status hope entries (CONFIG.md table) — one row per source, value × count.</summary>
+        /// <summary>
+        /// [TH] ขั้น 7: สรุปสภาพคนงาน (หมดแรง/หิว/ป่วย/ใกล้ตาย/ตาย) เป็นรายการ Hope ส่งเข้า ledger
+        /// Aggregate per-status hope entries (CONFIG.md table) — one row per source, value × count.
+        /// </summary>
         private void ReportToHopeLedger()
         {
             ReportStatus(WorkerStatus.Exhausted, "worker.exhausted", "คนหมดแรง", _cfg.hopeWorkerExhausted);
@@ -661,6 +720,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] โบนัส Hope "ALARA": ทีมที่ลง Zone B ใส่ชุดกันรังสีครบทุกคน — จ่ายเฉพาะเมื่อมีคนลงไปจริง
         /// alara.compliant (CONFIG.md Hope Sources) — the crew sent into Zone B is fully suited. Documented
         /// with a value since v6.3 and never reported by anything, like the reactor-side sources. Pays only
         /// when someone is actually down there: an empty Zone B is not compliance, it is just an empty room.
@@ -692,7 +752,10 @@ namespace NuclearReMind
         //  Threshold effects (GDD §18)
         // ─────────────────────────────────────────
 
-        /// <summary>Strike: ratio of alive workers stop for cfg.strikeDays — they keep lastJob and return.</summary>
+        /// <summary>
+        /// [TH] Hope ต่ำถึงเส้นสไตรค์: คนงานส่วนหนึ่ง (เริ่มจากคนล้าสุด) หยุดงานประท้วงชั่วคราว แล้วกลับงานเดิมเอง
+        /// Strike: ratio of alive workers stop for cfg.strikeDays — they keep lastJob and return.
+        /// </summary>
         private void HandleStrike(float ratio)
         {
             var candidates = _workers.Where(w => w.alive && w.strikeDaysLeft <= 0).ToList();
@@ -705,7 +768,10 @@ namespace NuclearReMind
             EventManager.Instance?.RaiseNotice("คนงานบางส่วนหยุดงานประท้วง — ขวัญเมืองต่ำเกินไป");
         }
 
-        /// <summary>Count down strike days and send finished strikers back to their job — once per day.</summary>
+        /// <summary>
+        /// [TH] นับถอยหลังวันสไตรค์ — ครบกำหนดแล้วส่งกลับงานเดิมอัตโนมัติ (เรียกวันละครั้ง)
+        /// Count down strike days and send finished strikers back to their job — once per day.
+        /// </summary>
         public void TickStrikes()
         {
             for (int i = 0; i < _workers.Count; i++)
@@ -721,7 +787,10 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>Exodus: ratio of population leaves permanently (removed, no death penalty — they left).</summary>
+        /// <summary>
+        /// [TH] Hope ต่ำถึงเส้นอพยพ: ประชากรส่วนหนึ่งทิ้งเมืองถาวร (คนว่าง/คนพักออกก่อน เก็บแรงงานไว้ให้นานสุด)
+        /// Exodus: ratio of population leaves permanently (removed, no death penalty — they left).
+        /// </summary>
         private void HandleExodus(float ratio)
         {
             var alive = _workers.Where(w => w.alive).ToList();
@@ -732,6 +801,7 @@ namespace NuclearReMind
             EventManager.Instance?.RaiseNotice($"ประชากร {count} คนทิ้งเมืองไป — ความหวังใกล้หมด");
         }
 
+        // [TH] Hope แตะ 0 → จบเกมแบบแพ้ (HopeZero)
         private void HandleHopeGameOver()
         {
             EventManager.Instance?.RaiseGameOver(GameEndType.HopeZero);

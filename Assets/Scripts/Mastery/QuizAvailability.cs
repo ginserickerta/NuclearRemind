@@ -1,6 +1,10 @@
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: struct เก็บสถานะ "ผู้เล่นใช้ความรู้แต่ละเรื่องไปแล้วหรือยัง" — เป็น input ของประตูควิซ
+    /// จุดสำคัญ (บั๊ก #3): tritiumEverProduced เป็น "สลัก" (latch) ไม่ใช่สต็อกปัจจุบัน
+    /// เพราะ tritium ถูกเผาเป็น 0 ทุกเทิร์น — ถ้าเช็ค tritium > 0 ควิซชี้แพ้ชนะจะแทบเข้าไม่ถึง
+    ///
     /// Snapshot of "has the player actually USED this knowledge yet?" — the requiresApplied gate for
     /// each quiz (QUIZZES.md). Read by <see cref="QuizAvailability"/>; produced by the game loop
     /// (Sprint 5/6 wires ZoneB/Reactor into it) or set directly by tests / the F9 dev panel.
@@ -26,6 +30,9 @@ namespace NuclearReMind
     }
 
     /// <summary>
+    /// [TH] หน้าที่: ตัดสินว่าควิซแต่ละข้อ "ตอบได้แล้วหรือยัง" — รวมเงื่อนไขทุกข้อไว้ที่เดียว
+    /// เพื่อกันใครเผลอเขียนเช็ค tritium > 0 ที่อื่นแล้วบั๊ก #3 กลับมา
+    ///
     /// Decides whether a quiz is answerable right now (requiresApplied — QUIZZES.md). Every v6.3 quiz
     /// carries requiresApplied = true, so this switch is the single gate for all of them. Keeping the
     /// per-quiz conditions together (rather than scattered across systems) is what keeps bug #3 from
@@ -33,6 +40,7 @@ namespace NuclearReMind
     /// </summary>
     public static class QuizAvailability
     {
+        // [TH] เงื่อนไขเปิดควิซรายข้อ — อ่านจาก state ที่ QuizAppliedWatcher เก็บมา
         public static bool IsApplied(string quizId, in MasteryAppliedState s)
         {
             switch (quizId)

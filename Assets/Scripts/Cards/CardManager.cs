@@ -4,7 +4,10 @@ using UnityEngine;
 
 namespace NuclearReMind
 {
-    /// <summary>Outcome of resolving a card option.</summary>
+    /// <summary>
+    /// [TH] หน้าที่: ผลลัพธ์ของการเลือกตัวเลือกการ์ด (สำเร็จไหม + บทปิดท้ายที่ต้องโชว์)
+    /// Outcome of resolving a card option.
+    /// </summary>
     public struct CardResolveResult
     {
         public bool valid;       // false = locked option / no pending card / bad index
@@ -12,6 +15,9 @@ namespace NuclearReMind
     }
 
     /// <summary>
+    /// [TH] หน้าที่: ผู้จัดการการ์ดวิกฤต — ทุกสิ้นวันถ่ายภาพ state โลก ถ้าการ์ดใบไหนเข้าเงื่อนไข (ตาม state
+    /// [TH] ไม่ใช่วันที่) และพ้น cooldown แล้ว จะเสนอ "ทีละ 1 ใบ" พร้อมหยุดเวลาเกมรอผู้เล่นตัดสินใจ
+    /// [TH] ตัวเลือกที่ล็อก (ยังไม่วิจัย) เลือกไม่ได้ · เลือกแล้ว effect ถูก apply ผ่านระบบจริง (Hope/ทรัพยากร/คนงาน)
     /// Crisis Card manager (GDD §25 / CARDS.md). Each day-end it snapshots the live world, and if a
     /// card's STATE trigger fires (CardTriggers — never the calendar, rule #1) and its cooldown has
     /// elapsed, it presents ONE card and pauses the day clock. The player picks an option; locked
@@ -83,7 +89,10 @@ namespace NuclearReMind
             Initialize(GameConfigSO.Instance);
         }
 
-        /// <summary>Bootstrap — also the EditMode-test entry point.</summary>
+        /// <summary>
+        /// [TH] ตั้งต้นระบบ: ล้างประวัติการ์ด/cooldown/Hope ต่อเนื่องทั้งหมด (จุดเข้าเทสต์ด้วย)
+        /// Bootstrap — also the EditMode-test entry point.
+        /// </summary>
         public void Initialize(GameConfigSO cfg)
         {
             _cfg = cfg;
@@ -118,6 +127,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] trigger ทันทีของการ์ด heat: พอเข็มความร้อนทะลุเกณฑ์ การ์ดเด้งเลย ไม่รอสรุปสิ้นวัน
+        /// [TH] (แก้ปัญหาการ์ดช้าไป 1 วันเพราะลำดับ subscribe — ยังผูกกับ state ตามกติกาข้อ 1)
         /// ★ 2026-07-23: immediate STATE trigger for the heat card. The day-end sweep alone had a
         /// full day of lag — CardManager's OnDayEnded handler often runs BEFORE ReactorController's
         /// DailyTick (subscription order), so it graded YESTERDAY's heat; the player watched the HUD
@@ -140,6 +151,7 @@ namespace NuclearReMind
 
         private void HandleDayStarted(int day, bool timed) => _currentDay = day;
 
+        // [TH] จบวัน: จ่าย Hope ต่อเนื่องจากการ์ดเก่า แล้วประเมินว่าวันนี้มีการ์ดใบไหนควรเด้ง (ข้ามวันแรก = บทเรียน)
         private void HandleDayEnded(int day)
         {
             if (day <= 1)
@@ -156,6 +168,7 @@ namespace NuclearReMind
         //  Catalog (tests register directly; play mode auto-loads from Resources)
         // ─────────────────────────────────────────
 
+        // [TH] ลงทะเบียน asset การ์ดเข้าแคตตาล็อก (เทสต์เรียกตรง · โหมดเล่นโหลดอัตโนมัติจาก Resources)
         public void RegisterCatalog(IEnumerable<CrisisCardSO> cards)
         {
             if (cards != null)
@@ -182,6 +195,7 @@ namespace NuclearReMind
         // ─────────────────────────────────────────
 
         /// <summary>
+        /// [TH] ไล่เช็คการ์ดตามลำดับ 1→8 แล้วเสนอ "ใบแรกที่เข้าเงื่อนไข" (เด้งได้ทีละใบ — ถ้ามีใบค้างอยู่ให้รอ)
         /// Present the first eligible card for this day (triggered + off cooldown + not spent).
         /// Returns the presented card (also stored in Pending) or null. Pauses the day clock.
         /// </summary>
@@ -208,6 +222,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ส่งการ์ดให้ UI แสดง แล้วเช็คว่าแผงขึ้นจริง — ถ้าไม่ขึ้นให้ปล่อยการ์ดทิ้ง กันเกมค้างทั้งรัน
         /// Hand a card to the UI, then check it actually arrived.
         ///
         /// The order matters. Pending + the clock pause used to be set before RaiseCrisisCardShown, so a
@@ -268,6 +283,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ตาราง debug รายใบ "ทำไมการ์ดไม่เด้งวันนี้" — asset หาย / onceOnly ใช้แล้ว / ติด cooldown / ไม่ถึงเกณฑ์
         /// Per-card "why not" table for one day. Public so the Editor tools can print the same text on
         /// demand instead of keeping a second copy that would drift — the same reason Describe() lives
         /// next to IsTriggered.
@@ -313,6 +329,7 @@ namespace NuclearReMind
             if (TraceHistory.Count > TraceHistoryMax) TraceHistory.RemoveAt(0);
         }
 
+        // [TH] การ์ดมีสิทธิ์เด้งเมื่อ: ไม่ใช่ onceOnly ที่ใช้ไปแล้ว + พ้น cooldown + เงื่อนไข state เป็นจริง
         private bool IsEligible(CrisisCardSO card, int day, in CardWorldState state)
         {
             if (card.onceOnly && _usedOnce.Contains(card.cardId)) return false;
@@ -321,7 +338,10 @@ namespace NuclearReMind
             return CardTriggers.IsTriggered(card.cardId, state);
         }
 
-        /// <summary>Is this option pickable right now (false = locked behind an unresearched note)?</summary>
+        /// <summary>
+        /// [TH] ตัวเลือกนี้กดได้ไหม — false ถ้าล็อกอยู่เพราะยังวิจัย Note ที่ต้องใช้ไม่เสร็จ
+        /// Is this option pickable right now (false = locked behind an unresearched note)?
+        /// </summary>
         public bool CanChoose(int optionIndex)
         {
             if (!HasPending || Pending.options == null) return false;
@@ -333,6 +353,8 @@ namespace NuclearReMind
         //  Resolve → apply the chosen option
         // ─────────────────────────────────────────
 
+        // [TH] ผู้เล่นเลือกตัวเลือก: กันเลือกตัวที่ล็อก → apply effect → บันทึกวันที่ยิง (เริ่ม cooldown)
+        // → แจ้ง event ให้ระบบอื่น → ปล่อยเวลาเกมเดินต่อ
         public CardResolveResult ResolveOption(int optionIndex)
         {
             var res = new CardResolveResult();
@@ -361,6 +383,8 @@ namespace NuclearReMind
         //  Effects (live systems only; deferred numbers ride OnCrisisCardResolved)
         // ─────────────────────────────────────────
 
+        // [TH] แปลง effect ของตัวเลือกเป็นการกระทำจริง: Hope ผ่าน ledger · ทรัพยากรผ่าน event ·
+        // สภาพคนงานผ่าน WorkerManager · ผลค้างระบบอื่น (heat/CORE/ZoneB) ส่งต่อผ่าน OnCrisisCardResolved
         private void ApplyEffect(string cardId, CardOption opt)
         {
             var e = opt.effect;
@@ -424,6 +448,7 @@ namespace NuclearReMind
             // e.heatDelta / coreStallDays / stopZoneBDays → consumed by Sprint 6 via the event
         }
 
+        // [TH] ดึงคนกลับไปทำฟาร์มตามจำนวนที่การ์ดสั่ง — เอาคนว่างก่อน แล้วค่อยดึงจากงานอื่น (ไม่แตะคนสไตรค์)
         private static void ReturnFarmers(WorkerManager wm, int count)
         {
             int moved = 0;
@@ -442,6 +467,7 @@ namespace NuclearReMind
             }
         }
 
+        // [TH] จ่าย Hope ต่อเนื่องรายวันจากการ์ดที่เลือกไปแล้ว (เช่น Decree −3/วัน) จนครบจำนวนวัน
         private void ApplyRecurringHope()
         {
             if (_recurring.Count == 0) return;

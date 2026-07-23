@@ -3,6 +3,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ระบุว่าโบนัส Mastery ตัวนี้ไหลเข้าระบบไหน (เตา/คนงาน/หมอ/ฟาร์ม/คลังอาหาร/Zone B)
+    /// ใช้ enum แทน string เพื่อกันพิมพ์ผิดแล้วโบนัสหายเงียบ ๆ
+    ///
     /// Which live system a Mastery bonus flows into. MasteryRegistry exposes one typed query per
     /// target; the six systems named in GDD §21/§31 read those (ReactorController · WorkerManager ·
     /// MedBay · Farm · FoodStorage · ZoneB). An enum (not a loose string) so a typo can't silently
@@ -23,6 +26,9 @@ namespace NuclearReMind
     }
 
     /// <summary>
+    /// [TH] หน้าที่: asset ข้อมูลโบนัสถาวรที่ได้จากตอบควิซ Codex ถูก 1 ข้อ
+    /// เก็บเฉพาะ "ตัวตน + ข้อความโชว์ผู้เล่น" — ตัวเลขที่มีผลจริงอยู่ใน GameConfigSO ที่เดียว (กติกาข้อ 2)
+    ///
     /// Mastery Bonus (GDD §16/§21) — the permanent reward for answering a Codex quiz correctly.
     /// One asset per quiz that grants a mechanical effect; q_alara / q_clean_energy carry
     /// targetSystem = None (Codex-unlock / ending-stat only).

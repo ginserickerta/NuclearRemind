@@ -6,6 +6,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor รวบยอด — รันเมนู setup ทั้งหมดของโปรเจกต์ตามลำดับที่ถูกต้องในคลิกเดียว
+    /// (ประกอบซีนเกมทั้งฉากตั้งแต่กริดจนถึงแสง) แล้วเซฟซีนให้
     /// รัน setup menu ทั้งหมดตามลำดับใน UNITY_SETUP_AND_PLAYTEST.md §2 แล้วเซฟซีน
     /// ลำดับสำคัญ — manager/HUD ต้องมาก่อน content ที่ wire เข้า manager (Quiz ต้องหลัง Crisis + HUD)
     ///
@@ -88,6 +90,7 @@ namespace NuclearReMind.EditorTools
             "NuclearReMind/Apply Kanit Font (Scene + Prefabs)",
         };
 
+        // เมนูนี้: รันทุกเมนู setup ตามลำดับ MenuOrder แล้วเซฟซีน (เมนูที่ยังไม่มีจะข้ามพร้อมสรุปท้ายสุด)
         [MenuItem("NuclearReMind/Run All Setups (in order)")]
         public static void Execute()
         {

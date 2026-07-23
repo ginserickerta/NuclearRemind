@@ -33,6 +33,7 @@ namespace NuclearReMind
         private readonly Dictionary<Vector2Int, int> _assigned = new Dictionary<Vector2Int, int>();
 
         // ── v6.3 job mapping (per-cell _assigned → global job pool) ────────────────
+        // แปลงชนิดอาคาร → ชื่องาน (job) ใน WorkerManager (เช่น Farm → farm, CoreTower → cool)
         public static string JobForBuildingType(BuildingType t)
         {
             switch (t)
@@ -48,6 +49,7 @@ namespace NuclearReMind
             }
         }
 
+        // งานของอาคารที่ cell นี้ (null = ไม่มีงาน/กำลังก่อสร้าง — คนที่จัดไว้เป็น "ผู้สร้าง")
         /// <summary>Production job for the building at this cell, or null (job-less / under construction).</summary>
         public static string JobForCell(Vector2Int cell)
         {
@@ -176,6 +178,7 @@ namespace NuclearReMind
         // ★ Single per-cell path for BOTH legacy and v6.3 — enforces the building cap for every entry
         //   point (BuildingUpgradeUI +/−, Q/E keys, LabPanelUI, CORE TOWER cooling). v6.3 adds one step:
         //   after writing the per-cell plan, ReconcileJobPool projects it onto WorkerManager's job pool.
+        // จุดรับคำสั่งจัด/ถอนคน ±1 จาก UI ทุกทาง (ปุ่ม, Q/E, แผงเตา) — เช็คเพดาน + idle ก่อนเสมอ
         private void HandleAssignRequested(Vector2Int cell, int delta)
         {
             EnsureWmHook();
@@ -240,6 +243,8 @@ namespace NuclearReMind
         private bool _projecting;
 
         /// <summary>
+        /// [TH] ฉายแผนจัดคนรายอาคาร (_assigned) ลง job pool กลางของ WorkerManager —
+        /// หดงานที่คนเกินก่อน (คืน idle) แล้วค่อยเติมงานที่ขาดจาก idle เพื่อไม่ให้ avatar สลับตัวมั่ว
         /// Project _assigned (per-cell truth) onto WorkerManager's job pool: each production-job building's
         /// count fills that job; job-less / under-construction cells fill the Build holding job (reserved,
         /// not producing). Incremental — shrink over-full jobs to idle, then grow deficits from idle — so
@@ -297,6 +302,7 @@ namespace NuclearReMind
             if (wm != null) wm.OnWorkersChanged += HandleWorkersChanged;
         }
 
+        // ประชากรลด (ตาย/อพยพ) → ตัดแผนจัดคนส่วนเกินออกให้ไม่เกินคนที่ยังมีชีวิต
         private void HandleWorkersChanged()
         {
             if (_projecting) return;
@@ -306,6 +312,7 @@ namespace NuclearReMind
             if (overflow > 0) { TrimAssigned(overflow); RaisePool(); }
         }
 
+        // ตัดคนออกจากแผนจัดคนทีละอาคารจนครบจำนวนที่ต้องลด
         private void TrimAssigned(int count)
         {
             var cells = new List<Vector2Int>(_assigned.Keys);

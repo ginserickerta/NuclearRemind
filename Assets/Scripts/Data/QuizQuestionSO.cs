@@ -35,10 +35,15 @@ namespace NuclearReMind
         // v6.3 Mastery (GDD §21 — Sprint 3). Added, not replacing: the legacy forced-quiz path still
         // reads `id`/`codexUnlockId` above; the new CodexQuizManager keys on `quizId`. Old assets
         // leave these blank and behave exactly as before (non-breaking, defaults preserved).
+        // [TH] บล็อก v6.3: ฟิลด์ "เพิ่มใหม่" ไม่แทนของเดิม — asset เก่าเว้นว่างได้ พฤติกรรมเหมือนเดิมทุกอย่าง
         [Header("v6.3 Mastery (GDD §21 — Codex quiz)")]
+        // [TH] คีย์ควิซระบบใหม่ v6.3 เช่น "q_deuterium" (ระบบเก่าใช้ id ด้านบนแทน)
         public string quizId;                 // q_deuterium ... (the v6.3 key; explanation reuses explainText)
+        // [TH] id ของ Research Note ที่สอนเนื้อหาข้อนี้ — ใช้แสดงผลอย่างเดียว
         public string linkedNoteId;           // note that teaches this — display only (QUIZZES.md)
+        // [TH] ★ ต้อง "ใช้ความรู้นั้นจริงในเกม" ก่อน ควิซถึงจะเปิดให้ตอบ
         public bool requiresApplied = true;   // ★ must have USED the knowledge before it's answerable
+        // [TH] โบนัสถาวรเมื่อตอบถูก (null = ปลด Codex อย่างเดียว ไม่มีโบนัส)
         public MasteryBonusSO bonus;          // permanent reward on a correct answer (null = Codex-only)
     }
 }

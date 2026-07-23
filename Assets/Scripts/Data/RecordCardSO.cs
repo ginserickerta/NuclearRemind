@@ -31,6 +31,8 @@ namespace NuclearReMind
         // ── v6.3 Data Recovery (GDD §24 / STORY.md) — added, default "" keeps old assets valid ──
         // ★ Lead pre-unlocked when this record is recovered (record_01→water_analysis, ...).
         // "" = story-only record (no gameplay unlock).
+        // [TH] ★ กู้บันทึกใบนี้สำเร็จ → ปลด LEAD วิจัยตัวนี้ให้ล่วงหน้า (รางวัลเกมเพลย์จริง ไม่ใช่แค่เนื้อเรื่อง)
+        // [TH] "" = บันทึกเนื้อเรื่องล้วน ไม่ปลดอะไร · default "" ทำให้ asset เก่ายังใช้ได้
         public string unlocksLead;
     }
 }

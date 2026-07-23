@@ -5,6 +5,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ผู้จัดการบทพูด NPC — ทุกสิ้นวันถ่ายภาพ state หา bark ที่เข้าเงื่อนไข + พ้น cooldown
+    /// [TH] แล้วพูดสูงสุด 2 บรรทัด/วัน (priority สูงชนะ, เลือกบรรทัดที่ไม่ได้พูดนานสุดก่อน)
+    /// [TH] ผลคือแต่ละสไตล์การเล่นได้ยินบทต่างกัน — เมืองที่ดูแลดีไม่มีวันได้ยิน "คนหิว"
     /// Bark manager (GDD §16 / BARKS.md). Each day-end it snapshots state, finds every bark whose
     /// condition is met (BarkConditions) and whose cooldown/once allows it, and speaks at most 2 —
     /// the highest-priority ones, preferring lines not heard recently. Bound to STATE, never the day.
@@ -34,7 +37,10 @@ namespace NuclearReMind
             Initialize();
         }
 
-        /// <summary>Reset firing history — also the EditMode-test entry point.</summary>
+        /// <summary>
+        /// [TH] ล้างประวัติการพูดทั้งหมด (วันที่พูดล่าสุด + รายการพูดครั้งเดียว) — จุดเข้าเทสต์ด้วย
+        /// Reset firing history — also the EditMode-test entry point.
+        /// </summary>
         public void Initialize()
         {
             _lastFiredDay.Clear();
@@ -63,6 +69,7 @@ namespace NuclearReMind
         //  Catalog (tests register directly; play mode auto-loads from Resources)
         // ─────────────────────────────────────────
 
+        // [TH] ลงทะเบียน asset bark เข้าแคตตาล็อก (เทสต์เรียกตรง · โหมดเล่นโหลดอัตโนมัติจาก Resources/Barks)
         public void RegisterCatalog(IEnumerable<BarkSO> barks)
         {
             if (barks != null)
@@ -82,6 +89,8 @@ namespace NuclearReMind
         //  Evaluate → speak up to 2 (public for tests)
         // ─────────────────────────────────────────
 
+        // [TH] ประเมินประจำวัน: รวมทุกบรรทัดที่เข้าเงื่อนไข → เรียง priority (เสมอกันเลือกที่เงียบมานานสุด
+        // แล้วเรียง id — ไม่สุ่ม ให้ผลซ้ำได้) → ยิงสูงสุด 2 บรรทัด
         public List<BarkSO> EvaluateDay(int day, in BarkWorldState state)
         {
             EnsureCatalog();
@@ -111,6 +120,7 @@ namespace NuclearReMind
             return fired;
         }
 
+        // [TH] มีสิทธิ์พูดเมื่อ: ไม่ใช่บรรทัดพูดครั้งเดียวที่ใช้ไปแล้ว + พ้น cooldown แล้ว
         private bool IsEligible(BarkSO b, int day)
         {
             if (b.onceOnly && _usedOnce.Contains(b.barkId)) return false;
@@ -118,6 +128,7 @@ namespace NuclearReMind
             return true;
         }
 
+        // [TH] ยิง bark จริง: จดวันที่พูด (เริ่ม cooldown) แล้วประกาศผ่าน event ให้ UI ไปแสดง
         private void Fire(BarkSO b, int day)
         {
             _lastFiredDay[b.barkId] = day;

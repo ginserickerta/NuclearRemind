@@ -64,6 +64,7 @@ namespace NuclearReMind
 
         private void HandleModeChanged(int mode) => Highlight(mode);
 
+        // อัปเดตหลอด CORE%/HEAT + ข้อความสถานะ + เปิด/ปิดปุ่มโหมดและ SCRAM ตามสถานะเตา
         private void HandleTowerProgress(TowerData d)
         {
             if (coreBar != null) { coreBar.maxValue = 100f; coreBar.value = d.corePercent; }

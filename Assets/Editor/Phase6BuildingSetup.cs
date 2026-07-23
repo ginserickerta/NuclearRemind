@@ -4,6 +4,7 @@ using UnityEngine;
 namespace NuclearReMind.Editor
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ตั้งค่าการผลิตเชื้อเพลิง (Deuterium/Tritium) ของอาคารระดับสูงใน asset
     /// เฟส 6 (V4 §4/§6) — ตั้งค่าเชื้อเพลิงที่ผลิตเมื่ออาคารถึงระดับสูงสุด (L3):
     ///   • Water Plant L3 → Deuterium (แหล่งเชื้อเพลิงเฟส 2 ของเตา)
     ///   • Laboratory → ไม่ผลิตเชื้อเพลิงแล้ว (สะพาน Tritium ปลดระวาง — Tritium ขุดจากแหล่งแร่โซน B เท่านั้น
@@ -14,6 +15,7 @@ namespace NuclearReMind.Editor
     {
         private const string Dir = "Assets/ScriptableObjects/Buildings/";
 
+        // เมนูนี้: เขียนค่าการผลิตเชื้อเพลิงลง BuildingData asset (WaterPlant/Laboratory)
         [MenuItem("NuclearReMind/Setup Phase 6 Buildings")]
         public static void Apply()
         {

@@ -257,6 +257,7 @@ namespace NuclearReMind
         private static int PhaseCoreRequirement(int phase) =>
             phase >= 4 ? 80 : phase == 3 ? 60 : phase == 2 ? 40 : 0;
 
+        // อาคารที่ผูก research note ต้องวิจัยก่อนถึงสร้างได้ — เช็คผ่าน KnowledgeDB จุดเดียว (ประตูเดียวกับเทสต์ Sprint 2)
         private static bool IsResearchUnlocked(BuildingData data)
         {
             // single gate — same method the Sprint 2 acceptance test asserts on (KnowledgeDB.IsBuildingUnlocked)

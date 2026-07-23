@@ -7,6 +7,7 @@ using UnityEngine.Tilemaps;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: หน้าต่างเครื่องมือ Editor "แปรงทาสีพื้น" — ทาสีหญ้า/ปูไทล์หินใน Scene view ด้วยเมาส์
     /// ทาสีพื้นหลายช่องพร้อมกัน — เปิดหน้าต่างนี้ เปิด "โหมดทา" แล้วทำงานที่ Scene view:
     ///   • หัวแปรง Single = คลิก/ลากทาทีละช่อง
     ///   • หัวแปรง Rectangle = ลากคลุมกรอบ ปล่อยเมาส์ = เติมทั้งกรอบทีเดียว
@@ -72,6 +73,7 @@ namespace NuclearReMind.EditorTools
         private bool _dragging;
         private Vector3Int _rectStart, _rectEnd;
 
+        // เมนูนี้: เปิดหน้าต่างแปรงทาสีพื้น (Tile Color Painter)
         [MenuItem("NuclearReMind/Tile Color Painter")]
         public static void Open() => GetWindow<TileColorPainter>("Tile Color Painter");
 

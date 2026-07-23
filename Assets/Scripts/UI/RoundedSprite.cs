@@ -4,6 +4,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: สร้าง sprite มุมโค้งสีขาวแบบ 9-slice ขึ้นตอนรัน (ไม่ต้องมีไฟล์ .png / shader)
+    /// ใช้ทำ border-radius ให้ panel ที่สร้างด้วยโค้ด — cache หนึ่งชิ้นต่อรัศมี ย้อมสีผ่าน Image.color ได้เลย
+    ///
     /// Runtime-generated rounded-corner sprites for code-built uGUI (no .png assets, no shaders).
     /// Each radius gets one tiny white 9-sliced texture, cached for the app's lifetime; tint it
     /// through Image.color exactly like a flat panel. This is how the CSS-mockup border-radius
@@ -15,7 +18,9 @@ namespace NuclearReMind
     {
         private static readonly Dictionary<int, Sprite> _cache = new Dictionary<int, Sprite>();
 
-        /// <summary>White 9-sliced sprite whose corners are circles of the given pixel radius.</summary>
+        /// <summary>
+        /// [TH] คืน sprite ขาว 9-slice มุมโค้งรัศมี radius px — สร้างครั้งแรกครั้งเดียวแล้ว cache ตลอดอายุเกม
+        /// White 9-sliced sprite whose corners are circles of the given pixel radius.</summary>
         public static Sprite Get(int radius)
         {
             radius = Mathf.Max(1, radius);

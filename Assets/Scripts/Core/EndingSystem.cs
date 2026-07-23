@@ -3,6 +3,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ตัดสินจบเกมทุกสิ้นวัน — ชนะเมื่อ CORE ≥ 100 (ไม่รอวัน 30 — บั๊ก #15) ·
+    /// แพ้เมื่อ HEAT ≥ 100 (เตาหลอมละลาย) หรือ Hope ≤ 0 · ครบวัน 30 แล้วยังไม่ถึง 100 = จบแบบรอง
+    /// ส่งผลลัพธ์ (GameEndType) ผ่าน EventManager ให้ GameManager แสดงฉากจบ — ยิงครั้งเดียวเท่านั้น
     /// Ending evaluator (STORY.md §4 / GDD §26). Checked every day-end (win/loss are state, not the
     /// calendar — the only allowed day literal is the day-30 deadline, rule #1):
     ///   • HEAT ≥ 100        → Meltdown
@@ -46,6 +49,7 @@ namespace NuclearReMind
             EventManager.Instance.OnDayEnded -= HandleDayEnded;
         }
 
+        // สิ้นวัน: รวบรวมค่า core/heat/hope ปัจจุบันแล้วส่งให้ Evaluate ตัดสิน
         private void HandleDayEnded(int day)
         {
             var reactor = ReactorController.Instance;
@@ -56,6 +60,7 @@ namespace NuclearReMind
             Evaluate(day, core, heat, hope);
         }
 
+        // หัวใจการตัดสิน: เช็คชนะก่อน (CORE 100 กันพายุได้แม้ HEAT ทะลุวันเดียวกัน) แล้วค่อยเช็คเงื่อนไขแพ้
         /// <summary>Pure evaluation — returns the end type, or null if the game continues. Public for tests.</summary>
         public GameEndType? Evaluate(int day, float core, float heat, float hope)
         {

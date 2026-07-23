@@ -4,6 +4,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ระบบ "กู้คืนบันทึก" ของ Dr. Elara Vane 4 ใบ — ห้องแล็บถอดรหัสสะสมทีละวัน
+    /// [TH] กู้ได้แต่ละใบจะปลด LEAD วิจัยล่วงหน้าให้ (เร็วขึ้น 4-6 วัน) = รางวัลเกมเพลย์จริง ไม่ใช่แค่เนื้อเรื่อง
+    /// [TH] อัตรา = 14 (passive) + 10 ต่อนักวิจัยว่าง · ×1.3 ที่แล็บ L2 (ค่าจาก CONFIG.md) · ข้ามได้ ไม่บังคับชนะ
     /// Data Recovery (GDD §24 / STORY.md) — Dr. Elara Vane's 4 logs, decrypted passively as the lab
     /// runs. Each recovered record pre-unlocks a research LEAD (record_01→water_analysis,
     /// record_02→magnetic_theory, record_03→storm_detection→Sensor Array, record_final→lithium_breeding),
@@ -30,6 +33,8 @@ namespace NuclearReMind
         public int TotalRecords => Order.Length;
 
         /// <summary>
+        /// [TH] true = แล็บกำลังถอดรหัสบันทึกใบถัดไปอยู่ — ผู้เล่นต้องกดเริ่มเองทีละใบ (ไม่รันอัตโนมัติ)
+        /// [TH] และ reset ตัวเองเมื่อกู้ใบนั้นสำเร็จ ให้แต่ละใบเป็นการตัดสินใจของผู้เล่นเสมอ
         /// True while the lab is working on the next record. Decryption used to run on its own the moment
         /// the lab was standing — the player never chose it and often never noticed it — so it is now
         /// started deliberately, one record at a time, the same way research is (owner's call 2026-07-21;
@@ -37,7 +42,8 @@ namespace NuclearReMind
         /// </summary>
         public bool IsDecoding { get; private set; }
 
-        /// <summary>Can the player press "ถอดรหัส" right now? Mirrors the conditions TickDay would refuse on.</summary>
+        /// <summary>[TH] ผู้เล่นกดปุ่ม "ถอดรหัส" ได้ตอนนี้ไหม — เงื่อนไขชุดเดียวกับที่ TickDay จะปฏิเสธ
+        /// Can the player press "ถอดรหัส" right now? Mirrors the conditions TickDay would refuse on.</summary>
         public bool CanStartDecoding
         {
             get
@@ -48,7 +54,8 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>Begin decrypting the next record. Returns false when the lab is ruined or nothing is left.</summary>
+        /// <summary>[TH] เริ่มถอดรหัสบันทึกใบถัดไป — คืน false ถ้าแล็บพัง/ไม่เหลือบันทึกให้กู้
+        /// Begin decrypting the next record. Returns false when the lab is ruined or nothing is left.</summary>
         public bool StartDecoding()
         {
             if (!CanStartDecoding) return false;
@@ -63,7 +70,8 @@ namespace NuclearReMind
             Initialize(GameConfigSO.Instance);
         }
 
-        /// <summary>Bootstrap — also the EditMode-test entry point.</summary>
+        /// <summary>[TH] ตั้งค่าเริ่มต้น (progress = 0, ยังไม่กู้สักใบ) — เป็นทางเข้าของ EditMode test ด้วย
+        /// Bootstrap — also the EditMode-test entry point.</summary>
         public void Initialize(GameConfigSO cfg)
         {
             _cfg = cfg;
@@ -102,7 +110,9 @@ namespace NuclearReMind
         /// </summary>
         private void HandleSaveLoaded(SaveData save) => RestoreFromSave(save);
 
-        /// <summary>Restore body — public so EditMode tests can drive it without a live subscription.</summary>
+        /// <summary>[TH] กู้สถานะจากเซฟ — replay การปลด LEAD ของบันทึกทุกใบที่กู้ไปแล้ว (KnowledgeDB ไม่ persist เอง)
+        /// [TH] ตั้งใจไม่ผ่าน UnlockNextRecord เพราะจะทำให้การ์ดบันทึกเด้งซ้ำทั้ง 4 ใบตอนโหลดเซฟ
+        /// Restore body — public so EditMode tests can drive it without a live subscription.</summary>
         public void RestoreFromSave(SaveData save)
         {
             if (save == null) return;
@@ -131,6 +141,7 @@ namespace NuclearReMind
         //  Catalog (tests register directly; play mode auto-loads from Resources)
         // ─────────────────────────────────────────
 
+        // [TH] ลงทะเบียน RecordCardSO เข้า catalog — เทสต์เรียกตรง ส่วน play mode โหลดจาก Resources/Records เอง
         public void RegisterCatalog(IEnumerable<RecordCardSO> records)
         {
             if (records != null)
@@ -150,6 +161,7 @@ namespace NuclearReMind
         //  Daily tick (public for tests)
         // ─────────────────────────────────────────
 
+        // [TH] ประมวลผล 1 วัน: คิดอัตราถอดรหัสจากนักวิจัยว่างในแล็บ → สะสม Progress → ครบเป้าก็ปลดบันทึกใบถัดไป
         public void TickDay()
         {
             EnsureCatalog();
@@ -188,13 +200,15 @@ namespace NuclearReMind
             EventManager.Instance?.RaiseRecordRecovered(rec); // pops the card + archives it
         }
 
+        // [TH] หา RecordCardSO จาก id (null = ไม่พบใน catalog)
         public RecordCardSO GetRecord(string recordId)
         {
             EnsureCatalog();
             return _catalog.TryGetValue(recordId, out var r) ? r : null;
         }
 
-        /// <summary>Records recovered so far, in order — for the Records panel.</summary>
+        /// <summary>[TH] บันทึกที่กู้ได้แล้วทั้งหมด เรียงตามลำดับกู้ — ให้แผง Records ใช้แสดง
+        /// Records recovered so far, in order — for the Records panel.</summary>
         public IEnumerable<RecordCardSO> Recovered
         {
             get

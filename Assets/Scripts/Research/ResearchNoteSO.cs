@@ -3,6 +3,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ข้อมูลโน้ตวิจัย 1 ใบ (ทั้งเกมมี 8 ใบ) — เนื้อหาความรู้, ราคา (จ่ายครั้งเดียวตอนเริ่ม),
+    /// เงื่อนไขปลดล็อก (ต้องมีเบาะแส/โน้ตก่อนหน้า) และสิ่งที่ปลดล็อกเมื่อวิจัยเสร็จ
+    /// ตัวเลข/ข้อความทั้งหมดอยู่ใน asset ตาม docs/NOTES.md — ห้าม hardcode ในโค้ด
+    ///
     /// Research Note (GDD §16/§19 — replaces InfoCardSO's role as the knowledge carrier).
     /// One asset per note — 8 total, data verbatim from docs/NOTES.md (created by
     /// menu NRM > Setup Research Notes). All numbers live in the asset, never in code.

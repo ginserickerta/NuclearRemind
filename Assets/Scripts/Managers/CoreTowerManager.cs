@@ -6,6 +6,9 @@ namespace NuclearReMind
     public enum ReactorAllocation { Deuterium, Tritium, CoolingEngineer, CoolingWater }
 
     /// <summary>
+    /// [TH] หน้าที่: ตัวจัดการ CORE TOWER รุ่นเก่า (v4.1) — ปัจจุบันเมื่อ ReactorController (v6.3) ทำงานอยู่
+    /// คลาสนี้กลายเป็น "facade": หยุด simulation เดิมทั้งหมด แล้วสะท้อนค่า CORE/HEAT จากเตา v6.3
+    /// ให้ UI/เซฟรุ่นเก่าใช้ต่อได้โดยไม่ต้องแก้ (ปุ่มโหมด/SCRAM/คอยล์ ส่งต่อไปที่เตาจริง)
     /// CORE TOWER (V4 §8) — วัดด้วย CORE% (0→100) + ระบบความร้อน HEAT · ก้าวหน้าต่อวัน (OnDayEnded)
     ///
     /// สูตร (GDD v4.1 §8 — 3 เฟสเชื้อเพลิงตามแบนด์ CORE%):
@@ -107,6 +110,7 @@ namespace NuclearReMind
         public float Q => V63Live ? ReactorController.Instance.Core / 100f : Current.corePercent / 100f;
 
         /// <summary>
+        /// [TH] กระจกสะท้อน v6.3: คัดลอก CORE/HEAT/โหมด จาก ReactorController ลง TowerData แล้วแจ้ง UI เก่า
         /// v6.3 mirror: rebuild TowerData from ReactorController and re-raise OnTowerProgressChanged so
         /// legacy HUD/save stay in sync. isUnlocked is always true (v6.3 has no Day-11 unlock — rule #1);
         /// overclockMode mirrors the reactor's real 4-mode state (Idle/Normal/Boost/Overdrive).
@@ -649,6 +653,7 @@ namespace NuclearReMind
         //   tank refuses with the reason. Values live in CONFIG.md (rule #2).
         private float _manualCoolWaterToday;
 
+        // ปุ่ม "หล่อเย็นเพิ่ม" (v6.3): จ่ายน้ำครั้งเดียว → HEAT ลดทันที (เตาเย็น/น้ำไม่พอ = ปฏิเสธพร้อมเหตุผล)
         private void ManualCoolV63(ReactorController r)
         {
             var cfg = GameConfigSO.Instance;

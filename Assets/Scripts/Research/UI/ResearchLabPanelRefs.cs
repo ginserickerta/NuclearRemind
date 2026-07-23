@@ -4,6 +4,10 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ที่รวม reference ของทุกชิ้นส่วนใน prefab หน้าห้องวิจัย — ไม่มี logic ใด ๆ
+    /// มีไว้ให้เจ้าของโปรเจกต์ปรับ ตำแหน่ง/ขนาด/สี/ฟอนต์ ใน Editor ได้โดยไม่ต้องแตะโค้ด
+    /// ResearchLabPanelUI จะหยิบ reference จากตรงนี้ไปเติมพฤติกรรมตอนรัน
+    ///
     /// Serialized handle to EVERY element of the Research Lab panel prefab
     /// (Resources/ResearchUI/ResearchLabPanel.prefab, baked by NuclearReMind → Setup Research Lab
     /// Prefabs). The prefab exists so the owner can tune position/size/color/font of any piece in

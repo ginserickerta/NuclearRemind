@@ -6,6 +6,7 @@ using UnityEngine.UI;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้าง UI การ์ด "บันทึกกู้คืน" (Record Card) บน Canvas แยกในซีนเกม
     /// สร้างการ์ด "บันทึกกู้คืน" ธีมไม้ (mockup v2) + wire RecordCardUI — idempotent
     /// อยู่บน "RecordCardCanvas" แยกของตัวเอง (ไม่ใช่ StoryCanvas) → รัน "Setup Story UI" ซ้ำแล้วไม่โดนลบ
     ///
@@ -24,6 +25,7 @@ namespace NuclearReMind.EditorTools
         private static readonly Color Ink   = new Color(0.20f, 0.13f, 0.08f);
         private static readonly Color DivCol = new Color(0.24f, 0.17f, 0.10f, 1f);
 
+        // เมนูนี้: สร้าง UI การ์ดบันทึกกู้คืนบน RecordCardCanvas (รันซ้ำได้)
         [MenuItem("NuclearReMind/Setup Record Card UI")]
         public static void Apply()
         {

@@ -6,6 +6,8 @@ using UnityEngine.Tilemaps;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้างชุดไทล์หินปูพื้น 10 ใบ จากไทล์หินในไทล์เซ็ตเดิม
+    /// (ตัดหน้าบน + เติมรอยแตก/มอส/ขอบกร่อน) — ผลลัพธ์เหมือนเดิมทุกการรัน ไม่ใช้ Random
     /// Generates the stone paving tile set (docs/GROUND_PLAN.md §2) — 10 tiles, 32×32 top-face rhombus,
     /// same format as flat_XXX produced by GroundTileFlattener.
     ///
@@ -86,6 +88,7 @@ namespace NuclearReMind.EditorTools
             ("stone_edge_1",  CobbleIndex, Palette.Warm, Kind.Chip,  1f,         37),
         };
 
+        // เมนูนี้: สร้างไฟล์ PNG ไทล์หิน 10 ใบลง Assets/Sprites/Art/Tiles/Stone
         [MenuItem("NuclearReMind/Generate Stone Tiles")]
         public static void Apply()
         {

@@ -5,6 +5,7 @@ using NuclearReMind;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: เครื่องมือ Editor จูนเงาอาคารด้วยการลาก handle ใน Scene view แล้วบันทึกค่าลง asset
     /// Custom editor สำหรับ ShadowTuner — ลาก "เงา" ของอาคารใน Scene view แล้วค่าเขียนลง BuildingData
     /// (shadowOffset / shadowSquash / shadowLeanDegrees / shadowAlpha + overrideShadow = true)
     ///
@@ -18,6 +19,7 @@ namespace NuclearReMind.EditorTools
     {
         private static readonly Color CShadow = new Color(0.35f, 0.75f, 1f, 1f);
 
+        // เมนูนี้: สร้าง GameObject ShadowTuner ชั่วคราวในซีนสำหรับลากจูนเงาอาคาร
         [MenuItem("NuclearReMind/Tools/Shadow Editor")]
         public static void Open()
         {

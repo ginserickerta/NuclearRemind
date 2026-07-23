@@ -3,6 +3,8 @@ using System.Text;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: จัดรูปข้อความการ์ดวิกฤต (หัวเรื่อง/บทตัวละคร/แถวตัวเลือก) เป็น string ล้วน — เทสต์ได้
+    /// [TH] จุดสำคัญ: ตัวเลือกที่ล็อกต้องพิมพ์ให้เห็น "[ล็อก] + ชื่อ Note ที่ต้องวิจัย" ห้ามซ่อน (กติกาข้อ 6)
     /// Crisis-card formatting (CARDS.md). Pure string builders so the option rows — especially the
     /// LOCKED ones — are unit-testable; the F9 dev panel and any uGUI view render these.
     ///
@@ -14,7 +16,10 @@ namespace NuclearReMind
         public static string Header(CrisisCardSO card) =>
             card == null ? "" : $"⚠  {card.title}\n{card.description}";
 
-        /// <summary>The character-clash block (may be empty — cards 1/2/3/8 have one voice or none).</summary>
+        /// <summary>
+        /// [TH] บล็อกบทตัวละครเถียงกัน (การ์ด 4/5/6/7 มี NPC สองคนชนกัน — บางใบว่างได้)
+        /// The character-clash block (may be empty — cards 1/2/3/8 have one voice or none).
+        /// </summary>
         public static string Dialogue(CrisisCardSO card)
         {
             if (card?.dialogueLines == null || card.dialogueLines.Length == 0) return "";
@@ -25,6 +30,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] แถวตัวเลือก 1 แถว: ปลดล็อกแล้ว = "[A] ชื่อ — ผลลัพธ์" · ล็อกอยู่ = "[C] [ล็อก] + ชื่อ Note ที่ต้องวิจัย"
         /// One option row. Unlocked → "[A] label — effect". Locked → greyed "[C] 🔒 label · ต้องวิจัย
         /// [note]" so the player can see the better path exists. `letter` is A/B/C by index.
         /// </summary>

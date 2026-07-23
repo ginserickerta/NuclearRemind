@@ -3,6 +3,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: "เบาะแส" (Lead) ที่ปลดล็อกให้โน้ตวิจัย 1 ใบเริ่มวิจัยได้
+    /// ปลดครั้งเดียวต่อเกม — มาจาก SoftTriggerWatcher (สภาพเกม) หรือ Data Recovery (ถอดรหัสบันทึก)
+    /// asset นี้เป็นแค่ตัวเก็บข้อความ hint — แผนที่ lead→note จริงอยู่ใน KnowledgeDB.BuildLeadMap
+    ///
     /// Research Lead (GDD §19) — the "clue" that makes one note researchable.
     /// Leads unlock ONCE per game (unlike cards which repeat on cooldown).
     /// Sources: SoftTriggerWatcher (state-bound) or Data Recovery records (Sprint 5).

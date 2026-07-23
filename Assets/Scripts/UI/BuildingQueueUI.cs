@@ -51,6 +51,7 @@ namespace NuclearReMind
         //  Event handlers
         // ─────────────────────────────────────────
 
+        // เมื่อวางสิ่งก่อสร้างใหม่ → สร้าง entry ในคิว พร้อมผูกปุ่ม Cancel/Prioritize
         private void HandleBuildingPlaced(Cell cell, BuildingData data)
         {
             if (_entries.Count >= maxVisible) return;
@@ -88,6 +89,7 @@ namespace NuclearReMind
             }
         }
 
+        // เมื่อสิ่งก่อสร้างถูกรื้อ/ยกเลิก → ลบ entry ออกจากคิว
         private void HandleBuildingRemoved(Vector2Int pos)
         {
             if (!_entries.TryGetValue(pos, out var go)) return;
@@ -95,6 +97,7 @@ namespace NuclearReMind
             if (go != null) Destroy(go);
         }
 
+        // เมื่อก่อสร้างเสร็จ → ลบ entry ออกจากคิว
         private void HandleConstructionComplete(Vector2Int pos, BuildingData _)
         {
             if (!_entries.TryGetValue(pos, out var go)) return;
@@ -102,6 +105,7 @@ namespace NuclearReMind
             if (go != null) Destroy(go);
         }
 
+        // อัปเดตตัวเลขความคืบหน้า (tick ปัจจุบัน/ทั้งหมด) ของ entry
         private void HandleProgressChanged(Vector2Int pos, int progress)
         {
             if (!_entries.TryGetValue(pos, out var go)) return;

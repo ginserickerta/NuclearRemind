@@ -78,6 +78,7 @@ namespace NuclearReMind
             _keranRelationship = save.keranRelationship;
         }
 
+        // รวบรวมสถานะจากทุกระบบ (query อ่านอย่างเดียว) ประกอบเป็น SaveData แล้วเขียนไฟล์ JSON
         public void Save()
         {
             var save = new SaveData
@@ -183,6 +184,7 @@ namespace NuclearReMind
             Debug.Log($"[SaveManager] Saved to {SavePath}");
         }
 
+        // อ่านไฟล์เซฟแล้วยิง OnSaveLoaded — แต่ละระบบกู้สถานะของตัวเองจาก event นี้
         public void Load()
         {
             if (!File.Exists(SavePath))

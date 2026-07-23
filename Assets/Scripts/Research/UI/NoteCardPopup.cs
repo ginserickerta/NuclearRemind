@@ -5,6 +5,10 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: popup "วิจัยสำเร็จ" — เด้งเมื่อโน้ตวิจัยเสร็จ แสดงเนื้อหาความรู้จริงจาก asset
+    /// พอปิดจะส่งบทพูดของ NPC ต่อให้ระบบ StoryDialogue (จงใจไม่ผ่าน BarkManager เพราะ bark มีลิมิต 2/วัน
+    /// แต่บทนี้ต้องแสดงเสมอ) · เปิดอยู่ = หยุดเวลาเกม
+    ///
     /// Note completion popup (GDD §19 + NOTES.md) — fires on OnResearchNoteCompleted and shows
     /// knowledgeBody, the actual knowledge, verbatim from the asset.
     ///
@@ -98,6 +102,7 @@ namespace NuclearReMind
             rt.localScale = Vector3.one;
         }
 
+        // [TH] ใช้เฉพาะตอน bake prefab ใน Editor — สร้างแผงพร้อมข้อความตัวอย่างให้เจ้าของโปรเจกต์แต่งต่อ
         /// <summary>
         /// Editor baker only: build the whole panel under this object — with sample content so the
         /// prefab previews exactly like the in-game popup — then save as a prefab. The backdrop ships
@@ -154,6 +159,7 @@ namespace NuclearReMind
             if (!_shown && _backdrop != null) _backdrop.SetActive(false); // instant — no close animation on scene start
         }
 
+        // [TH] รับ event โน้ตวิจัยเสร็จ → หาโน้ตจาก KnowledgeDB แล้วเปิด popup
         private void HandleNoteCompleted(string noteId)
         {
             var db = KnowledgeDB.Instance;
@@ -163,6 +169,7 @@ namespace NuclearReMind
             Show(note);
         }
 
+        // [TH] เปิด popup ของโน้ต — ถ้ามีใบเปิดค้างอยู่ ให้เข้าคิวรอแทน (โน้ตสองใบเสร็จพร้อมกันได้)
         /// <summary>Open the two-page popup for a note (public so tests/panels can drive it).</summary>
         public void Show(ResearchNoteSO note)
         {
@@ -203,6 +210,7 @@ namespace NuclearReMind
             if (_btnLabel != null) _btnLabel.text = "ปิด";
         }
 
+        // [TH] ปิด popup: คืนเวลาเกม → ถ้ามีโน้ตค้างคิวเปิดต่อ → ไม่มีแล้วค่อยให้ NPC พูดบทปิดท้าย
         private void Close()
         {
             var finished = _note;      // captured before the reset — the NPC line still needs it
@@ -219,6 +227,7 @@ namespace NuclearReMind
             SpeakCompletionLine(finished);
         }
 
+        // [TH] ส่งบทพูดปิดท้ายของ NPC (เช่น "DORN(sad)") เข้าระบบบทสนทนา — มีรูปหน้า + ป้ายชื่อ + กรอบคำพูด
         /// <summary>
         /// Hand the note's closing remark to the story dialogue system (portrait + name plate + speech
         /// frame). DialogueUIController owns its own PauseReason.StoryCard, and this runs after
@@ -265,6 +274,7 @@ namespace NuclearReMind
         void GameUIStack.IPanel.CloseFromStack() => Close();
 
         // ═══════════════ BUILD ═══════════════
+        // [TH] สร้าง UI ของ popup ด้วยโค้ด (กรณีไม่มี prefab ที่ bake ไว้)
         private void BuildPanel()
         {
             _backdrop = NewUI("Backdrop", transform, CBackdrop);

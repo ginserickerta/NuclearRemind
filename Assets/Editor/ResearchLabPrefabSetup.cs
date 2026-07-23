@@ -5,6 +5,8 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor อบ (bake) แผงห้องวิจัยที่สร้างด้วยโค้ดออกเป็น prefab 6 ตัว
+    /// เพื่อให้แก้ตำแหน่ง/ขนาด/สี/ฟอนต์ใน Inspector ได้เองโดยไม่ต้องแก้โค้ด
     /// Bakes the code-built Research Lab panel into editable prefabs so the owner can tune every
     /// position/size/color/font in the Inspector instead of asking for code edits per pixel.
     ///
@@ -26,6 +28,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string Dir = "Assets/Resources/ResearchUI";
 
+        // เมนูนี้: สร้าง prefab แผงห้องวิจัย 6 ตัวลง Resources/ResearchUI (รันซ้ำ = รีเซ็ต layout)
         [MenuItem("NuclearReMind/Setup Research Lab Prefabs")]
         public static void Apply()
         {

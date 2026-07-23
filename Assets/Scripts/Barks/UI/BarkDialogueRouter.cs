@@ -4,6 +4,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ตัวกลาง route ทุกบทพูด (bark NPC + เสียงในใจ) เข้าแผง dialogue แบบ VN
+    /// [TH] (มีรูปหน้า + ป้ายชื่อ) แทน toast มุมจอ — จุดสำคัญ 2 อย่าง:
+    /// [TH] 1) รวมบทที่ยิงเฟรมเดียวกันเป็นชุดเดียว กันแผงเปิดทับกันเอง 2) รอคิว — ถ้าการ์ดวิกฤต/Record
+    /// [TH] เปิดอยู่ให้บทพูดรอ (สำคัญน้อยกว่า) · ไม่มีแผงในซีน = ถอยให้ BarkFeedHUD ไม่มีบทพูดหาย
     /// Routes every spoken line — NPC barks and Auren's inner voice — into the VN dialogue panel
     /// (StoryDialoguePanel / DialogueUIController) instead of the bottom-left toast feed.
     ///
@@ -32,6 +36,7 @@ namespace NuclearReMind
         public static BarkDialogueRouter Instance { get; private set; }
 
         /// <summary>
+        /// [TH] true = บทพูดวิ่งเข้าแผง dialogue — BarkFeedHUD อ่านค่านี้แล้วเงียบ ให้แสดงช่องเดียวเสมอ
         /// True when spoken lines go to the dialogue panel. BarkFeedHUD reads this and stays quiet, so
         /// exactly one of the two channels is live and a line is never shown twice.
         /// </summary>
@@ -84,6 +89,7 @@ namespace NuclearReMind
             EventManager.Instance.OnBarkFired -= HandleBarkFired;
         }
 
+        // [TH] เก็บบทที่ยิงมาลงคิวก่อน แล้วนัด flush เฟรมถัดไป (รวมทุกบรรทัดของเฟรมนี้เป็นชุดเดียว)
         private void HandleBarkFired(BarkSO bark)
         {
             if (bark == null || string.IsNullOrEmpty(bark.text)) return;
@@ -101,6 +107,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] แสดงคิวบทพูดเมื่อจอว่าง — ถ้า dialogue เดิม/การ์ดวิกฤต/Record ยังเปิดอยู่ ให้รอ (เช็คทุกเฟรม)
         /// Show the queued lines if nothing more important owns the screen.
         ///
         /// Polled rather than driven by a "modal closed" event on purpose: the three modals close
@@ -126,6 +133,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] แปลง BarkSO เป็นบรรทัด dialogue: เลือกสีหน้า portrait — เสียงในใจ Auren ใช้หน้าครุ่นคิดเสมอ
         /// A bark carries no emotion, so pick the one that matches how the line is used: Auren's inner
         /// voice is written as her thinking it (and auren_thinking is the portrait the scene setup
         /// loads), while an NPC saying a fact out loud reads Neutral.

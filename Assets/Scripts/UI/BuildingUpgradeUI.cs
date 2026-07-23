@@ -208,6 +208,7 @@ namespace NuclearReMind
                || d.buildingType == BuildingType.Laboratory;
 
         // ═══════════════════════════ POPULATE ═══════════════════════════
+        // เติมข้อมูลทั้งแผงตามอาคารที่เลือก: header/ผลผลิต/คนงาน/การ์ดระดับ/ต้นทุนอัปเกรด (โหนดแร่ = โหมดขุดพิเศษ)
         private void Refresh()
         {
             if (_root == null) return;
@@ -744,6 +745,7 @@ namespace NuclearReMind
             t.horizontalOverflow = HorizontalWrapMode.Overflow; t.verticalOverflow = VerticalWrapMode.Overflow;
             return t;
         }
+        // [TH] แถวสกัดดิวเทอเรียมของโรงน้ำ: โชว์อัตราผลิต/น้ำที่ใช้ + ปุ่มเปิด-ปิด · ถ้ายังล็อก (วิจัย/ระดับ/คนงาน) ต้องบอกเงื่อนไข ห้ามซ่อน (กฎข้อ 6)
         /// <summary>
         /// The Water Plant extraction row: what it would produce, what it would cost, and the switch.
         ///
@@ -799,6 +801,7 @@ namespace NuclearReMind
             SetExtractTextRoom(showBtn);
         }
 
+        // [TH] สร้างปุ่มสวิตช์สกัดดิวเทอเรียมให้แผง (ครอบทั้งกรณี prefab และสร้างสด — ถ้า prefab มีปุ่มอยู่แล้วจะไม่สร้างซ้ำ)
         /// <summary>
         /// Add the extraction switch to whichever panel we ended up with.
         ///
@@ -819,6 +822,7 @@ namespace NuclearReMind
             _extractBtnTxt = _extractBtn.GetComponentInChildren<Text>();
         }
 
+        // [TH] จัดพื้นที่ข้อความในแถวสกัด: มีปุ่ม = ร่นข้อความหลบปุ่ม · ไม่มีปุ่ม = คืนพื้นที่เต็มความกว้าง (กันข้อความถูกตัด)
         /// <summary>
         /// Keep the row's text clear of the switch — and give the space back when the switch is hidden.
         ///
@@ -833,6 +837,7 @@ namespace NuclearReMind
             rt.offsetMax = new Vector2(buttonVisible ? -150f : -28f, rt.offsetMax.y);
         }
 
+        // กดสวิตช์เปิด/ปิดการสกัดดิวเทอเรียมของอาคารที่เลือกอยู่
         private void OnToggleExtract()
         {
             var dex = DeuteriumExtraction.Instance;

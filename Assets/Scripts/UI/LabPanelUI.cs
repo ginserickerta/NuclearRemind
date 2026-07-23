@@ -76,6 +76,8 @@ namespace NuclearReMind
 
         private static void AutoSpawnUnsafe()
         {
+            // [TH] v6.3: แผงวิจัย 3 โครงการรุ่นเก่านี้ถูกพักใช้ (return ทันที ไม่ spawn) — UI วิจัยตัวจริงคือ ResearchQueuePanel
+            //      โค้ดยังคอมไพล์อยู่จนกว่าจะลบชุด legacy ทิ้งตอน cleanup
             // ★ v6.3 cutover (slice 1): the live in-game research UI is now ResearchQueuePanel (drives the
             //   v6.3 ResearchLab note-queue). This legacy 3-project panel is retired from the scene — kept
             //   compiled only until the legacy cluster is bulk-deleted at cutover cleanup.

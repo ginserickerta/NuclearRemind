@@ -6,6 +6,10 @@ using UnityEngine.Tilemaps;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: แผงจูน "บรรยากาศ ASHFALL DAWN" ของทั้งฉากผ่าน Inspector — แสงหลัก/แสงอาทิตย์,
+    /// การเกรดสี (exposure/contrast/split toning), bloom, vignette, grain และสีย้อมพื้น
+    /// ปรับค่าแล้วเห็นผลทันทีทั้ง edit/play mode · เป็นชั้นภาพล้วน ไม่แตะ gameplay และไม่ลง SaveData
+    ///
     /// ASHFALL DAWN mood tuner — live Inspector control over the Phase A look
     /// (docs/RENDER_PLAN.md). Sits on "__ASHFALL_Volume"; references are wired by
     /// the "Setup Ashfall Render (Phase A)" editor menu.
@@ -90,6 +94,7 @@ namespace NuclearReMind
             Apply();
         }
 
+        // [TH] อัดค่าทุก field ลง Volume profile + ไฟ + พื้น — เรียกซ้ำได้ปลอดภัย
         /// <summary>Push all fields into profile + lights + ground. Safe to call any time.</summary>
         [ContextMenu("Apply Now")]
         public void Apply()
@@ -104,6 +109,8 @@ namespace NuclearReMind
 #endif
         }
 
+        // [TH] จัดไฟ: URP 2D ยอมให้มี global light ได้แค่ 1 ดวงต่อ blend style — เลยรวมแสงหลัก+fill
+        //      เป็นดวงเดียว (Multiply) ส่วนแสงอาทิตย์อยู่อีก style (Additive) · ไฟเกินถูกปิดกันคอนโซลสแปม
         /// <summary>
         /// ★ URP 2D renders exactly ONE global light per blend style per sorting layer — any extra is
         /// dropped and logs "More than one global light on layer …" on every OnEnable. So the key and
@@ -149,6 +156,7 @@ namespace NuclearReMind
             return new Color((a.r * ai + b.r * bi) / i, (a.g * ai + b.g * bi) / i, (a.b * ai + b.b * bi) / i);
         }
 
+        // [TH] อัดค่าการเกรดสีทั้งหมดลง Volume profile (มี override ไหนก็เซ็ตอันนั้น)
         private void ApplyGrading()
         {
             if (profile == null) return;
@@ -190,6 +198,7 @@ namespace NuclearReMind
             }
         }
 
+        // [TH] ย้อมสีพื้นหญ้า/หิน — เฉพาะเมื่อเปิดสวิตช์ (กันไปทับสีที่ทามือด้วย Tile Color Painter)
         private void ApplyGround()
         {
             // Grass colour belongs to Tile Color Painter / GridSpriteFiller — never stomp it unasked

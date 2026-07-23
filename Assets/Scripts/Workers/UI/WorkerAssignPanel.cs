@@ -6,6 +6,9 @@ using UnityEngine.EventSystems;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: แผงจัดคนงานลงงาน (ฟาร์ม/น้ำ/ไฟ/เหมือง/แล็บ/หล่อเย็น) + แถว Zone B และคราฟต์ Rad Suit
+    /// [TH] สร้าง UI เองทั้งหมดด้วยโค้ด (ไม่ใช้ prefab) — ปัจจุบัน "ปลดระวาง" แล้ว: จัดคนผ่านการคลิกอาคารแทน
+    /// [TH] เก็บไฟล์ไว้เพราะตรรกะเปิด Zone B / คราฟต์ชุดจะถูกยกไปใช้ใน UI ปลายเกมภายหลัง
     /// v6.3 worker-assignment panel (GDD §17) — the live in-game way to move workers between JOBS
     /// (farm/power/water/mine/lab/cool), replacing the legacy per-building cell assignment. Self-contained:
     /// auto-spawns onto HUDCanvas and builds its own uGUI (same pattern as ResearchQueuePanel). Toggled by a
@@ -126,6 +129,7 @@ namespace NuclearReMind
             }
         }
 
+        // [TH] เปิดแผง: หยุดเวลาเกมชั่วคราวแล้วรีเฟรชตัวเลขทั้งหมด
         private void Open()
         {
             _shown = true;
@@ -135,6 +139,7 @@ namespace NuclearReMind
             Refresh();
         }
 
+        // [TH] ปิดแผงและปล่อยเวลาเกมเดินต่อ
         private void Hide()
         {
             _shown = false;
@@ -148,6 +153,7 @@ namespace NuclearReMind
         GameObject GameUIStack.IPanel.PanelRoot => _backdrop;
         void GameUIStack.IPanel.CloseFromStack() => Hide();
 
+        // [TH] ปุ่ม +/− ของแต่ละงาน: + ดึงคนว่างมาลงงาน · − ถอนคนออกไปว่าง (Zone B รับเฉพาะคนรังสีต่ำพอ)
         private void Move(string job, int dir)
         {
             var wm = WorkerManager.Instance;
@@ -187,6 +193,7 @@ namespace NuclearReMind
 
         // ★ Open Zone B (GDD §6/§7): needs the tritium note + Phase 4 · costs Iron 150 + Power 200
         //   (no free choices — rule #5). ZoneBController.Open() flips storm pressure & production on.
+        // [TH] เปิด Zone B: ต้องวิจัย Note tritium + ถึง Phase 4 และจ่ายเหล็ก+พลังงาน (ไม่มีของฟรี)
         private void OpenZoneB()
         {
             var zb = ZoneBController.Instance;
@@ -210,6 +217,7 @@ namespace NuclearReMind
             Refresh();
         }
 
+        // [TH] อัปเดตตัวเลขทุกแถวให้ตรงสถานะจริง (จำนวนคนต่องาน, Zone B, Rad Suit)
         private void Refresh()
         {
             var wm = WorkerManager.Instance;
@@ -231,6 +239,7 @@ namespace NuclearReMind
         }
 
         // Rad Suit row states: 🔒 needs nuclear_medicine → craftable (labMat 30, up to 5).
+        // [TH] แถว Rad Suit: ยังไม่วิจัย = โชว์ว่าล็อกอยู่ (ห้ามซ่อน) · วิจัยแล้ว = คราฟต์ได้ตามเป้า
         private void RefreshRadSuit(WorkerManager wm)
         {
             if (_suitLabel == null) return;
@@ -268,6 +277,7 @@ namespace NuclearReMind
         }
 
         // Zone B row states: 🔒 no note → 🔒 phase < 4 → "open" button → live staffing row.
+        // [TH] แถว Zone B ไล่สถานะ: ล็อกเพราะยังไม่วิจัย → ล็อกเพราะเฟสไม่ถึง → ปุ่มเปิด → จัดคนได้จริง
         private void RefreshZoneB(WorkerManager wm)
         {
             if (_zoneLabel == null) return;
@@ -309,6 +319,7 @@ namespace NuclearReMind
         }
 
         // ═══════════════ BUILD ═══════════════
+        // [TH] ประกอบหน้าตาแผงทั้งหมดด้วยโค้ด: ฉากหลัง + กรอบ + หัวเรื่อง + แถวงานทีละแถว
         private void BuildPanel()
         {
             _backdrop = NewUI("Backdrop", transform, CBackdrop);

@@ -3,9 +3,11 @@ using UnityEngine;
 
 namespace NuclearReMind
 {
-    /// <summary>One quiz's status in the Codex list (CODEX.md §6).</summary>
+    /// <summary>[TH] สถานะของควิซหนึ่งข้อในรายการ Codex: ล็อก / ตอบได้ / เชี่ยวชาญแล้ว
+    /// One quiz's status in the Codex list (CODEX.md §6).</summary>
     public enum QuizState { Locked, Answerable, Earned }
 
+    /// <summary>[TH] หน้าที่: ข้อมูลหนึ่งแถวสำหรับแสดงใน Codex panel — ควิซ + entry ที่คู่กัน + สถานะ</summary>
     public struct QuizView
     {
         public QuizQuestionSO quiz;
@@ -13,7 +15,8 @@ namespace NuclearReMind
         public QuizState state;
     }
 
-    /// <summary>Result of answering — the panel shows explanation ALWAYS, right or wrong (QUIZZES.md).</summary>
+    /// <summary>[TH] หน้าที่: ผลการตอบควิซหนึ่งครั้ง — คำอธิบายต้องโชว์เสมอ ทั้งตอบถูกและผิด
+    /// Result of answering — the panel shows explanation ALWAYS, right or wrong (QUIZZES.md).</summary>
     public struct SubmitResult
     {
         public bool valid;            // false = quiz unknown / not answerable (locked or already earned)
@@ -24,6 +27,10 @@ namespace NuclearReMind
     }
 
     /// <summary>
+    /// [TH] หน้าที่: หัวใจระบบควิซ-Codex v6.3 — ควิซเป็นทางเลือก (ไม่บังคับ ไม่มีเวลา) อยู่ในหน้า Codex
+    /// [TH] ควิซจะ "ตอบได้" ก็ต่อเมื่อผู้เล่นใช้ความรู้นั้นจริงในเกมแล้ว (requiresApplied — กันบั๊ก #3)
+    /// [TH] ตอบถูก → ได้ Mastery ถาวร + ปลด Codex entry (ติดตัวข้ามรอบเล่น) · ตอบผิด → ไม่มีโทษ ลองใหม่พรุ่งนี้
+    /// [TH] เป็น plain class singleton (ไม่ใช่ MonoBehaviour) เพื่อให้เทสต์รันได้โดยไม่ต้องมีซีน
     /// v6.3 Codex-quiz flow (GDD §21 / QUIZZES.md / CODEX.md). Replaces the legacy forced-QuizManager
     /// + event CodexManager on the new path; both legacy classes stay compiled for the old scene until
     /// cutover, so this one carries a distinct name (no CS0101 collision with CodexManager).
@@ -40,10 +47,13 @@ namespace NuclearReMind
         private static CodexQuizManager _instance;
         public static CodexQuizManager Instance => _instance ?? (_instance = new CodexQuizManager());
 
-        /// <summary>Fresh manager for EditMode tests / restart (does not clear MetaProgress).</summary>
+        /// <summary>[TH] สร้าง instance ใหม่สำหรับ EditMode test (ไม่ล้าง MetaProgress)
+        /// Fresh manager for EditMode tests / restart (does not clear MetaProgress).</summary>
         public static void ResetForTest() => _instance = new CodexQuizManager();
 
         /// <summary>
+        /// [TH] ล้างสถานะควิซ "ของรอบเล่นนี้" ตอน Restart (ซีนรีโหลดแต่ static singleton ไม่รีเอง)
+        /// [TH] Mastery และ Codex ที่ปลดแล้วอยู่ใน MetaProgress — ตั้งใจให้รอดข้ามรอบ ไม่ถูกล้างที่นี่
         /// Drop this run's quiz state on Restart. The scene reloads but a plain static singleton does not,
         /// so applied-flags, the reveal-day latches and the "already offered as a prompt" set would all
         /// carry into the next run. Mastery and unlocked Codex entries live in MetaProgress and survive
@@ -70,6 +80,7 @@ namespace NuclearReMind
         //  Catalog (tests register directly; play mode auto-loads from Resources)
         // ─────────────────────────────────────────
 
+        // [TH] ลงทะเบียนควิซ + Codex entry เข้า catalog — เทสต์เรียกตรง ส่วน play mode โหลดจาก Resources เอง
         public void RegisterCatalog(IEnumerable<QuizQuestionSO> quizzes, IEnumerable<CodexEntrySO> codex)
         {
             if (quizzes != null)
@@ -96,6 +107,8 @@ namespace NuclearReMind
         public int TotalCodex { get { EnsureCatalog(); return _codexAll.Count; } }
 
         /// <summary>
+        /// [TH] ตัวเลขหัวแผง "เชี่ยวชาญ x / 11" — นับจาก MasteryRegistry (ตัวที่จ่ายโบนัสจริง) ไม่ใช่
+        /// [TH] MetaProgress.UnlockedCodex เพื่อให้หัวแผงกับแถวข้างล่างไม่มีวันขัดกัน
         /// Header count "x / 11" — counts all unlocked entries, never per-category (CODEX.md §6).
         ///
         /// ★ Counted from MasteryRegistry, NOT from MetaProgress.UnlockedCodex. The two are separate
@@ -127,6 +140,7 @@ namespace NuclearReMind
             return MasteryRegistry.Instance.Has(c.unlockedFromQuiz);
         }
 
+        // [TH] entry นี้ปลดล็อกแล้วไหม (อิง Mastery ของควิซเจ้าของ — fallback ไปชุด persist ถ้าไม่มีควิซผูก)
         public bool IsCodexUnlocked(string entryId)
         {
             EnsureCatalog();
@@ -139,9 +153,12 @@ namespace NuclearReMind
         //  Applied state — the game loop / tests feed this (requiresApplied)
         // ─────────────────────────────────────────
 
+        // [TH] game loop / เทสต์ ป้อนสถานะ "ใช้ความรู้แล้ว" เข้ามา (เงื่อนไข requiresApplied)
         public void SetApplied(MasteryAppliedState s) => _applied = s;
 
         /// <summary>
+        /// [TH] เดินนาฬิกา reveal 1 วัน — จดวันแรกที่ควิซแต่ละข้อ "ใช้ความรู้แล้ว" เพื่อหน่วงให้ควิซ
+        /// [TH] โผล่หลังจากนั้น 1-2 วัน (จังหวะการสอน ไม่ใช่เด้งทันทีที่ใช้)
         /// Advance the reveal clock one day (called by QuizAppliedWatcher on OnDayEnded). Latches the first
         /// day each quiz's knowledge became "applied" so it surfaces quizRevealDelayDays later — a beat after
         /// the lesson, not the moment you use it (QUIZZES.md pacing).
@@ -160,6 +177,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] จดว่าเครื่องสกัด (โรงน้ำเลเวลสูงสุดที่สกัด Deuterium) เดินเครื่องแล้ว — ครั้งแรกยิง bark V06 ด้วย
         /// Also the V06 trigger ("Extractor เดินครั้งแรก"). v6.3 has no Extractor building — a Water Plant
         /// at max level doing deuterium extraction IS the extractor (see QuizAppliedWatcher), and this is
         /// the one place that knows it ran. Fire on the 0→1 edge; the bark is onceOnly regardless.
@@ -177,7 +195,8 @@ namespace NuclearReMind
         public void MarkMutationLab()     => _applied.mutationLabRan = true;
         public void MarkCo60()            => _applied.co60Ran = true;
         public void MarkTritiumFed()      => _applied.tritiumFed = true;
-        /// <summary>Zone B produced tritium today — latches tritiumEverProduced (★ bug #3).</summary>
+        /// <summary>[TH] วันนี้ Zone B ผลิตทริเทียมได้ — latch ค่า "เคยผลิตแล้ว" (★ กันบั๊ก #3: tritium ถูกเผาเป็น 0 ทุกเทิร์น)
+        /// Zone B produced tritium today — latches tritiumEverProduced (★ bug #3).</summary>
         public void MarkTritiumProduced() { _applied.tritiumEverProduced = true; _applied.zoneBProducedDays++; }
         public void SetCoreProgress(float core) => _applied.coreProgress = core;
         public void MarkEndingReached()   => _applied.reachedEnding = true;
@@ -186,7 +205,8 @@ namespace NuclearReMind
         //  Availability
         // ─────────────────────────────────────────
 
-        /// <summary>Answerable now: catalog has it, not already earned, and requiresApplied is met.</summary>
+        /// <summary>[TH] ควิซข้อนี้ตอบได้ตอนนี้ไหม: มีใน catalog + ยังไม่เชี่ยวชาญ + ใช้ความรู้แล้ว + ผ่านหน่วง reveal
+        /// Answerable now: catalog has it, not already earned, and requiresApplied is met.</summary>
         public bool IsAnswerable(string quizId)
         {
             EnsureCatalog();
@@ -199,7 +219,8 @@ namespace NuclearReMind
             return _appliedOnDay.TryGetValue(quizId, out int d) && (_today - d) >= _revealDelay;
         }
 
-        /// <summary>How many quizzes are answerable-but-unanswered right now — the notification badge count.</summary>
+        /// <summary>[TH] จำนวนควิซที่ตอบได้แต่ยังไม่ตอบ — ตัวเลขบน badge แจ้งเตือน
+        /// How many quizzes are answerable-but-unanswered right now — the notification badge count.</summary>
         public int AnswerableCount
         {
             get
@@ -212,7 +233,8 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>Any quiz answerable-but-unanswered → HUD red dot on the Codex button (QUIZZES.md UI).</summary>
+        /// <summary>[TH] มีควิซใหม่ที่ตอบได้ค้างอยู่ไหม → จุดแดงบนปุ่ม Codex ใน HUD
+        /// Any quiz answerable-but-unanswered → HUD red dot on the Codex button (QUIZZES.md UI).</summary>
         public bool HasNewQuiz
         {
             get
@@ -224,6 +246,7 @@ namespace NuclearReMind
             }
         }
 
+        // [TH] รายการควิซทั้งหมดพร้อมสถานะ (ล็อก/ตอบได้/เชี่ยวชาญ) — Codex panel ใช้วาดแถว
         public IEnumerable<QuizView> GetAll()
         {
             EnsureCatalog();
@@ -243,6 +266,8 @@ namespace NuclearReMind
         private readonly HashSet<string> _prompted = new HashSet<string>();
 
         /// <summary>
+        /// [TH] ควิซที่เพิ่งตอบได้และยังไม่เคยถูกเสนอเป็น prompt กลางจอ — เรียกแล้วถือว่า "เสนอไปแล้ว" (ครั้งเดียว)
+        /// [TH] ตัดสินแค่ "เชิญเมื่อไร" — ผู้เรียกต้องให้ข้ามได้เสมอ เพราะควิซเป็นทางเลือกตามสเปก
         /// Quizzes that have just become answerable and have never been offered as a prompt. Calling this
         /// consumes them. QUIZZES.md keeps quizzes optional, so the caller must present them skippably —
         /// this only decides WHEN to invite, never whether the player has to answer.
@@ -262,7 +287,8 @@ namespace NuclearReMind
             return fresh;
         }
 
-        /// <summary>Codex list ordered for the panel — all entries, locked ones INCLUDED (never hidden).</summary>
+        /// <summary>[TH] Codex entry ทั้งหมดเรียงสำหรับแผง — รวมที่ล็อกด้วย (ห้ามซ่อน ตามกติกาเกม)
+        /// Codex list ordered for the panel — all entries, locked ones INCLUDED (never hidden).</summary>
         public IReadOnlyList<CodexEntrySO> AllCodex { get { EnsureCatalog(); return _codexAll; } }
 
         // ─────────────────────────────────────────
@@ -270,6 +296,7 @@ namespace NuclearReMind
         // ─────────────────────────────────────────
 
         /// <summary>
+        /// [TH] ตอบควิซ: ผิด → ไม่มีโทษ ได้คำอธิบาย ลองใหม่พรุ่งนี้ · ถูก → Mastery ถาวร + ปลด Codex entry
         /// Answer a quiz. Wrong → no penalty, explanation returned, quiz stays answerable (retry next
         /// day). Correct → grant permanent mastery + unlock the linked Codex entry (persistent).
         /// </summary>

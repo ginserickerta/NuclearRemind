@@ -4,6 +4,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: เก็บสถิติประจำรอบเล่นสำหรับหน้าสรุปจบเกม — จับค่าที่หายไปถ้าไม่บันทึกทันที
+    /// (Hope ต่ำสุด + วันที่เกิด · ตัวเลือก Decree ที่ผู้เล่นเลือก · เคยเจอการ์ด Triage ไหม · วันทำงานใน Zone B)
+    /// ส่วนที่เหลือ (คนรอด/ตาย, Mastery, Records) ดึงสดจากระบบอื่นตอนสรุป — ใช้ตัดสิน Achievements ด้วย
     /// Per-run statistics for the end-of-run summary (STORY.md §④ "สรุปการเล่นของคุณ").
     ///
     /// Most of the seven spec'd rows are already derivable from the live systems and are pulled on
@@ -56,6 +59,7 @@ namespace NuclearReMind
         private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
             => AutoSpawn();
 
+        // สร้างตัวเองอัตโนมัติตอนโหลดซีนเกม (ต้องมีก่อนวันแรกเริ่ม ไม่งั้นค่า Hope ช่วงต้นหาย)
         private static void AutoSpawn()
         {
             try
@@ -80,6 +84,7 @@ namespace NuclearReMind
         private void OnEnable() => TrySubscribe();
         private void Start() => TrySubscribe();
 
+        // สมัครฟัง event กลาง (เริ่มวัน/จบวัน/การ์ด/โหลดเซฟ) — กันสมัครซ้ำด้วย _subscribed
         private void TrySubscribe()
         {
             if (_subscribed || EventManager.Instance == null) return;
@@ -119,6 +124,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] เก็บตัวอย่าง ALARA วันละครั้ง: คนใน Zone B วันนี้กี่คน ใส่ชุดกันรังสีกี่คน (วัดก่อนรังสีลงและก่อนสับเวร)
         /// One ALARA sample per day: of the workers standing in Zone B right now, how many are wearing a
         /// suit? This runs at execution order -90, i.e. BEFORE WorkerManager (-50) applies the day's
         /// radiation and before ZoneBController (-35) rotates anyone out — so it sees the crew as it
@@ -151,6 +157,7 @@ namespace NuclearReMind
             _hope = null;
         }
 
+        // จด Hope ต่ำสุดใหม่ทุกครั้งที่ค่าหลัง commit ต่ำกว่าที่เคยเห็น
         private void HandleHopeCommitted(float current, float delta)
         {
             if (current >= LowestHope) return;
@@ -172,6 +179,7 @@ namespace NuclearReMind
         }
 
         // ── Derived on demand ─────────────────────────────────────────────────────────
+        // ค่าที่ดึงสดจากระบบอื่นตอนสรุปจบเกม (คนรอด/ตาย · Mastery · Records)
         public int TotalWorkers => WorkerManager.Instance != null ? WorkerManager.Instance.Workers.Count : 0;
         public int Survivors => WorkerManager.Instance != null ? WorkerManager.Instance.AliveCount : 0;
         public int Deaths => Mathf.Max(0, TotalWorkers - Survivors);
@@ -183,6 +191,7 @@ namespace NuclearReMind
         public int RecordsTotal => DataRecovery.Instance != null ? DataRecovery.Instance.TotalRecords : 0;
 
         /// <summary>
+        /// [TH] สัดส่วนวันทำงาน Zone B ที่ใส่ชุดกันรังสี — วัด "การป้องกัน" ไม่ใช่ผลลัพธ์ · null ถ้าไม่เคยส่งใครเข้า
         /// ALARA compliance (STORY.md §④) — the share of Zone B worker-days that were spent in a suit.
         ///
         /// STORY.md names the row but never defines the maths, so this follows the only definition the
@@ -200,6 +209,7 @@ namespace NuclearReMind
         // ── Summary block ─────────────────────────────────────────────────────────────
 
         /// <summary>
+        /// [TH] สร้างข้อความสรุป 7 บรรทัดสำหรับหน้าจบเกม (ความรู้/คนรอด/ALARA/Decree/Hope ต่ำสุด/Record)
         /// The seven-row block from STORY.md §④, aligned in a fixed-width column. Rows whose data is
         /// unavailable this run are dropped rather than printed as a misleading zero.
         /// </summary>
@@ -236,6 +246,7 @@ namespace NuclearReMind
             => sb.Append(label.PadRight(LabelWidth)).Append(value).Append('\n');
 
         // ── Save / load ───────────────────────────────────────────────────────────────
+        // เขียนสถิติที่จับไว้ลง SaveData ตอนเซฟ
         public void WriteTo(SaveData save)
         {
             if (save == null) return;
@@ -249,6 +260,7 @@ namespace NuclearReMind
 
         private void HandleSaveLoaded(SaveData save) => RestoreFromSave(save);
 
+        // กู้สถิติกลับจากเซฟ (-1 = ยังไม่เคยวัด Hope — กันเซฟเก่าอ่านเพี้ยนเป็น 0)
         /// <summary>Restore body — public so EditMode tests can drive it without a live subscription.</summary>
         public void RestoreFromSave(SaveData save)
         {
@@ -263,6 +275,7 @@ namespace NuclearReMind
             ZoneBSuitedDays = save.statZoneBSuitedDays;
         }
 
+        // ล้างสถิติทั้งหมดเมื่อเริ่มรอบเล่นใหม่
         /// <summary>Wipe every latched stat — a fresh run starts from nothing.</summary>
         public void ResetForNewRun()
         {

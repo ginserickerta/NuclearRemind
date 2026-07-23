@@ -6,6 +6,8 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ป๊อปอัปการ์ดวิกฤตในเกมจริง — โชว์หัวเรื่อง เล่นบทตัวละครเถียงกันก่อน แล้วให้เลือก A/B/C
+    /// [TH] modal ปิดไม่ได้จนกว่าจะเลือก · ตัวเลือกที่ล็อกโชว์จาง ๆ พร้อม "[ล็อก] ต้องวิจัย..." กดไม่ได้แต่ห้ามซ่อน
     /// v6.3 crisis-card popup (GDD §25 / CARDS.md) — the live in-game modal that appears when CardManager
     /// presents a card (EventManager.OnCrisisCardShown). Shows the title, the character-clash dialogue, and
     /// the options. ★ A "good" option gated behind an unresearched note is shown GREYED with 🔒 + the note
@@ -33,6 +35,7 @@ namespace NuclearReMind
         static readonly Color CFrameLock = new Color(0.46f, 0.45f, 0.43f, 1f);
 
         /// <summary>
+        /// [TH] ธงบอกว่ามีการ์ดขึ้นจออยู่ — CardManager ใช้เช็คว่าการ์ดถึงมือแผงจริง ไม่ค้างเงียบ ๆ
         /// True while a crisis card is on screen. CardManager checks this right after raising
         /// OnCrisisCardShown: if the card never made it to a panel it must not stay Pending, because
         /// Pending is cleared only by resolving an option and would block the rest of the run silently.
@@ -107,6 +110,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ใช้ตอน bake prefab ใน Editor เท่านั้น: สร้างแผงพร้อมข้อความตัวอย่าง A/B/C ให้พรีวิวเหมือนของจริง
         /// Editor baker only: build the whole panel under this object — with sample content and A/B/C
         /// rows so the prefab previews exactly like the in-game card — then save as a prefab.
         /// Row A doubles as the runtime style template (_optTemplate); B and C are preview-only samples
@@ -202,6 +206,7 @@ namespace NuclearReMind
         // ── show / hide (CardManager owns the day-clock pause/resume) ──
         private bool _awaitingDialogue;
 
+        // [TH] รับการ์ดจาก CardManager: เติมข้อความ → ถ้ามีบทพูดให้เล่นก่อน → แล้วค่อยเผยแผงตัวเลือก
         private void Show(CrisisCardSO card)
         {
             if (card == null) return;
@@ -222,6 +227,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ส่งบทตัวละครของการ์ดให้ระบบ dialogue เล่นก่อน (มีรูปหน้า + กรอบพูดเหมือนบทสนทนาอื่น)
+        /// [TH] จบบทแล้วค่อยโชว์แผงตัวเลือก — ผู้เล่นได้ฟังข้อโต้แย้งก่อนตัดสินใจ
         /// Hand the card's character lines to the story dialogue system — portraits and speech frames,
         /// the same presentation every other conversation in the game gets, instead of grey text stacked
         /// inside the card body. The options panel follows once the conversation ends, so the player reads
@@ -281,6 +288,7 @@ namespace NuclearReMind
         GameObject GameUIStack.IPanel.PanelRoot => _backdrop;
         void GameUIStack.IPanel.CloseFromStack() { } // no-op: only resolving an option closes it
 
+        // [TH] ผู้เล่นกดตัวเลือก: ให้ CardManager ตัดสิน — สำเร็จค่อยปิดแผง (เลือกตัวล็อกไม่ผ่าน แผงค้างไว้)
         private void Choose(int optionIndex)
         {
             var cm = CardManager.Instance;
@@ -289,6 +297,7 @@ namespace NuclearReMind
             if (res.valid) Hide(); // invalid (e.g. locked) → leave the card up
         }
 
+        // [TH] เติมข้อความการ์ดลงแผง + สร้างปุ่มตัวเลือก — ตัวล็อกใช้สีจาง กดไม่ได้ พร้อมบอกว่าต้องวิจัย Note ไหน
         private void Populate(CrisisCardSO card)
         {
             if (_title != null) _title.text = $"⚠ {card.title}";
@@ -388,6 +397,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] วัดความสูงเนื้อหาจริงแล้วย่อ/ขยายแผงให้พอดี — การ์ดสั้นไม่เหลือช่องว่าง การ์ดยาวโดนตัดที่เพดาน
         /// Short cards used to leave ~200px of dead space because the body reserved a fixed 238px
         /// and the options were pinned to the bottom. Measure the body instead and shrink to fit.
         /// </summary>
@@ -428,6 +438,7 @@ namespace NuclearReMind
         }
 
         // ═══════════════ BUILD ═══════════════
+        // [TH] ประกอบแผงด้วยโค้ด (กรณีไม่มี prefab): ฉากหลังกันคลิก + กรอบ + หัวเรื่อง + เนื้อหา + โซนตัวเลือก
         private void BuildPanel()
         {
             _backdrop = NewUI("Backdrop", transform, CBackdrop);

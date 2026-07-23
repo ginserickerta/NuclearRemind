@@ -9,6 +9,7 @@ using UnityEngine.UI;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้างแถบปุ่มด้านข้าง 4 ปุ่ม (ไอเทม/คีย์ลัด/Codex/บันทึก) บน HUD
     /// แถบปุ่มด้านข้าง HUD (ซ้ายล่าง) — 4 ปุ่มสไปรต์: ไอเทม(I) / คีย์ลัด(F1) / Codex(C) / บันทึก
     ///   • นำเข้าสไปรต์ Assets/Sprites/UI/side_*.png (icon + ข้อความ baked)
     ///   • ลบปุ่มเรียบเดิม (CodexToggleButton, HotkeyHelpButton) — แทนด้วยสไปรต์ในแถบนี้
@@ -23,6 +24,7 @@ namespace NuclearReMind.EditorTools
         private const string ScenePath = "Assets/Scenes/Gamescene.unity";
         private const string UIFolder = "Assets/Sprites/UI";
 
+        // เมนูนี้: นำเข้าสไปรต์ปุ่ม + สร้างแถบปุ่มข้าง 4 ปุ่ม + ผูก onClick เข้า HudMenuButtons
         [MenuItem("NuclearReMind/Setup Side Menu Buttons")]
         public static void Apply()
         {

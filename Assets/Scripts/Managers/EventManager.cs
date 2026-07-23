@@ -5,6 +5,7 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ศูนย์กลาง event ของทุกระบบ — ประกาศ event ทั้งเกมไว้ที่เดียว พร้อมเมธอด Raise คู่กัน
     /// จัดการ event กลางของเกมทั้งหมด (Observer pattern, Singleton)
     /// ระบบอื่นต้อง subscribe/raise ผ่าน EventManager.Instance เท่านั้น ห้าม direct reference ข้าม Manager
     /// </summary>
@@ -185,6 +186,8 @@ namespace NuclearReMind
             Instance = this;
             DontDestroyOnLoad(gameObject);
         }
+
+        // ── ส่วนล่างทั้งหมด: เมธอด Raise* สำหรับยิง event ข้างบนตามคู่ของมัน (null-safe ทุกตัว) ──
 
         // ===== Building =====
         public void RaiseBuildingPlaced(Cell cell, BuildingData data) => OnBuildingPlaced?.Invoke(cell, data);

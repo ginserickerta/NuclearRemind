@@ -54,6 +54,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] แปลงชื่อผู้พูด (สตริง) → Speaker — ไม่สนตัวพิมพ์เล็ก/ใหญ่ · ชื่อที่ไม่รู้จัก = System (กันวาด portrait ผิดคน)
         /// Name → Speaker. Case-insensitive because the content assets are not consistent: research notes
         /// spell it "KOVA", crisis cards spell it "Kova". Anything unrecognised becomes System rather than
         /// silently drawing the wrong character's portrait.
@@ -74,6 +75,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] แยกบรรทัดบทรูปแบบ `Kova(emotion): "…"` → DialogueLine (ถอดเครื่องหมายคำพูดออก
+        /// เพราะกล่องสนทนาวาดกรอบเอง) · ไม่มีชื่อนำหน้า = เก็บทั้งบรรทัดเป็นบท System ไม่ทิ้ง
         /// Parse one authored line in the crisis-card format: `Kova: "…"`. The surrounding quotes are
         /// stripped because the dialogue box draws its own speech frame. A line with no `Name:` prefix is
         /// kept verbatim as a System line rather than being dropped.
@@ -118,7 +121,8 @@ namespace NuclearReMind
             return line;
         }
 
-        /// <summary>Emotion-name → enum for the `Name(emotion):` tag. Unknown = Neutral (never throws).</summary>
+        /// <summary>[TH] แปลงชื่ออารมณ์ (แท็ก `Name(emotion):`) → enum Emotion — ไม่รู้จัก = Neutral ไม่มีวัน throw
+        /// Emotion-name → enum for the `Name(emotion):` tag. Unknown = Neutral (never throws).</summary>
         public static Emotion ParseEmotion(string raw)
         {
             if (string.IsNullOrEmpty(raw)) return Emotion.Neutral;

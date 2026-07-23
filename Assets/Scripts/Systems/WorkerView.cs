@@ -76,12 +76,15 @@ namespace NuclearReMind
         /// <summary>ผูกเงาใต้เท้า (สร้างโดย WorkerVisualSpawner) — จะถูกจัด sortingOrder ให้อยู่ใต้ตัวทุกครั้งที่คนงานขยับ</summary>
         public void SetShadow(SpriteRenderer shadow) => _shadow = shadow;
 
+        // ของประดับที่ต้องตามความลึกของตัวคนงาน (ป้ายสุขภาพ/ป้ายชื่อ) — ลงทะเบียนครั้งเดียวตอน spawn
+        // (เดิมใช้ order สูงตายตัว ทำให้หน้า/ชื่อลอยทะลุอาคารที่ตัวคนงานถูกบังอยู่)
         // Decorations that must ride the body's depth (health badge, name tag). A fixed high order made
         // them float over buildings the worker was standing behind — a face and a name showing through a
         // wall the body was hidden by. Registered once at spawn; no per-frame lookups.
         private readonly List<(Renderer r, int offset)> _sortFollowers = new List<(Renderer, int)>();
 
-        /// <summary>Keep a child renderer at (worker order + offset) every time the worker is re-sorted.</summary>
+        /// <summary>[TH] ให้ renderer ลูกอยู่ที่ (ลำดับคนงาน + offset) ทุกครั้งที่คนงานถูกจัดลำดับใหม่
+        /// Keep a child renderer at (worker order + offset) every time the worker is re-sorted.</summary>
         public void AddSortFollower(Renderer r, int offset)
         {
             if (r != null) _sortFollowers.Add((r, offset));

@@ -4,6 +4,10 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: อินโทรเปิดเกม (STORY.md §①) — การ์ดข้อความบนจอดำ 7 ใบ เล่นครั้งเดียวตอนเริ่มเกมใหม่
+    /// [TH] คลิก/Space = ไปการ์ดถัดไป (ล็อกขั้นต่ำ 2 วิ/ใบ) · กดค้าง = ข้ามทั้งหมด (มีแถบ progress)
+    /// [TH] spawn ตัวเองอัตโนมัติตอนโหลด Gamescene สร้าง Canvas ของตัวเอง ไม่ต้อง wire ในซีน
+    ///
     /// Opening intro (STORY.md §①) — black-screen text cards shown once at the start of a new game,
     /// before the player touches the city. NOT a cutscene: plain centered text on black. Each advance
     /// CROSSFADES the text (fade out + slide up → swap → fade in); the final card fades the whole
@@ -173,6 +177,7 @@ namespace NuclearReMind
             _barFill.anchoredPosition = Vector2.zero;
         }
 
+        // การ์ดยาวใช้ฟอนต์เล็กลงอัตโนมัติ ให้พอดีกล่อง 1500×500 เสมอ (legacy Text ไม่มี auto-fit)
         // Long cards shrink so they always fit the 1500×500 safe box (legacy Text has no auto-fit).
         private static int FontSizeFor(string card)
         {
@@ -183,6 +188,7 @@ namespace NuclearReMind
             return 33;
         }
 
+        // โหลดการ์ดใบที่ i แล้วเริ่มเฟดเข้า (รีเซ็ตตัวจับเวลา gate 2 วิ)
         // Load card i and start its fade-in.
         private void Show(int i)
         {
@@ -205,6 +211,7 @@ namespace NuclearReMind
             SetBodyY(SlideY);
         }
 
+        // ขับเคลื่อนทั้งลำดับ: เฟดเข้า/ออกของการ์ด + อ่าน input (แตะสั้น=ไปต่อ · กดค้าง=ข้าม) + แถบ skip
         private void Update()
         {
             float dt = Time.unscaledDeltaTime; // unscaled — works even if the game is paused
@@ -279,6 +286,7 @@ namespace NuclearReMind
                 _barFill.sizeDelta = new Vector2(BarWidth * Mathf.Clamp01(_holdTime / HoldSkipDur), 0f);
         }
 
+        // ไปการ์ดถัดไป (เริ่มเฟดออก) · การ์ดสุดท้าย → เฟดจอทั้งใบเข้าสู่เกม
         private void Advance()
         {
             if (_phase == Phase.Out) return;            // already crossfading — ignore
@@ -287,6 +295,7 @@ namespace NuclearReMind
             _t = 0f;
         }
 
+        // ปิดอินโทรทั้งหมด: เฟดจอออกแล้ว Destroy ตัวเอง (เลิกบล็อกคลิกทันที)
         private void Dismiss()
         {
             if (_dismissing) return;

@@ -7,6 +7,10 @@ using UnityEngine.EventSystems;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: หน้าต่างคิววิจัย (เวอร์ชันเก่า) — โชว์สถานะแล็บ/งานวิจัย/โน้ตที่วิจัยได้/เบาะแสที่ปลดแล้ว
+    /// โน้ตที่ยังไม่มีเบาะแสแสดงเป็น ??? (กติกาข้อ 4: ห้ามบอกคำตอบก่อนวิจัย)
+    /// ปัจจุบันถูกแทนด้วย ResearchLabPanelUI แล้ว — เก็บไว้เป็นทาง rollback (AutoSpawn ถูกปิดด้วย return)
+    ///
     /// Research queue panel (GDD §19 UI) — the live in-game window into the v6.3 knowledge economy:
     ///   · lab state (ruin → repair → level) + active job progress
     ///   · researchable notes with slots×days + cost and a start button
@@ -136,6 +140,7 @@ namespace NuclearReMind
             if (Input.GetMouseButtonDown(0) && !overUI && !_shown && ClickedLab()) Open();
         }
 
+        // [TH] เช็คว่าผู้เล่นคลิกตึกห้องวิจัยไหม — เช็คจากช่องกริดก่อน แล้วค่อย fallback เป็นขอบเขต sprite
         // Clicked the Laboratory building — grid footprint first (WebGL-proven), sprite bounds fallback.
         private bool ClickedLab()
         {
@@ -177,6 +182,7 @@ namespace NuclearReMind
         void GameUIStack.IPanel.CloseFromStack() => Hide();
 
         // ═══════════════ POPULATE ═══════════════
+        // [TH] อัปเดตข้อความทั้งหน้าจากสถานะจริงของ ResearchLab + KnowledgeDB
         public void Refresh()
         {
             if (_root == null) return;
@@ -214,6 +220,7 @@ namespace NuclearReMind
             return sb.ToString();
         }
 
+        // [TH] สร้างรายการโน้ตใหม่ทั้งชุด: เสร็จแล้ว ✅ / วิจัยได้ (ปุ่มกด) / ขาด prerequisite / ยังไม่มีเบาะแส = ???
         private void RebuildList(ResearchLab lab, KnowledgeDB db)
         {
             if (_listContainer == null || db == null) return;
@@ -262,6 +269,7 @@ namespace NuclearReMind
         }
 
         // ═══════════════ BUILD (runtime uGUI) ═══════════════
+        // [TH] สร้าง UI ทั้งหน้าด้วยโค้ดล้วน (ไม่ใช้ prefab) — ฉากหลังมืด + แผงกลางจอ + รายการเลื่อนได้
         private void BuildPanel()
         {
             // full-screen dark backdrop — click outside closes

@@ -4,6 +4,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ป้ายสถานะสุขภาพ (วงกลม + หน้าอีโมจิ) ลอยเหนือหัวคนงาน — สีและหน้าบอกสถานะตาม GDD §17
+    /// เป็นลูกของ WorkerView จึงเดินตามตัวคนงานอัตโนมัติ · หน้า "วาดเป็นสไปรต์" ไม่ใช่พิมพ์อีโมจิ
+    /// เพราะ TextMesh วาดอีโมจินอก BMP (surrogate pair) ไม่ได้ — ยกเว้นชั้นป่วย (☣/☠/⚰) ที่เป็น glyph ใน BMP
     /// Health face floating above a worker sprite (v6.3 §17 status).
     /// Child of a WorkerView GO — follows the sprite automatically.
     ///
@@ -41,6 +44,7 @@ namespace NuclearReMind
         private const float SymbolScale = 0.05f;
         private static Font _symbolFont;
 
+        // glyph ประจำชั้นป่วย (สตริงว่าง = ใช้หน้าที่วาดเป็นสไปรต์แทน)
         private static string SymbolFor(WorkerStatus s)
         {
             switch (s)
@@ -60,7 +64,8 @@ namespace NuclearReMind
             return _symbolFont;
         }
 
-        /// <summary>Build the badge above the given body sprite. Call once right after AddComponent.</summary>
+        /// <summary>[TH] สร้างป้ายเหนือหัว sprite ตัวคนงาน — เรียกครั้งเดียวหลัง AddComponent
+        /// Build the badge above the given body sprite. Call once right after AddComponent.</summary>
         public void Init(SpriteRenderer body)
         {
             if (_built) return;
@@ -119,7 +124,8 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>Set the shown status (no-op if unchanged — cheap to call every refresh).</summary>
+        /// <summary>[TH] ตั้งสถานะที่แสดง (สี + หน้า/สัญลักษณ์) — สถานะเดิมไม่เปลี่ยน = ไม่ทำอะไร เรียกซ้ำได้
+        /// Set the shown status (no-op if unchanged — cheap to call every refresh).</summary>
         public void SetStatus(WorkerStatus status)
         {
             if (!_built || status == _last) return;
@@ -145,7 +151,7 @@ namespace NuclearReMind
                 _bg.color = new Color(c.r * 0.25f, c.g * 0.25f, c.b * 0.25f, 0.6f);
         }
 
-        // ── status → colour (GDD §17 table) ────────────────────────
+        // ── สีประจำสถานะ (ตาราง GDD §17) — status → colour ────────────────────────
         private static Color StatusColor(WorkerStatus s)
         {
             switch (s)
@@ -167,6 +173,7 @@ namespace NuclearReMind
         private const int D = 64;                 // texture size
         private const float EyeY = 40f, EyeLX = 22f, EyeRX = 42f;
 
+        // สร้าง/หยิบจาก cache สไปรต์หน้าตามสถานะ — วาดเป็นสีขาวแล้วให้ SpriteRenderer.color tint ตามสถานะ
         private static Sprite Face(WorkerStatus s)
         {
             if (_faces.TryGetValue(s, out var cached) && cached != null) return cached;

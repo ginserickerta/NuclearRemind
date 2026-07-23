@@ -2,13 +2,21 @@ using System;
 
 namespace NuclearReMind
 {
-    /// <summary>Worker status per GDD §17 status table — one label per worker, severity-ordered.</summary>
+    /// <summary>
+    /// [TH] หน้าที่: สถานะสุขภาพของคนงาน 1 ป้ายต่อคน เรียงตามความรุนแรง (ปกติ→เหนื่อย→หมดแรง→หิว→ป่วย→ใกล้ตาย→ตาย)
+    /// Worker status per GDD §17 status table — one label per worker, severity-ordered.
+    /// </summary>
     public enum WorkerStatus { Healthy, Tired, Exhausted, Hungry, Sick, Dying, Dead }
 
-    /// <summary>Radiation zone a worker stands in — derived from job string (GDD §17 radiation formula).</summary>
+    /// <summary>
+    /// [TH] หน้าที่: โซนรังสีที่คนงานยืนทำงานอยู่ คำนวณจากชื่องาน (mine/zoneb/cool) — ใช้คิดปริมาณรังสีที่รับต่อวัน
+    /// Radiation zone a worker stands in — derived from job string (GDD §17 radiation formula).
+    /// </summary>
     public enum WorkerZone { None, Mine, ZoneB, Core }
 
     /// <summary>
+    /// [TH] หน้าที่: เก็บสถานะรายคนของคนงาน 1 คน (งานที่ทำ, ความเหนื่อย, ความหิว, รังสีสะสม, เป็น/ตาย)
+    /// [TH] คนงานทุกคนเหมือนกันหมด ไม่มีอาชีพ/สกิล — ต่างกันแค่ string งานปัจจุบันเท่านั้น
     /// Per-worker state (GDD §17). Plain class — no classes/training (v5.2 killed them),
     /// everyone is identical, only the current job string differs.
     /// job strings: farm / power / water / mine / lab / cool / zoneb / extract / idle
@@ -32,10 +40,16 @@ namespace NuclearReMind
         // but strike semantics differ from rest (no fatigue-based auto-return).
         public int strikeDaysLeft;
 
-        /// <summary>Working = alive, not resting/striking, and has an actual job.</summary>
+        /// <summary>
+        /// [TH] ถือว่า "กำลังทำงาน" เมื่อยังมีชีวิต ไม่ได้พัก ไม่ได้สไตรค์ และมีงานจริง (ไม่ใช่ idle)
+        /// Working = alive, not resting/striking, and has an actual job.
+        /// </summary>
         public bool IsWorking => alive && !resting && strikeDaysLeft <= 0 && job != WorkerJobs.Idle;
 
-        /// <summary>Zone from current job (GDD §17): mine → Mine 4.0 · zoneb → B 15.0 · cool → Core 6.0.</summary>
+        /// <summary>
+        /// [TH] แปลงงานปัจจุบันเป็นโซนรังสี: เหมือง 4.0/วัน · Zone B 15.0/วัน · หล่อเย็นเตา 6.0/วัน (งานอื่นไม่โดนรังสี)
+        /// Zone from current job (GDD §17): mine → Mine 4.0 · zoneb → B 15.0 · cool → Core 6.0.
+        /// </summary>
         public WorkerZone Zone
         {
             get
@@ -52,7 +66,10 @@ namespace NuclearReMind
         }
     }
 
-    /// <summary>Canonical job string constants (GDD §17) — avoid scattered literals.</summary>
+    /// <summary>
+    /// [TH] หน้าที่: รวมค่าคงที่ชื่องานทั้งหมดไว้ที่เดียว กันการพิมพ์ string ผิดกระจายทั่วโค้ด
+    /// Canonical job string constants (GDD §17) — avoid scattered literals.
+    /// </summary>
     public static class WorkerJobs
     {
         public const string Farm = "farm";

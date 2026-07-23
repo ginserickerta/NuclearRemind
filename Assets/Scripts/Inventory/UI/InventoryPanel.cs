@@ -5,6 +5,9 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: แผงคลัง v6.3 — 6 แท็บ + กริดช่องไอเทม ทุกตัวเลขอ่านสดจาก InventoryManager.GetSlots
+    /// [TH] (เป็น view layer ไม่เก็บ state เอง — กติกาข้อ 9) แต่ละแถวโชว์ ไอคอน · จำนวน/เพดาน · อัตรา/วัน (+เขียว/−แดง)
+    /// [TH] ★ Tritium ติดลบต้องกะพริบแดง — จุดสอนสำคัญที่สุดของเกม (ผู้เล่นต้องเห็น −6.0/วัน แล้วไปหาควิซ q_tritium_breeding)
     /// v6.3 inventory panel (docs/INVENTORY.md ข้อ 6) — 6 tabs over a slot grid.
     /// Every number is read live from InventoryManager.GetSlots (view layer, no state here).
     ///
@@ -72,7 +75,8 @@ namespace NuclearReMind
                     _rows[_blinkRows[i]].color = c;
         }
 
-        /// <summary>HUD inventory button hooks this.</summary>
+        /// <summary>[TH] ปุ่มคลังบน HUD เรียกเมธอดนี้ — เปิด/ปิดแผง
+        /// HUD inventory button hooks this.</summary>
         public void TogglePanel()
         {
             if (panelRoot == null) return;
@@ -80,7 +84,8 @@ namespace NuclearReMind
             if (panelRoot.activeSelf) Refresh();
         }
 
-        /// <summary>Tab buttons pass their index (0=ทั้งหมด … 5=เกษตร).</summary>
+        /// <summary>[TH] ปุ่มแท็บส่ง index ของตัวเอง (0=ทั้งหมด … 5=เกษตร) แล้ว refresh รายการ
+        /// Tab buttons pass their index (0=ทั้งหมด … 5=เกษตร).</summary>
         public void SetTab(int tabIndex)
         {
             _tab = (InventoryTab)Mathf.Clamp(tabIndex, 0, TabNames.Length - 1);
@@ -88,6 +93,7 @@ namespace NuclearReMind
             Refresh();
         }
 
+        // [TH] วาดรายการช่องใหม่ทั้งหมดตามแท็บปัจจุบัน — อ่านสดจาก InventoryManager ทุกครั้ง (ไม่ cache)
         public void Refresh()
         {
             if (InventoryManager.Instance == null || slotContainer == null || slotTemplate == null) return;
@@ -117,7 +123,8 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>"⚡ Power  240/400  +45/วัน" · locked → "🔒 Rad Suit — ต้องวิจัย ...". Static for tests.</summary>
+        /// <summary>[TH] ประกอบข้อความหนึ่งแถว เช่น "⚡ Power  240/400  +45/วัน" · ล็อก → "[ล็อก] ... — ต้องวิจัย ..." (static ให้เทสต์เรียกได้)
+        /// "⚡ Power  240/400  +45/วัน" · locked → "🔒 Rad Suit — ต้องวิจัย ...". Static for tests.</summary>
         public static string FormatSlot(InventorySlotView s)
         {
             if (!string.IsNullOrEmpty(s.lockedHint))

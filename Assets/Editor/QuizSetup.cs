@@ -6,6 +6,7 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้าง asset คำถามควิซ 12 ข้อ แล้วต่อสายเข้าระบบควิซในซีนเกม
     /// สร้าง 12 QuizQuestionSO assets (Q1–Q10 + QT1/QT2 ควิซ Tritium ใหม่ v8)
     /// + wire เข้า QuizManager.allQuizzes + ผูก linkedQuizIds ให้ crisis dilemma
     /// รันผ่านเมนู NuclearReMind / Setup Quiz System
@@ -26,6 +27,7 @@ namespace NuclearReMind.EditorTools
         private const string DilemmaFolder = "Assets/ScriptableObjects/Dilemmas";
         private const string ScenePath     = "Assets/Scenes/Gamescene.unity";
 
+        // เมนูนี้: สร้าง asset ควิซทั้ง 12 ข้อ + wire เข้า QuizManager และ crisis dilemma
         [MenuItem("NuclearReMind/Setup Quiz System")]
         public static void SetupAll()
         {

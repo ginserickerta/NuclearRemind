@@ -2,7 +2,11 @@ using UnityEngine;
 
 namespace NuclearReMind
 {
-    /// <summary>City state snapshot for one soft-trigger evaluation — injected for headless tests.</summary>
+    /// <summary>
+    /// [TH] หน้าที่: ภาพรวมสถานะเมือง ณ วันนั้น (core%, เชื้อเพลิง, ความร้อน, อาหาร, รังสี, คนหิว/หมดแรง)
+    /// ใช้เป็น input ให้ตัวเช็ค soft trigger — แยกเป็น struct เพื่อให้ test รันได้โดยไม่ต้องเปิดเกม
+    ///
+    /// City state snapshot for one soft-trigger evaluation — injected for headless tests.</summary>
     public struct SoftTriggerState
     {
         public float core;            // CORE% 0-100
@@ -16,6 +20,10 @@ namespace NuclearReMind
     }
 
     /// <summary>
+    /// [TH] หน้าที่: ปลดเบาะแสวิจัย (lead) จาก "สภาพเกมจริง" ไม่ใช่จากวันที่ (กติกาเหล็กข้อ 1)
+    /// เช่น เตาไม่มีเชื้อเพลิง → ปลดเบาะแสเรื่องน้ำ · ความร้อนไต่ → ปลดเบาะแสสนามแม่เหล็ก
+    /// เกณฑ์เลื่อนตาม core% — ยิ่งเล่นเก่ง ยิ่งได้เบาะแสเร็ว · ResearchLab เรียกวันละครั้ง
+    ///
     /// Soft triggers (GDD §19) — unlock research leads from STATE, never from the calendar
     /// (rule #1: no if(day == X)). Thresholds slide with core%: the further the reactor is,
     /// the earlier the game hints — เล่นเก่ง = ได้ Lead เร็ว.
@@ -29,6 +37,7 @@ namespace NuclearReMind
 
         public SoftTriggerWatcher(GameConfigSO cfg) => _cfg = cfg;
 
+        // [TH] เช็ค soft trigger ทั้ง 7 ข้อ — เข้าเงื่อนไหนก็ปลดเบาะแสข้อนั้น (ปลดซ้ำไม่มีผล)
         /// <summary>Evaluate all 7 soft triggers (CONFIG.md 🔒 SOFT TRIGGER — verbatim §19 logic).</summary>
         public void Evaluate(SoftTriggerState s, KnowledgeDB db)
         {
@@ -64,6 +73,7 @@ namespace NuclearReMind
             // storm_detection ไม่อยู่ในนี้ — ปลดจาก Record #3 เท่านั้น (STORY.md, Sprint 5)
         }
 
+        // [TH] เก็บสถานะเมืองวันนี้จากระบบจริง (ResourceManager / ReactorController / WorkerManager)
         /// <summary>Build today's state from live systems (play mode). Reactor fields stay 0 until Sprint 6.</summary>
         public static SoftTriggerState Snapshot()
         {

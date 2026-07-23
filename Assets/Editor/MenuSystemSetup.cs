@@ -11,6 +11,7 @@ using UnityEngine.UI;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สร้างเมนูหลัก + เมนูหยุดชั่วคราว (ESC) ให้เกมอัตโนมัติ
     /// สร้างระบบเมนู 2 ส่วน:
     ///   • เมนูหลัก (ซีน MainMenu.unity ใหม่ — build index 0) : เริ่มเกม / ออก
     ///   • เมนูหยุดชั่วคราว (overlay ในซีนเกม กด ESC) : เล่นต่อ / เริ่มใหม่ / กลับเมนูหลัก / ออก
@@ -34,6 +35,7 @@ namespace NuclearReMind.EditorTools
         //  เมนูรวม
         // ─────────────────────────────────────────────────────────────
 
+        // เมนูนี้: สร้างทั้งเมนูหลักและเมนูหยุดชั่วคราวในคลิกเดียว
         [MenuItem("NuclearReMind/Setup Menu System (Main + Pause)")]
         public static void SetupAll()
         {

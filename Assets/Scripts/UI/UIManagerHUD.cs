@@ -127,6 +127,7 @@ namespace NuclearReMind
             HookWorkerManager();
         }
 
+        // เกี่ยว event ของ WorkerManager — ตัวมันเกิดทีหลัง (auto-spawn) อาจยังไม่มีตอน OnEnable จึงให้ Start ลองซ้ำ
         // WorkerManager auto-spawns AfterSceneLoad, so it may not exist yet at OnEnable — Start() retries.
         // Guarded by a flag because both entry points can run for the same enable cycle.
         private bool _workersHooked;
@@ -340,6 +341,7 @@ namespace NuclearReMind
             RefreshPopulationText();
         }
 
+        // แหล่ง Hope จริงของ v6.3: HopeLedger (ผ่าน WorkerManager) ยิงค่ามาที่นี่ — ตอนเริ่มเกมและหลังปิดวันทุกวัน
         // v6.3 Hope source: WorkerManager broadcasts the ledger value here — at start (hope_start = 70) and
         // after every end-of-day commit (research +6, memorial +2, worker/food/water penalties, …).
         private void HandleMoraleChanged(float hope) => SetHopeDisplay(hope);
@@ -362,6 +364,7 @@ namespace NuclearReMind
             RefreshPopulationText();
         }
 
+        // อัปเดตแถวประชากรบน HUD — อ่านจาก WorkerManager (เจ้าของข้อมูลจริง v6.3) · ไม่มีจึงถอยไปใช้ข้อมูลเก่า
         private void RefreshPopulationText()
         {
             // ★ v6.3: WorkerManager owns population now — PopulationData is the retired v4.1 record and
@@ -530,6 +533,7 @@ namespace NuclearReMind
         private static readonly Color EndPlate = new Color(0.169f, 0.141f, 0.094f, 1f); // #2b2418
         private static readonly Color EndLine  = new Color(0.420f, 0.353f, 0.247f, 1f); // #6b5a3f
 
+        // สร้างการ์ดสรุปจบเกมธีมกรอบโลหะ (สร้างครั้งแรกที่ใช้เท่านั้น) — ย้าย gameOverText/ปุ่มเริ่มใหม่เดิมเข้ามาในการ์ด
         private void EnsureEndingCard()
         {
             if (_endCard != null || gameOverPanel == null) return;

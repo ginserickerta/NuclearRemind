@@ -6,6 +6,7 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor ติดตั้งแผงทดสอบเนื้อเรื่อง (กด F1-F4 ยิงวิกฤตทันที) — ใช้เฉพาะตอนพัฒนา
     /// [DEV] เพิ่ม StoryTestPanel เข้า Gamescene + assign วิกฤต 4 ตัว (ปุ่ม F1-F4)
     /// ★ ไม่รวมใน Run All Setups (เป็น dev tool) — รันเองตอนอยากทดสอบ · ลบ GameObject "StoryTestPanel" ออกได้เมื่อเสร็จ
     /// </summary>
@@ -22,6 +23,7 @@ namespace NuclearReMind.EditorTools
             "Crisis_DecreeEmergency",    // F4
         };
 
+        // เมนูนี้: เพิ่ม StoryTestPanel เข้าซีนเกม + ผูกวิกฤต 4 ตัวเข้าปุ่ม F1-F4 (dev เท่านั้น)
         [MenuItem("NuclearReMind/Setup Story Test Panel (dev)")]
         public static void SetupAll()
         {

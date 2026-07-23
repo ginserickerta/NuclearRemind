@@ -3,6 +3,11 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: โซน B — แหล่งผลิต tritium (โซนอันตราย) หัวใจของ Death Spiral:
+    /// คนที่เข้าไปโดนรังสีทุกวัน พอรังสีเกินเกณฑ์ระบบจะดึงออกก่อนป่วย → คนไม่พอ → tritium หยุด →
+    /// CORE ค้าง → การ์ดวิกฤตเด้ง → Hope ร่วง · ชุดกันรังสี (RadSuitManager) ลดรังสีเหลือ ×0.4
+    /// อัตราผลิตคือตัวชี้แพ้ชนะ: ไม่ตอบควิซ = 3.0/วัน (แพ้) · ตอบถูก = 8.0/วัน (ชนะ)
+    ///
     /// Zone B — the tritium breeder (GDD §22 / CONFIG.md 🔒 METHOD B). The heart of the Death Spiral:
     /// workers inside take rad_zoneb every day (applied by WorkerManager via Worker.Zone — we do NOT
     /// re-apply it here), and once a worker's radiation passes zoneb_rotate_rad we pull them OUT before
@@ -35,6 +40,7 @@ namespace NuclearReMind
             Initialize(GameConfigSO.Instance);
         }
 
+        // [TH] ตั้งค่าเริ่มต้น (เป็นทางเข้าให้ EditMode test ด้วย)
         /// <summary>Bootstrap — also the EditMode-test entry point.</summary>
         public void Initialize(GameConfigSO cfg)
         {
@@ -68,6 +74,7 @@ namespace NuclearReMind
         //  Open / close (research gates it; player opens it)
         // ─────────────────────────────────────────
 
+        // [TH] เปิดโซน B — ต้องวิจัยโน้ต tritium ก่อน และผู้เล่นยอมรับความเสี่ยงเอง
         /// <summary>Open Zone B (needs the tritium note; the player commits to the risk).</summary>
         public void Open()
         {
@@ -78,6 +85,7 @@ namespace NuclearReMind
 
         public void Close() => IsOpen = false;
 
+        // [TH] เตาปฏิกรณ์ดึง tritium จากสต็อกที่นี่ — ไม่มีทางติดลบ
         /// <summary>Reactor (Sprint 6) draws tritium from here. Never below 0.</summary>
         public float ConsumeTritium(float amount)
         {
@@ -96,6 +104,7 @@ namespace NuclearReMind
             TickProduction();
         }
 
+        // [TH] หมุนเวียนคน: ใครรังสีสะสมเกินเกณฑ์ ดึงออกมาพักทันทีก่อนล้มป่วย (และไม่ส่งกลับเข้าโซนอัตโนมัติ)
         /// <summary>§22: pull anyone past zoneb_rotate_rad out to idle BEFORE they sicken.</summary>
         private void TickRotation()
         {
@@ -113,6 +122,7 @@ namespace NuclearReMind
             }
         }
 
+        // [TH] ผลิต tritium เมื่อโซนเปิด + คนพอ — อัตรามาจาก MasteryRegistry (3.0 ไม่มีควิซ / 8.0 มีควิซ)
         /// <summary>Produce tritium if open and staffed — the 3.0 vs 8.0 game-decider.</summary>
         private void TickProduction()
         {

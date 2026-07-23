@@ -7,6 +7,7 @@ using UnityEngine.Tilemaps;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor วาด sprite ชั่วคราว (อาคาร/พื้น) ด้วยโค้ด ใช้แทนงานศิลป์ที่ยังไม่เสร็จ
     /// สร้าง placeholder sprite (ทรงไอโซเมตริกแบบเรียบง่าย เฉพาะตัวต่ออาคาร) สำหรับอาคารและพื้น Tilemap
     /// ใช้ระหว่างรอ sprite จริงจากทีม Art
     /// </summary>
@@ -192,6 +193,7 @@ namespace NuclearReMind.EditorTools
             importer.SaveAndReimport();
         }
 
+        // เมนูนี้: วาด sprite ชั่วคราวของอาคาร/พื้นทั้งหมดลงโฟลเดอร์ Sprites แล้วผูกเข้า asset
         [MenuItem("NuclearReMind/Generate Placeholder Sprites")]
         public static void GenerateAll()
         {

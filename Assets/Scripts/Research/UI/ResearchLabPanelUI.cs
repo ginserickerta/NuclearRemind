@@ -7,6 +7,11 @@ using UnityEngine.EventSystems;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: หน้าจอห้องวิจัยตัวจริงของเกม (เปิดเมื่อคลิกตึกห้องวิจัย) — เป็น "view layer" ล้วน ๆ
+    /// กลไกทั้งหมดอยู่ในระบบจริง: ซ่อมแล็บ = ResearchLab · โน้ต/เบาะแส = KnowledgeDB (ไม่มีเบาะแส = ???)
+    /// จัดวิศวกร = WorkerAssignmentManager · ถอดรหัสบันทึก = DataRecovery · ชิปความเชี่ยวชาญ = MasteryRegistry
+    /// ตัวเลขทุกตัวมาจาก GameConfigSO และ asset (กติกาข้อ 2 ห้าม hardcode)
+    ///
     /// Research Lab panel — v2 skin ported from nuclear_remind_research_lab_thai_v2.html (the approved
     /// mockup). Replaces ResearchQueuePanel as the live window into the v6.3 knowledge economy; the old
     /// panel stays compiled as the rollback path (its AutoSpawn is a dormant stub).
@@ -68,6 +73,7 @@ namespace NuclearReMind
         private readonly List<GameObject> _chips = new List<GameObject>();
 
         // ── auto-spawn (same pattern as the panel it replaces) ──
+        // [TH] เซกชัน: สร้างตัวเองอัตโนมัติทุกครั้งที่โหลดซีน (ไม่ต้องลากใส่ซีน)
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoSpawnHook()
         {
@@ -114,6 +120,7 @@ namespace NuclearReMind
             return fallback;
         }
 
+        // [TH] โหลดฟอนต์ + สกิน pixel-art + prefab ที่เจ้าของแต่งได้ — ทุกตัว null-safe ถ้าไม่มีจะใช้หน้าตาที่วาดด้วยโค้ดแทน
         private void Awake()
         {
             _font = LoadFont();
@@ -174,6 +181,7 @@ namespace NuclearReMind
             return btn;
         }
 
+        // [TH] เซกชัน: สมัคร/ถอน event ทุกตัวที่ทำให้หน้าจอต้องรีเฟรช (วันใหม่, เบาะแส, วิจัย, คนงาน, บันทึก, mastery)
         private void OnEnable()
         {
             var em = EventManager.Instance;
@@ -236,6 +244,7 @@ namespace NuclearReMind
             if (Input.GetMouseButtonDown(0) && !overUI && ClickedLab()) Open();
         }
 
+        // [TH] เช็คว่าผู้เล่นคลิกตึกห้องวิจัยไหม — เช็คช่องกริดก่อน แล้ว fallback เป็นขอบเขต sprite
         // Clicked the Laboratory building — grid footprint first (WebGL-proven), sprite bounds fallback.
         private bool ClickedLab()
         {
@@ -276,6 +285,7 @@ namespace NuclearReMind
         void GameUIStack.IPanel.CloseFromStack() => Hide();
 
         // ═══════════════ POPULATE ═══════════════
+        // [TH] เซกชัน: เติมข้อมูลสดทั้งหน้า — สถานะซาก/ซ่อม/พร้อม, ตัวเลขสถิติ, คำเตือนแรงงาน, รายการโครงการ, ชิป mastery
         public void Refresh()
         {
             if (_root == null) return;
@@ -375,6 +385,8 @@ namespace NuclearReMind
         }
 
         // ─────────── project list ───────────
+        // [TH] เซกชัน: สร้างรายการโครงการใหม่ทั้งชุด — โน้ตเรียง กำลังทำ→รอคิว→วิจัยได้→ติดเงื่อนไข→เสร็จ
+        //      โน้ตที่ยังไม่มีเบาะแสถูกยุบเป็นบรรทัด "[ล็อก] ยังไม่มีเบาะแส" (กติกาข้อ 4) · บันทึกถอดตามลำดับ
         private void RebuildList(ResearchLab lab, GameConfigSO cfg, DataRecovery dr)
         {
             if (_listContainer == null) return;
@@ -586,6 +598,8 @@ namespace NuclearReMind
         }
 
         // ─────────── prefab row fill (owner-editable templates) ───────────
+        // [TH] เซกชัน: เติมข้อมูลลง "แถวจาก prefab" (เจ้าของแต่ง layout ใน Editor ได้) — logic เดียวกับ
+        //      ตัวสร้างแถวด้วยโค้ดข้างบนทุกประการ ถ้าไม่มี prefab จะ fallback ไปใช้ตัวโค้ด
         // Mirrors the legacy Add*Row logic 1:1 but pours the live data into an instantiated template
         // instead of constructing widgets, so the owner owns layout while code owns content. The
         // legacy builders below stay as the no-prefab fallback — keep both in sync when logic changes.
@@ -820,6 +834,7 @@ namespace NuclearReMind
         private Image _activeBarFill;
         private int _activeBarDays;
 
+        // [TH] ขยับหลอดวิจัยทุกเฟรมตาม progress จริงของ ResearchLab (แตะเฉพาะหลอด ไม่ rebuild ทั้งแถว)
         private void TrackLiveProgress()
         {
             if (_activeBarFill == null) return;
@@ -841,6 +856,7 @@ namespace NuclearReMind
         }
 
         // ─────────── mastery chips ───────────
+        // [TH] เซกชัน: ชิป "ความเชี่ยวชาญ" — ได้จากตอบควิซ Codex ถูก (ไม่ใช่จากวิจัย) โชว์ x/ทั้งหมด
         private void RebuildMastery()
         {
             if (_masteryContainer == null) return;
@@ -902,6 +918,7 @@ namespace NuclearReMind
         }
 
         // ─────────── tabs ───────────
+        // [TH] เซกชัน: อัปเดตแท็บกรอง (ทั้งหมด/ความรู้/กู้บันทึก) — แท็บที่เลือกสว่าง แท็บอื่นหม่น
         private void RefreshTabs()
         {
             foreach (var tab in _tabs)
@@ -923,6 +940,7 @@ namespace NuclearReMind
         }
 
         // ═══════════════ PREFAB BIND (owner-editable path) ═══════════════
+        // [TH] เซกชัน: โหลด prefab ที่เจ้าของแต่งไว้แล้วต่อสาย event/ปุ่มให้ — layout อยู่ใน prefab โค้ดคุมแค่เนื้อหา
         /// <summary>
         /// Instantiate Resources/ResearchUI/ResearchLabPanel.prefab and wire behaviour through its
         /// ResearchLabPanelRefs. Layout/skin lives entirely in the prefab; this only adds listeners
@@ -1000,6 +1018,7 @@ namespace NuclearReMind
         }
 
         // ═══════════════ BUILD (runtime uGUI — layout mirrors the mockup's DOM) ═══════════════
+        // [TH] เซกชัน: สร้าง UI ทั้งหน้าด้วยโค้ด (ทาง fallback เมื่อไม่มี prefab) — ผัง layout ตาม mockup HTML
         private void BuildPanel()
         {
             _backdrop = Flat("Backdrop", transform, CBackdrop);
@@ -1088,6 +1107,7 @@ namespace NuclearReMind
             BuildMainBlock(W, H);
         }
 
+        // [TH] สร้างบล็อก "ซ่อมแล็บ" — ปุ่มจ่ายเหล็ก + แถบความคืบหน้า + ปุ่มเพิ่ม/ลดคนซ่อม
         private void BuildRepairBlock()
         {
             _repairBlock = Flat("RepairBlock", _root.transform, CSection);
@@ -1153,6 +1173,7 @@ namespace NuclearReMind
             SetFill(_repairFill, 0f);
         }
 
+        // [TH] สร้างบล็อกหลัก — การ์ดสถิติ 4 ใบ + แถบซ้ายจัดวิศวกร + คอลัมน์ขวารายการโครงการ (เลื่อนได้)
         private void BuildMainBlock(float W, float H)
         {
             _mainBlock = new GameObject("Main", typeof(RectTransform));
@@ -1340,6 +1361,7 @@ namespace NuclearReMind
         }
 
         // ═══════════════ PREFAB BAKE (called by Assets/Editor/ResearchLabPrefabSetup) ═══════════════
+        // [TH] เซกชัน: ใช้เฉพาะใน Editor — สร้าง hierarchy เดียวกับตอนรันแล้วเซฟเป็น prefab ให้เจ้าของแต่งต่อ
         // These run in EDIT mode on a throwaway host object: build the exact same hierarchy the
         // runtime fallback would, attach the Refs component, and hand the root to the editor script
         // to save as a prefab. Listeners added during build are runtime-only and don't serialize —
@@ -1580,6 +1602,7 @@ namespace NuclearReMind
         }
 
         // ─────────── uGUI helpers ───────────
+        // [TH] เซกชัน: ตัวช่วยสร้างชิ้นส่วน UI (กล่อง/กรอบโค้ง/ปุ่ม/ข้อความ) + แปลงสี hex ให้ตรงกับ Linear color space
         // How hard to push sRGB hex toward linear (Linear color space washes UGUI colors out).
         // 1 = full .linear (playtest: too dark) · 0 = raw hex (too pale) · 0.5 = approved middle.
         const float GammaFix = 0.5f;

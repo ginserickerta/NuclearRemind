@@ -5,6 +5,10 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ป๊อปอัพควิซกลางจอ (v6.3) — เด้งเมื่อความรู้ถูก "ใช้จริง" แล้วเท่านั้น (event OnQuizShown)
+    /// ควิซข้ามได้ (Esc / ปุ่ม "ไว้ทีหลัง") · ตอบแล้วเฉลยทันที (ถูก=เขียว ผิด=แดง + คำอธิบาย)
+    /// ส่งคำตอบให้ CodexQuizManager ตอนปิด · หยุดนาฬิกาเกมระหว่างเปิด · หน้าตาเป็นชุดเดียวกับการ์ดวิกฤต
+    ///
     /// v6.3 quiz popup (GDD §21 / QUIZZES.md) — the centre-screen invitation that appears when
     /// QuizAppliedWatcher raises EventManager.OnQuizShown, once a piece of knowledge has actually been
     /// USED. Rebuilt from the scene-wired QuizPopupController in the crisis-card visual language: the same
@@ -76,6 +80,7 @@ namespace NuclearReMind
         private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
             => AutoSpawn();
 
+        // สร้างตัวเองลง HUDCanvas อัตโนมัติ — มี prefab ที่ bake ไว้ใช้ก่อน ไม่มีค่อยสร้างด้วยโค้ด
         private static void AutoSpawn()
         {
             try
@@ -114,6 +119,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ใช้เฉพาะตอน bake prefab ใน Editor: สร้างแผงทั้งชุดพร้อมเนื้อหาตัวอย่าง A/B/C ให้พรีวิวเหมือนของจริง
         /// Editor baker only: build the whole panel under this object — with sample content and A/B/C
         /// rows so the prefab previews exactly like the in-game quiz — then save as a prefab.
         /// Row A doubles as the runtime style template (_optTemplate); B and C are preview-only samples
@@ -214,6 +220,7 @@ namespace NuclearReMind
         }
 
         // ── show / hide ──
+        // ควิซเด้ง: สร้างแผง (ถ้ายังไม่มี) → เติมเนื้อหา → เปิด backdrop → หยุดนาฬิกาเกม
         private void HandleQuizShown(QuizQuestionSO quiz)
         {
             if (quiz == null) return;
@@ -247,6 +254,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ปิดป๊อปอัพ — ถ้าตอบแล้วจึงส่งคำตอบให้ CodexQuizManager (ตอบถูก = Mastery ถาวร + ปลด Codex)
+        /// ข้าม (ยังไม่ตอบ) = ไม่ส่งอะไร ควิซยังรอตอบใน Codex ได้
         /// Close the popup. If the quiz was answered (revealed), submit the chosen option to
         /// CodexQuizManager — permanent Mastery + Codex unlock on a correct answer. Skipping (Esc or the
         /// "ไว้ทีหลัง" button before answering) submits nothing; the quiz stays answerable in the Codex.
@@ -271,6 +280,7 @@ namespace NuclearReMind
                 CodexQuizManager.Instance.Submit(quizId, answer);
         }
 
+        // ผู้เล่นเลือกตัวเลือก — ไฮไลต์กรอบเหลือง + เปิดปุ่มยืนยัน (เปลี่ยนใจได้จนกว่าจะยืนยัน)
         private void Select(int slot)
         {
             if (_revealed || _quiz == null) return;
@@ -280,6 +290,7 @@ namespace NuclearReMind
             SetConfirmEnabled(true);
         }
 
+        // ยืนยันคำตอบ — เฉลย: ข้อถูกเขียว ข้อที่เลือกผิดแดง + โชว์คำอธิบายความรู้ (ถูกหรือผิดก็โชว์)
         private void Confirm()
         {
             if (_quiz == null || _selected < 0 || _revealed) return;
@@ -307,6 +318,7 @@ namespace NuclearReMind
             if (_skipLabel != null) _skipLabel.text = "ปิด"; // the skip button becomes a plain close
         }
 
+        // เติมเนื้อหาควิซลงแผง: หมวด/หัวข้อ/คำถาม + ปุ่มตัวเลือก (สับตำแหน่งกันจำข้อถูก) + footer รางวัล Codex
         private void Populate(QuizQuestionSO quiz)
         {
             Color accent = ColorFor(quiz.category);
@@ -372,6 +384,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] ลบแถวตัวเลือกทั้งหมด (รวมแถวตัวอย่างจาก prefab) — ยกเว้นแถว template ที่ใช้เป็นต้นแบบ clone
         /// Destroy every option row — including sample rows a baked prefab carries for preview —
         /// but never the template itself (it is the stencil the next quiz clones).
         /// </summary>
@@ -402,6 +415,7 @@ namespace NuclearReMind
         void GameUIStack.IPanel.CloseFromStack() => Close();
 
         // ═══════════════ BUILD ═══════════════
+        // สร้างแผงทั้งหมดด้วยโค้ด (runtime uGUI) — เรียงแนวตั้ง สูงยืดตามเนื้อหาด้วย ContentSizeFitter
         // A vertical stack that sizes itself to its content — the question length and the explanation
         // appearing after the answer both change the height, and a ContentSizeFitter absorbs that without
         // the manual measuring the crisis card has to do for its fixed-anchor body.

@@ -139,6 +139,7 @@ namespace NuclearReMind
         private void HandleZoom(float dt)
         {
             float scroll = Input.GetAxis("Mouse ScrollWheel"); // ±0.1 ต่อ notch
+            // มีแผง UI เปิดอยู่ / เมาส์ชี้บน UI → ยก scroll ให้ UI (ลิสต์ในแผงต้องเลื่อนได้ ไม่ใช่ซูมเมืองข้างหลัง)
             // Scroll belongs to the UI whenever a stacked panel is open OR the cursor is over any UI
             // element (panel scroll lists must not zoom the city behind them). Zoom only from the bare map.
             if (GameUIStack.AnyOpen ||

@@ -4,6 +4,8 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ชุดผลลัพธ์ของตัวเลือกการ์ด 1 ตัวเลือก (Hope, ทรัพยากร, สภาพคนงาน, ผลต่อเตา/Zone B)
+    /// [TH] ค่า default 0 = ไม่มีผล · ตามกติกาข้อ 5 ทุกตัวเลือกต้องมีราคา — effect ที่เป็น 0 หมดคือ asset ผิด
     /// What a card option does when chosen (GDD §25 / CARDS.md). Authored per option; default 0 =
     /// "no effect" so an unfilled field never changes behaviour.
     ///

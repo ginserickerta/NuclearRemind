@@ -5,6 +5,8 @@ using UnityEngine.UI;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ระบบเสียงทั้งเกม — BGM ตามซีน (เมนู/ในเกม) พร้อม crossfade · SFX คลิก/สร้างตึก/แจ้งเตือน
+    /// · widget ปรับเสียงเพลงในเมนูหลัก (เซฟค่าใน PlayerPrefs) · สร้างตัวเองอัตโนมัติและอยู่รอดข้ามซีน (DontDestroyOnLoad)
     /// Game-wide audio (★ 2026-07-22, owner-picked clips in Resources/Audio):
     ///   • BGM per scene — bgm_menu on MainMenu, bgm_game everywhere else (starts under the intro
     ///     cards, which run on Gamescene load). Crossfades between tracks, volume in PlayerPrefs.
@@ -51,6 +53,7 @@ namespace NuclearReMind
             if (Instance != null) Instance.ApplySceneAudio(s.name);
         }
 
+        // สร้าง AudioManager ถ้ายังไม่มี (ถูกเรียกทุกครั้งที่โหลดซีน)
         private static void Ensure()
         {
             if (Instance != null) return; // Unity-null when destroyed → respawn
@@ -75,6 +78,7 @@ namespace NuclearReMind
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
 
+            // โหลดคลิปเสียงทั้งหมดจาก Resources/Audio + อ่านค่าเสียงที่เซฟไว้
             _bgmMenu = Resources.Load<AudioClip>("Audio/bgm_menu");
             _bgmGame = Resources.Load<AudioClip>("Audio/bgm_game");
             _click   = Resources.Load<AudioClip>("Audio/sfx_click");
@@ -116,6 +120,7 @@ namespace NuclearReMind
         //  BGM
         // ─────────────────────────────────────────
 
+        // เลือกเพลงตามซีน: MainMenu = bgm_menu · ซีนอื่น = bgm_game + สร้าง/ลบ widget ปรับเสียง
         private void ApplySceneAudio(string sceneName)
         {
             bool isMenu = sceneName == "MainMenu";
@@ -133,6 +138,7 @@ namespace NuclearReMind
             }
         }
 
+        // เล่นเสียงตอกสร้างเฉพาะตอนผู้เล่นวางตึกเอง (กรอง ore node กับตึกที่มากับแผนที่ออก)
         private void HandleBuildingPlaced(Cell cell, BuildingData data)
         {
             // Player construction only. OnBuildingPlaced is shared by three raisers:
@@ -144,6 +150,7 @@ namespace NuclearReMind
             if (_build != null) _sfx.PlayOneShot(_build, SfxVolume);
         }
 
+        // เปลี่ยนเพลง BGM แบบ crossfade (สลับใช้ AudioSource สองตัว)
         private void PlayBgm(AudioClip clip)
         {
             if (clip == null)
@@ -180,6 +187,7 @@ namespace NuclearReMind
             _fade = null;
         }
 
+        // ปรับเสียงเพลง ±0.1 จากปุ่ม −/+ แล้วเซฟทันที
         public void AdjustBgmVolume(float delta)
         {
             _bgmVolume = Mathf.Clamp01(_bgmVolume + delta);
@@ -193,8 +201,10 @@ namespace NuclearReMind
         //  SFX
         // ─────────────────────────────────────────
 
+        // เสียงคลิก (เรียกจาก Update ทุกครั้งที่คลิกซ้าย/กด Q/E)
         public void PlayClick() { if (_click != null) _sfx.PlayOneShot(_click, SfxVolume); }
 
+        // เสียงแจ้งเตือนมุมขวาล่าง — เว้นช่วงขั้นต่ำกันเสียงรัวตอน alert มาเป็นชุด
         public void PlayAlert()
         {
             if (_alert == null || Time.unscaledTime - _lastAlertTime < AlertMinGap) return;
@@ -216,6 +226,7 @@ namespace NuclearReMind
         //  main-menu volume widget (code-built — no scene wiring)
         // ─────────────────────────────────────────
 
+        // สร้าง widget "เพลง − % +" ด้วยโค้ดล้วน (ไม่ต้อง wiring ในซีน) — โผล่เฉพาะเมนูหลัก
         private void BuildVolumeWidget()
         {
             if (_volumeWidget != null) return;
@@ -286,6 +297,7 @@ namespace NuclearReMind
     }
 
     /// <summary>
+    /// [TH] คลาสร้าง (เลิกใช้แล้ว) — เก็บไว้กันซีนที่เคยเซฟ component นี้พังเป็น missing script
     /// Retired 2026-07-23 — clicks are now read globally in AudioManager.Update (every left click
     /// + Q/E), so per-button components would double-fire. The empty shell stays so any instance
     /// serialized into a scene during play-mode saves doesn't become a missing script.

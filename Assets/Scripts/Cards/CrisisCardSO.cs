@@ -3,6 +3,8 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: asset การ์ดวิกฤต 1 ใบ — เก็บข้อความ (หัวเรื่อง, บทตัวละครเถียงกัน, ตัวเลือก 2–3 ข้อ) + cooldown
+    /// [TH] เงื่อนไข trigger เป็นโค้ดใน CardTriggers ผูกกับ state จริง (heat, hunger ฯลฯ) ไม่ใช่วันที่ (กติกาข้อ 1)
     /// Crisis Card (GDD §16/§25 / CARDS.md) — a state-triggered decision with 2–3 options, some
     /// locked behind research. dialogueLines carry the character-clash script (cards 4/5/6/7 have
     /// two NPCs arguing in one box, CARDS.md §Conflict); order is fixed, never shuffle.

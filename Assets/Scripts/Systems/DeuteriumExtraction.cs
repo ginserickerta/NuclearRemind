@@ -4,6 +4,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ระบบ "ปุ่มสกัดดิวเทอเรียม" ของโรงน้ำ — ผู้เล่นต้องเลือกเปิดเอง ไม่ใช่โรงน้ำสกัดให้อัตโนมัติ
+    /// เปิดได้ต่อเมื่อผ่าน 2 ด่าน: วิจัย note "deuterium" เสร็จ (เช็คผ่าน KnowledgeDB) + โรงน้ำเลเวลถึงขั้นต่ำ
+    /// การสกัดกินน้ำ (แย่งกับน้ำดื่ม/หล่อเย็นเตา) จึงเป็นสวิตช์รายโรง ค่าเริ่มต้น = ปิด (กติกา "ไม่มีทางเลือกฟรี")
     /// Deuterium extraction is a choice the player makes, not something the Water Plant does on its own
     /// (ResearchLab_System_Spec §3, "ปุ่มสกัด Deuterium").
     ///
@@ -45,6 +48,7 @@ namespace NuclearReMind
         private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
             => AutoSpawn();
 
+        // สร้างตัวเองอัตโนมัติเมื่อเข้าซีนเกม (ถ้ายังไม่มี) — ซีนเมนูไม่มี EventManager จึงข้ามไป
         private static void AutoSpawn()
         {
             try
@@ -88,11 +92,13 @@ namespace NuclearReMind
 
         // ── gates ─────────────────────────────────────────────────────────────
 
-        /// <summary>Has the player researched extraction at all? (the spec's unlock_deuterium_button)</summary>
+        /// <summary>[TH] ผู้เล่นวิจัยการสกัดแล้วหรือยัง (= ธง unlock_deuterium_button ของ spec)
+        /// Has the player researched extraction at all? (the spec's unlock_deuterium_button)</summary>
         public static bool Researched
             => KnowledgeDB.Instance != null && KnowledgeDB.Instance.HasNote(NoteId);
 
-        /// <summary>Lowest level this building can extract at — falls back to max level (old behaviour).</summary>
+        /// <summary>[TH] เลเวลต่ำสุดของโรงน้ำที่สกัดได้ — ไม่ได้ตั้งค่า = ต้องเลเวลสูงสุด (พฤติกรรมเดิม)
+        /// Lowest level this building can extract at — falls back to max level (old behaviour).</summary>
         public static int MinLevelFor(BuildingData data)
         {
             int max = BuildingRegistry.Instance != null ? BuildingRegistry.Instance.maxBuildingLevel : 3;
@@ -100,7 +106,8 @@ namespace NuclearReMind
             return data.deuteriumMinLevel > 0 ? data.deuteriumMinLevel : max;
         }
 
-        /// <summary>Output per day at this level — 0 below the minimum, the min-level rate below max, full at max.</summary>
+        /// <summary>[TH] อัตราผลิตดิวเทอเรียม/วัน ตามเลเวลโรง — ต่ำกว่าขั้นต่ำ = 0 · เลเวลสูงสุด = อัตราเต็ม
+        /// Output per day at this level — 0 below the minimum, the min-level rate below max, full at max.</summary>
         public static float RateFor(BuildingData data, int level)
         {
             if (data == null || data.deuteriumProduction <= 0f) return 0f;
@@ -110,15 +117,18 @@ namespace NuclearReMind
             return 0f;
         }
 
-        /// <summary>Both gates passed — the button may be shown as usable (it may still be switched off).</summary>
+        /// <summary>[TH] ผ่านครบทั้ง 2 ด่าน (วิจัย + เลเวล) — ปุ่มกดได้แล้ว (แต่สวิตช์อาจยังปิดอยู่)
+        /// Both gates passed — the button may be shown as usable (it may still be switched off).</summary>
         public static bool Unlocked(BuildingData data, int level)
             => Researched && RateFor(data, level) > 0f;
 
         // ── per-plant switch ──────────────────────────────────────────────────
 
+        // สวิตช์ของโรงน้ำที่ cell นี้เปิดอยู่ไหม
         public bool IsOn(Vector2Int cell) => _enabled.Contains(cell);
 
-        /// <summary>Returns the new state. Refused (and unchanged) while either gate is closed.</summary>
+        /// <summary>[TH] เปิด/ปิดสวิตช์รายโรง — ด่านใดยังไม่ผ่าน = ปฏิเสธและคืนสถานะเดิม
+        /// Returns the new state. Refused (and unchanged) while either gate is closed.</summary>
         public bool SetOn(Vector2Int cell, bool on, BuildingData data, int level)
         {
             if (on && !Unlocked(data, level)) return IsOn(cell);
@@ -126,15 +136,18 @@ namespace NuclearReMind
             return on;
         }
 
+        // สลับสวิตช์เปิด/ปิดของโรงน้ำที่ cell นี้ (เรียกจากปุ่มบนแผงโรงน้ำ)
         public bool Toggle(Vector2Int cell, BuildingData data, int level)
             => SetOn(cell, !IsOn(cell), data, level);
 
-        /// <summary>What ResourceManager asks each day: is this plant actually extracting right now?</summary>
+        /// <summary>[TH] ResourceManager ถามทุกวัน: โรงนี้กำลังสกัดจริงไหม (สวิตช์เปิด + ด่านยังผ่านอยู่)
+        /// What ResourceManager asks each day: is this plant actually extracting right now?</summary>
         public bool IsExtracting(Vector2Int cell, BuildingData data, int level)
             => IsOn(cell) && Unlocked(data, level);
 
         // ── events ────────────────────────────────────────────────────────────
 
+        // วิจัยเสร็จ → แจ้งผู้เล่นครั้งเดียวว่าปุ่มนี้มีแล้ว (ไม่บอก = ฟีเจอร์ล่องหน สวิตช์ที่ไม่มีใครรู้ = ไม่มีสวิตช์)
         // Tell the player the button now exists. Without this the feature is invisible: nothing on screen
         // changes when the research lands, and a switch nobody knows about is the same as no switch.
         private void HandleNoteCompleted(string noteId)
@@ -145,11 +158,13 @@ namespace NuclearReMind
                 "ปลดล็อกการสกัดดิวเทอเรียม — เปิดสวิตช์ได้ที่แผงโรงน้ำ (กินน้ำ แลกกับเชื้อเพลิงเตา)");
         }
 
+        // ทุบโรงน้ำ → ล้างสวิตช์ของ cell นั้น (ช่องอาจถูกสร้างเป็นอาคารอื่น)
         // A demolished plant must not keep its switch: the cell can be rebuilt with something else.
         private void HandleDemolished(Vector2Int cell) => _enabled.Remove(cell);
 
         // ── save / load ───────────────────────────────────────────────────────
 
+        // เขียนสถานะสวิตช์ + ธงประกาศ ลง SaveData (เรียกโดย SaveManager ตอนเซฟ)
         public void WriteTo(SaveData save)
         {
             if (save == null) return;
@@ -159,7 +174,8 @@ namespace NuclearReMind
 
         private void HandleSaveLoaded(SaveData save) => RestoreFromSave(save);
 
-        /// <summary>Restore body — public so EditMode tests can drive it without a live subscription.</summary>
+        /// <summary>[TH] กู้สถานะจากเซฟ — เปิดเป็น public ให้ EditMode test เรียกตรงได้โดยไม่ต้อง subscribe event
+        /// Restore body — public so EditMode tests can drive it without a live subscription.</summary>
         public void RestoreFromSave(SaveData save)
         {
             if (save == null) return;
@@ -169,6 +185,7 @@ namespace NuclearReMind
             _announced = save.deuteriumUnlockAnnounced;
         }
 
+        // ล้างสถานะทั้งหมดเมื่อเริ่มเกมรอบใหม่
         public void ResetForNewRun()
         {
             _enabled.Clear();

@@ -148,6 +148,7 @@ namespace NuclearReMind
 
             if (overlayPanel != null) overlayPanel.SetActive(true);
 
+            // หยุดนาฬิกาเฉพาะเมื่อการ์ดโชว์บนจอ "จริง" เท่านั้น — ถ้าแผงถูกปิดไว้ในซีน pause จะค้างถาวร (บั๊กเดิม D9)
             // ★ Freeze the clock only once the card is provably on screen. The old order paused first
             // and hoped the panel appeared — and when RecordCardCanvas was left inactive in the scene,
             // SetActive(true) on a child of a disabled parent showed nothing, the dismiss buttons could
@@ -177,6 +178,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] การ์ดมองเห็นได้จริง "และ" ปิดได้จริงไหม — ต้องครบทั้งคู่ ไม่งั้นผู้เล่นติดค้าง (ห้าม pause)
         /// Is the card actually visible AND closable? Both halves matter: a panel nobody can see and a
         /// panel with no working dismiss button trap the player exactly the same way.
         /// </summary>

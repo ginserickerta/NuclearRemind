@@ -4,6 +4,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: เสียงในใจของ Auren (บรรทัด ▸ ไม่มีชื่อผู้พูด) — คนละช่องกับ bark ของ NPC
+    /// [TH] เป็น milestone ยิงครั้งเดียวต่อเหตุการณ์ (เก็บ Record, เปิด Zone B, พายุมา, CORE 100 ฯลฯ)
+    /// [TH] ไม่จำกัด 2 บรรทัด/วันแบบ BarkManager
     /// Inner Voice — Auren's ▸ lines (BARKS.md §Inner Voice, V01–V20). A separate channel from the NPC
     /// barks: these are one-shot milestones (fire once each), not the ≤2/day state chorus BarkManager
     /// runs. Assets live in Resources/InnerVoice (speaker = Auren) and fire via OnBarkFired, so the HUD
@@ -60,6 +63,7 @@ namespace NuclearReMind
         }
 
         // ── event hooks ─────────────────────────────────────────────
+        // [TH] เก็บ Record ครบใบที่ 1/2/3/4 → ยิงบรรทัดในใจตามลำดับเรื่องราว
         private void HandleRecordRecovered(RecordCardSO r)
         {
             _recordCount++;
@@ -82,6 +86,8 @@ namespace NuclearReMind
         }
 
         // ── state milestones (checked each day, fire once) ──────────
+        // [TH] milestone ที่เช็คจาก state ทุกสิ้นวัน (ยิงครั้งเดียว): เตาร้อนจัด, แม่เหล็กครบ, CORE ค้าง 3 วันติด,
+        // CORE 100, คนป่วย/ตายคนแรก, Hope ต่ำกว่า 30, สร้าง Med Bay สำเร็จ
         private void HandleDayEnded(int day)
         {
             // ★ 2026-07-22: V01 backstop removed — the owner cut the game-start dialogue box
@@ -117,7 +123,10 @@ namespace NuclearReMind
         }
 
         // ── firing ──────────────────────────────────────────────────
-        /// <summary>Fire an inner-voice line once (public so future building hooks can call it).</summary>
+        /// <summary>
+        /// [TH] ยิงบรรทัดเสียงในใจ 1 ครั้งต่อเกม — เคยยิงแล้วจะเงียบตลอด (public ให้ระบบอื่นเรียกได้)
+        /// Fire an inner-voice line once (public so future building hooks can call it).
+        /// </summary>
         public void Fire(string id)
         {
             EnsureCatalog();
@@ -127,6 +136,7 @@ namespace NuclearReMind
             EventManager.Instance?.RaiseBarkFired(bark);
         }
 
+        // [TH] ลงทะเบียน asset บรรทัดเสียงในใจ (โหมดเล่นโหลดอัตโนมัติจาก Resources/InnerVoice)
         public void RegisterCatalog(IEnumerable<BarkSO> barks)
         {
             if (barks != null)

@@ -84,11 +84,14 @@ namespace NuclearReMind
         private void HandlePopulationChanged(PopulationData pop) => RebuildLayout(snap: false);
         private void HandleSaveLoaded(SaveData save) => RebuildLayout(snap: true);
 
+        // v6.3: ถ้า WorkerManager ทำงาน → WorkerAvatarSpawner เป็นเจ้าของ visual คนงานแทน (ตัวตนราย Worker +
+        // ป้ายสุขภาพ) — ระบบเก่าแบบนับจำนวนต่อคลาสนี้ต้องหยุด ไม่งั้น sprite ซ้อนสองชุด
         // v6.3: WorkerManager active → WorkerAvatarSpawner owns worker visuals (per-worker identity +
         // health badges). Legacy class/count sprites must stand down or they double up.
         private bool _retiredForWorkerManager;
 
-        /// <summary>Despawn all legacy worker sprites — called by WorkerAvatarSpawner on takeover.</summary>
+        /// <summary>[TH] ลบ sprite คนงานของระบบเก่าทั้งหมด — WorkerAvatarSpawner เรียกตอนเข้ารับช่วง
+        /// Despawn all legacy worker sprites — called by WorkerAvatarSpawner on takeover.</summary>
         public void ClearAllVisuals()
         {
             foreach (var kv in _byClass)

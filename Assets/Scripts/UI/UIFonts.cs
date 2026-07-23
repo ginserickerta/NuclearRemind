@@ -3,6 +3,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: จุดเดียวที่รู้ตำแหน่งฟอนต์ UI — ทุกแผงที่สร้างด้วยโค้ดเรียก UIFonts.Body
+    /// แก้ปัญหาฟอนต์เพี้ยนคนละแบบจากการ copy path ผิด ๆ กระจายทั่วโค้ด
+    /// ลำดับ fallback: ChakraPetch SemiBold → Regular → Kanit → ฟอนต์ในตัว Unity (อย่างแย่คือฟอนต์ผิด ไม่ใช่ตัวหนังสือหาย)
+    ///
     /// The one place that knows where the UI font lives.
     ///
     /// Every code-built panel used to carry its own copy of this lookup, and most of them asked for
@@ -18,7 +22,9 @@ namespace NuclearReMind
     {
         private static Font _body;
 
-        /// <summary>UI face for every runtime-built panel. Cached; never returns null in a normal build.</summary>
+        /// <summary>
+        /// [TH] ฟอนต์หลักของทุกแผงที่สร้างตอนรัน (cache แล้ว — บิลด์ปกติไม่มีวันคืน null)
+        /// UI face for every runtime-built panel. Cached; never returns null in a normal build.</summary>
         public static Font Body
         {
             get
@@ -34,7 +40,9 @@ namespace NuclearReMind
             }
         }
 
-        /// <summary>Editor setup scripts run outside play mode and re-import assets; drop the cache.</summary>
+        /// <summary>
+        /// [TH] ล้าง cache ฟอนต์ — ใช้โดยสคริปต์ setup ฝั่ง Editor ที่รันนอก play mode แล้ว re-import asset
+        /// Editor setup scripts run outside play mode and re-import assets; drop the cache.</summary>
         public static void ClearCache() => _body = null;
     }
 }

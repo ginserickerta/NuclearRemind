@@ -4,6 +4,9 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: สร้าง sprite คนงานบนแมพ "หนึ่งตัวต่อ Worker จริงหนึ่งคน" (คีย์ด้วย Worker.id — ระบบ v6.3)
+    /// วางตำแหน่งตามอาคาร/งานที่คนงานถูก assign · ป้ายสุขภาพและป้ายชื่อของแต่ละตัวตรงกับคนงานคนนั้นจริง
+    /// ใช้ WorkerView เดิมเป็นตัวเดิน/จัดลำดับความลึก · เข้ามาแทน WorkerVisualSpawner ตัวเก่า (สั่งให้หยุด กัน sprite ซ้อน)
     /// WorkerManager-driven world avatars (v6.3). One sprite per real Worker (keyed by Worker.id),
     /// so each sprite's health badge reflects THAT worker's actual status — the correct-identity path
     /// chosen over the legacy class/count spawner.
@@ -33,6 +36,7 @@ namespace NuclearReMind
         private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
             => AutoSpawn();
 
+        // สร้างตัวเองอัตโนมัติหลังโหลดซีน — "ห้าม" รอ WorkerManager ตรงนี้ (ลำดับ hook ไม่แน่นอน · TryInit จะ retry ให้เอง)
         private static void AutoSpawn()
         {
             try
@@ -92,6 +96,8 @@ namespace NuclearReMind
         private bool _initialized;
         private bool _dirty;
 
+        // init แบบ lazy: รอจน WorkerManager พร้อม (retry ทุกเฟรมใน Update) แล้วยืม sprite จาก spawner เก่า
+        // + ปลดระวางตัวเก่า + subscribe event ที่เกี่ยวกับการเดิน/จัดคน — race หนึ่งเฟรมจึงไม่ทำ visual หาย
         // Lazy init: WorkerManager may not exist yet when this spawns (auto-spawn ordering), so we retry
         // in Update instead of permanently disabling — otherwise a one-frame race kills worker visuals.
         private bool TryInit()
@@ -161,6 +167,8 @@ namespace NuclearReMind
         private readonly Dictionary<BuildingType, List<Vector2Int>> _byType =
             new Dictionary<BuildingType, List<Vector2Int>>();
 
+        // หัวใจของระบบ: จับคู่คนงานแต่ละคนกับจุดยืน (1. อาคาร/แหล่งแร่ที่ถูก assign จริง → 2. อาคารตามชนิดงาน
+        // → 3. ว่างงาน = เดินลาดตระเวนรอบแลนด์มาร์ก) แล้วอัปเดตป้ายสุขภาพ/ชื่อ + เก็บ avatar ของคนที่ตายออก
         private void Sync()
         {
             if (_wm == null || GridManager.Instance == null) return;
@@ -272,6 +280,7 @@ namespace NuclearReMind
             }
         }
 
+        // รวบรวม cell อาคารแยกตามชนิด (ใช้เป็นเป้าหมายเดิน fallback ของข้อ 2 ใน Sync)
         private void RefreshBuildingCells()
         {
             foreach (var kv in _byType) kv.Value.Clear();
@@ -290,6 +299,7 @@ namespace NuclearReMind
             }
         }
 
+        // หา avatar ของ worker id นี้ — ยังไม่มีก็สร้างใหม่พร้อมป้ายสุขภาพ (WorkerHealthBadge) + ป้ายชื่อ (WorkerNameTag)
         private WorkerView GetOrSpawn(int id)
         {
             if (_avatars.TryGetValue(id, out var view) && view != null) return view;
@@ -344,6 +354,7 @@ namespace NuclearReMind
                 _patrolCenters.Add(g.IsoToWorldF((g.columns - 1) * 0.5f, (g.rows - 1) * 0.5f));
         }
 
+        // sprite สำรองรูปคนอย่างง่าย (สร้างด้วยโค้ด) — ใช้เมื่อไม่มี sprite คนงานจริงให้ยืมจากระบบเก่า
         private static Sprite _placeholder;
         private static Sprite PlaceholderSprite()
         {

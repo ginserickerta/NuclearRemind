@@ -3,6 +3,8 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: บัญชีทรัพยากรกลางของเกมทั้งหมด (ไฟ/น้ำ/อาหาร/เหล็ก/ดิวเทอเรียม/ทริเทียม/ความรู้/วัสดุแล็บ)
+    /// ทุกระบบเพิ่ม/ลดผ่าน event OnResourceDelta — ค่าทุกตัว clamp ไม่ติดลบ (บั๊ก #17/#18)
     /// ติดตามทรัพยากรหลัก (V4 §4) — หักต้นทุนเมื่อวางอาคาร
     /// ผลิต+บริโภคเรียลไทม์ต่อ tick (5 วิ · ApplyProductionTick) แล้ว reconcile จบวัน (OnDayProduction)
     ///   ให้ยอดสุทธิเท่าตาราง §6/§4 · ผลิต/upkeep รายอาคาร → บริโภค Food/Water 2/คน/วัน
@@ -198,6 +200,7 @@ namespace NuclearReMind
             CheckThresholds();
         }
 
+        // จุดรับเพิ่ม/ลดทรัพยากรจากทุกระบบ (ผ่าน event) — clamp 0..max แล้ว broadcast ค่าใหม่
         private void HandleResourceDelta(ResourceType type, float amount)
         {
             var c = Current;
@@ -272,6 +275,7 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] สูตรผลิต v6.3: ผลผลิตแต่ละอย่าง = Σ ประสิทธิภาพคนงานในงานนั้น × อัตราต่อคน (กติกา #7 — ห้ามนับหัว)
         /// v6.3 job-based production (GDD §6/§1 + CONFIG yields): food/water/iron/power = Σ efficiency of each
         /// job × per-worker yield (rule #7 — efficiency-weighted, never headcount). Consumption is handled
         /// per-worker by WorkerManager (feeding + water) and upkeep by the reactor / Zone B systems, so this
@@ -297,6 +301,8 @@ namespace NuclearReMind
         }
 
         /// <summary>
+        /// [TH] สกัดดิวเทอเรียมรายโรง (ต้องวิจัยโน้ต deuterium + โรงน้ำถึงระดับ + เปิดสวิตช์) —
+        /// กินน้ำเป็นวัตถุดิบ 25:1 และไม่ดึงน้ำต่ำกว่า reserve เพื่อไม่ให้เมืองขาดน้ำ
         /// Deuterium extraction (CONFIG.md "การสกัดดิวเทอเรียม" / ResearchLab_System_Spec).
         ///
         /// This is per-BUILDING, not per-job, which is why the v6.3 cutover lost it: production moved to
@@ -535,6 +541,7 @@ namespace NuclearReMind
                    !ConstructionController.Instance.IsUnderConstruction(cell);
         }
 
+        // เช็คทรัพยากรใกล้หมด/หมด แล้วยิง alert (edge-triggered — เตือนเฉพาะตอนแย่ลง)
         private void CheckThresholds()
         {
             CheckResource(Current.energy, criticalEnergy, ResourceType.Energy);
@@ -565,6 +572,7 @@ namespace NuclearReMind
         private readonly System.Collections.Generic.Dictionary<ResourceType, ResourceAlertState> _alertState =
             new System.Collections.Generic.Dictionary<ResourceType, ResourceAlertState>();
 
+        // ตรรกะ latch ต่อทรัพยากร: Ok → Critical → Depleted ยิง event เฉพาะขาแย่ลง + hysteresis กัน alert กระพริบ
         private void CheckResource(float amount, float threshold, ResourceType type)
         {
             if (!_alertState.TryGetValue(type, out var prev)) prev = ResourceAlertState.Ok;

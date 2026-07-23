@@ -5,6 +5,7 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor เพิ่มระบบรังสี (RadiationManager) เข้าซีนเกม
     /// เพิ่ม RadiationManager เข้า Gamescene (Story Guide §4 — ระบบ Zone A / วิกฤตโรครังสี)
     /// รันผ่านเมนู NuclearReMind / Setup Radiation System (หรือรวมใน Run All Setups)
     ///
@@ -15,6 +16,7 @@ namespace NuclearReMind.EditorTools
     {
         private const string ScenePath = "Assets/Scenes/Gamescene.unity";
 
+        // เมนูนี้: สร้าง GameObject RadiationManager ในซีนเกม (ถ้ายังไม่มี)
         [MenuItem("NuclearReMind/Setup Radiation System")]
         public static void SetupAll()
         {

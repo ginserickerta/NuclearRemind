@@ -5,6 +5,10 @@ using UnityEngine;
 namespace NuclearReMind
 {
     /// <summary>
+    /// [TH] หน้าที่: ห้องวิจัย — เปลี่ยน "คน + เวลา + ทรัพยากร" ให้เป็นความรู้ (หัวใจของเกม)
+    /// เริ่มเกมเป็นซากต้องซ่อมก่อน (เหล็ก 80 · 2 วัน · 2 คน) · จ่ายค่าวิจัยครั้งเดียวตอนเริ่ม
+    /// จัดคนเข้าห้องวิจัยใหม่ทุกวัน (กันงานค้าง) · วิกฤตคนหิว/หมดแรงจะเตะงานวิจัยทิ้งกลางคัน
+    ///
     /// Research Lab (GDD §19) — a production building that turns people + time + resources
     /// into knowledge. ★ Starts the game as a RUIN (isRuined = true): repair costs Iron 80,
     /// 2 days, 2 workers before anything can be researched.
@@ -40,6 +44,7 @@ namespace NuclearReMind
         private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
             => AutoSpawn();
 
+        // [TH] สร้างตัวเองอัตโนมัติเมื่อโหลดซีนเกม (ไม่ต้องลากใส่ซีนเอง)
         private static void AutoSpawn()
         {
             try
@@ -54,6 +59,7 @@ namespace NuclearReMind
             }
         }
 
+        // [TH] งานวิจัยที่กำลังทำอยู่ — progress นับเป็น "วันประสิทธิผล" (คนเก่ง/ครบทีม = คืบเร็ว)
         /// <summary>Active research job — progress in "effective days" (GDD §19 OnDayEnd).</summary>
         public class ResearchJob
         {
@@ -93,6 +99,7 @@ namespace NuclearReMind
             Initialize(GameConfigSO.Instance);
         }
 
+        // [TH] ตั้งค่าเริ่มต้นทั้งหมด (เป็นทางเข้าให้ EditMode test ด้วย)
         /// <summary>Bootstrap — also the EditMode-test entry point.</summary>
         public void Initialize(GameConfigSO cfg)
         {
@@ -122,6 +129,7 @@ namespace NuclearReMind
         //  Repair (ซาก → ห้องวิจัย)
         // ─────────────────────────────────────────
 
+        // [TH] จ่ายเหล็ก 80 ครั้งเดียวเพื่อเริ่มซ่อมซากห้องวิจัย (คนซ่อม = คนที่ถูกส่งไปงาน "lab")
         /// <summary>Pay Iron 80 once to start the repair. Crew = workers on job "lab".</summary>
         public bool StartRepair()
         {
@@ -139,6 +147,7 @@ namespace NuclearReMind
             return true;
         }
 
+        // [TH] เดินหน้าการซ่อมวันละ 1 หน่วย — ถ้าคนซ่อมไม่ครบ วันนั้นไม่คืบ
         private void TickRepair()
         {
             if (!IsRuined || !RepairPaid) return;
@@ -158,6 +167,7 @@ namespace NuclearReMind
         //  Start research — จ่ายครั้งเดียว (bug #2)
         // ─────────────────────────────────────────
 
+        // [TH] เช็คว่าทรัพยากรพอจ่ายค่าวิจัยโน้ตนี้ไหม (พลังงาน/เหล็ก/วัสดุแล็บ)
         public bool CanAfford(ResearchNoteSO note)
         {
             var rm = ResourceManager.Instance;
@@ -166,6 +176,7 @@ namespace NuclearReMind
             return c.energy >= note.costPower && c.iron >= note.costIron && c.labMat >= note.costLabMat;
         }
 
+        // [TH] เริ่ม (หรือเข้าคิว) วิจัยโน้ต — จ่ายค่าใช้จ่ายเต็มจำนวน "ครั้งเดียว" ตรงนี้ (กันบั๊ก #2 หักรายวัน)
         /// <summary>
         /// Start (or enqueue) a note. Pays the FULL cost here, exactly once — bug #2:
         /// deducting per day made tritium eat the iron stock and block itself.
@@ -224,6 +235,7 @@ namespace NuclearReMind
             TickDay();
         }
 
+        // [TH] งานประจำวันของแล็บ: ซ่อม → เช็ควิกฤต → จัดคนใหม่ → เดินหน้าวิจัย → เช็ค soft trigger
         /// <summary>One lab day. Public so tests drive it headless (same pattern as WorkerManager).</summary>
         public void TickDay()
         {
@@ -238,6 +250,7 @@ namespace NuclearReMind
             Triggers.Evaluate(SoftTriggerWatcher.Snapshot(), KnowledgeDB.Instance);
         }
 
+        // [TH] วิกฤตคน (หิว/หมดแรงเกินเกณฑ์) → ทิ้งงานวิจัยปัจจุบันทันที progress หายฟรี = ราคาที่ต้องจ่าย
         /// <summary>
         /// S7/S8 (GDD §19): a severe people-crisis dumps the current job — progress หาย = ราคาที่จ่าย.
         /// Verbatim per spec: only drops; the player must choose to research the emergency note.
@@ -267,6 +280,8 @@ namespace NuclearReMind
             PromoteQueue();
         }
 
+        // [TH] เติมนักวิจัยให้ครบทุกวัน (กันงานค้างถาวร บั๊ก #7): เอาคนว่างก่อน แล้วค่อยดึงจากเหมือง→น้ำ→ฟาร์ม
+        //      โดยห้ามดึงจนต่ำกว่าขั้นต่ำ (ฟาร์ม/น้ำ ≥ 2, เหมือง ≥ 1 — กันอาหารหมดเมือง บั๊ก #9)
         /// <summary>
         /// bug #7 (research deadlock): the job re-staffs itself every day — idle workers first,
         /// then donors mine → water → farm. bug #9 floors: farm/water ≥ 2, mine ≥ 1 —
@@ -303,6 +318,7 @@ namespace NuclearReMind
             }
         }
 
+        // [TH] ความคืบหน้าที่ได้ใน 1 วัน = 1 × ประสิทธิภาพเฉลี่ยของทีม × สัดส่วนคนครบทีม (ต่ำกว่า 0.5 = ไม่คืบ)
         /// <summary>
         /// GDD §19 OnDayEnd verbatim: 1 × avgEff × staffRatio, with a min-staffing gate at staffRatioMin.
         /// Returns what a full day of this lab is worth right now; 0 when the job is stalled or unstaffed.
@@ -328,6 +344,7 @@ namespace NuclearReMind
         // full day for free.
         private float _accruedToday;
 
+        // [TH] ตอนจบวัน: เติมความคืบหน้าส่วนที่ตัวเดินแบบเรียลไทม์ยังไม่ได้ให้ (รวมทั้งวันแล้วเท่ากับ DailyGain พอดี)
         /// <summary>Day boundary: bank whatever the realtime ticker did not already award today.</summary>
         private void TickProgress(WorkerManager wm)
         {
@@ -341,6 +358,7 @@ namespace NuclearReMind
                 CompleteResearch();
         }
 
+        // [TH] เดินหลอดวิจัยแบบเรียลไทม์ให้ผู้เล่นเห็นขยับ (แบ่ง DailyGain เท่าเดิมกระจายตลอดวัน)
         /// <summary>
         /// Realtime progress so the bar moves while the player watches instead of jumping once at
         /// midnight. Spreads the same DailyGain across dayLength seconds, so the daily total is
@@ -370,6 +388,7 @@ namespace NuclearReMind
                 CompleteResearch();
         }
 
+        // [TH] วิจัยเสร็จ: บันทึกลง KnowledgeDB + เพิ่ม Hope + แจก Knowledge + ยิง event ให้ popup เด้ง
         private void CompleteResearch()
         {
             var note = ActiveJob.note;
@@ -391,6 +410,7 @@ namespace NuclearReMind
             PromoteQueue();
         }
 
+        // [TH] ดันงานถัดไปในคิวขึ้นมาเป็นงานวิจัยปัจจุบัน (ค่าใช้จ่ายจ่ายไปแล้วตอนเข้าคิว)
         private void PromoteQueue()
         {
             while (ActiveJob == null && _queue.Count > 0)

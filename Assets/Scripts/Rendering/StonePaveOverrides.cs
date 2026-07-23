@@ -4,7 +4,10 @@ using UnityEngine;
 
 namespace NuclearReMind
 {
-    /// <summary>One hand-painted stone cell. Empty <see cref="tileName"/> = the cell was erased.</summary>
+    /// <summary>
+    /// [TH] หน้าที่: ข้อมูลหินที่ทาด้วยมือ 1 ช่อง — tileName ว่าง = ช่องนั้นถูกลบ
+    ///
+    /// One hand-painted stone cell. Empty <see cref="tileName"/> = the cell was erased.</summary>
     [Serializable]
     public struct StonePaveOverride
     {
@@ -21,6 +24,10 @@ namespace NuclearReMind
     }
 
     /// <summary>
+    /// [TH] หน้าที่: เก็บรายการช่องพื้นหินที่เจ้าของโปรเจกต์ทา/ลบเองด้วย Tile Color Painter
+    /// ระบบปูพื้นอัตโนมัติจะทาทับรายการนี้ "ทีหลังสุด" เสมอ — งานทามือจึงไม่หายเมื่อรัน setup ใหม่
+    /// เป็นชั้นภาพล้วน ไม่อยู่ใน SaveData และ gameplay ไม่อ่านค่านี้
+    ///
     /// Hand-painted additions/removals on the StonePave tilemap (docs/GROUND_PLAN.md).
     ///
     /// Same pattern as OreDepositManager.tileColorOverrides: the automatic pass

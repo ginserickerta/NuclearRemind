@@ -5,6 +5,7 @@ using UnityEngine;
 namespace NuclearReMind.EditorTools
 {
     /// <summary>
+    /// [TH] หน้าที่: สคริปต์ Editor สั่ง build เกมเวอร์ชัน WebGL (เล่นในเบราว์เซอร์/iPad) ลง Build/WebGL
     /// Build WebGL (iPad Safari/เบราว์เซอร์-friendly) → โฟลเดอร์ Build/WebGL
     ///   • เมนู: NuclearReMind/Build WebGL
     ///   • batch: & "Unity.exe" -quit -batchmode -projectPath "..." -executeMethod NuclearReMind.EditorTools.WebGLBuilder.Build -logFile build.log
@@ -22,6 +23,7 @@ namespace NuclearReMind.EditorTools
             "Assets/Scenes/Gamescene.unity",
         };
 
+        // เมนูนี้: ตั้งค่า Player Settings สำหรับ WebGL แล้ว build เกม 2 ซีนลง Build/WebGL
         [MenuItem("NuclearReMind/Build WebGL")]
         public static void Build()
         {
